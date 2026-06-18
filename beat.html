@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>TheCFG TheBeat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    <link rel="stylesheet" href="css/beat/styles.css">
+    <style>
+        /* 터치 디바이스 레이아웃 - 좁은 화면(1024px 이하)에서만 세로 배치 */
+        @media (hover: none) and (pointer: coarse) and (max-width: 1024px) {
+            body > div {
+                display: flex !important;
+                flex-direction: column !important;
+                height: 100vh !important;
+                overflow: hidden !important;
+            }
+            #game-area {
+                flex: 0 0 auto !important;
+                width: 100% !important;
+                height: 35vh !important;
+                min-height: 200px !important;
+                max-height: 40vh !important;
+            }
+            #ui-area {
+                width: 100% !important;
+                flex: 1 1 0 !important;
+                min-height: 0 !important;
+                overflow-y: scroll !important;
+                -webkit-overflow-scrolling: touch !important;
+            }
+        }
+    </style>
+</head>
+<body class="w-screen h-screen flex items-center justify-center bg-[#2d3748]">
+
+<div class="w-full h-full flex flex-col lg:flex-row overflow-hidden">
+    <!-- Game Area -->
+    <div id="game-area" class="w-full lg:w-3/5 h-1/3 lg:h-full bg-black relative flex justify-center touch-none flex-shrink-0">
+        <div id="lanes-container" class="h-full flex relative">
+            <!-- Lanes will be generated here -->
+        </div>
+        <div id="judgement-text-container" class="absolute inset-0 pointer-events-none">
+            <div id="judgement-text" class="judgement-text"></div>
+            <div id="combo-text" class="combo-text"></div>
+            <div id="countdown-text" class="countdown-text"></div>
+        </div>
+    </div>
+            <!-- UI Area -->
+            <div id="ui-area" class="w-full lg:w-2/5 flex-1 lg:h-full p-2 lg:p-4 xl:p-8 flex flex-col justify-start bg-[#2d3748] overflow-y-auto overflow-x-hidden touch-auto" style="-webkit-overflow-scrolling: touch; overscroll-behavior: contain;">
+                <!-- Menu Screen -->
+                <div id="menu-screen" class="flex flex-col flex-shrink-0">
+                    <div class="flex justify-between items-center mb-8">
+                        <h1 class="text-3xl sm:text-4xl font-bold text-white"><a href="http://the-cfg.kro.kr">TheBeat v2.1</a></h1>
+                        <button id="settings-icon-menu" class="p-2 rounded-full hover:bg-gray-600 transition">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                        </button>
+                    </div>
+                    <p class="text=l font-bold mb-8 text-white">2026/02/17 05:23 release</p>
+                    <div id="menu-message" class="hidden p-3 mb-4 text-center text-white bg-red-500 rounded-lg"></div>
+                    <div class="space-y-6">
+                        <div>
+                            <h3 class="text-xl mb-2 text-gray-300" data-i18n="game_mode">게임 모드</h3>
+                            <div class="flex space-x-2 btn-group" id="mode-selector">
+                                <button data-mode="random" class="w-full py-3 px-4 bg-gray-700 hover:bg-gray-600 rounded-lg transition active" data-i18n="random_mode">랜덤 모드</button>
+                                <button data-mode="music" class="w-full py-3 px-4 bg-gray-700 hover:bg-gray-600 rounded-lg transition" data-i18n="music_mode">뮤직 모드</button>
+                            </div>
+                        </div>
+                        <div id="music-mode-controls" class="hidden mt-2 space-y-2">
+                            <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+                                <label for="chart-file-input" class="cursor-pointer text-center block w-full py-2 px-4 bg-blue-600 hover:bg-blue-500 rounded-lg transition" data-i18n="load_chart">차트 불러오기</label>
+                                <input type="file" id="chart-file-input" class="hidden" accept="*">
+                                <label for="music-file-input" class="cursor-pointer text-center block w-full py-2 px-4 bg-teal-600 hover:bg-teal-500 rounded-lg transition" data-i18n="load_music">음악 불러오기</label>
+                                <input type="file" id="music-file-input" class="hidden" accept="audio/*,.mp3,.wav,.ogg">
+                            </div>
+                            <p id="chart-file-name" class="text-sm text-gray-400 truncate"></p>
+                            <p id="music-file-name" class="text-sm text-gray-400 truncate"></p>
+                            <p id="required-music-file-name" class="text-sm text-yellow-400 truncate h-5"></p>
+                        </div>
+                        <div id="note-count-container">
+                            <h3 class="text-xl mb-2 text-gray-300" data-i18n="note_count">노트 수 (랜덤 모드)</h3>
+                            <input type="number" id="note-count-input" value="100" min="10" max="500" class="w-full p-3 bg-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="개수는 최소 10개에서 최대 500개까지 사용 가능합니다.">
+                        </div>
+                        <div id="difficulty-controls">
+                            <div>
+                                <div class="flex justify-between items-center mb-2">
+                                    <h3 class="text-xl text-gray-300" data-i18n="difficulty">난이도</h3>
+                                    <button id="toggle-details-btn" class="p-1 rounded-full hover:bg-gray-600 transition">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div class="flex space-x-2 btn-group" id="difficulty-selector">
+                                    <button data-difficulty="easy" class="w-full py-3 px-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition" data-i18n="easy">쉬움</button>
+                                    <button data-difficulty="normal" class="w-full py-3 px-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition active" data-i18n="normal">보통</button>
+                                    <button data-difficulty="hard" class="w-full py-3 px-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition" data-i18n="hard">어려움</button>
+                                </div>
+                            </div>
+                            <div id="detailed-difficulty-settings" class="hidden mt-4 p-4 bg-gray-800 rounded-lg space-y-4">
+                                <div>
+                                    <div class="flex justify-between items-center text-gray-300">
+                                        <label for="note-fall-speed-slider">노트 하강 속도</label>
+                                        <span id="note-fall-speed-value" class="font-mono">7</span>
+                                    </div>
+                                    <input id="note-fall-speed-slider" type="range" min="1" max="20" value="7" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                </div>
+                                <div>
+                                    <div class="flex justify-between items-center text-gray-300">
+                                        <label for="note-spawn-speed-slider">노트 속도 (생성 빈도)</label>
+                                        <span id="note-spawn-speed-value" class="font-mono">1.5x</span>
+                                    </div>
+                                    <input id="note-spawn-speed-slider" type="range" min="50" max="300" value="150" step="10" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                </div>
+                                <div>
+                                    <div class="flex justify-between items-center text-gray-300">
+                                        <label for="dongta-prob-slider">동시타 확률</label>
+                                        <span id="dongta-prob-value" class="font-mono">25%</span>
+                                    </div>
+                                    <input id="dongta-prob-slider" type="range" min="0" max="100" value="25" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                </div>
+                                <div>
+                                    <div class="flex justify-between items-center text-gray-300">
+                                        <label for="max-simultaneous-slider">최대 동시타 개수</label>
+                                        <span id="max-simultaneous-value" class="font-mono">3</span>
+                                    </div>
+                                    <input id="max-simultaneous-slider" type="range" min="2" max="8" value="3" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                </div>
+                                <div class="border-t border-gray-700 pt-4">
+                                    <h4 class="text-sm font-semibold text-gray-400 mb-3">동시타 노트 타입 확률</h4>
+                                    <div class="space-y-3">
+                                        <div>
+                                            <div class="flex justify-between items-center text-gray-300">
+                                                <label for="dongta-tap-prob-slider" class="text-sm">기본 노트</label>
+                                                <span id="dongta-tap-prob-value" class="font-mono text-sm">70%</span>
+                                            </div>
+                                            <input id="dongta-tap-prob-slider" type="range" min="0" max="100" value="70" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                        </div>
+                                        <div>
+                                            <div class="flex justify-between items-center text-gray-300">
+                                                <label for="dongta-long-prob-slider" class="text-sm">롱 노트</label>
+                                                <span id="dongta-long-prob-value" class="font-mono text-sm">20%</span>
+                                            </div>
+                                            <input id="dongta-long-prob-slider" type="range" min="0" max="100" value="20" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                        </div>
+                                        <div>
+                                            <div class="flex justify-between items-center text-gray-300">
+                                                <label for="dongta-false-prob-slider" class="text-sm">가짜 노트</label>
+                                                <span id="dongta-false-prob-value" class="font-mono text-sm">10%</span>
+                                            </div>
+                                            <input id="dongta-false-prob-slider" type="range" min="0" max="100" value="10" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between items-center text-gray-300">
+                                        <label for="long-note-prob-slider">롱노트 확률</label>
+                                        <span id="long-note-prob-value" class="font-mono">15%</span>
+                                    </div>
+                                    <input id="long-note-prob-slider" type="range" min="0" max="100" value="15" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                </div>
+                                <div class="border-t border-gray-700 pt-4 space-y-4">
+                                    <div class="flex items-center justify-between text-gray-300">
+                                        <label for="false-note-toggle">가짜 노트 활성화</label>
+                                        <input id="false-note-toggle" type="checkbox" class="h-5 w-5 bg-gray-700 rounded border-gray-600 text-blue-500 focus:ring-blue-500">
+                                    </div>
+                                    <div id="false-note-prob-container" class="hidden">
+                                        <div class="flex justify-between items-center text-gray-300">
+                                            <label for="false-note-prob-slider">가짜 노트 등장 확률</label>
+                                            <span id="false-note-prob-value" class="font-mono">0%</span>
+                                        </div>
+                                        <input id="false-note-prob-slider" type="range" min="0" max="500" value="0" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <h3 class="text-xl mb-2 text-gray-300" data-i18n="lanes">레인 수</h3>
+                            <select id="lanes-selector" class="w-full p-3 bg-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="4" selected data-i18n="lanes_4">4 레인</option>
+                                <option value="5" data-i18n="lanes_5">5 레인</option>
+                                <option value="6" data-i18n="lanes_6">6 레인</option>
+                                <option value="7" data-i18n="lanes_7">7 레인</option>
+                                <option value="8" data-i18n="lanes_8">8 레인</option>
+                            </select>
+                        </div>
+                        <div class="mt-10 space-y-3" style="padding-bottom: var(--safe-bottom, 80px);">
+                            <button id="start-game-btn" class="w-full py-4 text-xl font-bold bg-green-600 hover:bg-green-500 rounded-lg transition" data-i18n="start_game">게임 시작</button>
+                            <button id="editor-btn" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 rounded-lg transition" data-i18n="editor">에디터</button>
+                        </div>
+                    </div>
+                </div>
+                <!-- Playing Screen -->
+                <div id="playing-screen" class="hidden h-full flex flex-col overflow-y-auto" style="-webkit-overflow-scrolling: touch;">
+                    <div class="flex-1 overflow-y-auto">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 id="playing-status-label" class="text-3xl font-bold text-white" data-i18n="playing">플레이 중</h2>
+                            <button id="settings-icon-playing" class="p-2 rounded-full hover:bg-gray-600 transition">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-lg">
+                            <div class="bg-gray-700 p-4 rounded-lg">
+                                <p class="text-gray-400" data-i18n="score">점수</p>
+                                <p id="score" class="text-3xl font-bold">0</p>
+                            </div>
+                            <div class="bg-gray-700 p-4 rounded-lg">
+                                <p class="text-gray-400" data-i18n="combo">콤보</p>
+                                <p id="combo" class="text-3xl font-bold">0</p>
+                            </div>
+                        </div>
+                        <div class="mt-4 bg-gray-700 p-4 rounded-lg">
+                            <h3 class="text-xl mb-2 text-gray-300" data-i18n="judgement">판정</h3>
+                            <div class="space-y-1 text-lg">
+                                <p><span data-i18n="perfect">PERFECT</span>: <span id="perfect-count">0</span></p>
+                                <p><span data-i18n="good">GOOD</span>: <span id="good-count">0</span></p>
+                                <p><span data-i18n="bad">BAD</span>: <span id="bad-count">0</span></p>
+                                <p><span data-i18n="miss">MISS</span>: <span id="miss-count">0</span></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="space-y-3 mt-4 flex-shrink-0" style="padding-bottom: var(--safe-bottom, 80px);">
+                        <div id="pause-resume-container">
+                            <button id="pause-game-btn" class="w-full py-3 text-lg font-bold bg-yellow-600 hover:bg-yellow-500 rounded-lg transition" data-i18n="pause">일시 정지</button>
+                            <button id="resume-game-btn" class="hidden w-full py-3 text-lg font-bold bg-green-600 hover:bg-green-500 rounded-lg transition" data-i18n="resume">계속하기</button>
+                        </div>
+                        <button id="give-up-btn" class="w-full py-3 text-lg font-bold bg-red-600 hover:bg-red-500 rounded-lg transition" data-i18n="give_up">포기하기</button>
+                    </div>
+                </div>
+                <div id="settings-screen" class="hidden h-full flex flex-col justify-between overflow-y-auto" style="-webkit-overflow-scrolling: touch;">
+                    <div class="flex-grow flex flex-col min-h-0">
+                        <h2 class="text-3xl font-bold mb-4 text-white" data-i18n="settings">환경설정</h2>
+                        <p id="settings-message" class="hidden text-center text-yellow-400 mb-4 py-2 bg-gray-700 rounded"></p>
+                        <div id="settings-tabs" class="flex border-b border-gray-600 mb-4">
+                            <button data-tab="volume" class="tab-btn py-2 px-4 text-gray-300 hover:text-white transition active" data-i18n="volume">음량</button>
+                            <button data-tab="appearance" class="tab-btn py-2 px-4 text-gray-300 hover:text-white transition" data-i18n="appearance">모양</button>
+                            <button data-tab="controls" class="tab-btn py-2 px-4 text-gray-300 hover:text-white transition" data-i18n="controls">조작</button>
+                            <button data-tab="help" class="tab-btn py-2 px-4 text-gray-300 hover:text-white transition" data-i18n="help">도움말</button>
+                            <button data-tab="etc" class="tab-btn py-2 px-4 text-gray-300 hover:text-white transition" data-i18n="etc">기타</button>
+                        </div>
+                        <div class="flex-grow space-y-6 overflow-y-auto">
+                            <div id="tab-content-volume" class="tab-content space-y-6">
+                                <div>
+                                    <div class="flex justify-between items-center text-gray-300 mb-2">
+                                        <label for="volume-slider-music" data-i18n="music_volume">음악 볼륨</label>
+                                        <span id="volume-value-music" class="font-mono">100</span>
+                                    </div>
+                                    <input id="volume-slider-music" type="range" min="0" max="100" value="100" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                </div>
+                                <div>
+                                    <div class="flex justify-between items-center text-gray-300 mb-2">
+                                        <label for="volume-slider-sfx" data-i18n="sfx_volume">효과음 볼륨</label>
+                                        <span id="volume-value-sfx" class="font-mono">100</span>
+                                    </div>
+                                    <input id="volume-slider-sfx" type="range" min="0" max="100" value="100" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                </div>
+                            </div>
+                            <div id="tab-content-appearance" class="tab-content hidden space-y-6">
+                                <!-- 노트 모양 선택 -->
+                                <div>
+                                    <h3 class="text-lg font-semibold mb-3 text-white" data-i18n="note_shape">노트 모양</h3>
+                                    <div class="flex space-x-4 btn-group" id="note-shape-selector">
+                                        <button data-shape="bar" class="flex-1 py-2 px-4 bg-gray-700 hover:bg-gray-600 rounded-lg transition active" data-i18n="bar_shape">막대형</button>
+                                        <button data-shape="circle" class="flex-1 py-2 px-4 bg-gray-700 hover:bg-gray-600 rounded-lg transition" data-i18n="circle_shape">원형</button>
+                                    </div>
+                                </div>
+                                
+                                <!-- 색상 모드 선택 -->
+                                <div>
+                                    <h3 class="text-lg font-semibold mb-3 text-white" data-i18n="color_mode">색상 모드</h3>
+                                    <div class="flex space-x-4 btn-group" id="color-mode-selector">
+                                        <button data-mode="note-type" class="flex-1 py-2 px-4 bg-gray-700 hover:bg-gray-600 rounded-lg transition active" data-i18n="note_type_color">노트별 색상</button>
+                                        <button data-mode="lane" class="flex-1 py-2 px-4 bg-gray-700 hover:bg-gray-600 rounded-lg transition" data-i18n="lane_color">레인별 색상</button>
+                                    </div>
+                                </div>
+                                
+                                <!-- 프리셋 슬롯 -->
+                                <div>
+                                    <h3 class="text-lg font-semibold mb-3 text-white" data-i18n="preset_slots">색상 프리셋</h3>
+                                    <div class="flex space-x-2" id="color-preset-slots">
+                                        <button data-slot="1" class="preset-slot flex-1 py-2 px-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition border-2 border-transparent active">1</button>
+                                        <button data-slot="2" class="preset-slot flex-1 py-2 px-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition border-2 border-transparent">2</button>
+                                        <button data-slot="3" class="preset-slot flex-1 py-2 px-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition border-2 border-transparent">3</button>
+                                        <button data-slot="4" class="preset-slot flex-1 py-2 px-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition border-2 border-transparent">4</button>
+                                        <button data-slot="5" class="preset-slot flex-1 py-2 px-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition border-2 border-transparent">5</button>
+                                    </div>
+                                </div>
+                                
+                                <!-- 노트별 색상 설정 -->
+                                <div id="note-type-colors" class="color-settings-panel">
+                                    <h3 class="text-lg font-semibold mb-3 text-white" data-i18n="note_colors">노트 타입별 색상</h3>
+                                    <div class="space-y-3">
+                                        <div class="flex items-center justify-between">
+                                            <label class="text-gray-300" data-i18n="tap_note">기본 노트</label>
+                                            <input type="color" id="color-tap-note" value="#63b3ed" class="w-16 h-10 rounded cursor-pointer bg-gray-700 border-2 border-gray-600">
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <label class="text-gray-300" data-i18n="long_note">롱 노트</label>
+                                            <input type="color" id="color-long-note" value="#a78bfa" class="w-16 h-10 rounded cursor-pointer bg-gray-700 border-2 border-gray-600">
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <label class="text-gray-300" data-i18n="false_note">가짜 노트</label>
+                                            <input type="color" id="color-false-note" value="#fca5a5" class="w-16 h-10 rounded cursor-pointer bg-gray-700 border-2 border-gray-600">
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- 레인별 색상 설정 -->
+                                <div id="lane-colors" class="color-settings-panel hidden">
+                                    <h3 class="text-lg font-semibold mb-3 text-white">레인별 색상</h3>
+                                    <div class="space-y-3">
+                                        <div class="flex items-center justify-between">
+                                            <label class="text-gray-300">L4 레인</label>
+                                            <input type="color" id="color-lane-L4" value="#ef4444" class="w-16 h-10 rounded cursor-pointer bg-gray-700 border-2 border-gray-600">
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <label class="text-gray-300">L3 레인</label>
+                                            <input type="color" id="color-lane-L3" value="#f59e0b" class="w-16 h-10 rounded cursor-pointer bg-gray-700 border-2 border-gray-600">
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <label class="text-gray-300">L2 레인</label>
+                                            <input type="color" id="color-lane-L2" value="#eab308" class="w-16 h-10 rounded cursor-pointer bg-gray-700 border-2 border-gray-600">
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <label class="text-gray-300">L1 레인</label>
+                                            <input type="color" id="color-lane-L1" value="#84cc16" class="w-16 h-10 rounded cursor-pointer bg-gray-700 border-2 border-gray-600">
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <label class="text-gray-300">C1 레인</label>
+                                            <input type="color" id="color-lane-C1" value="#06b6d4" class="w-16 h-10 rounded cursor-pointer bg-gray-700 border-2 border-gray-600">
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <label class="text-gray-300">R1 레인</label>
+                                            <input type="color" id="color-lane-R1" value="#3b82f6" class="w-16 h-10 rounded cursor-pointer bg-gray-700 border-2 border-gray-600">
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <label class="text-gray-300">R2 레인</label>
+                                            <input type="color" id="color-lane-R2" value="#8b5cf6" class="w-16 h-10 rounded cursor-pointer bg-gray-700 border-2 border-gray-600">
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <label class="text-gray-300">R3 레인</label>
+                                            <input type="color" id="color-lane-R3" value="#a855f7" class="w-16 h-10 rounded cursor-pointer bg-gray-700 border-2 border-gray-600">
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <label class="text-gray-300">R4 레인</label>
+                                            <input type="color" id="color-lane-R4" value="#ec4899" class="w-16 h-10 rounded cursor-pointer bg-gray-700 border-2 border-gray-600">
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- 미리보기 -->
+                                <div>
+                                    <h3 class="text-lg font-semibold mb-3 text-white">미리보기</h3>
+                                    <div id="color-preview-container" class="bg-gray-800 p-4 rounded-lg" style="min-height: 100px;">
+                                        <!-- 노트별 미리보기 -->
+                                        <div id="preview-note-type" class="flex justify-center items-center space-x-4">
+                                            <div id="preview-tap-note" class="note-preview" style="background-color: #63b3ed;"></div>
+                                            <div id="preview-long-note" class="note-preview note-preview-long" style="background: linear-gradient(to top, #818cf8, #a78bfa);"></div>
+                                            <div id="preview-false-note" class="note-preview" style="background-color: #fca5a5;"></div>
+                                        </div>
+                                        <!-- 레인별 미리보기 -->
+                                        <div id="preview-lanes" class="hidden flex justify-center items-center flex-wrap gap-2">
+                                            <div class="note-preview" data-lane="L4" style="background-color: #ef4444;"></div>
+                                            <div class="note-preview" data-lane="L3" style="background-color: #f59e0b;"></div>
+                                            <div class="note-preview" data-lane="L2" style="background-color: #eab308;"></div>
+                                            <div class="note-preview" data-lane="L1" style="background-color: #84cc16;"></div>
+                                            <div class="note-preview" data-lane="C1" style="background-color: #06b6d4;"></div>
+                                            <div class="note-preview" data-lane="R1" style="background-color: #3b82f6;"></div>
+                                            <div class="note-preview" data-lane="R2" style="background-color: #8b5cf6;"></div>
+                                            <div class="note-preview" data-lane="R3" style="background-color: #a855f7;"></div>
+                                            <div class="note-preview" data-lane="R4" style="background-color: #ec4899;"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- 버튼들 -->
+                                <div class="flex space-x-3">
+                                    <button id="save-preset-btn" class="flex-1 py-2 px-4 bg-green-600 hover:bg-green-500 rounded-lg transition font-semibold" data-i18n="save_preset">프리셋 저장</button>
+                                    <button id="apply-appearance-btn" class="flex-1 py-2 px-4 bg-blue-600 hover:bg-blue-500 rounded-lg transition font-semibold" data-i18n="apply">적용</button>
+                                    <button id="reset-appearance-btn" class="flex-1 py-2 px-4 bg-gray-600 hover:bg-gray-500 rounded-lg transition font-semibold" data-i18n="reset">초기화</button>
+                                </div>
+                            </div>
+                            <div id="tab-content-controls" class="tab-content hidden space-y-4 text-gray-300">
+                                <div class="space-y-2 text-sm sm:text-base">
+                                    <div class="flex justify-between items-center p-2 rounded-lg hover:bg-gray-700">
+                                        <span data-i18n="left_4">좌측 4</span>
+                                        <div class="keybind-box w-28 text-center" data-key-id="L4"></div>
+                                    </div>
+                                    <div class="flex justify-between items-center p-2 rounded-lg hover:bg-gray-700">
+                                        <span data-i18n="left_3">좌측 3</span>
+                                        <div class="keybind-box w-28 text-center" data-key-id="L3"></div>
+                                    </div>
+                                    <div class="flex justify-between items-center p-2 rounded-lg hover:bg-gray-700">
+                                        <span data-i18n="left_2">좌측 2</span>
+                                        <div class="keybind-box w-28 text-center" data-key-id="L2"></div>
+                                    </div>
+                                    <div class="flex justify-between items-center p-2 rounded-lg hover:bg-gray-700">
+                                        <span data-i18n="left_1">좌측 1</span>
+                                        <div class="keybind-box w-28 text-center" data-key-id="L1"></div>
+                                    </div>
+                                    <div class="flex justify-between items-center p-2 rounded-lg hover:bg-gray-700">
+                                        <span data-i18n="center">중앙</span>
+                                        <div class="keybind-box w-28 text-center" data-key-id="C1"></div>
+                                    </div>
+                                    <div class="flex justify-between items-center p-2 rounded-lg hover:bg-gray-700">
+                                        <span data-i18n="right_1">우측 1</span>
+                                        <div class="keybind-box w-28 text-center" data-key-id="R1"></div>
+                                    </div>
+                                    <div class="flex justify-between items-center p-2 rounded-lg hover:bg-gray-700">
+                                        <span data-i18n="right_2">우측 2</span>
+                                        <div class="keybind-box w-28 text-center" data-key-id="R2"></div>
+                                    </div>
+                                    <div class="flex justify-between items-center p-2 rounded-lg hover:bg-gray-700">
+                                        <span data-i18n="right_3">우측 3</span>
+                                        <div class="keybind-box w-28 text-center" data-key-id="R3"></div>
+                                    </div>
+                                    <div class="flex justify-between items-center p-2 rounded-lg hover:bg-gray-700">
+                                        <span data-i18n="right_4">우측 4</span>
+                                        <div class="keybind-box w-28 text-center" data-key-id="R4"></div>
+                                    </div>
+                                </div>
+                                <div class="pt-4 text-center">
+                                    <p id="keybind-status-label" class="h-6 text-yellow-400"></p>
+                                    <button id="save-keybinds-btn" class="mt-2 w-full max-w-xs py-2 bg-blue-600 hover:bg-blue-500 rounded transition" data-i18n="save">저장</button>
+                                </div>
+                            </div>
+                            <div id="tab-content-help" class="tab-content hidden space-y-6 text-gray-300 text-sm">
+                                <div>
+                                    <h3 class="text-xl font-semibold mb-2 text-white">1. 플레이 방법 및 화면 조작</h3>
+                                    <ul class="list-disc list-inside space-y-1">
+                                        <li><strong>기본 목표:</strong> 화면 위에서 아래로 내려오는 노트를 판정선에 맞춰 정확한 타이밍에 처리하는 리듬 게임입니다.</li>
+                                        <li><strong>조작:</strong> 각 레인(세로줄)에 해당하는 키보드 키를 눌러 노트를 처리합니다. 기본 조작키는 <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">A</kbd> <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">S</kbd> <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">D</kbd> <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">F</kbd> / <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Space</kbd> / <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">J</kbd> <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">K</kbd> <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">L</kbd> <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">;</kbd>이며, '환경설정 &gt; 조작' 탭에서 변경할 수 있습니다.</li>
+                                        <li><strong>일시정지:</strong> 게임 플레이 중 <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">ESC</kbd> 키를 누르거나 일시정지 버튼을 누르면 게임을 일시정지하거나 다시 시작할 수 있습니다.</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-semibold mb-2 text-white">2. 노트의 종류</h3>
+                                    <ul class="list-disc list-inside space-y-1">
+                                        <li><strong class="text-blue-400">일반 노트 (파란색):</strong> 가장 기본적인 노트입니다. 판정선에 맞춰 한 번 누르면 처리됩니다.</li>
+                                        <li><strong class="text-purple-400">롱노트 (보라색):</strong> 긴 막대 형태의 노트입니다. 시작 지점에서 키를 누른 상태를 유지하고, 끝 지점에서 정확하게 키를 떼야 합니다.</li>
+                                        <li><strong class="text-red-400">가짜 노트 (붉은색):</strong> 함정 노트입니다. 절대로 누르지 말고 그대로 통과시켜야 PERFECT 판정을 받으며, 잘못 누르면 MISS가 됩니다. 랜덤 모드에서는 '어려움' 난이도 또는 세부 설정에서 확률을 직접 조절할 때 등장합니다.</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-semibold mb-2 text-white">3. 점수 계산과 종료 화면</h3>
+                                    <ul class="list-disc list-inside space-y-1">
+                                        <li><strong>판정:</strong> 정확도에 따라 PERFECT, GOOD, BAD, MISS 네 가지로 나뉩니다. GOOD 이상의 판정은 콤보를 쌓고 점수를 줍니다.</li>
+                                        <li><strong>콤보:</strong> 연속으로 GOOD 이상 판정을 받으면 콤보가 쌓이며, 높은 콤보는 더 많은 추가 점수를 제공합니다.</li>
+                                        <li><strong>종료 화면:</strong> 곡이 끝나면 최종 점수, 판정별 노트 수, 그리고 성과에 따른 최종 랭크(S, A, B, C)가 표시됩니다.</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-semibold mb-2 text-white">4. 메인 메뉴 설정 가이드</h3>
+                                    <ul class="list-disc list-inside space-y-1">
+                                        <li><strong>게임 모드:</strong> 노트가 자동으로 생성되는 '랜덤 모드'와 직접 만든 차트를 플레이하는 '뮤직 모드'를 선택할 수 있습니다.</li>
+                                        <li><strong>레인 수 조정:</strong> 4레인부터 8레인까지 원하는 플레이 환경을 선택할 수 있습니다.</li>
+                                        <li>
+                                            <strong>난이도 조절 (랜덤 모드 전용):</strong>
+                                            <ul class="list-circle list-inside ml-4 mt-1 space-y-1">
+                                                <li><strong>간단 설정:</strong> '쉬움', '보통', '어려움' 버튼으로 난이도를 선택합니다. '어려움'에서는 가짜 노트가 등장합니다.</li>
+                                                <li><strong>세부 설정:</strong> 화살표 아이콘을 눌러 노트 하강 속도, 노트 생성 속도, 동시타 확률, 최대 동시타 수, 동시타 내 노트 타입 비율, 롱노트 확률, 가짜 노트 등장 여부 및 확률을 세밀하게 조절할 수 있습니다.</li>
+                                            </ul>
+                                        </li>
+                                        <li><strong>뮤직 모드:</strong> '차트 불러오기'로 JSON 차트 파일을, '음악 불러오기'로 차트가 요구하는 음악 파일을 각각 불러온 뒤 게임을 시작합니다.</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-semibold mb-2 text-white">5. 환경설정 (톱니바퀴 아이콘)</h3>
+                                    <ul class="list-disc list-inside space-y-1">
+                                        <li><strong>음량:</strong> 배경 음악(BGM)과 효과음(SFX)의 크기를 각각 조절합니다.</li>
+                                        <li><strong>모양:</strong> 노트의 형태(막대형 / 원형)와 색상 모드(노트별 색상 / 레인별 색상)를 설정합니다. 노트별 색상 모드에서는 일반·롱·가짜 노트의 색을 개별 지정할 수 있으며, 자주 쓰는 설정을 최대 3개의 색상 프리셋으로 저장하고 불러올 수 있습니다.</li>
+                                        <li><strong>조작:</strong> 게임 플레이에 사용할 키를 직접 설정합니다. 키 박스를 클릭한 뒤 원하는 키를 누르면 변경되며, 변경 후에는 반드시 '저장' 버튼을 눌러야 적용됩니다.</li>
+                                        <li><strong>기타:</strong> 인터페이스 언어(한국어 / English) 전환, 디버그 오버레이 활성화 옵션이 있습니다.</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-semibold mb-2 text-white">6. 에디터 사용법</h3>
+                                    <p class="mb-2">자신만의 차트를 만드는 공간입니다.</p>
+                                    <ul class="list-disc list-inside space-y-1">
+                                        <li><strong>기본 설정:</strong> 음악 파일, BPM(곡 빠르기), 음악 시작 시간(초), 차트 파일명을 설정합니다. 차트를 저장하려면 반드시 음악 파일을 먼저 불러와야 합니다.</li>
+                                        <li><strong>노트 종류 선택:</strong> 상단 버튼 또는 단축키 <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">1</kbd> (일반) / <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">2</kbd> (롱노트) / <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">3</kbd> (가짜)로 배치할 노트 종류를 선택합니다.</li>
+                                        <li><strong>노트 배치:</strong> 타임라인의 원하는 위치를 클릭하여 노트를 배치하거나 삭제합니다. 재생 중에도 키보드로 레인에 노트를 직접 찍을 수 있습니다. (레인 단축키: <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Q</kbd> <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">W</kbd> <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">E</kbd> <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">R</kbd> <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">T</kbd> <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Y</kbd> <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">U</kbd> <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">I</kbd> <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">O</kbd>)</li>
+                                        <li><strong>스냅 설정:</strong> 드롭다운으로 노트가 배치될 타이밍 격자의 세밀함을 조절합니다. (4분음표, 8분음표 등)</li>
+                                        <li><strong>트리거:</strong> 차트 중간에 BPM이나 노트 속도를 변경할 지점을 설정합니다. 타임라인에 노란 선으로 표시됩니다.</li>
+                                        <li><strong>마디 조절:</strong> '+'와 '-' 버튼으로 차트의 전체 길이를 자유롭게 조절할 수 있습니다.</li>
+                                        <li><strong>미리보기:</strong> '재생/일시정지'로 차트를 재생하면 우측 게임 화면에서 노트 낙하를 실시간으로 미리 볼 수 있습니다. 미리보기 레인 수를 별도로 설정할 수도 있습니다.</li>
+                                        <li><strong>관리:</strong> '저장'으로 차트를 JSON 파일로 내보내고, '열기'로 기존 차트를 불러옵니다. '재설정'은 배치된 노트를 모두 삭제합니다. <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Ctrl</kbd>+<kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Z</kbd>로 직전 작업을 취소할 수 있습니다. (최대 50단계)</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-semibold mb-2 text-white">7. 문의</h3>
+                                    <p>버그 리포트 및 기타 문의는 디스코드 서버 또는 개인 DM으로 연락 바랍니다.</p>
+                                </div>
+                            </div>
+                            <div id="tab-content-etc" class="tab-content hidden">
+                                <div>
+                                    <h3 class="text-xl font-semibold mb-2 text-white flex items-center gap-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <circle cx="12" cy="12" r="10"/>
+                                            <line x1="2" y1="12" x2="22" y2="12"/>
+                                            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                                        </svg>
+                                        <span data-i18n="language">언어 / Language</span>
+                                    </h3>
+                                    <div class="flex gap-3 mt-3">
+                                        <button id="lang-ko" class="flex-1 py-2 px-4 bg-gray-700 hover:bg-gray-600 rounded-lg transition font-semibold active">한국어</button>
+                                        <button id="lang-en" class="flex-1 py-2 px-4 bg-gray-700 hover:bg-gray-600 rounded-lg transition font-semibold">English</button>
+                                    </div>
+                                </div>
+                                <div class="border-t border-gray-700 pt-4 mt-4">
+                                    <h3 class="text-xl font-semibold mb-2 text-white" data-i18n="debug_mode">디버그 모드</h3>
+                                    <div class="flex items-center justify-between text-sm">
+                                        <label for="debug-mode-toggle" data-i18n="debug_overlay">디버그 오버레이 활성화</label>
+                                        <input id="debug-mode-toggle" type="checkbox" class="h-5 w-5 bg-gray-700 rounded border-gray-600 text-blue-500 focus:ring-blue-500">
+                                    </div>
+                                </div>
+                                <div class="border-t border-gray-700 pt-4 mt-4">
+                                    <h3 class="text-xl font-semibold mb-2 text-white" data-i18n="info">정보</h3>
+                                    <div class="text-gray-400 text-sm space-y-1">
+                                        <p>(c) 2025-2026 TheCFG All Rights Reserved.</p>
+                                        <p>Dedicated by TheCFG,</p>
+                                        <p>Created with Google AI Studio & Claude,</p>
+                                        <p>Published with Netlify</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <button id="settings-back-btn" class="w-full py-3 text-lg font-bold bg-gray-600 hover:bg-gray-500 rounded-lg transition mt-4 flex-shrink-0" data-i18n="back">돌아가기</button>
+                    </div>
+                </div>
+                <!-- Result Screen -->
+                <div id="result-screen" class="hidden h-full flex flex-col justify-center items-center text-center overflow-y-auto" style="-webkit-overflow-scrolling: touch;">
+                    <h2 class="text-4xl sm:text-5xl font-bold mb-4 text-white" data-i18n="game_result">게임 결과</h2>
+                    <div class="w-full bg-gray-700 p-6 rounded-lg">
+                        <p class="text-2xl text-gray-400 mb-2" data-i18n="final_score">최종 점수</p>
+                        <p id="final-score" class="text-5xl sm:text-6xl font-bold mb-6">0</p>
+                        <p class="text-2xl text-gray-400 mb-2" data-i18n="rank">랭크</p>
+                        <p id="rank" class="text-6xl sm:text-7xl font-bold text-yellow-400 mb-8">C</p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-lg sm:text-xl">
+                            <p><span data-i18n="perfect">PERFECT</span>: <span id="final-perfect">0</span></p>
+                            <p><span data-i18n="good">GOOD</span>: <span id="final-good">0</span></p>
+                            <p><span data-i18n="bad">BAD</span>: <span id="final-bad">0</span></p>
+                            <p><span data-i18n="miss">MISS</span>: <span id="final-miss">0</span></p>
+                        </div>
+                    </div>
+                    <button id="back-to-menu-btn" class="mt-8 w-full max-w-sm py-4 text-xl font-bold bg-blue-600 hover:bg-blue-500 rounded-lg transition" style="margin-bottom: var(--safe-bottom, 80px);" data-i18n="main_menu">메인으로 돌아가기</button>
+                </div>
+                <!-- Editor Screen -->
+                <div id="editor-screen" class="hidden flex flex-col h-full text-white overflow-y-auto" style="-webkit-overflow-scrolling: touch;">
+                    <div class="flex-shrink-0 touch-auto">
+                        <h2 class="text-3xl font-bold mb-4" data-i18n="editor_title">차트 에디터<span id="editor-dirty-indicator" class="text-yellow-400 ml-2"></span></h2>
+                        <div id="editor-message" class="hidden p-3 mb-4 text-center bg-red-500 rounded-lg"></div>
+                        <!-- 상단 컨트롤 영역 -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-800 rounded-lg">
+                            <!-- 1. 음악 설정 -->
+                            <div class="flex flex-col space-y-2">
+                                <h3 class="text-lg font-semibold border-b border-gray-600 pb-1">음악 설정</h3>
+                                <div class="flex items-center space-x-2">
+                                    <label for="audio-file-input-editor" class="cursor-pointer text-center flex-1 py-2 px-3 bg-teal-600 hover:bg-teal-500 rounded transition text-sm">음악 불러오기</label>
+                                    <input type="file" id="audio-file-input-editor" accept="*" class="hidden">
+                                    <span id="audio-file-name-editor" class="text-xs text-gray-400 flex-1 truncate">선택된 파일 없음</span>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <label for="editor-start-time" class="text-sm">시작(초):</label>
+                                    <input type="number" id="editor-start-time" value="0" min="0" class="w-20 p-1 bg-gray-700 rounded text-sm">
+                                </div>
+                                <!-- [수정] 재생/정지 버튼과 미리보기 레인 선택 추가 -->
+                                <div class="flex items-center space-x-2">
+                                    <label for="editor-preview-lanes" class="text-sm">미리보기:</label>
+                                    <select id="editor-preview-lanes" class="p-1 bg-gray-700 rounded text-sm flex-1">
+                                        <option value="4" selected>4레인</option>
+                                        <option value="5">5레인</option>
+                                        <option value="6">6레인</option>
+                                        <option value="7">7레인</option>
+                                        <option value="8">8레인</option>
+                                    </select>
+                                </div>
+                                <div class="flex items-center space-x-2 pt-1">
+                                    <button id="editor-play-btn" class="flex-1 py-1 px-2 bg-green-600 hover:bg-green-500 rounded text-sm">재생</button>
+                                    <button id="editor-stop-btn" class="flex-1 py-1 px-2 bg-gray-500 hover:bg-gray-400 rounded text-sm">정지</button>
+                                </div>
+                            </div>
+                            <!-- 2. 차트 설정 (변경 없음) -->
+                            <div class="flex flex-col space-y-2">
+                                <h3 class="text-lg font-semibold border-b border-gray-600 pb-1">차트 설정</h3>
+                                <div class="flex items-center space-x-2">
+                                    <label for="bpm-input" class="text-sm">BPM:</label>
+                                    <input type="number" id="bpm-input" value="120" class="w-20 p-1 bg-gray-700 rounded text-sm">
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <label for="editor-note-spawn-speed" class="text-sm">노트속도:</label>
+                                    <input type="number" id="editor-note-spawn-speed" value="1.5" step="0.1" min="0.5" max="3.0" class="w-20 p-1 bg-gray-700 rounded text-sm">
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <label for="editor-note-fall-speed" class="text-sm">하강속도:</label>
+                                    <input type="number" id="editor-note-fall-speed" value="7" min="1" max="20" class="w-20 p-1 bg-gray-700 rounded text-sm">
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <label for="editor-snap-selector" class="text-sm">분할:</label>
+                                    <select id="editor-snap-selector" class="p-1 bg-gray-700 rounded text-sm">
+                                        <option value="4">1/4</option>
+                                        <option value="8">1/8</option>
+                                        <option value="12">1/12</option>
+                                        <option value="16">1/16</option>
+                                        <option value="24">1/24</option>
+                                        <option value="32">1/32</option>
+                                    </select>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <label class="text-sm">마디:</label>
+                                    <button id="editor-add-measure-btn" class="px-2 py-0.5 bg-gray-600 hover:bg-gray-500 rounded text-sm">+</button>
+                                    <button id="editor-remove-measure-btn" class="px-2 py-0.5 bg-gray-600 hover:bg-gray-500 rounded text-sm">-</button>
+                                </div>
+                                <div id="editor-note-type-selector" class="flex space-x-2 btn-group pt-1">
+                                    <button data-type="tap" class="w-10 h-8 bg-blue-500 hover:bg-blue-400 rounded transition active" title="기본 노트"></button>
+                                    <button data-type="long" class="w-10 h-8 bg-purple-500 hover:bg-purple-400 rounded transition" title="롱 노트"></button>
+                                    <button data-type="false" class="w-10 h-8 bg-red-400 hover:bg-red-300 rounded transition" title="가짜 노트"></button>
+                                    <button data-type="trigger" class="w-10 h-8 bg-yellow-500 hover:bg-yellow-400 rounded transition" title="설정 트리거">⚙️</button>
+                                </div>
+                            </div>
+                            <!-- 3. 관리 -->
+                            <div class="flex flex-col space-y-2">
+                                <h3 class="text-lg font-semibold border-b border-gray-600 pb-1">관리</h3>
+                                <!-- [수정] 저장 버튼과 파일명 입력 칸 추가 -->
+                                <div class="flex items-center space-x-2">
+                                    <input type="text" id="editor-chart-filename" placeholder="파일명" class="flex-grow p-1 bg-gray-700 rounded text-sm min-w-0">
+                                    <button id="editor-save-btn" class="py-1 px-2 bg-blue-600 hover:bg-blue-500 rounded text-sm">저장</button>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2 pt-1">
+                                    <button id="editor-load-btn" class="py-1 px-2 bg-purple-600 hover:bg-purple-500 rounded text-sm">열기</button>
+                                    <button id="editor-reset-btn" class="py-1 px-2 bg-red-700 hover:bg-red-600 rounded text-sm">재설정</button>
+                                    <button id="editor-back-btn" class="col-span-2 py-1 px-2 bg-gray-600 hover:bg-gray-500 rounded text-sm">메인 메뉴</button>
+                                </div>
+                            </div>
+                        </div>
+                        <p id="editor-status-label" class="text-yellow-400 text-center h-5 mt-2"></p>
+                    </div>
+                    <!-- 악보 편집 영역 -->
+                    <div class="flex-grow relative bg-black min-h-0 mt-4" id="editor-container">
+                        <div id="editor-timeline">
+                            <div id="editor-grid-container"></div>
+                            <div id="editor-notes-container">
+                                <div id="editor-playhead"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <input type="file" id="editor-load-input" class="hidden" accept="*">
+                </div>
+            </div>
+        </div>
+        <div id="debug-overlay" class="hidden">
+            <h3 class="title">디버그 모드</h3>
+            <div class="debug-content-area">
+                <!-- 1. 성능 프로파일러 섹션 -->
+                <div class="debug-section">
+                    <h4 class="debug-section-title">성능</h4>
+                    <div id="debug-perf-container" class="debug-container"></div>
+                </div>
+                <!-- 2. 실시간 상태 뷰어 섹션 -->
+                <div class="debug-section">
+                    <h4 class="debug-section-title">게임 상태 (실시간)</h4>
+                    <div id="debug-state-container" class="debug-container">
+                        <pre></pre>
+                    </div>
+                </div>
+                <!-- 3. 에러 로그 섹션 -->
+                <div class="debug-section">
+                    <h4 class="debug-section-title">에러 로그</h4>
+                    <div id="debug-log-container" class="debug-container"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Trigger Settings Modal -->
+        <div id="trigger-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+            <div class="bg-gray-800 rounded-lg p-6 max-w-md w-full">
+                <h3 class="text-xl font-bold text-white mb-4">설정 트리거 배치</h3>
+                <p class="text-gray-300 text-sm mb-4">이 시점부터 BPM, 노트 속도, 하강 속도를 변경합니다.</p>
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-sm text-gray-300">BPM:</label>
+                        <input type="number" id="trigger-bpm" class="w-full p-2 bg-gray-700 rounded text-white" value="120">
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-300">노트 속도:</label>
+                        <input type="number" id="trigger-spawn-speed" class="w-full p-2 bg-gray-700 rounded text-white" value="1.5" step="0.1">
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-300">하강 속도:</label>
+                        <input type="number" id="trigger-fall-speed" class="w-full p-2 bg-gray-700 rounded text-white" value="7">
+                    </div>
+                </div>
+                <div class="flex space-x-3 mt-6">
+                    <button id="trigger-confirm-btn" class="flex-1 py-2 bg-green-600 hover:bg-green-500 rounded text-white">배치</button>
+                    <button id="trigger-cancel-btn" class="flex-1 py-2 bg-gray-600 hover:bg-gray-500 rounded text-white">취소</button>
+                </div>
+            </div>
+        </div>
+        
+        <audio id="music-player"></audio>
+        
+        <!-- Fix mobile viewport height and browser navigation bar -->
+        <script>
+            // 모바일 브라우저의 실제 뷰포트 높이 계산
+            function setViewportHeight() {
+                // window.innerHeight는 모바일 브라우저 UI를 제외한 실제 가용 높이
+                const vh = window.innerHeight * 0.01;
+                document.documentElement.style.setProperty('--vh', `${vh}px`);
+                
+                // 안전 영역 하단 여백 계산 (브라우저 네비게이션 바 고려)
+                const safeBottom = Math.max(
+                    parseInt(getComputedStyle(document.documentElement).getPropertyValue('env(safe-area-inset-bottom)')) || 0,
+                    80 // 기본 여백 (브라우저 UI 높이)
+                );
+                document.documentElement.style.setProperty('--safe-bottom', `${safeBottom}px`);
+            }
+            
+            // 초기 설정
+            setViewportHeight();
+            
+            // 화면 크기 변경, 회전, 스크롤 시 재계산
+            window.addEventListener('resize', setViewportHeight);
+            window.addEventListener('orientationchange', setViewportHeight);
+            
+            // 주소창 숨김/보임 감지를 위한 스크롤 이벤트
+            let ticking = false;
+            window.addEventListener('scroll', () => {
+                if (!ticking) {
+                    window.requestAnimationFrame(() => {
+                        setViewportHeight();
+                        ticking = false;
+                    });
+                    ticking = true;
+                }
+            }, { passive: true });
+        </script>
+        
+        <!-- JavaScript Files -->
+        <script defer src="js/beat/config.js"></script>
+        <script defer src="js/beat/dom.js"></script>
+        <script defer src="js/beat/audio.js"></script>
+        <script defer src="js/beat/i18n.js"></script>
+        <script defer src="js/beat/appearance.js"></script>
+        <script defer src="js/beat/ui.js"></script>
+        <script defer src="js/beat/editor.js"></script>
+        <script defer src="js/beat/game.js"></script>
+        <script defer src="js/beat/main.js"></script>
+    </body>
+</html>

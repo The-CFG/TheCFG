@@ -1,0 +1,201 @@
+/* ════════════════════════════════════════════════
+   디시전 편집기
+════════════════════════════════════════════════ */
+
+.decisions-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--bg-editor);
+    position: relative;
+}
+
+.decisions-form-panel {
+    position: absolute;
+    inset: 0;
+    overflow-y: auto;
+    background: var(--bg-editor);
+}
+.decisions-form-panel.hidden { display: none; }
+#decisions-placeholder.hidden { display: none; }
+
+.decisions-form-inner {
+    max-width: 740px;
+    margin: 0 auto;
+    padding: 20px 24px 48px;
+}
+
+.decisions-form-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    gap: 8px;
+}
+
+/* 카테고리 탭 */
+.dec-cat-tabs {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-bottom: 4px;
+}
+.dec-cat-tab {
+    width: 100%;
+    text-align: left;
+    padding: 5px 8px;
+    font-size: 12px;
+    background: transparent;
+    color: var(--text-normal);
+    border: 1px solid transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.dec-cat-tab:hover  { background: var(--bg-hover); }
+.dec-cat-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.dec-cat-tab.dec-cat-add {
+    color: var(--text-muted);
+    border: 1px dashed var(--border);
+    font-size: 11px;
+    margin-top: 2px;
+}
+.dec-cat-tab.dec-cat-add:hover { color: var(--accent); border-color: var(--accent); }
+
+/* 디시전 목록 */
+.dec-list {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    max-height: 340px;
+    overflow-y: auto;
+}
+.dec-list-empty {
+    color: var(--text-muted);
+    font-size: 12px;
+    padding: 8px 4px;
+}
+
+/* 디시전 카드 */
+.dec-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 6px 8px;
+    border-radius: 5px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    background: transparent;
+    transition: background 0.1s;
+}
+.dec-card:hover    { background: var(--bg-hover); }
+.dec-card.selected {
+    background: var(--accent-dim, rgba(99,102,241,0.15));
+    border-color: var(--accent);
+}
+.dec-card-icon   {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    line-height: 1;
+    border-radius: 4px;
+    overflow: hidden;
+    background: var(--bg-sidebar, rgba(255,255,255,0.04));
+}
+.dec-card-icon img { width: 100%; height: 100%; object-fit: contain; }
+.dec-card-info   { flex: 1; min-width: 0; }
+.dec-card-id     {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-normal);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.dec-card-sub    { font-size: 10px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dec-card-badges { display: flex; gap: 3px; margin-top: 2px; flex-wrap: wrap; }
+
+/* 배지 */
+.dec-badge          { display: inline-block; font-size: 9px; padding: 1px 5px; border-radius: 10px; font-weight: 600; }
+.dec-badge-mission  { background: rgba(245,158,11,0.2); color: #b45309; }
+.dec-badge-targeted { background: rgba(99,102,241,0.15); color: var(--accent); }
+
+/* 폼 헤더 안 배지 */
+span.dec-badge-mission  { font-size: 10px; padding: 2px 8px; display: inline-block; border-radius: 10px; background: rgba(245,158,11,0.2); color: #b45309; font-weight: 600; }
+span.dec-badge-targeted { font-size: 10px; padding: 2px 8px; display: inline-block; border-radius: 10px; background: rgba(99,102,241,0.15); color: var(--accent); font-weight: 600; }
+
+/* RAW 편집 */
+.dec-raw-wrap {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    box-sizing: border-box;
+    padding: 16px;
+    gap: 10px;
+}
+.dec-raw-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+.dec-raw-title   { font-size: 14px; }
+.dec-raw-actions { display: flex; gap: 6px; }
+.dec-raw-fullarea {
+    flex: 1;
+    width: 100%;
+    box-sizing: border-box;
+    font-family: monospace;
+    font-size: 12px;
+    resize: none;
+}
+
+/* 접기/펼치기 섹션 */
+.dec-collapsible { margin-bottom: 8px; }
+.dec-section-header {
+    padding: 6px 8px;
+    background: var(--bg-section-header, var(--bg-sidebar));
+    border-radius: 4px;
+    user-select: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.dec-section-header:hover { background: var(--bg-hover); }
+.dec-section-arrow { font-size: 10px; color: var(--text-muted); }
+.dec-section-body  { padding: 10px 4px 4px; }
+
+[data-theme="light"] .dec-section-header       { background: #f0f0f0; }
+[data-theme="light"] .dec-section-header:hover { background: #e4e4e4; }
+
+/* raw textarea */
+.dec-raw-ta {
+    width: 100%;
+    min-height: 80px;
+    font-family: monospace;
+    font-size: 11px;
+    box-sizing: border-box;
+    resize: vertical;
+}
+
+/* 부제목: ID 바탕 로컬라이징 이름 */
+.dec-card-locname {
+    font-size: 10px;
+    font-weight: 400;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

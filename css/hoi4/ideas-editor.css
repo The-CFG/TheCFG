@@ -1,0 +1,195 @@
+/* ════════════════════════════════════════════════
+   아이디어(국민정신) 편집기
+════════════════════════════════════════════════ */
+
+/* 메인 영역 */
+.ideas-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--bg-editor);
+    position: relative;
+}
+
+/* 폼 패널 */
+.ideas-form-panel {
+    position: absolute;
+    inset: 0;
+    overflow-y: auto;
+    background: var(--bg-editor);
+}
+.ideas-form-panel.hidden { display: none; }
+
+#ideas-placeholder.hidden { display: none; }
+
+/* 폼 내부 레이아웃 */
+.ideas-form-inner {
+    max-width: 740px;
+    margin: 0 auto;
+    padding: 20px 24px 48px;
+}
+
+/* 폼 헤더 */
+.ideas-form-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+/* 카테고리 탭 */
+.ideas-cat-tabs {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-bottom: 4px;
+}
+.ideas-cat-tab {
+    width: 100%;
+    text-align: left;
+    padding: 5px 8px;
+    font-size: 12px;
+    background: transparent;
+    color: var(--text-normal);
+    border: 1px solid transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.ideas-cat-tab:hover  { background: var(--bg-hover); }
+.ideas-cat-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.ideas-cat-tab.ideas-cat-add {
+    color: var(--text-muted);
+    border: 1px dashed var(--border);
+    font-size: 11px;
+    margin-top: 2px;
+}
+.ideas-cat-tab.ideas-cat-add:hover { color: var(--accent); border-color: var(--accent); }
+
+/* 아이디어 목록 */
+.ideas-list {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    max-height: 380px;
+    overflow-y: auto;
+}
+
+/* 아이디어 카드 */
+.idea-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 6px 8px;
+    border-radius: 5px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    background: var(--bg-sidebar-item, transparent);
+    transition: background 0.1s;
+}
+.idea-card:hover   { background: var(--bg-hover); }
+.idea-card.selected {
+    background: var(--accent-dim, rgba(99,102,241,0.15));
+    border-color: var(--accent);
+}
+.idea-card-icon {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    line-height: 1;
+    border-radius: 4px;
+    overflow: hidden;
+    background: var(--bg-sidebar, rgba(255,255,255,0.04));
+}
+.idea-card-icon img { width: 100%; height: 100%; object-fit: contain; }
+.idea-card-info { flex: 1; min-width: 0; }
+/* 메인 제목: ID */
+.idea-card-id   {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-normal);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.idea-card-comment { font-size: 10px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* RAW 카테고리 섹션 (좌측 안내) */
+.ideas-raw-section {
+    padding: 4px 0;
+}
+.ideas-raw-ta {
+    resize: vertical;
+}
+
+/* RAW 편집 화면 (메인 패널 전체) */
+.ideas-raw-edit-wrap {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    box-sizing: border-box;
+    padding: 16px;
+    gap: 10px;
+}
+.ideas-raw-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+.ideas-raw-title {
+    font-size: 14px;
+}
+.ideas-raw-actions {
+    display: flex;
+    gap: 6px;
+}
+.ideas-raw-fullarea {
+    flex: 1;
+    width: 100%;
+    box-sizing: border-box;
+    font-family: monospace;
+    font-size: 12px;
+    resize: none;
+}
+
+/* 접기/펼치기 섹션 */
+.ideas-collapsible {
+    margin-bottom: 8px;
+}
+.ideas-section-header {
+    padding: 6px 8px;
+    background: var(--bg-section-header, var(--bg-sidebar));
+    border-radius: 4px;
+    user-select: none;
+}
+.ideas-section-header:hover { background: var(--bg-hover); }
+.ideas-section-arrow { font-size: 10px; color: var(--text-muted); }
+.ideas-section-body  { padding: 10px 4px 4px; }
+
+[data-theme="light"] .ideas-section-header {
+    background: #f0f0f0;
+}
+[data-theme="light"] .ideas-section-header:hover {
+    background: #e4e4e4;
+}
+/* 부제목: ID 바탕 로컬라이징 이름 */
+.idea-card-locname {
+    font-size: 10px;
+    font-weight: 400;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

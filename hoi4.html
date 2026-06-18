@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
+    <title>TheCFG HOI4 Mod Editor</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="css/hoi4/style.css">
+    <link rel="stylesheet" href="css/hoi4/localisation.css">
+    <link rel="stylesheet" href="css/hoi4/focus-editor.css">
+    <link rel="stylesheet" href="css/hoi4/script-block.css">
+    <link rel="stylesheet" href="css/hoi4/collab.css">
+    <link rel="stylesheet" href="css/hoi4/gfx-editor.css">
+    <link rel="stylesheet" href="css/hoi4/ideas-editor.css">
+    <link rel="stylesheet" href="css/hoi4/decisions-editor.css">
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════
+     홈 화면
+════════════════════════════════════════════════ -->
+<div id="home-view" class="view-fullscreen home-bg">
+    <div class="home-card">
+        <h1 class="home-title">TheCFG HOI4 Mod Editor</h1>
+        <p class="home-subtitle">v0.8 · 2026.05.12</p>
+
+        <!-- 새 프로젝트 -->
+        <div class="home-new-row">
+            <input type="text" id="new-project-name" placeholder="새 모드 이름 (예: MyMod)">
+            <button id="btn-create-project">만들기</button>
+        </div>
+
+        <!-- 열기 버튼 그리드 -->
+        <div class="home-open-grid">
+            <button id="btn-open-project-zip" class="home-open-btn">
+                <span class="home-open-icon">📦</span>
+                <span>ZIP 열기</span>
+            </button>
+            <button id="btn-open-project-dir" class="home-open-btn">
+                <span class="home-open-icon">📂</span>
+                <span>폴더 열기</span>
+            </button>
+        </div>
+        <input type="file" id="file-loader-project-zip" accept=".zip" style="display:none;">
+        <input type="file" id="file-loader-project-dir" style="display:none;" webkitdirectory multiple>
+
+        <hr class="home-divider">
+
+        <!-- 최근 프로젝트 -->
+        <div class="home-section-label">최근 프로젝트</div>
+        <div id="recent-list"></div>
+        <button id="btn-all-projects" class="home-all-projects-link" style="display:none;">모든 프로젝트 →</button>
+
+        <hr class="home-divider">
+
+        <!-- 로그인 상태 행 -->
+        <div id="home-auth-row" class="home-auth-row">
+            <span class="home-auth-icon">🌐</span>
+            <span id="auth-status-text" class="home-auth-text">로그인되지 않음</span>
+            <button id="btn-open-auth" class="home-auth-btn">로그인</button>
+        </div>
+    </div>
+
+    <!-- 모든 프로젝트 드로어 -->
+    <div id="all-projects-drawer" class="all-projects-drawer">
+        <div class="all-projects-drawer-header">
+            <span class="all-projects-drawer-title">📋 모든 프로젝트</span>
+            <button id="btn-close-all-projects" class="icon-btn" title="닫기">✕</button>
+        </div>
+        <div id="all-projects-list" class="all-projects-list"></div>
+    </div>
+    <div id="all-projects-backdrop" class="all-projects-backdrop"></div>
+</div>
+
+<!-- 프로그레스 모달 — 서버 업로드/다운로드 진행 표시 -->
+<div id="progress-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.75);z-index:10000;align-items:center;justify-content:center;">
+    <div style="background:var(--bg-panel,#3d4548);padding:28px 32px;border-radius:10px;width:min(400px,90vw);border:1px solid var(--border,#b2bec3);display:flex;flex-direction:column;gap:14px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+            <span id="progress-icon" style="font-size:20px;">☁️</span>
+            <span id="progress-title" style="font-weight:600;color:var(--text);font-size:15px;">서버에 저장 중...</span>
+        </div>
+        <div id="progress-detail" style="font-size:12px;color:var(--text-muted);min-height:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+        <div style="background:var(--bg-dark,#2b2f31);border-radius:6px;height:10px;overflow:hidden;">
+            <div id="progress-bar-fill" style="height:100%;width:0%;background:linear-gradient(90deg,#4a9eff,#74c0fc);border-radius:6px;transition:width 0.25s ease;"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);">
+            <span id="progress-step-label"></span>
+            <span id="progress-pct">0%</span>
+        </div>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     파일 선택 모달 (부분 업로드 / 다운로드)
+════════════════════════════════════════════════ -->
+<div id="file-select-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.82);z-index:10001;align-items:center;justify-content:center;">
+    <div style="background:var(--bg-panel,#3d4548);border-radius:10px;width:min(560px,96vw);max-height:88vh;display:flex;flex-direction:column;border:1px solid var(--border,#b2bec3);overflow:hidden;">
+        <!-- 헤더 1행: 타이틀 -->
+        <div style="padding:14px 16px 0;flex-shrink:0;">
+            <span id="fsel-title" style="font-weight:700;font-size:14px;color:var(--text);">파일 선택</span>
+        </div>
+        <!-- 헤더 2행: 전체선택 / 전체해제 + 카운터 -->
+        <div style="padding:10px 16px 0;display:flex;align-items:center;gap:8px;flex-shrink:0;">
+            <button id="fsel-all"  style="font-size:12px;padding:4px 12px;background:#4a9eff;color:#fff;border:none;border-radius:4px;cursor:pointer;">전체 선택</button>
+            <button id="fsel-none" style="font-size:12px;padding:4px 12px;background:#e74c3c;color:#fff;border:none;border-radius:4px;cursor:pointer;">전체 해제</button>
+            <span id="fsel-count" style="font-size:12px;color:var(--text-muted);margin-left:auto;"></span>
+        </div>
+        <!-- 헤더 3행: 검색창 -->
+        <div style="padding:8px 16px 10px;border-bottom:1px solid var(--border,#b2bec3);flex-shrink:0;">
+            <input id="fsel-search" type="text" placeholder="경로 검색..." style="width:100%;box-sizing:border-box;padding:5px 10px;font-size:12px;background:var(--bg-dark,#2b2f31);border:1px solid var(--border,#b2bec3);color:var(--text);border-radius:4px;">
+        </div>
+        <!-- 트리 -->
+        <div id="fsel-tree" style="flex:1;overflow-y:auto;padding:8px 12px;min-height:0;"></div>
+        <!-- 푸터 -->
+        <div style="padding:10px 16px;border-top:1px solid var(--border,#b2bec3);display:flex;justify-content:flex-end;gap:8px;flex-shrink:0;">
+            <button id="fsel-cancel" class="secondary">취소</button>
+            <button id="fsel-confirm">✔ 선택한 파일로 진행</button>
+        </div>
+    </div>
+</div>
+
+<!-- 인증 모달 — body 레벨, 기본 숨김 -->
+<div id="auth-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:9999;align-items:center;justify-content:center;">
+    <div style="background:var(--bg-panel,#3d4548);padding:30px;border-radius:8px;width:min(320px,90vw);border:1px solid var(--border,#b2bec3);">
+        <h2 id="auth-title" style="margin-top:0;color:var(--text);">서버 로그인</h2>
+        <div style="display:flex;flex-direction:column;gap:12px;margin-top:20px;">
+            <input type="email" id="auth-email" placeholder="이메일" style="padding:8px;background:#3c3c3c;border:1px solid #555;color:white;border-radius:4px;">
+            <input type="password" id="auth-password" placeholder="비밀번호" style="padding:8px;background:#3c3c3c;border:1px solid #555;color:white;border-radius:4px;">
+            <button id="btn-auth-execute" style="padding:10px;">로그인</button>
+            <p id="auth-switch" style="font-size:12px;color:var(--text-muted);cursor:pointer;text-align:center;margin:0;">계정이 없으신가요? 회원가입</p>
+            <button id="btn-auth-close" class="secondary">닫기</button>
+        </div>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     프로젝트 탐색기
+════════════════════════════════════════════════ -->
+<div id="explorer-view" class="view-fullscreen hidden">
+    <div class="explorer-layout">
+
+        <!-- 탐색기 사이드바 -->
+        <aside class="explorer-sidebar">
+            <div class="explorer-header">
+                <div class="explorer-title-row">
+                    <button id="btn-explorer-back" class="icon-btn" title="홈으로">⬅</button>
+                    <span id="explorer-project-name" class="explorer-project-name"></span>
+                    <button id="btn-rename-project" class="icon-btn" title="프로젝트 이름 변경">✏</button>
+                </div>
+                <button id="btn-save-project">💾 프로젝트 저장</button>
+                <button id="btn-collab" class="secondary" style="display:none;">👥 공동 작업</button>
+                <button id="btn-explorer-import" class="secondary">📥 파일 가져오기</button>
+            </div>
+            <div id="explorer-tree" class="explorer-tree"></div>
+        </aside>
+
+        <!-- 탐색기 본문 -->
+        <main class="explorer-main">
+            <!-- 파일 미선택 안내 -->
+            <div id="explorer-placeholder" class="explorer-placeholder">
+                <p>👈 왼쪽에서 파일을 선택하거나<br>새 파일을 만드세요.</p>
+                <p class="explorer-placeholder-sub">
+                    폴더 옆 <strong>＋</strong> 버튼으로 새 파일,<br>
+                    <strong>📥</strong> 버튼으로 외부 파일을 가져올 수 있습니다.
+                </p>
+            </div>
+
+            <!-- 로컬라이징 편집기 (인라인) -->
+            <div id="loc-inline-panel" class="loc-inline-panel hidden">
+                <header class="loc-editor-header">
+                    <button id="btn-loc-back" class="icon-btn" title="닫기">✕</button>
+                    <span id="loc-editor-title" class="editor-file-title"></span>
+                    <div class="loc-header-actions">
+                        <button id="btn-loc-save-server">☁️ 서버에 저장</button>
+                        <button id="btn-loc-save-file" class="btn-export">📤 파일 내보내기</button>
+                        <button id="btn-loc-import-file" class="btn-import">📥 파일 불러오기</button>
+                        <button id="btn-loc-raw-edit" class="btn-raw">📝 RAW 편집</button>
+                    </div>
+                </header>
+                <div class="loc-controls">
+                    <input type="text" id="loc-search" placeholder="🔍 ID 또는 이름으로 검색...">
+                    <div class="loc-add-row">
+                        <input type="text" id="loc-new-key" placeholder="새 항목 ID">
+                        <button id="btn-loc-add-entry">＋ 추가</button>
+                    </div>
+                </div>
+                <div id="localisation-list" class="localisation-list loc-editor-body"></div>
+            </div>
+
+            <!-- GFX / DDS / RAW 인라인 에디터 컨테이너 -->
+            <div id="inline-editor-content" style="display:none;position:absolute;inset:0;overflow-y:auto;padding:20px;box-sizing:border-box;"></div>
+        </main>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     국가중점 편집기
+════════════════════════════════════════════════ -->
+<div id="focus-editor-view" class="view-fullscreen hidden">
+    <div class="app-container">
+
+        <!-- 왼쪽 툴바 -->
+        <nav class="left-panel" id="left-panel">
+            <!-- 축소 상태 아이콘 컬럼 -->
+            <div class="collapsed-icons">
+                <button class="col-icon-btn" onclick="document.getElementById('btn-focus-back').click()"       title="탐색기로">⬅</button>
+                <button class="col-icon-btn" onclick="document.getElementById('btn-focus-save-server').click()" title="서버에 저장">☁️</button>
+                <button class="col-icon-btn" onclick="document.getElementById('btn-focus-save-file').click()"   title="파일 내보내기">📤</button>
+                <button class="col-icon-btn" onclick="document.getElementById('btn-focus-import-file').click()" title="파일 불러오기">📥</button>
+                <button class="col-icon-btn" onclick="document.getElementById('btn-focus-raw-edit').click()"    title="RAW 편집">📝</button>
+                <div class="col-divider"></div>
+                <button class="col-icon-btn" onclick="document.getElementById('btn-undo').click()"              title="실행 취소">↩</button>
+                <button class="col-icon-btn" onclick="document.getElementById('btn-redo').click()"              title="다시 실행">↪</button>
+                <div class="col-divider"></div>
+                <button class="col-icon-btn" onclick="document.getElementById('btn-tree-settings').click()"    title="계통도 설정">⚙</button>
+                <button class="col-icon-btn" onclick="document.getElementById('btn-new-focus').click()"        title="새 중점 추가">＋</button>
+                <div class="col-divider"></div>
+                <button class="col-icon-btn" id="btn-sidebar-expand" title="메뉴 펼치기">›</button>
+            </div>
+
+            <div class="menu-container">
+                <div class="editor-nav-row">
+                    <button id="btn-focus-back" class="icon-btn" title="탐색기로">⬅</button>
+                    <span id="focus-editor-title" class="editor-file-title"></span>
+                </div>
+
+                <h3 class="menu-section-title">파일</h3>
+                <button id="btn-focus-save-server">☁️ 서버에 저장</button>
+                <button id="btn-focus-save-file" class="btn-export">📤 파일 내보내기</button>
+                <button id="btn-focus-import-file" class="btn-import">📥 파일 불러오기</button>
+                <button id="btn-focus-raw-edit" class="btn-raw">📝 RAW 편집</button>
+
+                <div class="undo-redo-group">
+                    <button id="btn-undo" disabled>↩ 취소</button>
+                    <button id="btn-redo" disabled>↪ 재실행</button>
+                </div>
+
+                <hr>
+                <h3 class="menu-section-title">편집</h3>
+                <button id="btn-tree-settings">⚙ 계통도 설정</button>
+                <button id="btn-new-focus">＋ 새 중점 추가</button>
+
+                <hr>
+                <h3 class="menu-section-title">노드 표시</h3>
+                <div class="node-display-toggle">
+                    <label class="node-display-radio">
+                        <input type="radio" name="node-display" value="id" checked> ID
+                    </label>
+                    <label class="node-display-radio">
+                        <input type="radio" name="node-display" value="localisation"> 로컬라이징
+                    </label>
+                </div>
+
+                <hr>
+                <div class="stats-info">
+                    <small>총 중점: <span id="focus-count">0</span></small>
+                </div>
+
+                <hr>
+                <!-- 무브패드 토글 + 사이드바 접기 버튼 행 -->
+                <div class="movepad-toggle-row">
+                    <button id="btn-movepad-toggle" class="btn-movepad-toggle">🕹 무브패드 열기</button>
+                    <button id="btn-sidebar-toggle-menu" class="btn-sidebar-toggle-menu" title="메뉴 접기">‹</button>
+                </div>
+
+                <!-- 무브패드 패널 -->
+                <div id="movepad-panel" class="movepad-panel" style="display:none;">
+                    <div class="movepad-selected-label">
+                        <span class="movepad-label-text">선택: <span id="movepad-focus-name">없음</span></span>
+                        <button id="movepad-clear-btn" class="movepad-clear-btn" title="선택 취소">✕</button>
+                    </div>
+                    <!-- 상대위치 기준 ID -->
+                    <div class="movepad-relpos-row" id="movepad-relpos-row">
+                        <label class="movepad-relpos-label">상대 기준</label>
+                        <input type="text" id="movepad-relpos-input" class="movepad-relpos-input"
+                               placeholder="없음 (절대좌표)" autocomplete="off">
+                        <button id="movepad-relpos-clear" class="movepad-clear-btn" title="상대위치 제거">✕</button>
+                    </div>
+                    <div class="movepad-dpad">
+                        <button class="dpad-btn dpad-up"    data-dir="up">▲</button>
+                        <div class="dpad-middle-row">
+                            <button class="dpad-btn dpad-left"  data-dir="left">◀</button>
+                            <button class="dpad-btn dpad-center-btn" title="현재 위치">—</button>
+                            <button class="dpad-btn dpad-right" data-dir="right">▶</button>
+                        </div>
+                        <button class="dpad-btn dpad-down"  data-dir="down">▼</button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- 편집 드로어 -->
+        <aside id="editor-drawer-panel" class="editor-drawer-panel">
+            <div class="panel-header">
+                <h3 id="panel-title">편집</h3>
+                <div class="panel-header-actions">
+                    <button id="btn-panel-delete" class="panel-delete-btn" title="중점 삭제" style="display:none;">🗑</button>
+                    <button id="btn-close-panel" title="닫기">&times;</button>
+                </div>
+            </div>
+            <nav id="panel-toc" class="panel-toc" style="display:none;">
+                <a class="toc-item" data-target="fsec-basic">기본</a>
+                <a class="toc-item" data-target="fsec-coord">좌표</a>
+                <a class="toc-item" data-target="fsec-links">연결</a>
+                <a class="toc-item" data-target="fsec-cond">조건</a>
+                <a class="toc-item" data-target="fsec-effect">효과</a>
+                <a class="toc-item" data-target="fsec-ai">AI</a>
+            </nav>
+            <div id="panel-content" class="panel-content"></div>
+        </aside>
+
+        <!-- 중점 트리 캔버스 -->
+        <main class="main-content">
+
+            <!-- 우상단 오버레이: 필터 아이콘 버튼 + 검색창 -->
+            <div id="focus-overlay-bar" class="focus-overlay-bar">
+                <div id="focus-filter-group" class="focus-filter-group">
+                    <button class="focus-filter-btn" data-filter="FOCUS_FILTER_POLITICAL"           title="정치">🏛</button>
+                    <button class="focus-filter-btn" data-filter="FOCUS_FILTER_RESEARCH"            title="연구">🔬</button>
+                    <button class="focus-filter-btn" data-filter="FOCUS_FILTER_INDUSTRY"            title="산업">🏭</button>
+                    <button class="focus-filter-btn" data-filter="FOCUS_FILTER_MANPOWER"            title="병력">👥</button>
+                    <button class="focus-filter-btn" data-filter="FOCUS_FILTER_STABILITY"           title="안정도">⚖</button>
+                    <button class="focus-filter-btn" data-filter="FOCUS_FILTER_WAR_SUPPORT"         title="전쟁 지지율">🔥</button>
+                    <button class="focus-filter-btn" data-filter="FOCUS_FILTER_ANNEXATION"          title="영토확장">🗺</button>
+                    <button class="focus-filter-btn" data-filter="FOCUS_FILTER_INTERNATIONAL_TRADE" title="국제무역">📦</button>
+                    <button class="focus-filter-btn" data-filter="FOCUS_FILTER_ARMY_XP"             title="육군 경험치">⚔</button>
+                    <button class="focus-filter-btn" data-filter="FOCUS_FILTER_NAVY_XP"             title="해군 경험치">⚓</button>
+                    <button class="focus-filter-btn" data-filter="FOCUS_FILTER_AIR_XP"              title="공군 경험치">✈</button>
+                    <button class="focus-filter-btn" data-filter="FOCUS_FILTER_HISTORICAL"          title="역사적">📜</button>
+                </div>
+                <div id="focus-search-bar" class="focus-search-bar">
+                    <div class="focus-search-input-wrap">
+                        <span class="focus-search-icon">🔍</span>
+                        <input type="text" id="focus-search-input" class="focus-search-input" placeholder="중점 검색...">
+                        <button id="focus-search-clear" class="focus-search-clear" style="display:none;" title="지우기">✕</button>
+                    </div>
+                    <div id="focus-search-dropdown" class="focus-search-dropdown" style="display:none;"></div>
+                </div>
+            </div>
+
+            <div id="center-panel" class="center-panel">
+                <div id="visual-editor-wrap" class="visual-editor-wrap">
+                    <div id="visual-editor"></div>
+                </div>
+            </div>
+
+            <!-- 줌 컨트롤: 스크롤에 영향받지 않도록 center-panel 밖에 배치 -->
+            <div class="zoom-controls" id="zoom-controls">
+                <button id="btn-zoom-out" class="zoom-btn" title="축소">−</button>
+                <span id="zoom-label" class="zoom-label">100%</span>
+                <button id="btn-zoom-in"  class="zoom-btn" title="확대">+</button>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     로컬라이제이션 편집기
+════════════════════════════════════════════════ -->
+<!-- localisation-editor-view: explorer-main 내 loc-inline-panel로 이동됨 -->
+
+<!-- ════════════════════════════════════════════════
+     GFX / DDS 편집기
+════════════════════════════════════════════════ -->
+<div id="gfx-editor-view" class="view-fullscreen hidden">
+    <div class="gfx-editor-layout">
+        <header class="gfx-editor-topbar">
+            <button id="btn-gfx-back" class="icon-btn" title="탐색기로">⬅</button>
+            <span id="gfx-editor-title" class="editor-file-title"></span>
+        </header>
+        <div id="gfx-editor-content" class="gfx-editor-content"></div>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     아이디어 편집기
+════════════════════════════════════════════════ -->
+<div id="ideas-editor-view" class="view-fullscreen hidden">
+    <div class="app-container">
+
+        <!-- 왼쪽 패널 -->
+        <nav class="left-panel" id="ideas-left-panel">
+            <div class="collapsed-icons">
+                <button class="col-icon-btn" onclick="document.getElementById('btn-ideas-back').click()"        title="탐색기로">⬅</button>
+                <button class="col-icon-btn" onclick="document.getElementById('btn-ideas-save-server').click()" title="서버에 저장">☁️</button>
+                <button class="col-icon-btn" onclick="document.getElementById('btn-ideas-export').click()"      title="파일 내보내기">📤</button>
+                <button class="col-icon-btn" onclick="document.getElementById('btn-ideas-import').click()"      title="파일 불러오기">📥</button>
+                <button class="col-icon-btn" onclick="document.getElementById('btn-ideas-raw').click()"         title="RAW 편집">📝</button>
+                <div class="col-divider"></div>
+                <button class="col-icon-btn" onclick="document.getElementById('btn-new-idea').click()"          title="새 아이디어">＋</button>
+                <div class="col-divider"></div>
+                <button class="col-icon-btn" id="btn-ideas-sidebar-expand" title="메뉴 펼치기">›</button>
+            </div>
+
+            <div class="menu-container">
+                <div class="editor-nav-row">
+                    <button id="btn-ideas-back" class="icon-btn" title="탐색기로">⬅</button>
+                    <span id="ideas-editor-title" class="editor-file-title"></span>
+                </div>
+
+                <h3 class="menu-section-title">파일</h3>
+                <button id="btn-ideas-save-server">☁️ 서버에 저장</button>
+                <button id="btn-ideas-export" class="btn-export">📤 파일 내보내기</button>
+                <button id="btn-ideas-import" class="btn-import">📥 파일 불러오기</button>
+                <button id="btn-ideas-raw" class="btn-raw">📝 RAW 편집</button>
+
+                <hr>
+                <h3 class="menu-section-title">카테고리</h3>
+                <div id="ideas-category-tabs" class="ideas-cat-tabs"></div>
+
+                <hr>
+                <h3 class="menu-section-title">아이디어 목록</h3>
+                <div id="ideas-list" class="ideas-list"></div>
+
+                <button id="btn-new-idea" style="width:100%;margin-top:8px;">＋ 새 아이디어</button>
+
+                <hr>
+                <div class="stats-info">
+                    <small>총 아이디어: <span id="ideas-count">0</span></small>
+                </div>
+
+                <div style="margin-top:auto;padding-top:8px;">
+                    <button id="btn-ideas-sidebar-toggle" class="btn-sidebar-toggle-menu" title="메뉴 접기">‹</button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- 메인 영역: 폼 -->
+        <main class="ideas-main">
+            <div id="ideas-placeholder" class="explorer-placeholder">
+                <div>💡</div>
+                <div>아이디어를 선택하거나 새로 추가하세요</div>
+                <p class="explorer-placeholder-sub">왼쪽에서 카테고리와 아이디어를 선택하세요</p>
+            </div>
+            <div id="ideas-form-panel" class="ideas-form-panel hidden"></div>
+        </main>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     디시전 편집기
+════════════════════════════════════════════════ -->
+<div id="decisions-editor-view" class="view-fullscreen hidden">
+    <div class="app-container">
+
+        <!-- 왼쪽 패널 -->
+        <nav class="left-panel" id="decisions-left-panel">
+            <div class="collapsed-icons">
+                <button class="col-icon-btn" onclick="document.getElementById('btn-dec-back').click()"        title="탐색기로">⬅</button>
+                <button class="col-icon-btn" onclick="document.getElementById('btn-dec-save-server').click()" title="서버에 저장">☁️</button>
+                <button class="col-icon-btn" onclick="document.getElementById('btn-dec-export').click()"      title="파일 내보내기">📤</button>
+                <button class="col-icon-btn" onclick="document.getElementById('btn-dec-import').click()"      title="파일 불러오기">📥</button>
+                <button class="col-icon-btn" onclick="document.getElementById('btn-dec-raw').click()"         title="RAW 편집">📝</button>
+                <div class="col-divider"></div>
+                <button class="col-icon-btn" onclick="document.getElementById('btn-new-decision').click()"    title="새 디시전">＋</button>
+                <div class="col-divider"></div>
+                <button class="col-icon-btn" id="btn-dec-sidebar-expand" title="메뉴 펼치기">›</button>
+            </div>
+
+            <div class="menu-container">
+                <div class="editor-nav-row">
+                    <button id="btn-dec-back" class="icon-btn" title="탐색기로">⬅</button>
+                    <span id="decisions-editor-title" class="editor-file-title"></span>
+                </div>
+
+                <h3 class="menu-section-title">파일</h3>
+                <button id="btn-dec-save-server">☁️ 서버에 저장</button>
+                <button id="btn-dec-export" class="btn-export">📤 파일 내보내기</button>
+                <button id="btn-dec-import" class="btn-import">📥 파일 불러오기</button>
+                <button id="btn-dec-raw" class="btn-raw">📝 RAW 편집</button>
+
+                <hr>
+                <h3 class="menu-section-title">카테고리</h3>
+                <div id="decisions-category-tabs" class="dec-cat-tabs"></div>
+
+                <hr>
+                <h3 class="menu-section-title" id="decisions-list-title">디시전 목록</h3>
+                <div id="decisions-list" class="dec-list"></div>
+
+                <button id="btn-new-decision" style="width:100%;margin-top:8px;">＋ 새 디시전</button>
+
+                <hr>
+                <div class="stats-info">
+                    <small>총 디시전: <span id="decisions-count">0</span></small>
+                </div>
+
+                <div style="margin-top:auto;padding-top:8px;">
+                    <button id="btn-dec-sidebar-toggle" class="btn-sidebar-toggle-menu" title="메뉴 접기">‹</button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- 메인 영역 -->
+        <main class="decisions-main">
+            <div id="decisions-placeholder" class="explorer-placeholder">
+                <div>⚖️</div>
+                <div>디시전을 선택하거나 새로 추가하세요</div>
+                <p class="explorer-placeholder-sub">왼쪽에서 카테고리와 디시전을 선택하세요</p>
+            </div>
+            <div id="decisions-form-panel" class="decisions-form-panel hidden"></div>
+        </main>
+    </div>
+</div>
+
+<!-- 로드 순서: state → io → home → explorer → editor → localisation → gfx-editor → ideas → main -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<!-- core: 기반 레이어 (의존성 없음 또는 state만) -->
+<!-- 환경설정 버튼 (전체 화면 공통 고정) -->
+<button id="btn-preferences" title="환경설정">⚙</button>
+<!-- 자동 저장 상태 표시 -->
+<div id="autosave-status"></div>
+
+<script src="js/hoi4/core/state.js"></script>
+<script src="js/hoi4/core/settings.js"></script>
+<script src="js/hoi4/core/io-parsers.js"></script>
+<script src="js/hoi4/core/io-image.js"></script>
+<script src="js/hoi4/core/io-zip.js"></script>
+<!-- cloud: Supabase 연동 -->
+<script src="js/hoi4/cloud/auth.js"></script>
+<script src="js/hoi4/cloud/collab.js"></script>
+<!-- cloud-ui: 저장/진행 공용 유틸 (auth.js 이후) -->
+<script src="js/hoi4/core/cloud-ui.js"></script>
+<!-- editors: 파일 타입별 편집기 -->
+<script src="js/hoi4/core/hoi4-defs.js"></script>
+<script src="js/hoi4/editors/focus-chips.js"></script>
+<script src="js/hoi4/editors/script-block.js"></script>
+<script src="js/hoi4/editors/focus-form.js"></script>
+<script src="js/hoi4/editors/focus-editor.js"></script>
+<script src="js/hoi4/editors/localisation.js"></script>
+<script src="js/hoi4/editors/gfx-editor.js"></script>
+<script src="js/hoi4/editors/ideas-editor.js"></script>
+<script src="js/hoi4/editors/ideas-form.js"></script>
+<script src="js/hoi4/editors/decisions-editor.js"></script>
+<script src="js/hoi4/editors/decisions-form.js"></script>
+<!-- 탐색기 / 홈 / 진입점 -->
+<script src="js/hoi4/explorer.js"></script>
+<script src="js/hoi4/home.js"></script>
+<script src="js/hoi4/main.js"></script>
+</body>
+</html>

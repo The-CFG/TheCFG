@@ -1,0 +1,338 @@
+/* ══════════════════════════════════════════════════════
+   ScriptBlock 에디터
+══════════════════════════════════════════════════════ */
+
+/* 컨테이너 */
+.sb-container {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* 툴바 — 검색 + 버튼 */
+.sb-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    align-items: center;
+    border-top: 1px solid var(--border);
+    padding-top: 8px;
+    margin-top: 2px;
+}
+/* 보조 툴바 행: IF / RAW / 스코프 버튼 분리 */
+.sb-toolbar-aux {
+    border-top: 1px dashed color-mix(in srgb, var(--border) 60%, transparent);
+    margin-top: 0;
+    padding-top: 6px;
+}
+.sb-add-btn {
+    font-size: .76rem;
+    padding: 4px 10px;
+    min-width: unset;
+    width: auto;
+    border-radius: 6px;
+    opacity: .85;
+    transition: opacity .15s;
+}
+.sb-add-btn:hover { opacity: 1; }
+
+/* 검색 인풋 + 드롭다운 */
+.sb-add-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 150px;
+}
+.sb-search {
+    width: 100%;
+    font-size: .8rem;
+    padding: 5px 10px;
+    box-sizing: border-box;
+    border-radius: 6px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    transition: border-color .15s;
+}
+.sb-search:focus { border-color: var(--accent); outline: none; }
+.sb-dropdown { top: calc(100% + 4px); min-width: 240px; z-index: 200; }
+.sb-kind-badge {
+    font-size: .65rem;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 10px;
+    margin-left: auto;
+    flex-shrink: 0;
+    letter-spacing: .03em;
+}
+.sb-kind-effect   { background: rgba(26,86,160,.85);  color: #c8dcf8; }
+.sb-kind-trigger  { background: rgba(90,58,140,.85);  color: #d4c4f0; }
+.sb-kind-modifier { background: rgba(30,90,60,.85);   color: #b0d8c0; }
+
+/* ── 노드 공통 ─────────────────────────────────────── */
+.sb-list { display: flex; flex-direction: column; gap: 5px; }
+.sb-list-inner {
+    margin-left: 8px;
+    padding-left: 10px;
+    border-left: 2px solid rgba(255,255,255,.08);
+}
+
+/* entry 노드 */
+.sb-entry {
+    display: flex;
+    flex-direction: column;
+    background: rgba(255,255,255,.03);
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 7px;
+    padding: 6px 8px;
+    transition: border-color .15s;
+}
+.sb-entry:hover { border-color: rgba(255,255,255,.15); }
+.sb-entry-header {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    flex-wrap: wrap;
+}
+.sb-entry-key {
+    font-family: monospace;
+    font-size: .82rem;
+    color: #7eb8f7;
+    white-space: nowrap;
+}
+/* sb-entry-label 제거됨 — label은 keySpan의 title(tooltip)으로만 표시 */
+
+/* 멀티 파라미터 입력 레이아웃 */
+.sb-multi-params {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    flex: 1;
+    align-items: center;
+}
+.sb-param-pair {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.sb-param-label {
+    font-size: .7rem;
+    color: var(--text-muted);
+    font-family: monospace;
+    white-space: nowrap;
+}
+.sb-param-val {
+    font-family: monospace;
+    font-size: .82rem;
+    padding: 3px 7px;
+    width: 110px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--text-primary);
+    transition: border-color .15s;
+}
+.sb-param-val:focus { border-color: var(--accent); outline: none; }
+.sb-entry-val {
+    flex: 1;
+    font-family: monospace;
+    font-size: .82rem;
+    padding: 3px 7px;
+    min-width: 60px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--text-primary);
+    transition: border-color .15s;
+}
+.sb-entry-val:focus { border-color: var(--accent); outline: none; }
+
+/* bool 타입 — yes/no 라디오 버튼 */
+.sb-bool-radio {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex: 1;
+}
+.sb-bool-label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-family: monospace;
+    font-size: .82rem;
+    color: var(--text-primary);
+    cursor: pointer;
+    user-select: none;
+}
+.sb-bool-label input[type="radio"] {
+    accent-color: var(--accent);
+    cursor: pointer;
+}
+
+/* 삭제 버튼 — 노드 우상단 × */
+.sb-remove {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,.25);
+    cursor: pointer;
+    font-size: .85rem;
+    padding: 2px 5px;
+    min-width: unset;
+    width: 22px;
+    height: 22px;
+    line-height: 1;
+    border-radius: 4px;
+    margin-left: auto;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .15s, color .15s;
+}
+.sb-remove:hover {
+    color: #fff;
+    background: rgba(220,50,50,.6);
+}
+
+/* IF 삭제 버튼 — 좀 더 눈에 띄게 */
+.sb-if-block > .sb-remove {
+    align-self: flex-end;
+    font-size: .72rem;
+    width: auto;
+    padding: 3px 8px;
+    border-radius: 5px;
+    color: rgba(255,120,120,.6);
+    border: 1px solid rgba(255,120,120,.2);
+    background: rgba(255,60,60,.05);
+    margin-left: 0;
+    order: 99;
+}
+.sb-if-block > .sb-remove:hover {
+    color: #fff;
+    background: rgba(220,50,50,.7);
+    border-color: transparent;
+}
+
+/* RAW 노드 */
+.sb-raw {
+    background: rgba(255,200,50,.04);
+    border: 1px dashed rgba(255,200,50,.25);
+    border-radius: 7px;
+    padding: 6px 8px;
+}
+.sb-raw-ta {
+    width: 100%;
+    font-family: monospace;
+    font-size: .78rem;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--text-primary);
+    padding: 6px 8px;
+    box-sizing: border-box;
+    resize: vertical;
+    margin-top: 5px;
+}
+
+/* 스코프 노드 */
+.sb-scope {
+    border: 1px solid rgba(100,180,255,.2);
+    border-radius: 7px;
+    padding: 6px 8px;
+    background: rgba(100,180,255,.03);
+}
+.sb-scope-inner { margin-top: 6px; }
+
+/* ── IF 블록 ───────────────────────────────────────── */
+.sb-if-block {
+    border: 1px solid rgba(120,200,120,.25);
+    border-radius: 10px;
+    padding: 10px;
+    background: rgba(120,200,120,.03);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    position: relative;
+}
+
+/* 섹션 (LIMIT / BODY) */
+.sb-section {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.sb-section-header {
+    font-size: .68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 0;
+}
+.sb-section-header::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: currentColor;
+    opacity: .2;
+}
+.sb-section-limit .sb-section-header { color: #b08cf0; }
+.sb-section-body  .sb-section-header { color: #7eb8f7; }
+
+/* ELSE_IF */
+.sb-elseif {
+    border-top: 1px dashed rgba(255,255,255,.1);
+    padding-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.sb-elseif .sb-section-header { color: #f0b060; }
+
+/* ELSE */
+.sb-else {
+    border-top: 1px dashed rgba(255,255,255,.1);
+    padding-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.sb-else .sb-section-header { color: #f07070; }
+
+/* IF 하단 액션 버튼 */
+.sb-if-actions {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+    border-top: 1px solid rgba(255,255,255,.06);
+    padding-top: 8px;
+    margin-top: 2px;
+}
+.sb-if-actions .sb-add-btn {
+    font-size: .72rem;
+    padding: 3px 9px;
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.1);
+    color: var(--text-secondary);
+}
+.sb-if-actions .sb-add-btn:hover {
+    background: rgba(255,255,255,.12);
+    color: var(--text-primary);
+}
+
+
+/* 스코프 내부 툴바 */
+.sb-scope-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(100,180,255,.15);
+}
