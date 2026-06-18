@@ -90,6 +90,11 @@ a { color: inherit; text-decoration: none; }
     font-family: var(--font-mono);
     margin-right: 2px;
 }
+.connections {
+    font-weight: 600;
+    font-size: .85rem;
+    color: #e8edf2;
+}
 
 /* ════════════════════════════════════════════════
    히어로
