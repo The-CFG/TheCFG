@@ -7,15 +7,15 @@ const TOOLS = [
         path: '/hoi4',
         title: 'HOI4 Mod Editor',
         version: 'v0.8',
-        desc: '포커스 트리, 디시전, 아이디어, 로컬라이제이션까지 — 브라우저에서 바로 만드는 Hearts of Iron IV 모드 에디터.',
+        desc: '기존 edge.hoi4modding.com을 대체하는 용도로 제작되었습니다. 계속 업데이트 중입니다.',
         href: 'hoi4.html',
         status: 'live', // live | planned
     },
     {
         path: '/beat',
         title: 'TheBeat',
-        version: 'v1.0',
-        desc: '채보를 찍고 바로 플레이까지, 브라우저에서 동작하는 리듬 게임 & 에디터.',
+        version: 'v2.0',
+        desc: '웹 리듬게임입니다. 지금은 파일 업/다운로드 시스템이지만 조만간 서버 시스템을 구축하겠습니다.',
         href: 'beat.html',
         status: 'live',
     },
@@ -45,7 +45,7 @@ function renderTools() {
             card.setAttribute('aria-label', `${tool.title} 열기`);
         }
 
-        const statusLabel = isLive ? '운영 중' : '준비 중';
+        const statusLabel = isLive ? '온라인' : '준비 중';
 
         card.innerHTML = `
             <div class="tool-card-top">
