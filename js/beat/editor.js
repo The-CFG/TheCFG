@@ -263,32 +263,56 @@ const Editor = {
     handleAudioLoad(e) {
         try {
             const file = e.target.files[0];
-            if (file) {
-                this.setDirty(true);
-
-                // 이전에 만들어둔 blob URL이 남아있으면 메모리 누수 및
-                // 일부 브라우저에서의 재생 충돌을 막기 위해 미리 해제한다.
-                if (DOM.musicPlayer.src && DOM.musicPlayer.src.startsWith('blob:')) {
-                    URL.revokeObjectURL(DOM.musicPlayer.src);
-                }
-
-                // 재생 중이던 상태를 완전히 정리한 뒤 새 파일을 로드한다.
-                DOM.musicPlayer.pause();
-                this.state.isPlaying = false;
-                cancelAnimationFrame(this.state.animationFrameId);
-
-                // file.type이 비어있거나 잘못된 경우를 대비해, 정확한 MIME 타입을
-                // 명시한 새 Blob을 만들어 createObjectURL에 사용한다.
-                const mimeType = this._resolveAudioMimeType(file);
-                const typedBlob = (file.type === mimeType) ? file : file.slice(0, file.size, mimeType);
-                DOM.musicPlayer.src = URL.createObjectURL(typedBlob);
-                // 새 소스를 명시적으로 로드해 이전 상태(readyState)를 깨끗하게 리셋한다.
-                DOM.musicPlayer.load();
-
-                this.state.audioFileName = file.name;
-                DOM.editor.audioFileNameEl.textContent = file.name;
-                DOM.musicPlayer.onloadedmetadata = () => this.drawGrid();
+            if (!file) {
+                e.target.value = null;
+                return;
             }
+
+            this.setDirty(true);
+
+            // 이전에 만들어둔 blob URL이 남아있으면 메모리 누수 및
+            // 일부 브라우저에서의 재생 충돌을 막기 위해 미리 해제한다.
+            if (DOM.musicPlayer.src && DOM.musicPlayer.src.startsWith('blob:')) {
+                URL.revokeObjectURL(DOM.musicPlayer.src);
+            }
+
+            // 재생 중이던 상태를 완전히 정리한 뒤 새 파일을 로드한다.
+            DOM.musicPlayer.pause();
+            this.state.isPlaying = false;
+            cancelAnimationFrame(this.state.animationFrameId);
+
+            const fileName = file.name;
+            const mimeType = this._resolveAudioMimeType(file);
+
+            // input.value를 리셋하거나(아래) 파일 선택기 컨텍스트가 닫히면
+            // 일부 모바일 브라우저(특히 Android의 콘텐츠 프로바이더 기반 파일)에서
+            // 원본 File 핸들이 비동기 로드 시점에 무효화되어 blob URL이
+            // "net::ERR_FILE_NOT_FOUND"로 실패하는 경우가 있다.
+            // 이를 피하기 위해 파일을 메모리(ArrayBuffer)로 완전히 읽어들인 뒤,
+            // 그 데이터로만 Blob을 만들어 input/파일 핸들 수명과 완전히 분리한다.
+            const reader = new FileReader();
+            reader.onerror = () => {
+                Debugger.logError(reader.error || new Error('FileReader error'), 'Editor.handleAudioLoad:read');
+                UI.showMessage('editor', '파일을 읽는 중 오류가 발생했습니다.');
+            };
+            reader.onload = () => {
+                try {
+                    const arrayBuffer = reader.result;
+                    const typedBlob = new Blob([arrayBuffer], { type: mimeType });
+
+                    DOM.musicPlayer.src = URL.createObjectURL(typedBlob);
+                    // 새 소스를 명시적으로 로드해 이전 상태(readyState)를 깨끗하게 리셋한다.
+                    DOM.musicPlayer.load();
+
+                    this.state.audioFileName = fileName;
+                    DOM.editor.audioFileNameEl.textContent = fileName;
+                    DOM.musicPlayer.onloadedmetadata = () => this.drawGrid();
+                } catch (err) {
+                    Debugger.logError(err, 'Editor.handleAudioLoad:onload');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+
             e.target.value = null;
         } catch (err) {
             Debugger.logError(err, 'Editor.handleAudioLoad');
