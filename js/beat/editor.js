@@ -27,11 +27,45 @@ const Editor = {
             this.resetEditorState();
             
             // 미리보기 레인 선택 변경 시 하이라이트 업데이트
-            if (DOM.editor.previewLanesSelector) {
+            if (DOM.editor.previewLanesSelector && !this._previewLanesListenerAttached) {
                 DOM.editor.previewLanesSelector.addEventListener('change', () => {
                     const laneCount = parseInt(DOM.editor.previewLanesSelector.value) || 4;
                     this.highlightEditorLanes(laneCount);
                 });
+                this._previewLanesListenerAttached = true;
+            }
+
+            // 오디오 엘리먼트에서 발생하는 실제 재생 오류(코덱 미지원, 디코딩 실패 등)를
+            // 잡아서 보여준다. 기존에는 이 이벤트를 듣지 않아 재생이 조용히 멈춰도
+            // 원인을 알 수 없었다.
+            if (!this._musicErrorListenerAttached) {
+                DOM.musicPlayer.addEventListener('error', () => {
+                    const mediaError = DOM.musicPlayer.error;
+                    if (!mediaError) return;
+                    const codeNames = {
+                        1: 'MEDIA_ERR_ABORTED',
+                        2: 'MEDIA_ERR_NETWORK',
+                        3: 'MEDIA_ERR_DECODE',
+                        4: 'MEDIA_ERR_SRC_NOT_SUPPORTED'
+                    };
+                    const name = codeNames[mediaError.code] || `code ${mediaError.code}`;
+                    console.error('[music-player error]', name, mediaError.message);
+                    UI.showMessage('editor', `음악 파일을 재생할 수 없습니다 (${name}). 다른 파일로 시도해보세요.`);
+                    this.state.isPlaying = false;
+                    DOM.editor.playBtn.textContent = "재생";
+                });
+
+                // 별다른 동작 없이 재생이 끊기면(예: 버퍼링 중단) 콘솔에 남겨 진단에 활용한다.
+                DOM.musicPlayer.addEventListener('stalled', () => {
+                    console.warn('[music-player] stalled - 데이터 수신이 중단되었습니다.');
+                });
+                DOM.musicPlayer.addEventListener('pause', () => {
+                    if (this.state.isPlaying) {
+                        console.warn('[music-player] 재생 중 예기치 않게 pause 이벤트가 발생했습니다.');
+                    }
+                });
+
+                this._musicErrorListenerAttached = true;
             }
         } catch (err) {
             Debugger.logError(err, 'Editor.init');
@@ -50,7 +84,11 @@ const Editor = {
             this.state.totalMeasures = 100;
 
             DOM.musicPlayer.pause();
-            DOM.musicPlayer.src = '';
+            if (DOM.musicPlayer.src && DOM.musicPlayer.src.startsWith('blob:')) {
+                URL.revokeObjectURL(DOM.musicPlayer.src);
+            }
+            DOM.musicPlayer.removeAttribute('src');
+            DOM.musicPlayer.load();
             DOM.editor.bpmInput.value = this.state.bpm;
             DOM.editor.snapSelector.value = this.state.snapDivision;
             DOM.editor.startTimeInput.value = this.state.startTimeOffset;
@@ -205,7 +243,22 @@ const Editor = {
             const file = e.target.files[0];
             if (file) {
                 this.setDirty(true);
+
+                // 이전에 만들어둔 blob URL이 남아있으면 메모리 누수 및
+                // 일부 브라우저에서의 재생 충돌을 막기 위해 미리 해제한다.
+                if (DOM.musicPlayer.src && DOM.musicPlayer.src.startsWith('blob:')) {
+                    URL.revokeObjectURL(DOM.musicPlayer.src);
+                }
+
+                // 재생 중이던 상태를 완전히 정리한 뒤 새 파일을 로드한다.
+                DOM.musicPlayer.pause();
+                this.state.isPlaying = false;
+                cancelAnimationFrame(this.state.animationFrameId);
+
                 DOM.musicPlayer.src = URL.createObjectURL(file);
+                // 새 소스를 명시적으로 로드해 이전 상태(readyState)를 깨끗하게 리셋한다.
+                DOM.musicPlayer.load();
+
                 this.state.audioFileName = file.name;
                 DOM.editor.audioFileNameEl.textContent = file.name;
                 DOM.musicPlayer.onloadedmetadata = () => this.drawGrid();
@@ -534,7 +587,17 @@ const Editor = {
 
             if (!this.state.isPlaying) {
                 this.state.playbackStartTime = performance.now() - (this.state.timeWhenPaused || 0);
-                if (isMusicLoaded) await DOM.musicPlayer.play();
+                if (isMusicLoaded) {
+                    try {
+                        await DOM.musicPlayer.play();
+                    } catch (playErr) {
+                        // play()가 시작 직후 중단(AbortError)되거나 브라우저 정책으로
+                        // 거부(NotAllowedError)된 경우를 구분해서 보여준다.
+                        Debugger.logError(playErr, 'Editor.handlePlayPause:play');
+                        UI.showMessage('editor', `음악 재생 실패 (${playErr.name || 'Error'}): ${playErr.message || ''}`);
+                        return;
+                    }
+                }
                 DOM.editor.playBtn.textContent = "일시정지";
                 this.state.isPlaying = true;
                 
@@ -594,8 +657,8 @@ const Editor = {
     },
 
     loop() {
+        if (!this.state.isPlaying) return;
         try {
-            if (!this.state.isPlaying) return;
             let elapsedSeconds;
             const isMusicLoaded = !!DOM.musicPlayer.src;
             if (isMusicLoaded && !DOM.musicPlayer.paused) {
@@ -610,10 +673,13 @@ const Editor = {
             const playheadPosition = beats * adjustedBeatHeight;
             DOM.editor.playhead.style.top = `${playheadPosition}px`;
             DOM.editor.container.scrollTop = playheadPosition - DOM.editor.container.clientHeight / 2;
-            this.state.animationFrameId = requestAnimationFrame(this.loop.bind(this));
         } catch (err) {
+            // 플레이헤드 표시 등 화면 갱신 중 발생한 오류일 뿐이므로
+            // 음악 재생 자체는 멈추지 않고 다음 프레임에 계속 시도한다.
             Debugger.logError(err, 'Editor.loop');
-            this.stopPlayback();
+        }
+        if (this.state.isPlaying) {
+            this.state.animationFrameId = requestAnimationFrame(this.loop.bind(this));
         }
     },
 
