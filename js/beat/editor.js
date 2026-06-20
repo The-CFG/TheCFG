@@ -238,6 +238,28 @@ const Editor = {
         }
     },
 
+    // 파일 확장자 -> MIME 타입 매핑. <input> 이나 OS/모바일 파일 선택기가
+    // file.type을 비워서 주는 경우(특히 모바일)가 많아, blob URL만으로는
+    // <audio>가 포맷을 인식하지 못해 MEDIA_ERR_SRC_NOT_SUPPORTED가 발생한다.
+    _resolveAudioMimeType(file) {
+        const knownTypes = ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp4', 'audio/aac', 'audio/flac', 'audio/webm', 'audio/x-m4a'];
+        if (file.type && knownTypes.includes(file.type)) return file.type;
+
+        const ext = (file.name.split('.').pop() || '').toLowerCase();
+        const extToMime = {
+            mp3: 'audio/mpeg',
+            wav: 'audio/wav',
+            ogg: 'audio/ogg',
+            oga: 'audio/ogg',
+            m4a: 'audio/mp4',
+            mp4: 'audio/mp4',
+            aac: 'audio/aac',
+            flac: 'audio/flac',
+            webm: 'audio/webm',
+        };
+        return extToMime[ext] || file.type || 'audio/mpeg';
+    },
+
     handleAudioLoad(e) {
         try {
             const file = e.target.files[0];
@@ -255,7 +277,11 @@ const Editor = {
                 this.state.isPlaying = false;
                 cancelAnimationFrame(this.state.animationFrameId);
 
-                DOM.musicPlayer.src = URL.createObjectURL(file);
+                // file.type이 비어있거나 잘못된 경우를 대비해, 정확한 MIME 타입을
+                // 명시한 새 Blob을 만들어 createObjectURL에 사용한다.
+                const mimeType = this._resolveAudioMimeType(file);
+                const typedBlob = (file.type === mimeType) ? file : file.slice(0, file.size, mimeType);
+                DOM.musicPlayer.src = URL.createObjectURL(typedBlob);
                 // 새 소스를 명시적으로 로드해 이전 상태(readyState)를 깨끗하게 리셋한다.
                 DOM.musicPlayer.load();
 
