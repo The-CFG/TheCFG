@@ -259,6 +259,21 @@ const Game = {
                 }
                 const timeToHit = note.time - elapsedTime;
                 const noteBottomPosition = gameHeight - 100 - (timeToHit * this.state.settings.noteSpeed / 10);
+
+                // notes는 시간 오름차순으로 정렬되어 있다. 아직 element도 없고
+                // 처리되지도 않은 노트인데 화면에 들어오려면 한참 남았다면
+                // (noteBottomPosition <= -50), 이후의 노트들은 시간상 전부 더
+                // 뒤이므로 화면에는 더더욱 멀리 있다는 뜻 — 더 볼 필요가 없다.
+                // 이 가지치기가 없으면 매 프레임 "남은 노트 전체"를 끝까지
+                // 훑게 되는데, 곡 시작 직후(unprocessedNoteIndex가 거의
+                // 줄지 않은 시점, 즉 남은 노트가 가장 많은 시점)에 부하가
+                // 최대가 되어 느린 기기(특히 모바일)에서 프레임이 밀리고,
+                // 음악은 정상 재생되는데 노트만 한두 박자 늦게 내려오는
+                // 현상으로 이어졌다.
+                if (!note.element && !note.processed && noteBottomPosition <= -50) {
+                    break;
+                }
+
                 const isLongNote = note.type === 'long_head';
                 
                 // 롱노트 높이 계산 시 최소 높이 적용
