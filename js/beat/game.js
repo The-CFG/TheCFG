@@ -51,8 +51,6 @@ const Game = {
         this.state.totalPausedTime = 0;
         this.state.unprocessedNoteIndex = 0;
         this.state.settings.requiredSongName = null;
-        this.state.settings.startTimeOffset = 0;
-        this.state.settings.bpm = 120;
         this.state.animationFrameId = null;
         this.state.countdownIntervalId = null;
     },
@@ -103,7 +101,7 @@ const Game = {
                 UI.showMessage('menu', '뮤직 모드를 시작하려면 차트 파일을 먼저 불러와주세요.');
                 return;
             }
-            if (!this.state.settings.musicFileObject) {
+            if (!this.state.settings.musicFileObject && !this.state.settings.musicSrc) {
                 UI.showMessage('menu', '뮤직 모드를 시작하려면 음악 파일을 먼저 불러와주세요.');
                 return;
             }
@@ -114,9 +112,15 @@ const Game = {
         UI.showScreen('playing');
         UI.updateScoreboard();
         this.state.gameState = 'countdown';
-        if (this.state.settings.mode === 'music' && this.state.settings.musicFileObject) {
-            const musicUrl = URL.createObjectURL(this.state.settings.musicFileObject);
-            DOM.musicPlayer.src = musicUrl;
+        if (this.state.settings.mode === 'music') {
+            if (this.state.settings.musicFileObject) {
+                // 로컬 파일: Blob URL 생성
+                const musicUrl = URL.createObjectURL(this.state.settings.musicFileObject);
+                DOM.musicPlayer.src = musicUrl;
+            } else if (this.state.settings.musicSrc) {
+                // 온라인 차트: 원격 URL 직접 사용
+                DOM.musicPlayer.src = this.state.settings.musicSrc;
+            }
         }
         this.runCountdown(() => {
             this.state.gameState = 'playing';

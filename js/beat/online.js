@@ -244,17 +244,13 @@ const Online = {
             Game.loadChartNotes(chartData);
             Game.state._onlineChartId = c.id; // 결과 화면에서 점수 제출에 사용
             Game.state.settings.mode = 'music';
+            Game.state.settings.musicFileObject = null; // 이전에 불러온 로컬 파일이 우선되지 않도록 초기화
             Game.state.settings.musicSrc = audioUrl;
-
-            // 음악 플레이어에 URL 설정
-            DOM.musicPlayer.src = audioUrl;
 
             UI.showScreen('menu');
             // 잠깐 후 게임 시작 (DOM 전환 대기)
             setTimeout(() => {
                 Game.start();
-                UI.showScreen('playing');
-                Game.state.gameState = 'playing';
             }, 100);
 
         } catch (err) {

@@ -395,6 +395,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const file = e.target.files[0];
             if (file) {
                 Game.state.settings.musicFileObject = file;
+                Game.state.settings.musicSrc = null;
                 DOM.musicFileNameEl.textContent = `음악: ${file.name}`;
             }
             e.target.value = null;
