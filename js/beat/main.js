@@ -194,7 +194,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert('로그인이 필요합니다. 우측 상단 계정 아이콘을 클릭해주세요.');
                 return;
             }
-            UploadModal.open('upload');
+            const cloudChart = Editor.state.cloudChart;
+            if (cloudChart) {
+                UploadModal.open('update', cloudChart.id);
+            } else {
+                UploadModal.open('upload');
+            }
         });
 
         // 업로드 모달 버튼

@@ -576,13 +576,16 @@
                 <!-- Editor Screen -->
                 <div id="editor-screen" class="hidden flex flex-col h-full text-white overflow-y-auto" style="-webkit-overflow-scrolling: touch;">
                     <div class="flex-shrink-0 touch-auto">
-                        <h2 class="text-3xl font-bold mb-4" data-i18n="editor_title">차트 에디터<span id="editor-dirty-indicator" class="text-yellow-400 ml-2"></span></h2>
+                        <div class="flex items-center justify-between mb-4 gap-2">
+                            <h2 class="text-3xl font-bold" data-i18n="editor_title">차트 에디터<span id="editor-dirty-indicator" class="text-yellow-400 ml-2"></span></h2>
+                            <button id="editor-back-btn" class="flex-shrink-0 py-2 px-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm">← 메인 메뉴</button>
+                        </div>
                         <div id="editor-message" class="hidden p-3 mb-4 text-center bg-red-500 rounded-lg"></div>
                         <!-- 상단 컨트롤 영역 -->
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-800 rounded-lg">
+                        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
                             <!-- 1. 음악 설정 -->
-                            <div class="flex flex-col space-y-2">
-                                <h3 class="text-lg font-semibold border-b border-gray-600 pb-1">음악 설정</h3>
+                            <div class="flex flex-col space-y-2 p-4 bg-gray-800 rounded-lg">
+                                <h3 class="text-xs font-bold uppercase tracking-wide text-gray-400 border-b border-gray-600 pb-2 mb-1">🎵 음악 설정</h3>
                                 <div class="flex items-center space-x-2">
                                     <label for="audio-file-input-editor" class="cursor-pointer text-center flex-1 py-2 px-3 bg-teal-600 hover:bg-teal-500 rounded transition text-sm">음악 불러오기</label>
                                     <input type="file" id="audio-file-input-editor" accept="*" class="hidden">
@@ -609,8 +612,8 @@
                                 </div>
                             </div>
                             <!-- 2. 차트 설정 (변경 없음) -->
-                            <div class="flex flex-col space-y-2">
-                                <h3 class="text-lg font-semibold border-b border-gray-600 pb-1">차트 설정</h3>
+                            <div class="flex flex-col space-y-2 p-4 bg-gray-800 rounded-lg">
+                                <h3 class="text-xs font-bold uppercase tracking-wide text-gray-400 border-b border-gray-600 pb-2 mb-1">🎼 차트 설정</h3>
                                 <div class="flex items-center space-x-2">
                                     <label for="bpm-input" class="text-sm">BPM:</label>
                                     <input type="number" id="bpm-input" value="120" class="w-20 p-1 bg-gray-700 rounded text-sm">
@@ -646,20 +649,26 @@
                                     <button data-type="trigger" class="w-10 h-8 bg-yellow-500 hover:bg-yellow-400 rounded transition" title="설정 트리거">⚙️</button>
                                 </div>
                             </div>
-                            <!-- 3. 관리 -->
-                            <div class="flex flex-col space-y-2">
-                                <h3 class="text-lg font-semibold border-b border-gray-600 pb-1">관리</h3>
+                            <!-- 3. 관리 (로컬 파일) -->
+                            <div class="flex flex-col space-y-2 p-4 bg-gray-800 rounded-lg">
+                                <h3 class="text-xs font-bold uppercase tracking-wide text-gray-400 border-b border-gray-600 pb-2 mb-1">💾 관리 (로컬 파일)</h3>
                                 <!-- [수정] 저장 버튼과 파일명 입력 칸 추가 -->
                                 <div class="flex items-center space-x-2">
                                     <input type="text" id="editor-chart-filename" placeholder="파일명" class="flex-grow p-1 bg-gray-700 rounded text-sm min-w-0">
-                                    <button id="editor-save-btn" class="py-1 px-2 bg-blue-600 hover:bg-blue-500 rounded text-sm">저장</button>
+                                    <button id="editor-save-btn" class="flex-shrink-0 py-1 px-2 bg-blue-600 hover:bg-blue-500 rounded text-sm">저장</button>
                                 </div>
                                 <div class="grid grid-cols-2 gap-2 pt-1">
                                     <button id="editor-load-btn" class="py-1 px-2 bg-purple-600 hover:bg-purple-500 rounded text-sm">열기</button>
                                     <button id="editor-reset-btn" class="py-1 px-2 bg-red-700 hover:bg-red-600 rounded text-sm">재설정</button>
-                                    <button id="editor-upload-btn" class="col-span-2 py-1 px-2 bg-teal-700 hover:bg-teal-600 rounded text-sm">☁ 서버에 업로드</button>
-                                    <button id="editor-back-btn" class="col-span-2 py-1 px-2 bg-gray-600 hover:bg-gray-500 rounded text-sm">메인 메뉴</button>
                                 </div>
+                                <p class="text-xs text-gray-500 pt-1">내 컴퓨터에 차트(.json) 파일로 저장하거나 불러옵니다.</p>
+                            </div>
+                            <!-- 4. 온라인 업로드 -->
+                            <div class="flex flex-col space-y-2 p-4 bg-teal-950 bg-opacity-40 rounded-lg border border-teal-700/60">
+                                <h3 class="text-xs font-bold uppercase tracking-wide text-teal-300 border-b border-teal-700/60 pb-2 mb-1">☁ 온라인 업로드</h3>
+                                <p id="editor-cloud-status" class="hidden text-xs text-teal-300 bg-teal-900/60 rounded p-2 leading-snug"></p>
+                                <button id="editor-upload-btn" class="py-2 px-2 bg-teal-700 hover:bg-teal-600 rounded text-sm font-semibold">☁ 서버에 업로드</button>
+                                <p class="text-xs text-gray-500 pt-1">공개 라이브러리에 차트와 음악을 함께 올립니다. (로그인 필요)</p>
                             </div>
                         </div>
                         <p id="editor-status-label" class="text-yellow-400 text-center h-5 mt-2"></p>

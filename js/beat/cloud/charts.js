@@ -15,6 +15,22 @@ const CloudCharts = {
             .order('updated_at', { ascending: false });
     },
 
+    // ── 내 차트 단건 상세 (Storage 경로 포함, 공개/비공개 무관) ──────────────
+    // "편집" 흐름에서 차트 JSON/오디오를 다시 받아오기 위해 전체 컬럼이 필요하다.
+    async getMyChartDetail(chartId) {
+        const user = await CloudAuth.getUser();
+        if (!user) return { data: null, error: new Error('로그인이 필요합니다.') };
+
+        const { data, error } = await _supabase
+            .from('beat_charts')
+            .select('*')
+            .eq('id', chartId)
+            .eq('owner_id', user.id)
+            .single();
+
+        return { data, error };
+    },
+
     // ── 차트 업로드 (신규) ────────────────────────────────────────────────────
     // meta: { title, artist, bpm, lane_count, difficulty_label }
     // chartData: Editor에서 넘어오는 JSON 객체

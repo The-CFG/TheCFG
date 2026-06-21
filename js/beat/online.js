@@ -300,6 +300,13 @@ const Online = {
                 this._deleteMyChart(btn.dataset.id, btn.dataset.title);
             });
         });
+
+        document.querySelectorAll('.my-edit-btn').forEach(btn => {
+            btn.addEventListener('click', e => {
+                e.stopPropagation();
+                this._editMyChart(btn.dataset.id);
+            });
+        });
     },
 
     _myChartCard(c) {
@@ -314,9 +321,54 @@ const Online = {
             </div>
             <div class="flex items-center space-x-1 flex-shrink-0">
                 ${isPublic}
+                <button class="my-edit-btn py-1 px-2 bg-indigo-700 hover:bg-indigo-600 rounded text-xs" data-id="${c.id}">편집</button>
                 <button class="my-delete-btn py-1 px-2 bg-red-800 hover:bg-red-700 rounded text-xs ml-1" data-id="${c.id}" data-title="${_esc(c.title)}">삭제</button>
             </div>
         </div>`;
+    },
+
+    // 이미 업로드한 차트를 에디터로 불러와 수정할 수 있게 한다.
+    // (차트 JSON + 음악 파일을 서버에서 다시 받아와 에디터 상태에 그대로 채워넣는다)
+    async _editMyChart(chartId) {
+        const btn = document.querySelector(`.my-edit-btn[data-id="${chartId}"]`);
+        const originalLabel = btn ? btn.textContent : '편집';
+        if (btn) { btn.disabled = true; btn.textContent = '불러오는 중…'; }
+
+        try {
+            const { data: c, error: detailErr } = await CloudCharts.getMyChartDetail(chartId);
+            if (detailErr) throw detailErr;
+
+            const { data: chartData, error: chartErr } = await CloudCharts.downloadChartData(c.chart_storage_path);
+            if (chartErr) throw chartErr;
+
+            const audioUrl = CloudCharts.getAudioUrl(c.audio_storage_path);
+            const audioRes = await fetch(audioUrl);
+            if (!audioRes.ok) throw new Error('음악 파일을 불러오지 못했습니다.');
+            const audioBlob = await audioRes.blob();
+
+            // 에디터 화면으로 전환 후 차트/음악을 채워넣는다.
+            Game.state.gameState = 'editor';
+            Editor.init();
+            Editor.loadChart(chartData, c.title);
+            Editor.loadAudioFromBlob(audioBlob, c.title);
+            Editor.setCloudChart({
+                id: c.id,
+                title: c.title,
+                artist: c.artist,
+                bpm: c.bpm,
+                lane_count: c.lane_count,
+                difficulty_label: c.difficulty_label,
+            });
+            Editor.setDirty(false);
+
+            setTimeout(() => {
+                Editor.drawTimeline();
+                Editor.renderNotes();
+            }, 0);
+        } catch (err) {
+            alert('차트를 불러오지 못했습니다: ' + err.message);
+            if (btn) { btn.disabled = false; btn.textContent = originalLabel; }
+        }
     },
 
     async _deleteMyChart(chartId, title) {
@@ -350,10 +402,14 @@ const UploadModal = {
 
         // 에디터 현재 차트 정보로 기본값 채우기
         const editorChart = Editor.getChartData?.();
-        if (editorChart) {
-            document.getElementById('upload-title').value = editorChart.songName || '';
-            document.getElementById('upload-bpm').value = editorChart.bpm || '';
-            document.getElementById('upload-lanes').value = editorChart.laneCount || 4;
+        const cloudChart = Editor.state?.cloudChart || null;
+        document.getElementById('upload-title').value = cloudChart?.title || editorChart?.songName || '';
+        document.getElementById('upload-bpm').value = cloudChart?.bpm || editorChart?.bpm || '';
+        document.getElementById('upload-lanes').value = cloudChart?.lane_count || editorChart?.laneCount || 4;
+        if (cloudChart) {
+            // 기존 차트를 편집하는 경우에만 아티스트/난이도까지 원래 값으로 채운다.
+            document.getElementById('upload-artist').value = cloudChart.artist || '';
+            document.getElementById('upload-diff').value = cloudChart.difficulty_label || '';
         }
 
         document.getElementById('upload-modal-title').textContent =
@@ -401,6 +457,19 @@ const UploadModal = {
             }
 
             if (result.error) throw result.error;
+
+            // 업로드/업데이트 성공 시점의 메타로 cloudChart를 갱신해서,
+            // 같은 에디터 세션에서 다시 업로드 버튼을 눌러도 "업데이트"로 동작하게 한다.
+            if (result.data) {
+                Editor.setCloudChart?.({
+                    id: result.data.id,
+                    title: result.data.title,
+                    artist: result.data.artist,
+                    bpm: result.data.bpm,
+                    lane_count: result.data.lane_count,
+                    difficulty_label: result.data.difficulty_label,
+                });
+            }
 
             alert(this._mode === 'upload' ? '업로드 완료!' : '업데이트 완료!');
             this.close();

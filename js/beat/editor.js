@@ -18,6 +18,10 @@ const Editor = {
         previewAnimationId: null,
         previewStartTime: 0,
         previewLaneCount: 4,
+        // 온라인 차트를 "편집"으로 불러온 경우, 그 차트의 메타 정보가 들어간다.
+        // null이면 일반적인(신규) 차트 작업 상태. 업로드 버튼이 이 값에 따라
+        // "신규 업로드" / "기존 차트 업데이트"를 자동으로 분기한다.
+        cloudChart: null,
     },
 
     init() {
@@ -82,6 +86,7 @@ const Editor = {
             this.state.audioFileName = '';
             this.state.selectedNoteType = 'tap';
             this.state.totalMeasures = 100;
+            this.state.cloudChart = null;
 
             DOM.musicPlayer.pause();
             if (DOM.musicPlayer.src && DOM.musicPlayer.src.startsWith('blob:')) {
@@ -99,8 +104,58 @@ const Editor = {
             this.drawTimeline();
             this.renderNotes();
             this.setDirty(false);
+            this._updateCloudUI();
         } catch (err) {
             Debugger.logError(err, 'Editor.resetEditorState');
+        }
+    },
+
+    // ── 온라인 차트 "편집" 연동 ──────────────────────────────────────────────
+    // 이미 서버에 업로드된 차트를 불러와 편집할 때, 그 차트의 메타를 기억해둔다.
+    // meta: { id, title, artist, bpm, lane_count, difficulty_label } | null
+    setCloudChart(meta) {
+        this.state.cloudChart = meta;
+        this._updateCloudUI();
+    },
+
+    _updateCloudUI() {
+        const statusEl = DOM.editor.cloudStatusEl;
+        const uploadBtn = DOM.editor.uploadBtn;
+        const cloudChart = this.state.cloudChart;
+        if (statusEl) {
+            if (cloudChart) {
+                statusEl.textContent = `✏️ "${cloudChart.title}" 편집 중 — 업로드 시 기존 차트가 업데이트됩니다.`;
+                statusEl.classList.remove('hidden');
+            } else {
+                statusEl.textContent = '';
+                statusEl.classList.add('hidden');
+            }
+        }
+        if (uploadBtn) {
+            uploadBtn.textContent = cloudChart ? '☁ 차트 업데이트' : '☁ 서버에 업로드';
+        }
+    },
+
+    // 이미 디코딩된 오디오 Blob을 에디터에 적용한다 (온라인 차트 편집 시 사용).
+    // <input type=file> 변경 이벤트 없이도 음악 플레이어/상태를 설정할 수 있도록
+    // handleAudioLoad의 핵심 로직만 분리한 헬퍼.
+    loadAudioFromBlob(blob, fileName) {
+        try {
+            if (DOM.musicPlayer.src && DOM.musicPlayer.src.startsWith('blob:')) {
+                URL.revokeObjectURL(DOM.musicPlayer.src);
+            }
+            DOM.musicPlayer.pause();
+            this.state.isPlaying = false;
+            cancelAnimationFrame(this.state.animationFrameId);
+
+            DOM.musicPlayer.src = URL.createObjectURL(blob);
+            DOM.musicPlayer.load();
+
+            this.state.audioFileName = fileName;
+            DOM.editor.audioFileNameEl.textContent = fileName;
+            DOM.musicPlayer.onloadedmetadata = () => this.drawGrid();
+        } catch (err) {
+            Debugger.logError(err, 'Editor.loadAudioFromBlob');
         }
     },
 
@@ -633,6 +688,11 @@ const Editor = {
             DOM.editor.audioFileNameEl.textContent = `요구 파일: ${chartData.songName || '없음'}`;
             if (loadedFileName) {
                 DOM.editor.chartFilenameInput.value = loadedFileName.split('.').slice(0, -1).join('.');
+            }
+            // 불러온 차트에 레인 수 정보가 있으면 미리보기 선택값을 맞춰준다.
+            if (chartData.laneCount && DOM.editor.previewLanesSelector) {
+                DOM.editor.previewLanesSelector.value = chartData.laneCount;
+                this.highlightEditorLanes(chartData.laneCount);
             }
             this.drawTimeline();
             this.renderNotes();

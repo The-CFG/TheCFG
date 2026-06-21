@@ -87,6 +87,8 @@ const DOM = {
         loadBtn: document.getElementById('editor-load-btn'),
         resetBtn: document.getElementById('editor-reset-btn'),
         backBtn: document.getElementById('editor-back-btn'),
+        uploadBtn: document.getElementById('editor-upload-btn'),
+        cloudStatusEl: document.getElementById('editor-cloud-status'),
         
         // 기타 UI
         loadInput: document.getElementById('editor-load-input'),
