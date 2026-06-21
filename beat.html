@@ -8,6 +8,8 @@
     <title>TheCFG TheBeat</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="icon" href="css/favicon.png" type="image/png">
     <link rel="stylesheet" href="css/beat/styles.css">
     <style>
         /* 터치 디바이스 레이아웃 - 좁은 화면(1024px 이하)에서만 세로 배치 */
@@ -61,6 +63,11 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
                                 </svg>
                             </a>
+                            <button id="account-icon-menu" class="account-icon-btn p-2 rounded-full hover:bg-gray-600 transition" title="로그인" aria-label="로그인">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-300 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                                </svg>
+                            </button>
                             <button id="settings-icon-menu" class="p-2 rounded-full hover:bg-gray-600 transition">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -713,6 +720,20 @@
             </div>
         </div>
         
+        <!-- 인증 모달 — TheBeat 계정 로그인/회원가입 -->
+        <div id="auth-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:9999;align-items:center;justify-content:center;">
+            <div style="background:#3d4548;padding:30px;border-radius:8px;width:min(320px,90vw);border:1px solid #555;">
+                <h2 id="auth-title" style="margin-top:0;color:#fff;">서버 로그인</h2>
+                <div style="display:flex;flex-direction:column;gap:12px;margin-top:20px;">
+                    <input type="email" id="auth-email" placeholder="이메일" style="padding:8px;background:#3c3c3c;border:1px solid #555;color:white;border-radius:4px;">
+                    <input type="password" id="auth-password" placeholder="비밀번호" style="padding:8px;background:#3c3c3c;border:1px solid #555;color:white;border-radius:4px;">
+                    <button id="btn-auth-execute" class="py-2 bg-teal-600 hover:bg-teal-500 rounded text-white" style="padding:10px;">로그인</button>
+                    <p id="auth-switch" style="font-size:12px;color:#aaa;cursor:pointer;text-align:center;margin:0;">계정이 없으신가요? 회원가입</p>
+                    <button id="btn-auth-close" class="py-2 bg-gray-600 hover:bg-gray-500 rounded text-white">닫기</button>
+                </div>
+            </div>
+        </div>
+
         <audio id="music-player"></audio>
         
         <!-- Fix mobile viewport height and browser navigation bar -->
@@ -760,6 +781,7 @@
         <script defer src="js/beat/ui.js"></script>
         <script defer src="js/beat/editor.js"></script>
         <script defer src="js/beat/game.js"></script>
+        <script defer src="js/beat/cloud/auth.js"></script>
         <script defer src="js/beat/main.js"></script>
     </body>
 </html>

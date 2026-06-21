@@ -586,6 +586,7 @@ document.addEventListener('DOMContentLoaded', () => {
         Debugger.init();
         I18n.init();
         Appearance.init();
+        if (typeof setupAuthUI === 'function') setupAuthUI();
     }
 
     initialize();
