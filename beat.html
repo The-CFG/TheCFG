@@ -258,7 +258,12 @@
                 </div>
                 <div id="settings-screen" class="hidden h-full flex flex-col justify-between overflow-y-auto" style="-webkit-overflow-scrolling: touch;">
                     <div class="flex-grow flex flex-col min-h-0">
-                        <h2 class="text-3xl font-bold mb-4 text-white" data-i18n="settings">환경설정</h2>
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-3xl font-bold text-white" data-i18n="settings">환경설정</h2>
+                            <button id="settings-back-btn" class="p-2 text-gray-400 hover:text-white transition flex-shrink-0" aria-label="닫기">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            </button>
+                        </div>
                         <p id="settings-message" class="hidden text-center text-yellow-400 mb-4 py-2 bg-gray-700 rounded"></p>
                         <div id="settings-tabs" class="flex border-b border-gray-600 mb-4">
                             <button data-tab="volume" class="tab-btn py-2 px-4 text-gray-300 hover:text-white transition active" data-i18n="volume">음량</button>
@@ -554,7 +559,6 @@
                                 </div>
                             </div>
                         </div>
-                        <button id="settings-back-btn" class="w-full py-3 text-lg font-bold bg-gray-600 hover:bg-gray-500 rounded-lg transition mt-4 flex-shrink-0" data-i18n="back">돌아가기</button>
                     </div>
                 </div>
                 <!-- Result Screen -->
