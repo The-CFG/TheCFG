@@ -30,6 +30,25 @@ const CloudAuth = {
         await _supabase.auth.signOut();
         _updateAuthStatus(null);
     },
+
+    // ── 닉네임 조회 (리더보드 표시용) ──────────────────────────
+    // 여러 userId → nickname 맵 일괄 조회
+    // HOI4Editor와 동일한 user_profiles 테이블 / get_nicknames_by_ids RPC(SECURITY DEFINER)를
+    // 그대로 사용한다 (RLS 우회, 같은 Supabase 프로젝트를 공유하므로 별도 백엔드 작업 불필요).
+    // 반환: { [userId]: nickname | null }
+    async _fetchNicknameMap(userIds) {
+        const uniqueIds = [...new Set(userIds)];
+        if (!uniqueIds.length) return {};
+        const { data, error } = await _supabase
+            .rpc('get_nicknames_by_ids', { user_ids: uniqueIds });
+        if (error) {
+            console.warn('_fetchNicknameMap RPC 오류:', error.message);
+            return {};
+        }
+        const map = {};
+        for (const row of (data || [])) map[row.user_id] = row.nickname || null;
+        return map;
+    },
 };
 
 // ── 계정 아이콘 표시 갱신 ────────────────────────────────────

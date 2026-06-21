@@ -25,12 +25,20 @@ const CloudScores = {
 
     // ── 리더보드 조회 (비로그인 가능) ────────────────────────────────────────
     async getLeaderboard(chartId, limit = 10) {
-        return await _supabase
+        const { data, error } = await _supabase
             .from('beat_scores')
             .select('user_id, score, accuracy, max_combo, achieved_at')
             .eq('chart_id', chartId)
             .order('score', { ascending: false })
             .limit(limit);
+
+        if (error || !data) return { data, error };
+
+        // user_id → 닉네임 일괄 조회 후 각 기록에 붙여서 반환
+        const nickMap = await CloudAuth._fetchNicknameMap(data.map(s => s.user_id));
+        const withNicknames = data.map(s => ({ ...s, nickname: nickMap[s.user_id] || null }));
+
+        return { data: withNicknames, error: null };
     },
 
     // ── 내 기록 조회 ──────────────────────────────────────────────────────────

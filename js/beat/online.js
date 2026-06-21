@@ -181,13 +181,16 @@ const Online = {
 
         const lbRows = lb.length === 0
             ? '<p class="text-gray-500 text-xs text-center py-4">기록 없음</p>'
-            : lb.map((s, i) => `
+            : lb.map((s, i) => {
+                const displayName = s.nickname ? _esc(s.nickname) : `${_esc(s.user_id.slice(0, 8))}…`;
+                return `
             <div class="flex items-center justify-between py-1.5 border-b border-gray-700 text-sm ${myScore && s.score === myScore.score ? 'text-teal-300' : 'text-gray-300'}">
                 <span class="w-6 text-center font-bold text-gray-400">${i + 1}</span>
-                <span class="flex-1 px-2 truncate">${_esc(s.user_id.slice(0, 8))}…</span>
+                <span class="flex-1 px-2 truncate">${displayName}</span>
                 <span class="font-mono font-bold w-16 text-right">${s.score.toLocaleString()}</span>
                 <span class="text-xs text-gray-500 w-14 text-right">${(+s.accuracy || 0).toFixed(1)}%</span>
-            </div>`).join('');
+            </div>`;
+            }).join('');
 
         const myScoreHtml = myScore
             ? `<div class="mt-3 p-2 bg-teal-900 rounded text-sm text-teal-200">
