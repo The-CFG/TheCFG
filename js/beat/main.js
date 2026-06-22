@@ -169,6 +169,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         document.getElementById('start-game-btn').addEventListener('click', async () => {
+            // 이전 온라인 플레이 상태 초기화
+            Game.state._onlineChartId = null;
+            Game.state.settings.musicSrc = null;
+            DOM.musicPlayer.src = '';
             await Game.start();
         });
 
