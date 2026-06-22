@@ -11,6 +11,8 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="icon" href="css/favicon.png" type="image/png">
     <link rel="stylesheet" href="css/beat/styles.css">
+    <link rel="stylesheet" href="css/beat/theme.css">
+    <script src="js/beat/theme.js"></script><!-- FOUC 방지: defer 없이 즉시 실행 -->
     <style>
         /* 터치 디바이스 레이아웃 - 좁은 화면(1024px 이하)에서만 세로 배치 */
         /* [수정] 기존에는 'body > div'로 잡아서 업로드/로그인/트리거/디버그 모달도
@@ -290,6 +292,39 @@
                                 </div>
                             </div>
                             <div id="tab-content-appearance" class="tab-content hidden space-y-6">
+                                <!-- 테마 선택 -->
+                                <div>
+                                    <h3 class="text-lg font-semibold mb-3 text-white" data-i18n="theme">테마</h3>
+                                    <div class="beat-theme-cards" id="beat-theme-selector">
+                                        <button class="beat-theme-card" data-theme-val="dark">
+                                            <div class="beat-theme-preview">
+                                                <div class="btp-bar"     style="background:#0d0f10"></div>
+                                                <div class="btp-body"    style="background:#161a1d">
+                                                    <div class="btp-surface" style="background:#1e2326"></div>
+                                                </div>
+                                            </div>
+                                            <span class="beat-theme-label" data-i18n="theme_dark">🌙 다크</span>
+                                        </button>
+                                        <button class="beat-theme-card" data-theme-val="blue">
+                                            <div class="beat-theme-preview">
+                                                <div class="btp-bar"     style="background:#1a202c"></div>
+                                                <div class="btp-body"    style="background:#2d3748">
+                                                    <div class="btp-surface" style="background:#374151"></div>
+                                                </div>
+                                            </div>
+                                            <span class="beat-theme-label" data-i18n="theme_blue">🔵 블루</span>
+                                        </button>
+                                        <button class="beat-theme-card" data-theme-val="light">
+                                            <div class="beat-theme-preview">
+                                                <div class="btp-bar"     style="background:#d1d5db"></div>
+                                                <div class="btp-body"    style="background:#e8eaed">
+                                                    <div class="btp-surface" style="background:#ffffff"></div>
+                                                </div>
+                                            </div>
+                                            <span class="beat-theme-label" data-i18n="theme_light">☀️ 라이트</span>
+                                        </button>
+                                    </div>
+                                </div>
                                 <!-- 노트 모양 선택 -->
                                 <div>
                                     <h3 class="text-lg font-semibold mb-3 text-white" data-i18n="note_shape">노트 모양</h3>
@@ -604,7 +639,6 @@
                                     <label for="editor-start-time" class="text-sm">시작(초):</label>
                                     <input type="number" id="editor-start-time" value="0" min="0" class="w-20 p-1 bg-gray-700 rounded text-sm">
                                 </div>
-                                <!-- [수정] 재생/정지 버튼과 미리보기 레인 선택 추가 -->
                                 <div class="flex items-center space-x-2">
                                     <label for="editor-preview-lanes" class="text-sm">미리보기:</label>
                                     <select id="editor-preview-lanes" class="p-1 bg-gray-700 rounded text-sm flex-1">
@@ -620,7 +654,7 @@
                                     <button id="editor-stop-btn" class="flex-1 py-1 px-2 bg-gray-500 hover:bg-gray-400 rounded text-sm">정지</button>
                                 </div>
                             </div>
-                            <!-- 2. 차트 설정 (변경 없음) -->
+                            <!-- 2. 차트 설정 -->
                             <div class="flex flex-col space-y-2 p-4 bg-gray-800 rounded-lg">
                                 <h3 class="text-xs font-bold uppercase tracking-wide text-gray-400 border-b border-gray-600 pb-2 mb-1">🎼 차트 설정</h3>
                                 <div class="flex items-center space-x-2">
@@ -661,7 +695,6 @@
                             <!-- 3. 관리 (로컬 파일) -->
                             <div class="flex flex-col space-y-2 p-4 bg-gray-800 rounded-lg">
                                 <h3 class="text-xs font-bold uppercase tracking-wide text-gray-400 border-b border-gray-600 pb-2 mb-1">💾 관리 (로컬 파일)</h3>
-                                <!-- [수정] 저장 버튼과 파일명 입력 칸 추가 -->
                                 <div class="flex items-center space-x-2">
                                     <input type="text" id="editor-chart-filename" placeholder="파일명" class="flex-grow p-1 bg-gray-700 rounded text-sm min-w-0">
                                     <button id="editor-save-btn" class="flex-shrink-0 py-1 px-2 bg-blue-600 hover:bg-blue-500 rounded text-sm">저장</button>
@@ -807,26 +840,20 @@
         <script>
             // 모바일 브라우저의 실제 뷰포트 높이 계산
             function setViewportHeight() {
-                // window.innerHeight는 모바일 브라우저 UI를 제외한 실제 가용 높이
                 const vh = window.innerHeight * 0.01;
                 document.documentElement.style.setProperty('--vh', `${vh}px`);
                 
-                // 안전 영역 하단 여백 계산 (브라우저 네비게이션 바 고려)
                 const safeBottom = Math.max(
                     parseInt(getComputedStyle(document.documentElement).getPropertyValue('env(safe-area-inset-bottom)')) || 0,
-                    80 // 기본 여백 (브라우저 UI 높이)
+                    80
                 );
                 document.documentElement.style.setProperty('--safe-bottom', `${safeBottom}px`);
             }
             
-            // 초기 설정
             setViewportHeight();
-            
-            // 화면 크기 변경, 회전, 스크롤 시 재계산
             window.addEventListener('resize', setViewportHeight);
             window.addEventListener('orientationchange', setViewportHeight);
             
-            // 주소창 숨김/보임 감지를 위한 스크롤 이벤트
             let ticking = false;
             window.addEventListener('scroll', () => {
                 if (!ticking) {

@@ -58,6 +58,11 @@ const I18n = {
             'apply': '적용',
             'preset_slots': '색상 프리셋',
             'save_preset': '프리셋 저장',
+            // 테마
+            'theme':       '테마',
+            'theme_dark':  '🌙 다크',
+            'theme_blue':  '🔵 블루 (기본)',
+            'theme_light': '☀️ 라이트',
             
             // 조작 설정
             'left_4': '좌측 4',
@@ -158,6 +163,11 @@ const I18n = {
             'apply': 'Apply',
             'preset_slots': 'Color Presets',
             'save_preset': 'Save Preset',
+            // Theme
+            'theme':       'Theme',
+            'theme_dark':  '🌙 Dark',
+            'theme_blue':  '🔵 Blue (Default)',
+            'theme_light': '☀️ Light',
             
             // Control settings
             'left_4': 'Left 4',
