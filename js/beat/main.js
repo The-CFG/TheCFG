@@ -206,6 +206,17 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
+        document.getElementById('editor-cloud-load-btn').addEventListener('click', async () => {
+            const user = await CloudAuth.getUser();
+            if (!user) {
+                alert('로그인이 필요합니다. 우측 상단 계정 아이콘을 클릭해주세요.');
+                return;
+            }
+            await CloudLoadModal.open();
+        });
+
+        document.getElementById('cloud-load-cancel-btn').addEventListener('click', () => CloudLoadModal.close());
+
         // 업로드 모달 버튼
         document.getElementById('upload-submit-btn').addEventListener('click', () => UploadModal.submit());
         document.getElementById('upload-cancel-btn').addEventListener('click', () => UploadModal.close());

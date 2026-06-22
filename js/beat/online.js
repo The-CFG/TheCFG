@@ -490,3 +490,80 @@ async function submitOnlineScore() {
         fresh.addEventListener('click', () => Online.show('detail', chartId));
     }
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// 에디터 — 서버에서 불러오기 모달
+// ════════════════════════════════════════════════════════════════════════════
+const CloudLoadModal = {
+
+    async open() {
+        const modal = document.getElementById('cloud-load-modal');
+        if (!modal) return;
+        modal.style.display = 'flex';
+        this._renderList('<p style="color:#718096;font-size:0.85rem;text-align:center;margin-top:16px;">불러오는 중…</p>');
+
+        const user = await CloudAuth.getUser();
+        if (!user) {
+            this._renderList('<p style="color:#fc8181;font-size:0.85rem;text-align:center;margin-top:16px;">로그인이 필요합니다.</p>');
+            return;
+        }
+
+        const { data, error } = await CloudCharts.listMyCharts();
+        if (error) {
+            this._renderList(`<p style="color:#fc8181;font-size:0.85rem;">${error.message}</p>`);
+            return;
+        }
+        if (!data || data.length === 0) {
+            this._renderList('<p style="color:#718096;font-size:0.85rem;text-align:center;margin-top:16px;">업로드한 차트가 없습니다.</p>');
+            return;
+        }
+
+        const listEl = document.getElementById('cloud-load-list');
+        listEl.innerHTML = '';
+        data.forEach(c => {
+            const item = document.createElement('button');
+            item.style.cssText = 'width:100%;text-align:left;padding:10px 12px;background:#3c4a5e;border:1px solid #4a5568;border-radius:6px;color:white;cursor:pointer;';
+            item.innerHTML = `
+                <div style="font-weight:600;font-size:0.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${_esc(c.title)}</div>
+                <div style="font-size:0.75rem;color:#a0aec0;margin-top:2px;">${_esc(c.artist || '—')} · ${c.lane_count}키 · ${c.note_count}노트</div>`;
+            item.addEventListener('mouseenter', () => item.style.background = '#4a5f78');
+            item.addEventListener('mouseleave', () => item.style.background = '#3c4a5e');
+            item.addEventListener('click', () => this._loadChart(c));
+            listEl.appendChild(item);
+        });
+    },
+
+    _renderList(html) {
+        const listEl = document.getElementById('cloud-load-list');
+        if (listEl) listEl.innerHTML = html;
+    },
+
+    async _loadChart(c) {
+        if (!Editor._confirmDiscardChanges('저장하지 않은 변경사항이 있습니다. 서버 차트를 불러오시겠습니까?')) return;
+
+        this._renderList('<p style="color:#718096;font-size:0.85rem;text-align:center;margin-top:16px;">차트 데이터 다운로드 중…</p>');
+
+        const { data: chartData, error } = await CloudCharts.downloadChartData(c.chart_storage_path);
+        if (error) {
+            this._renderList(`<p style="color:#fc8181;font-size:0.85rem;">다운로드 실패: ${error.message}</p>`);
+            return;
+        }
+
+        // 에디터에 로드
+        Editor.loadChart(chartData, c.title + '.json');
+
+        // 서버 메타 등록 → 이후 "서버에 업로드" 버튼이 update 모드로 동작
+        Editor.setCloudChart({ id: c.id, title: c.title });
+
+        this.close();
+
+        // 음악 파일 안내
+        const audioName = c.audio_storage_path.split('/').pop();
+        UI.showMessage('editor', `차트 로드 완료. 음악 파일(${audioName})을 별도로 다시 로드해주세요.`);
+    },
+
+    close() {
+        const modal = document.getElementById('cloud-load-modal');
+        if (modal) modal.style.display = 'none';
+    },
+};
