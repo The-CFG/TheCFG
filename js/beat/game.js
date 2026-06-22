@@ -122,14 +122,24 @@ const Game = {
                 DOM.musicPlayer.src = this.state.settings.musicSrc;
             }
         }
+        // 카운트다운 시간 = 3,2,1,START! 총 4틱 × 1000ms
+        const COUNTDOWN_DURATION_MS = 4000;
+
+        // gameStartTime을 4초 뒤로 설정: 카운트다운 동안 elapsedTime이 음수가 되어
+        // 노트들이 화면 위쪽에서부터 자연스럽게 흘러 내려오기 시작한다.
+        this.state.gameStartTime = performance.now() + COUNTDOWN_DURATION_MS;
+
+        // 게임 루프를 카운트다운 시작과 동시에 구동
+        // (콜드 스타트 렉 없이 첫 노트가 판정선에 도달)
+        this.loop(performance.now());
+
         this.runCountdown(() => {
             this.state.gameState = 'playing';
             if (this.state.settings.mode === 'music' && DOM.musicPlayer.src) {
                 DOM.musicPlayer.currentTime = this.state.settings.startTimeOffset;
                 DOM.musicPlayer.play();
             }
-            this.state.gameStartTime = performance.now();
-            this.loop(performance.now());
+            // gameStartTime과 loop()는 이미 구동 중 — 별도 작업 불필요
         });
     },
 
@@ -214,9 +224,12 @@ const Game = {
             const self = this;
             let elapsedTime;
 
-            if (self.state.settings.mode === 'music') {
+            if (self.state.settings.mode === 'music' && self.state.gameState === 'playing') {
+                // 게임 진행 중: 오디오 시간 기준 (음악과의 싱크 보장)
                 elapsedTime = Math.max(0, (DOM.musicPlayer.currentTime - self.state.settings.startTimeOffset) * 1000);
-            } else { // 'random'
+            } else {
+                // 카운트다운 중이거나 랜덤 모드: performance 기반 클럭
+                // gameStartTime이 미래로 설정되어 있어 카운트다운 동안 음수값 → 노트가 화면 위에서 자연스럽게 하강
                 elapsedTime = timestamp - self.state.gameStartTime - self.state.totalPausedTime;
             }
 
