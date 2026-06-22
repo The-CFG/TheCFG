@@ -53,6 +53,7 @@ const Game = {
         this.state.settings.requiredSongName = null;
         this.state.animationFrameId = null;
         this.state.countdownIntervalId = null;
+        this.state.audioReady = false;
     },
 
     runCountdown(onComplete) {
@@ -112,16 +113,26 @@ const Game = {
         UI.showScreen('playing');
         UI.updateScoreboard();
         this.state.gameState = 'countdown';
+        this.state.audioReady = false; // Fix 2: 오디오가 실제로 진행 중일 때만 오디오 클럭 사용
+
         if (this.state.settings.mode === 'music') {
             if (this.state.settings.musicFileObject) {
-                // 로컬 파일: Blob URL 생성
                 const musicUrl = URL.createObjectURL(this.state.settings.musicFileObject);
                 DOM.musicPlayer.src = musicUrl;
             } else if (this.state.settings.musicSrc) {
-                // 온라인 차트: 원격 URL 직접 사용
                 DOM.musicPlayer.src = this.state.settings.musicSrc;
             }
+
+            // Fix 1: 카운트다운 중에 오디오 시스템을 선행 워밍업
+            // seek + play→pause 로 모바일 오디오 초기화 비용을 게임 시작 전에 미리 지불.
+            // 이렇게 하면 게임 시작 시 play()가 거의 즉시 반환되어 메인 스레드 블로킹이 없어진다.
+            DOM.musicPlayer.currentTime = this.state.settings.startTimeOffset;
+            DOM.musicPlayer.play().then(() => {
+                DOM.musicPlayer.pause();
+                DOM.musicPlayer.currentTime = this.state.settings.startTimeOffset;
+            }).catch(() => {}); // autoplay 정책에 걸려도 무시 (게임 시작 시 다시 시도)
         }
+
         // 카운트다운 시간 = 3,2,1,START! 총 4틱 × 1000ms
         const COUNTDOWN_DURATION_MS = 4000;
 
@@ -130,16 +141,18 @@ const Game = {
         this.state.gameStartTime = performance.now() + COUNTDOWN_DURATION_MS;
 
         // 게임 루프를 카운트다운 시작과 동시에 구동
-        // (콜드 스타트 렉 없이 첫 노트가 판정선에 도달)
         this.loop(performance.now());
 
         this.runCountdown(() => {
             this.state.gameState = 'playing';
             if (this.state.settings.mode === 'music' && DOM.musicPlayer.src) {
+                // seek 비용은 이미 워밍업 단계에서 지불됨 — play()만 호출
                 DOM.musicPlayer.currentTime = this.state.settings.startTimeOffset;
-                DOM.musicPlayer.play();
+                DOM.musicPlayer.play().then(() => {
+                    // 오디오가 실제로 재생되기 시작하면 오디오 클럭 활성화 (Fix 2)
+                    this.state.audioReady = true;
+                }).catch(() => {});
             }
-            // gameStartTime과 loop()는 이미 구동 중 — 별도 작업 불필요
         });
     },
 
@@ -224,11 +237,13 @@ const Game = {
             const self = this;
             let elapsedTime;
 
-            if (self.state.settings.mode === 'music' && self.state.gameState === 'playing') {
-                // 게임 진행 중: 오디오 시간 기준 (음악과의 싱크 보장)
+            if (self.state.settings.mode === 'music' && self.state.audioReady) {
+                // 오디오가 실제로 재생 중일 때만 오디오 클럭 사용 (Fix 2: 클럭 전환 유예)
+                // play() 직후 currentTime이 아직 0인 몇 프레임 동안은 performance 클럭을 유지하여
+                // 노트 위치 점프(stuttering) 방지
                 elapsedTime = Math.max(0, (DOM.musicPlayer.currentTime - self.state.settings.startTimeOffset) * 1000);
             } else {
-                // 카운트다운 중이거나 랜덤 모드: performance 기반 클럭
+                // 카운트다운 중, 랜덤 모드, 또는 오디오 미준비: performance 기반 클럭
                 // gameStartTime이 미래로 설정되어 있어 카운트다운 동안 음수값 → 노트가 화면 위에서 자연스럽게 하강
                 elapsedTime = timestamp - self.state.gameStartTime - self.state.totalPausedTime;
             }
