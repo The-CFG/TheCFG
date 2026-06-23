@@ -17,6 +17,7 @@ const DOM = {
     requiredMusicFileNameEl: document.getElementById('required-music-file-name'),
     screens: {
         menu: document.getElementById('menu-screen'),
+        practice: document.getElementById('practice-screen'),
         playing: document.getElementById('playing-screen'),
         result: document.getElementById('result-screen'),
         editor: document.getElementById('editor-screen'),

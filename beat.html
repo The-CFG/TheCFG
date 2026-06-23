@@ -83,30 +83,40 @@
                             </button>
                         </div>
                     </div>
-                    <p class="text=l font-bold mb-8 text-white">2026/02/17 05:23 release</p>
                     <div id="menu-message" class="hidden p-3 mb-4 text-center text-white bg-red-500 rounded-lg"></div>
+                    <div class="space-y-4 mt-4" style="padding-bottom: var(--safe-bottom, 80px);">
+                        <button id="online-btn" class="w-full py-6 flex flex-col items-center justify-center bg-gray-700 hover:bg-gray-600 rounded-xl transition">
+                            <span class="text-3xl mb-1">🎵</span>
+                            <span class="text-xl font-bold text-white">플레이</span>
+                            <span class="text-sm text-gray-400 mt-0.5">온라인 라이브러리</span>
+                        </button>
+                        <button id="practice-btn" class="w-full py-6 flex flex-col items-center justify-center bg-gray-700 hover:bg-gray-600 rounded-xl transition">
+                            <span class="text-3xl mb-1">🎲</span>
+                            <span class="text-xl font-bold text-white">연습</span>
+                            <span class="text-sm text-gray-400 mt-0.5">랜덤 모드</span>
+                        </button>
+                        <button id="editor-btn" class="w-full py-6 flex flex-col items-center justify-center bg-gray-700 hover:bg-gray-600 rounded-xl transition">
+                            <span class="text-3xl mb-1">✏️</span>
+                            <span class="text-xl font-bold text-white">에디터</span>
+                            <span class="text-sm text-gray-400 mt-0.5">차트 제작</span>
+                        </button>
+                    </div>
+                </div>
+                <!-- Practice Screen -->
+                <div id="practice-screen" class="hidden flex flex-col flex-shrink-0">
+                    <div class="flex items-center mb-6">
+                        <button id="practice-back-btn" class="p-2 rounded-full hover:bg-gray-600 transition mr-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                            </svg>
+                        </button>
+                        <h2 class="text-2xl font-bold text-white">연습</h2>
+                    </div>
+                    <div id="practice-message" class="hidden p-3 mb-4 text-center text-white bg-red-500 rounded-lg"></div>
                     <div class="space-y-6">
-                        <div>
-                            <h3 class="text-xl mb-2 text-gray-300" data-i18n="game_mode">게임 모드</h3>
-                            <div class="flex space-x-2 btn-group" id="mode-selector">
-                                <button data-mode="random" class="w-full py-3 px-4 bg-gray-700 hover:bg-gray-600 rounded-lg transition active" data-i18n="random_mode">랜덤 모드</button>
-                                <button data-mode="music" class="w-full py-3 px-4 bg-gray-700 hover:bg-gray-600 rounded-lg transition" data-i18n="music_mode">뮤직 모드</button>
-                            </div>
-                        </div>
-                        <div id="music-mode-controls" class="hidden mt-2 space-y-2">
-                            <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-                                <label for="chart-file-input" class="cursor-pointer text-center block w-full py-2 px-4 bg-blue-600 hover:bg-blue-500 rounded-lg transition" data-i18n="load_chart">차트 불러오기</label>
-                                <input type="file" id="chart-file-input" class="hidden" accept="*">
-                                <label for="music-file-input" class="cursor-pointer text-center block w-full py-2 px-4 bg-teal-600 hover:bg-teal-500 rounded-lg transition" data-i18n="load_music">음악 불러오기</label>
-                                <input type="file" id="music-file-input" class="hidden" accept="audio/*,.mp3,.wav,.ogg">
-                            </div>
-                            <p id="chart-file-name" class="text-sm text-gray-400 truncate"></p>
-                            <p id="music-file-name" class="text-sm text-gray-400 truncate"></p>
-                            <p id="required-music-file-name" class="text-sm text-yellow-400 truncate h-5"></p>
-                        </div>
                         <div id="note-count-container">
-                            <h3 class="text-xl mb-2 text-gray-300" data-i18n="note_count">노트 수 (랜덤 모드)</h3>
-                            <input type="number" id="note-count-input" value="100" min="10" max="500" class="w-full p-3 bg-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="개수는 최소 10개에서 최대 500개까지 사용 가능합니다.">
+                            <h3 class="text-xl mb-2 text-gray-300" data-i18n="note_count">노트 수</h3>
+                            <input type="number" id="note-count-input" value="100" min="10" max="500" class="w-full p-3 bg-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="최소 10개 ~ 최대 500개">
                         </div>
                         <div id="difficulty-controls">
                             <div>
@@ -211,11 +221,17 @@
                                 <option value="8" data-i18n="lanes_8">8 레인</option>
                             </select>
                         </div>
-                        <div class="mt-10 space-y-3" style="padding-bottom: var(--safe-bottom, 80px);">
-                            <button id="start-game-btn" class="w-full py-4 text-xl font-bold bg-green-600 hover:bg-green-500 rounded-lg transition" data-i18n="start_game">게임 시작</button>
-                            <button id="online-btn" class="w-full py-3 bg-teal-700 hover:bg-teal-600 rounded-lg transition">🌐 온라인 라이브러리</button>
-                            <button id="editor-btn" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 rounded-lg transition" data-i18n="editor">에디터</button>
+                        <div style="padding-bottom: var(--safe-bottom, 80px);">
+                            <button id="start-game-btn" class="w-full py-4 text-xl font-bold bg-green-600 hover:bg-green-500 rounded-lg transition">연습 시작</button>
                         </div>
+                    </div>
+                    <!-- 뮤직 모드 파일 input (DOM 참조 유지용, 숨김) -->
+                    <div class="hidden">
+                        <input type="file" id="chart-file-input" accept="*">
+                        <input type="file" id="music-file-input" accept="audio/*,.mp3,.wav,.ogg">
+                        <p id="chart-file-name"></p>
+                        <p id="music-file-name"></p>
+                        <p id="required-music-file-name"></p>
                     </div>
                 </div>
                 <!-- Playing Screen -->

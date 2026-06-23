@@ -293,7 +293,75 @@ const Online = {
             ? '<p class="text-gray-400 text-sm text-center mt-8">업로드한 차트가 없습니다.</p>'
             : (data || []).map(c => this._myChartCard(c)).join('');
 
-        this._setContent(`<div class="space-y-2">${cards}</div>`);
+        this._setContent(`
+        <!-- 로컬 파일로 플레이 -->
+        <div class="p-3 bg-gray-800 rounded-lg mb-4 border border-gray-600">
+            <h3 class="text-sm font-semibold text-gray-300 mb-2">📂 로컬 파일로 플레이</h3>
+            <div class="flex flex-col space-y-2">
+                <div class="flex space-x-2">
+                    <label for="local-chart-file-input" class="cursor-pointer flex-1 text-center py-2 px-3 bg-blue-700 hover:bg-blue-600 rounded text-sm transition">차트 불러오기</label>
+                    <label for="local-music-file-input" class="cursor-pointer flex-1 text-center py-2 px-3 bg-teal-700 hover:bg-teal-600 rounded text-sm transition">음악 불러오기</label>
+                </div>
+                <p id="local-chart-name" class="text-xs text-gray-400 truncate hidden"></p>
+                <p id="local-music-name" class="text-xs text-gray-400 truncate hidden"></p>
+                <p id="local-required-name" class="text-xs text-yellow-400 truncate hidden"></p>
+                <button id="local-play-btn" class="w-full py-2 bg-green-700 hover:bg-green-600 rounded text-sm font-semibold transition disabled:opacity-40" disabled>▶ 플레이</button>
+            </div>
+        </div>
+        <!-- 내 업로드 차트 목록 -->
+        <h3 class="text-sm font-semibold text-gray-300 mb-2">☁ 내 업로드 차트</h3>
+        <div class="space-y-2">${cards}</div>`);
+
+        // 로컬 파일 input (hidden, DOM 원본은 practice-screen 안에 있으므로 여기선 별도 생성)
+        const chartInput = document.createElement('input');
+        chartInput.type = 'file'; chartInput.id = 'local-chart-file-input'; chartInput.accept = '*'; chartInput.className = 'hidden';
+        const musicInput = document.createElement('input');
+        musicInput.type = 'file'; musicInput.id = 'local-music-file-input'; musicInput.accept = 'audio/*,.mp3,.wav,.ogg'; musicInput.className = 'hidden';
+        document.body.appendChild(chartInput);
+        document.body.appendChild(musicInput);
+
+        chartInput.addEventListener('change', e => {
+            const file = e.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = ev => {
+                try {
+                    const chartData = JSON.parse(ev.target.result);
+                    Game.loadChartNotes(chartData);
+                    Game.state.settings.mode = 'music';
+                    document.getElementById('local-chart-name').textContent = `차트: ${file.name}`;
+                    document.getElementById('local-chart-name').classList.remove('hidden');
+                    if (chartData.songName) {
+                        document.getElementById('local-required-name').textContent = `필요 음악: ${chartData.songName}`;
+                        document.getElementById('local-required-name').classList.remove('hidden');
+                        Game.state.settings.requiredSongName = chartData.songName;
+                    }
+                    this._checkLocalPlayReady();
+                } catch { UI.showMessage('online', '차트 파일을 읽을 수 없습니다.'); }
+            };
+            reader.readAsText(file);
+        });
+
+        musicInput.addEventListener('change', e => {
+            const file = e.target.files[0]; if (!file) return;
+            Game.state.settings.musicFileObject = file;
+            Game.state.settings.musicSrc = URL.createObjectURL(file);
+            DOM.musicPlayer.src = Game.state.settings.musicSrc;
+            document.getElementById('local-music-name').textContent = `음악: ${file.name}`;
+            document.getElementById('local-music-name').classList.remove('hidden');
+            this._checkLocalPlayReady();
+        });
+
+        document.getElementById('local-play-btn').addEventListener('click', async () => {
+            Game.state._onlineChartId = null;
+            await Game.start();
+            UI.showScreen('playing');
+            Game.state.gameState = 'playing';
+        });
+
+        // 이전에 동적 생성된 input 정리 후 재생성했으므로 기존 것 제거
+        document.querySelectorAll('input#local-chart-file-input, input#local-music-file-input').forEach((el, i, arr) => {
+            if (i < arr.length - 2) el.remove(); // 마지막 2개만 유지 (방금 추가한 것)
+        });
 
         document.querySelectorAll('.my-delete-btn').forEach(btn =>
             btn.addEventListener('click', e => {
@@ -327,6 +395,14 @@ const Online = {
                 </div>
             </div>
         </div>`;
+    },
+
+    _checkLocalPlayReady() {
+        const btn = document.getElementById('local-play-btn');
+        if (!btn) return;
+        const hasChart = Game.state.notes?.length > 0;
+        const hasMusic = !!Game.state.settings.musicSrc;
+        btn.disabled = !(hasChart && hasMusic);
     },
 
     async _deleteMyChart(chartId, title) {

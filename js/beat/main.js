@@ -168,10 +168,19 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
+        document.getElementById('practice-btn').addEventListener('click', () => {
+            UI.showScreen('practice');
+        });
+
+        document.getElementById('practice-back-btn').addEventListener('click', () => {
+            UI.showScreen('menu');
+        });
+
         document.getElementById('start-game-btn').addEventListener('click', async () => {
-            // 이전 온라인 플레이 상태 초기화
+            // 연습 화면에서 오는 랜덤 모드 — 온라인 상태 초기화
             Game.state._onlineChartId = null;
             Game.state.settings.musicSrc = null;
+            Game.state.settings.mode = 'random';
             DOM.musicPlayer.src = '';
             await Game.start();
         });
@@ -180,9 +189,17 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('back-to-menu-btn').addEventListener('click', () => {
             DOM.lanesContainer.innerHTML = '';
             resetPlayingScreenUI();
+            const wasOnline  = !!Game.state._onlineChartId;
+            const wasRandom  = Game.state.settings.mode === 'random';
             Game.state._onlineChartId = null;
             Game.state.gameState = 'menu';
-            UI.showScreen('menu');
+            if (wasOnline) {
+                Online.show('browse');
+            } else if (wasRandom) {
+                UI.showScreen('practice');
+            } else {
+                UI.showScreen('menu');
+            }
         });
 
         // 온라인 라이브러리 버튼
@@ -250,26 +267,6 @@ document.addEventListener('DOMContentLoaded', () => {
         DOM.triggerModal.container.addEventListener('click', (e) => {
             if (e.target === DOM.triggerModal.container) {
                 Editor.hideTriggerModal();
-            }
-        });
-
-        document.getElementById('mode-selector').addEventListener('click', (e) => {
-            if (e.target.tagName !== 'BUTTON') return;
-            Game.state.settings.mode = e.target.dataset.mode;
-            document.querySelectorAll('#mode-selector button').forEach(b => b.classList.remove('active'));
-            e.target.classList.add('active');
-            const isMusicMode = Game.state.settings.mode === 'music';
-            DOM.musicModeControls.classList.toggle('hidden', !isMusicMode);
-            DOM.noteCountContainer.classList.toggle('hidden', isMusicMode);
-            DOM.difficultyControls.classList.toggle('hidden', isMusicMode);
-            if (!isMusicMode) {
-                DOM.chartFileNameEl.textContent = '';
-                DOM.musicFileNameEl.textContent = '';
-                DOM.requiredMusicFileNameEl.textContent = '';
-                Game.state.notes = [];
-                Game.state.settings.musicSrc = null;
-                Game.state.settings.musicFileObject = null;
-                Game.state.settings.requiredSongName = null;
             }
         });
 
@@ -622,7 +619,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function initialize() {
         setupEventListeners();
-        document.querySelector('#mode-selector button[data-mode="random"]').classList.add('active');
         document.querySelector('#difficulty-selector button[data-difficulty="normal"]').classList.add('active');
         updateDetailedSettingsUI();
         Debugger.init();
