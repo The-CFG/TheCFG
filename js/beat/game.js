@@ -410,11 +410,6 @@ const Game = {
                 headNote.element.remove();
                 headNote.element = null;
             }
-        } else if (note.type === 'long_head') {
-            if (note.element) { note.element.remove(); note.element = null; }
-            // 대응하는 tail도 processed 처리 (카운트 없이)
-            const tailNote = this.state.notes.find(n => n.noteId === note.noteId && n.type === 'long_tail');
-            if (tailNote) tailNote.processed = true;
         } else if ((note.type === 'tap' || note.type === 'false') && note.element) {
             note.element.remove();
             note.element = null;
@@ -426,7 +421,6 @@ const Game = {
         this.state.score += CONFIG.POINTS[judgement];
         if (judgement === 'miss' || judgement === 'bad') {
             this.state.combo = 0;
-        this.state.maxCombo = 0;
         } else {
             this.state.combo++;
             if (this.state.combo > this.state.maxCombo) this.state.maxCombo = this.state.combo;
