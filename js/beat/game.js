@@ -444,13 +444,14 @@ const Game = {
                 judgement = (judgement === 'miss') ? 'perfect' : 'miss';
             }
             if (judgement === 'miss' && note.time > 0) {
-                // 같은 타임의 일반 tap 노트만 함께 처리 — 롱노트는 개별 판정
-                const notesAtSameTime = this.state.notes.filter(n =>
-                    !n.processed && n.time === note.time && n.type === 'tap'
-                );
-                if (notesAtSameTime.length > 0) {
+                if (note.type === 'tap' || note.type === 'false') {
+                    // tap끼리만 같은 타임 일괄 miss 처리
+                    const notesAtSameTime = this.state.notes.filter(n =>
+                        !n.processed && n.time === note.time && (n.type === 'tap' || n.type === 'false')
+                    );
                     notesAtSameTime.forEach(n => this._processSingleJudgement('miss', n));
                 } else {
+                    // long_head / long_tail 은 개별 처리
                     this._processSingleJudgement('miss', note);
                 }
                 Audio.playMissSound();
