@@ -454,13 +454,10 @@ const Game = {
                     // long_head / long_tail 은 개별 처리
                     this._processSingleJudgement('miss', note);
                 }
-                Audio.playMissSound();
                 UI.showJudgementFeedback('MISS', 0);
                 UI.updateScoreboard();
             } else {
                 this._processSingleJudgement(judgement, note);
-                if (judgement === 'perfect' || judgement === 'good') Audio.playHitSound();
-                else Audio.playMissSound();
                 UI.showJudgementFeedback(judgement.toUpperCase(), this.state.combo);
                 UI.updateScoreboard();
             }

@@ -1,21 +1,9 @@
 const Audio = {
     isReady: false,
-    hitSound: null,
-    missSound: null,
     countdownTickSound: null,
     countdownStartSound: null,
 
     initializeSynths() {
-        this.hitSound = new Tone.Synth({
-            oscillator: { type: 'sine' },
-            envelope: { attack: 0.005, decay: 0.05, sustain: 0, release: 0.1 }
-        }).toDestination();
-
-        this.missSound = new Tone.Synth({
-            oscillator: { type: 'square' },
-            envelope: { attack: 0.01, decay: 0.2, sustain: 0, release: 0.1 }
-        }).toDestination();
-
         this.countdownTickSound = new Tone.Synth({
             oscillator: { type: 'sine' },
             envelope: { attack: 0.005, decay: 0.1, sustain: 0.1, release: 0.2 }
@@ -43,18 +31,6 @@ const Audio = {
         }
     },
 
-    playHitSound() {
-        if (!this.isReady || !this.hitSound) return;
-        const now = Tone.now();
-        this.hitSound.triggerAttackRelease("G5", 0.05, now + 0.001);
-    },
-
-    playMissSound() {
-        if (!this.isReady || !this.missSound) return;
-        const now = Tone.now();
-        this.missSound.triggerAttackRelease("C3", "8n", now + 0.001);
-    },
-
     playCountdownTick() {
         if (!this.isReady || !this.countdownTickSound) return;
         const now = Tone.now();
@@ -76,8 +52,6 @@ const Audio = {
         if (!this.isReady) return;
         const db = (value - 100) * 0.5;
         const volume = (value === 0) ? -Infinity : db;
-        this.hitSound.volume.value = volume;
-        this.missSound.volume.value = volume;
         this.countdownTickSound.volume.value = volume;
         this.countdownStartSound.volume.value = volume;
     }

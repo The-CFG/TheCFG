@@ -1,0 +1,151 @@
+/* 모바일 브라우저 주소창/네비게이션 바 대응 */
+html, body {
+    height: 100vh;
+    height: calc(var(--vh, 1vh) * 100);
+}
+
+body > div {
+    height: 100vh;
+    height: calc(var(--vh, 1vh) * 100);
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #2d3748; /* UI 영역 배경색과 통일 */
+    color: #e2e8f0;
+    overscroll-behavior: none;
+}
+.key-hint {
+    position: absolute;
+    bottom: 60px;
+    width: 100%;
+    text-align: center;
+    font-size: 0.9rem;
+    color: #a0aec0;
+    transition: opacity 0.3s ease;
+}
+.judgement-line {
+    position: absolute;
+    bottom: 100px;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(90deg, rgba(255,255,255,0.2), rgba(255,255,255,0.8), rgba(255,255,255,0.2));
+    box-shadow: 0 0 10px #fff, 0 0 20px #fff;
+}
+.note {
+    position: absolute;
+    width: 100%;
+    height: 25px;
+    border-radius: 5px;
+    will-change: transform;
+}
+
+/* 노트 타입별 색상 모드일 때만 CSS 변수 사용 */
+body:not(.lane-color-mode) .note {
+    background-color: var(--note-tap-color);
+}
+body:not(.lane-color-mode) .note.long {
+    background: linear-gradient(to top, var(--note-long-gradient-start), var(--note-long-color));
+    opacity: 0.9;
+}
+body:not(.lane-color-mode) .note.false {
+    background-color: var(--note-false-color);
+    box-shadow: 0 0 8px var(--note-false-color);
+}
+
+/* 게임 중 원형 노트 스타일 (에디터 제외) */
+body.circle-notes .note {
+    border-radius: 50%;
+    width: 90px !important;
+    left: 5px !important;
+}
+
+body.circle-notes .note:not(.long) {
+    height: 90px !important;
+}
+
+body.circle-notes .note.long {
+    border-radius: 45px;
+    min-height: 90px;
+    /* 위아래 모두 둥글게 처리하여 캡슐 모양으로 표시 */
+}
+
+/* 원형 노트일 때 판정선도 원형으로 */
+body.circle-notes .judgement-line {
+    border-radius: 50%;
+    height: 90px;
+    width: 90px;
+    left: 5px;
+    background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0.1) 100%);
+    box-shadow: 0 0 10px #fff, 0 0 20px #fff;
+}
+
+.judgement-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 4rem;
+    font-weight: bold;
+    color: white;
+    opacity: 0;
+    transition: all 0.3s ease-out;
+    text-shadow: 0 0 15px rgba(0,0,0,0.5);
+}
+.judgement-text.show {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.2);
+    transition: none;
+}
+.combo-text {
+    position: absolute;
+    top: 60%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #f6e05e;
+    opacity: 0;
+    transition: all 0.3s ease-out;
+    text-shadow: 0 0 10px rgba(0,0,0,0.5);
+}
+.combo-text.show {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.1);
+    transition: none;
+}
+.countdown-text {
+    position: absolute;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(1.5);
+    font-size: 8rem;
+    font-weight: bold;
+    color: white;
+    opacity: 0;
+    transition: all 0.3s ease-out;
+    text-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    pointer-events: none;
+}
+.countdown-text.show {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+}
+.lane {
+    position: relative;
+    height: 100%;
+    border-left: 1px solid #4a5568;
+    border-right: 1px solid #4a5568;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: rgba(255, 255, 255, 0.2);
+}
+.lane.active-feedback {
+    background-color: rgba(255, 255, 255, 0.1);
+    transition: background-color 0.05s ease;
+}
+.btn-group button.active {
+    background-color: #4299e1;
+    color: white;
+}

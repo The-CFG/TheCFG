@@ -1,0 +1,296 @@
+/* Touch device UI improvements - applies to ALL touch devices regardless of screen size */
+@media (hover: none) and (pointer: coarse) {
+    html, body {
+        font-size: 14px;
+        overflow: hidden;
+        position: fixed;
+        width: 100%;
+        height: 100%;
+    }
+
+    #ui-area {
+        -webkit-overflow-scrolling: touch !important;
+        overscroll-behavior: contain !important;
+        overflow-y: auto !important;
+    }
+}
+
+/* Touch device layout - column only on NARROW screens (phones/small tablets) */
+@media (hover: none) and (pointer: coarse) and (max-width: 1024px) {
+    /* Force column layout only on narrow touch devices */
+    body > div {
+        display: flex !important;
+        flex-direction: column !important;
+        height: 100vh !important;
+        overflow: hidden !important;
+    }
+    
+    /* Game area takes fixed space */
+    #game-area {
+        flex: 0 0 auto !important;
+        width: 100% !important;
+        height: 35vh !important;
+        min-height: 200px !important;
+        max-height: 40vh !important;
+    }
+    
+    /* UI area takes remaining space and scrolls */
+    #ui-area {
+        flex: 1 1 0 !important;
+        width: 100% !important;
+        min-height: 0 !important;
+        overflow-y: scroll !important;
+        padding: 0.5rem !important;
+        padding-bottom: calc(0.5rem + var(--mobile-bottom-padding)) !important;
+    }
+    
+    /* Ensure all screens have proper bottom padding */
+    #menu-screen,
+    #playing-screen,
+    #editor-screen,
+    #settings-screen,
+    #result-screen {
+        padding-bottom: var(--mobile-bottom-padding) !important;
+    }
+}
+
+/* Tablet and mobile by screen size */
+@media (max-width: 1024px) {
+    html, body {
+        font-size: 14px;
+        overflow: hidden;
+        position: fixed;
+        width: 100%;
+        height: 100%;
+    }
+    
+    /* Force proper flex layout on tablet/mobile */
+    body > div {
+        display: flex !important;
+        flex-direction: column !important;
+        height: 100vh !important;
+        overflow: hidden !important;
+    }
+    
+    /* Game area takes fixed space */
+    #game-area {
+        flex: 0 0 auto !important;
+        height: 35vh !important;
+        min-height: 200px !important;
+        max-height: 40vh !important;
+    }
+    
+    /* UI area takes remaining space and scrolls */
+    #ui-area {
+        flex: 1 1 0 !important;
+        min-height: 0 !important;
+        -webkit-overflow-scrolling: touch !important;
+        overscroll-behavior: contain !important;
+        overflow-y: scroll !important;
+    }
+    
+    .judgement-text {
+        font-size: 3rem;
+    }
+    
+    .combo-text {
+        font-size: 2rem;
+    }
+    
+    .countdown-text {
+        font-size: 4rem;
+    }
+    
+    /* Make buttons more touch-friendly */
+    button {
+        min-height: 44px;
+        touch-action: manipulation;
+    }
+    
+    input[type="range"] {
+        height: 40px;
+        touch-action: pan-x;
+    }
+    
+    /* Better spacing for tablet/mobile UI */
+    #ui-area {
+        font-size: 0.9rem;
+        padding: 0.5rem !important;
+    }
+    
+    /* Make sliders easier to use on touch devices */
+    input[type="range"]::-webkit-slider-thumb {
+        width: 24px;
+        height: 24px;
+    }
+    
+    input[type="range"]::-moz-range-thumb {
+        width: 24px;
+        height: 24px;
+    }
+    
+    /* Ensure scrollable areas work on iOS */
+    .overflow-y-auto {
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Reduce spacing on tablet/mobile */
+    .space-y-6 > * + * {
+        margin-top: 1rem !important;
+    }
+    
+    .space-y-4 > * + * {
+        margin-top: 0.75rem !important;
+    }
+    
+    .space-y-3 > * + * {
+        margin-top: 0.5rem !important;
+    }
+    
+    /* Make text inputs smaller on touch devices */
+    input[type="number"],
+    input[type="text"],
+    select {
+        padding: 0.5rem !important;
+        font-size: 0.875rem !important;
+    }
+    
+    /* Compact headings on tablet/mobile */
+    h1 {
+        font-size: 1.75rem !important;
+        margin-bottom: 1rem !important;
+    }
+    
+    h2 {
+        font-size: 1.5rem !important;
+        margin-bottom: 0.75rem !important;
+    }
+    
+    h3 {
+        font-size: 1.125rem !important;
+    }
+    
+    /* Reduce padding on cards/boxes */
+    .bg-gray-700,
+    .bg-gray-800 {
+        padding: 0.75rem !important;
+    }
+    
+    /* Make buttons more compact */
+    button {
+        padding-top: 0.5rem !important;
+        padding-bottom: 0.5rem !important;
+    }
+    
+    /* Compact playing screen stats */
+    #playing-screen .bg-gray-700 {
+        padding: 0.5rem !important;
+    }
+    
+    #playing-screen .text-3xl {
+        font-size: 1.5rem !important;
+    }
+    
+    #playing-screen .text-xl {
+        font-size: 1.125rem !important;
+    }
+    
+    #playing-screen .space-y-1 > * + * {
+        margin-top: 0.25rem !important;
+    }
+    
+    /* Ensure buttons are always visible */
+    #playing-screen {
+        padding-bottom: env(safe-area-inset-bottom, 0) !important;
+    }
+}
+
+/* Fine-tuning for larger tablets in landscape */
+@media (min-width: 768px) and (max-width: 1024px) and (orientation: landscape) {
+    #game-area {
+        height: 50vh !important;
+        max-height: 50vh !important;
+    }
+}
+
+/* Desktop only - restore side-by-side layout */
+@media (min-width: 1025px) {
+    body > div {
+        flex-direction: row !important;
+    }
+    
+    #game-area {
+        width: 60% !important;
+        height: 100% !important;
+        max-height: none !important;
+    }
+    
+    #ui-area {
+        width: 40% !important;
+        height: 100% !important;
+    }
+}
+
+/* Prevent touch callouts and selections on game elements only */
+#game-area,
+#lanes-container,
+.note,
+.judgement-line {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: none;
+}
+
+/* Allow scrolling in UI area */
+#ui-area,
+#menu-screen,
+#playing-screen,
+#editor-screen,
+#settings-screen,
+#result-screen {
+    touch-action: pan-y;
+    overscroll-behavior-y: contain;
+}
+
+/* Allow interaction with UI controls */
+#ui-area button,
+#ui-area input,
+#ui-area select,
+#menu-screen button,
+#menu-screen input,
+#menu-screen select,
+#playing-screen button,
+#playing-screen input,
+#playing-screen select,
+#editor-screen button,
+#editor-screen input,
+#editor-screen select,
+#settings-screen button,
+#settings-screen input,
+#settings-screen select {
+    touch-action: manipulation;
+}
+
+/* Ensure all screen containers are properly scrollable */
+#menu-screen,
+#playing-screen,
+#result-screen,
+#editor-screen,
+#settings-screen {
+    -webkit-overflow-scrolling: touch;
+    overflow-y: auto;
+}
+
+/* Better trigger visibility */
+.editor-trigger {
+    box-shadow: 0 0 5px rgba(251, 191, 36, 0.5);
+}
+
+/* Improve modal for mobile */
+@media (max-width: 640px) {
+    #trigger-modal > div {
+        width: 90%;
+        max-width: none;
+    }
+}
