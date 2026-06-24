@@ -509,73 +509,320 @@
                                     <button id="save-keybinds-btn" class="mt-2 w-full max-w-xs py-2 bg-blue-600 hover:bg-blue-500 rounded transition" data-i18n="save">저장</button>
                                 </div>
                             </div>
-                            <div id="tab-content-help" class="tab-content hidden space-y-6 text-gray-300 text-sm">
-                                <div>
-                                    <h3 class="text-xl font-semibold mb-2 text-white">1. 플레이 방법 및 화면 조작</h3>
-                                    <ul class="list-disc list-inside space-y-1">
-                                        <li><strong>기본 목표:</strong> 화면 위에서 아래로 내려오는 노트를 판정선에 맞춰 정확한 타이밍에 처리하는 리듬 게임입니다.</li>
-                                        <li><strong>조작:</strong> 각 레인(세로줄)에 해당하는 키보드 키를 눌러 노트를 처리합니다. 기본 조작키는 <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">A</kbd> <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">S</kbd> <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">D</kbd> <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">F</kbd> / <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Space</kbd> / <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">J</kbd> <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">K</kbd> <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">L</kbd> <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">;</kbd>이며, '환경설정 &gt; 조작' 탭에서 변경할 수 있습니다.</li>
-                                        <li><strong>일시정지:</strong> 게임 플레이 중 <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">ESC</kbd> 키를 누르거나 일시정지 버튼을 누르면 게임을 일시정지하거나 다시 시작할 수 있습니다.</li>
-                                    </ul>
+                            <div id="tab-content-help" class="tab-content hidden help-tab">
+
+                                <!-- 섹션 1: 플레이 방법 -->
+                                <details class="help-card" open>
+                                    <summary class="help-card-header">
+                                        <span class="help-card-icon">🎮</span>
+                                        <span class="help-card-title">플레이 방법</span>
+                                        <svg class="help-card-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                                    </summary>
+                                    <div class="help-card-body">
+                                        <p class="help-desc">화면 위에서 아래로 내려오는 노트를 <strong>판정선</strong>에 맞춰 정확한 타이밍에 처리하는 리듬 게임입니다.</p>
+                                        <div class="help-rows">
+                                            <div class="help-row">
+                                                <span class="help-row-label">기본 조작</span>
+                                                <span class="help-row-value">각 레인에 대응하는 키를 눌러 노트를 처리합니다</span>
+                                            </div>
+                                            <div class="help-row">
+                                                <span class="help-row-label">기본 키 (4레인)</span>
+                                                <span class="help-row-value help-keys">
+                                                    <kbd>D</kbd><kbd>F</kbd>
+                                                    <span class="help-key-sep">/</span>
+                                                    <kbd>J</kbd><kbd>K</kbd>
+                                                </span>
+                                            </div>
+                                            <div class="help-row">
+                                                <span class="help-row-label">기본 키 (5레인)</span>
+                                                <span class="help-row-value help-keys">
+                                                    <kbd>D</kbd><kbd>F</kbd>
+                                                    <span class="help-key-sep">/</span>
+                                                    <kbd>Space</kbd>
+                                                    <span class="help-key-sep">/</span>
+                                                    <kbd>J</kbd><kbd>K</kbd>
+                                                </span>
+                                            </div>
+                                            <div class="help-row">
+                                                <span class="help-row-label">기본 키 (8레인)</span>
+                                                <span class="help-row-value help-keys">
+                                                    <kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><kbd>F</kbd>
+                                                    <span class="help-key-sep">/</span>
+                                                    <kbd>J</kbd><kbd>K</kbd><kbd>L</kbd><kbd>;</kbd>
+                                                </span>
+                                            </div>
+                                            <div class="help-row">
+                                                <span class="help-row-label">일시정지</span>
+                                                <span class="help-row-value help-keys"><kbd>ESC</kbd> <span class="help-key-sep">또는 화면 우상단 버튼</span></span>
+                                            </div>
+                                        </div>
+                                        <p class="help-tip">💡 조작 키는 <strong>환경설정 → 조작</strong> 탭에서 자유롭게 변경할 수 있습니다. 레인 수에 따라 활성화되는 키가 달라집니다.</p>
+                                    </div>
+                                </details>
+
+                                <!-- 섹션 2: 노트 종류 -->
+                                <details class="help-card">
+                                    <summary class="help-card-header">
+                                        <span class="help-card-icon">🎵</span>
+                                        <span class="help-card-title">노트의 종류</span>
+                                        <svg class="help-card-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                                    </summary>
+                                    <div class="help-card-body">
+                                        <div class="help-note-grid">
+                                            <div class="help-note-item">
+                                                <div class="help-note-visual help-note-visual--tap"></div>
+                                                <div>
+                                                    <div class="help-note-name" style="color:#63b3ed;">일반 노트</div>
+                                                    <div class="help-note-desc">판정선에 맞춰 <strong>한 번</strong> 누르면 처리됩니다. 가장 기본적인 노트입니다.</div>
+                                                </div>
+                                            </div>
+                                            <div class="help-note-item">
+                                                <div class="help-note-visual help-note-visual--long"></div>
+                                                <div>
+                                                    <div class="help-note-name" style="color:#b794f4;">롱 노트</div>
+                                                    <div class="help-note-desc">시작 지점에서 <strong>누른 채로</strong> 유지하다가 끝 지점에서 정확하게 떼야 합니다. 도중에 놓으면 MISS 처리됩니다.</div>
+                                                </div>
+                                            </div>
+                                            <div class="help-note-item">
+                                                <div class="help-note-visual help-note-visual--false"></div>
+                                                <div>
+                                                    <div class="help-note-name" style="color:#fc8181;">가짜 노트 <span class="help-badge">함정</span></div>
+                                                    <div class="help-note-desc">누르면 MISS! 키를 <strong>누르지 않고</strong> 통과시켜야 PERFECT를 받습니다. '어려움' 난이도에서 등장합니다.</div>
+                                                </div>
+                                            </div>
+                                            <div class="help-note-item">
+                                                <div class="help-note-visual help-note-visual--dongta"></div>
+                                                <div>
+                                                    <div class="help-note-name" style="color:#f6ad55;">동시타</div>
+                                                    <div class="help-note-desc">같은 타이밍에 여러 레인에서 동시에 등장합니다. 대응하는 키를 <strong>동시에</strong> 눌러야 합니다.</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </details>
+
+                                <!-- 섹션 3: 점수 및 판정 -->
+                                <details class="help-card">
+                                    <summary class="help-card-header">
+                                        <span class="help-card-icon">🏆</span>
+                                        <span class="help-card-title">점수 & 판정</span>
+                                        <svg class="help-card-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                                    </summary>
+                                    <div class="help-card-body">
+                                        <div class="help-judgement-grid">
+                                            <div class="help-judgement-item" style="border-color:#ffd700;">
+                                                <div class="help-judgement-name" style="color:#ffd700;">PERFECT</div>
+                                                <div class="help-judgement-pts">+10점</div>
+                                                <div class="help-judgement-desc">±50ms 이내</div>
+                                            </div>
+                                            <div class="help-judgement-item" style="border-color:#68d391;">
+                                                <div class="help-judgement-name" style="color:#68d391;">GOOD</div>
+                                                <div class="help-judgement-pts">+5점</div>
+                                                <div class="help-judgement-desc">±100ms 이내</div>
+                                            </div>
+                                            <div class="help-judgement-item" style="border-color:#f6ad55;">
+                                                <div class="help-judgement-name" style="color:#f6ad55;">BAD</div>
+                                                <div class="help-judgement-pts">+2점</div>
+                                                <div class="help-judgement-desc">±150ms 이내</div>
+                                            </div>
+                                            <div class="help-judgement-item" style="border-color:#fc8181;">
+                                                <div class="help-judgement-name" style="color:#fc8181;">MISS</div>
+                                                <div class="help-judgement-pts">+0점</div>
+                                                <div class="help-judgement-desc">콤보 초기화</div>
+                                            </div>
+                                        </div>
+                                        <div class="help-rows" style="margin-top:10px;">
+                                            <div class="help-row">
+                                                <span class="help-row-label">콤보</span>
+                                                <span class="help-row-value">GOOD 이상 연속 시 쌓이며, 높을수록 추가 점수가 올라갑니다. BAD·MISS는 콤보를 초기화합니다.</span>
+                                            </div>
+                                            <div class="help-row">
+                                                <span class="help-row-label">랭크</span>
+                                                <span class="help-row-value">결과 화면에서 최종 점수에 따라 <span style="color:#ffd700;font-weight:700;">S</span> / <span style="color:#68d391;font-weight:700;">A</span> / <span style="color:#63b3ed;font-weight:700;">B</span> / <span style="color:#a0aec0;font-weight:700;">C</span> 랭크가 부여됩니다.</span>
+                                            </div>
+                                            <div class="help-row">
+                                                <span class="help-row-label">온라인 점수</span>
+                                                <span class="help-row-value">로그인 상태에서 온라인 차트를 클리어하면 점수가 리더보드에 자동 기록됩니다.</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </details>
+
+                                <!-- 섹션 4: 게임 모드 -->
+                                <details class="help-card">
+                                    <summary class="help-card-header">
+                                        <span class="help-card-icon">🕹️</span>
+                                        <span class="help-card-title">게임 모드</span>
+                                        <svg class="help-card-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                                    </summary>
+                                    <div class="help-card-body">
+                                        <div class="help-mode-grid">
+                                            <div class="help-mode-item">
+                                                <div class="help-mode-icon">🎲</div>
+                                                <div class="help-mode-name">랜덤 모드</div>
+                                                <div class="help-mode-desc">노트가 자동 생성됩니다. 난이도와 레인 수, 세부 파라미터를 원하는 대로 설정하세요.</div>
+                                            </div>
+                                            <div class="help-mode-item">
+                                                <div class="help-mode-icon">🎼</div>
+                                                <div class="help-mode-name">뮤직 모드</div>
+                                                <div class="help-mode-desc">직접 만든 차트(JSON)와 음악 파일을 불러와 정확한 박자에 맞춰 플레이합니다.</div>
+                                            </div>
+                                            <div class="help-mode-item">
+                                                <div class="help-mode-icon">🌐</div>
+                                                <div class="help-mode-name">온라인 라이브러리</div>
+                                                <div class="help-mode-desc">다른 사람이 업로드한 차트를 검색하고 바로 플레이하거나 리더보드를 확인합니다.</div>
+                                            </div>
+                                        </div>
+                                        <div class="help-rows" style="margin-top:10px;">
+                                            <div class="help-row">
+                                                <span class="help-row-label">레인 수</span>
+                                                <span class="help-row-value">4 ~ 8레인 선택 가능. 레인이 많을수록 더 넓은 손가락 운용이 필요합니다.</span>
+                                            </div>
+                                            <div class="help-row">
+                                                <span class="help-row-label">난이도 (랜덤)</span>
+                                                <span class="help-row-value">쉬움 / 보통 / 어려움 선택 후 세부 설정으로 속도·확률을 직접 미세 조정할 수 있습니다.</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </details>
+
+                                <!-- 섹션 5: 난이도 세부 설정 -->
+                                <details class="help-card">
+                                    <summary class="help-card-header">
+                                        <span class="help-card-icon">⚙️</span>
+                                        <span class="help-card-title">난이도 세부 설정</span>
+                                        <svg class="help-card-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                                    </summary>
+                                    <div class="help-card-body">
+                                        <p class="help-desc">랜덤 모드에서 세부 설정 패널을 열어 각 파라미터를 개별 조절할 수 있습니다.</p>
+                                        <div class="help-rows">
+                                            <div class="help-row">
+                                                <span class="help-row-label">낙하 속도</span>
+                                                <span class="help-row-value">노트가 판정선까지 내려오는 속도입니다. 값이 높을수록 빠릅니다. (쉬움 4 / 보통 7 / 어려움 10)</span>
+                                            </div>
+                                            <div class="help-row">
+                                                <span class="help-row-label">생성 속도</span>
+                                                <span class="help-row-value">노트가 얼마나 빠르게 연속으로 등장하는지를 결정합니다. (쉬움 1.0x / 보통 1.5x / 어려움 2.0x)</span>
+                                            </div>
+                                            <div class="help-row">
+                                                <span class="help-row-label">동시타 확률</span>
+                                                <span class="help-row-value">여러 레인 노트가 동시에 등장할 확률입니다. (쉬움 10% / 보통 25% / 어려움 40%)</span>
+                                            </div>
+                                            <div class="help-row">
+                                                <span class="help-row-label">최대 동시타 수</span>
+                                                <span class="help-row-value">한 번에 등장할 수 있는 동시타 최대 개수. 레인 수를 초과할 수 없습니다.</span>
+                                            </div>
+                                            <div class="help-row">
+                                                <span class="help-row-label">롱노트 확률</span>
+                                                <span class="help-row-value">전체 노트 중 롱 노트가 등장하는 비율입니다. (쉬움 10% / 보통 15% / 어려움 20%)</span>
+                                            </div>
+                                            <div class="help-row">
+                                                <span class="help-row-label">가짜 노트</span>
+                                                <span class="help-row-value">토글로 활성화하면 가짜 노트가 등장합니다. 기본적으로 어려움 난이도에서만 활성화됩니다.</span>
+                                            </div>
+                                        </div>
+                                        <p class="help-tip">💡 프리셋 버튼(쉬움/보통/어려움)을 누른 뒤 세부 값을 조금씩 조절하면 나만의 커스텀 난이도를 만들 수 있습니다.</p>
+                                    </div>
+                                </details>
+
+                                <!-- 섹션 6: 차트 에디터 -->
+                                <details class="help-card">
+                                    <summary class="help-card-header">
+                                        <span class="help-card-icon">✏️</span>
+                                        <span class="help-card-title">차트 에디터</span>
+                                        <svg class="help-card-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                                    </summary>
+                                    <div class="help-card-body">
+                                        <p class="help-desc">자신만의 차트를 직접 제작하는 공간입니다. 음악 파일을 먼저 불러온 뒤 타임라인에 노트를 배치하세요.</p>
+                                        <div class="help-editor-section-label">기본 조작</div>
+                                        <div class="help-rows">
+                                            <div class="help-row">
+                                                <span class="help-row-label">노트 타입 선택</span>
+                                                <span class="help-row-value help-keys">
+                                                    <kbd>1</kbd><span class="help-key-sep">일반</span>
+                                                    <kbd>2</kbd><span class="help-key-sep">롱노트</span>
+                                                    <kbd>3</kbd><span class="help-key-sep">가짜</span>
+                                                </span>
+                                            </div>
+                                            <div class="help-row">
+                                                <span class="help-row-label">레인 입력 키</span>
+                                                <span class="help-row-value help-keys"><kbd>Q</kbd><kbd>W</kbd><kbd>E</kbd><kbd>R</kbd><kbd>T</kbd><kbd>Y</kbd><kbd>U</kbd><kbd>I</kbd><kbd>O</kbd></span>
+                                            </div>
+                                            <div class="help-row">
+                                                <span class="help-row-label">실행 취소</span>
+                                                <span class="help-row-value help-keys"><kbd>Ctrl</kbd><span class="help-key-sep">+</span><kbd>Z</kbd> <span class="help-key-sep">최대 50단계</span></span>
+                                            </div>
+                                            <div class="help-row">
+                                                <span class="help-row-label">재생 / 정지</span>
+                                                <span class="help-row-value help-keys"><kbd>Space</kbd> <span class="help-key-sep">또는 재생 버튼</span></span>
+                                            </div>
+                                        </div>
+                                        <div class="help-editor-section-label" style="margin-top:10px;">에디터 기능</div>
+                                        <div class="help-rows">
+                                            <div class="help-row">
+                                                <span class="help-row-label">스냅</span>
+                                                <span class="help-row-value">노트 배치 격자의 세밀도를 조절합니다. 4분음표 / 8분음표 / 16분음표 등을 선택하세요.</span>
+                                            </div>
+                                            <div class="help-row">
+                                                <span class="help-row-label">트리거</span>
+                                                <span class="help-row-value">차트 중간에 BPM 또는 노트 낙하 속도를 변경하는 지점입니다. 타임라인에 노란 선으로 표시됩니다.</span>
+                                            </div>
+                                            <div class="help-row">
+                                                <span class="help-row-label">미리보기</span>
+                                                <span class="help-row-value">재생 시 우측 게임 화면에서 노트 낙하를 실시간으로 확인할 수 있습니다.</span>
+                                            </div>
+                                            <div class="help-row">
+                                                <span class="help-row-label">저장 / 열기</span>
+                                                <span class="help-row-value">차트를 .json 파일로 내보내거나 기존 파일을 불러옵니다.</span>
+                                            </div>
+                                            <div class="help-row">
+                                                <span class="help-row-label">클라우드 업로드</span>
+                                                <span class="help-row-value">로그인 후 완성된 차트를 온라인 라이브러리에 공유할 수 있습니다.</span>
+                                            </div>
+                                        </div>
+                                        <p class="help-tip">💡 롱노트는 타임라인에서 시작 셀을 클릭하고 드래그하여 길이를 지정합니다. 노트 클릭으로 삭제할 수 있습니다.</p>
+                                    </div>
+                                </details>
+
+                                <!-- 섹션 7: 온라인 기능 -->
+                                <details class="help-card">
+                                    <summary class="help-card-header">
+                                        <span class="help-card-icon">🌐</span>
+                                        <span class="help-card-title">온라인 기능</span>
+                                        <svg class="help-card-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                                    </summary>
+                                    <div class="help-card-body">
+                                        <div class="help-rows">
+                                            <div class="help-row">
+                                                <span class="help-row-label">회원가입 / 로그인</span>
+                                                <span class="help-row-value">우측 상단 계정 아이콘을 눌러 이메일로 가입하거나 로그인합니다.</span>
+                                            </div>
+                                            <div class="help-row">
+                                                <span class="help-row-label">라이브러리 탐색</span>
+                                                <span class="help-row-value">온라인 버튼에서 다른 유저가 공유한 차트를 검색하고 바로 플레이할 수 있습니다.</span>
+                                            </div>
+                                            <div class="help-row">
+                                                <span class="help-row-label">리더보드</span>
+                                                <span class="help-row-value">온라인 차트 클리어 시 점수가 자동으로 기록되며, 차트별 리더보드에서 순위를 확인할 수 있습니다.</span>
+                                            </div>
+                                            <div class="help-row">
+                                                <span class="help-row-label">차트 업로드</span>
+                                                <span class="help-row-value">에디터에서 제작한 차트를 업로드해 다른 유저와 공유할 수 있습니다. 업로드 후 수정도 가능합니다.</span>
+                                            </div>
+                                            <div class="help-row">
+                                                <span class="help-row-label">닉네임 설정</span>
+                                                <span class="help-row-value">계정 아이콘 → 프로필에서 리더보드에 표시될 닉네임을 설정합니다.</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </details>
+
+                                <!-- 섹션 8: 문의 -->
+                                <div class="help-contact">
+                                    <span>💬</span>
+                                    <span>버그 리포트 및 기타 문의는 디스코드 서버 또는 개인 DM으로 연락 바랍니다.</span>
                                 </div>
-                                <div>
-                                    <h3 class="text-xl font-semibold mb-2 text-white">2. 노트의 종류</h3>
-                                    <ul class="list-disc list-inside space-y-1">
-                                        <li><strong class="text-blue-400">일반 노트 (파란색):</strong> 가장 기본적인 노트입니다. 판정선에 맞춰 한 번 누르면 처리됩니다.</li>
-                                        <li><strong class="text-purple-400">롱노트 (보라색):</strong> 긴 막대 형태의 노트입니다. 시작 지점에서 키를 누른 상태를 유지하고, 끝 지점에서 정확하게 키를 떼야 합니다.</li>
-                                        <li><strong class="text-red-400">가짜 노트 (붉은색):</strong> 함정 노트입니다. 절대로 누르지 말고 그대로 통과시켜야 PERFECT 판정을 받으며, 잘못 누르면 MISS가 됩니다. 랜덤 모드에서는 '어려움' 난이도 또는 세부 설정에서 확률을 직접 조절할 때 등장합니다.</li>
-                                    </ul>
-                                </div>
-                                <div>
-                                    <h3 class="text-xl font-semibold mb-2 text-white">3. 점수 계산과 종료 화면</h3>
-                                    <ul class="list-disc list-inside space-y-1">
-                                        <li><strong>판정:</strong> 정확도에 따라 PERFECT, GOOD, BAD, MISS 네 가지로 나뉩니다. GOOD 이상의 판정은 콤보를 쌓고 점수를 줍니다.</li>
-                                        <li><strong>콤보:</strong> 연속으로 GOOD 이상 판정을 받으면 콤보가 쌓이며, 높은 콤보는 더 많은 추가 점수를 제공합니다.</li>
-                                        <li><strong>종료 화면:</strong> 곡이 끝나면 최종 점수, 판정별 노트 수, 그리고 성과에 따른 최종 랭크(S, A, B, C)가 표시됩니다.</li>
-                                    </ul>
-                                </div>
-                                <div>
-                                    <h3 class="text-xl font-semibold mb-2 text-white">4. 메인 메뉴 설정 가이드</h3>
-                                    <ul class="list-disc list-inside space-y-1">
-                                        <li><strong>게임 모드:</strong> 노트가 자동으로 생성되는 '랜덤 모드'와 직접 만든 차트를 플레이하는 '뮤직 모드'를 선택할 수 있습니다.</li>
-                                        <li><strong>레인 수 조정:</strong> 4레인부터 8레인까지 원하는 플레이 환경을 선택할 수 있습니다.</li>
-                                        <li>
-                                            <strong>난이도 조절 (랜덤 모드 전용):</strong>
-                                            <ul class="list-circle list-inside ml-4 mt-1 space-y-1">
-                                                <li><strong>간단 설정:</strong> '쉬움', '보통', '어려움' 버튼으로 난이도를 선택합니다. '어려움'에서는 가짜 노트가 등장합니다.</li>
-                                                <li><strong>세부 설정:</strong> 화살표 아이콘을 눌러 노트 하강 속도, 노트 생성 속도, 동시타 확률, 최대 동시타 수, 동시타 내 노트 타입 비율, 롱노트 확률, 가짜 노트 등장 여부 및 확률을 세밀하게 조절할 수 있습니다.</li>
-                                            </ul>
-                                        </li>
-                                        <li><strong>뮤직 모드:</strong> '차트 불러오기'로 JSON 차트 파일을, '음악 불러오기'로 차트가 요구하는 음악 파일을 각각 불러온 뒤 게임을 시작합니다.</li>
-                                    </ul>
-                                </div>
-                                <div>
-                                    <h3 class="text-xl font-semibold mb-2 text-white">5. 환경설정 (톱니바퀴 아이콘)</h3>
-                                    <ul class="list-disc list-inside space-y-1">
-                                        <li><strong>음량:</strong> 배경 음악(BGM)과 효과음(SFX)의 크기를 각각 조절합니다.</li>
-                                        <li><strong>모양:</strong> 노트의 형태(막대형 / 원형)와 색상 모드(노트별 색상 / 레인별 색상)를 설정합니다. 노트별 색상 모드에서는 일반·롱·가짜 노트의 색을 개별 지정할 수 있으며, 자주 쓰는 설정을 최대 3개의 색상 프리셋으로 저장하고 불러올 수 있습니다.</li>
-                                        <li><strong>조작:</strong> 게임 플레이에 사용할 키를 직접 설정합니다. 키 박스를 클릭한 뒤 원하는 키를 누르면 변경되며, 변경 후에는 반드시 '저장' 버튼을 눌러야 적용됩니다.</li>
-                                        <li><strong>기타:</strong> 인터페이스 언어(한국어 / English) 전환, 디버그 오버레이 활성화 옵션이 있습니다.</li>
-                                    </ul>
-                                </div>
-                                <div>
-                                    <h3 class="text-xl font-semibold mb-2 text-white">6. 에디터 사용법</h3>
-                                    <p class="mb-2">자신만의 차트를 만드는 공간입니다.</p>
-                                    <ul class="list-disc list-inside space-y-1">
-                                        <li><strong>기본 설정:</strong> 음악 파일, BPM(곡 빠르기), 음악 시작 시간(초), 차트 파일명을 설정합니다. 차트를 저장하려면 반드시 음악 파일을 먼저 불러와야 합니다.</li>
-                                        <li><strong>노트 종류 선택:</strong> 상단 버튼 또는 단축키 <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">1</kbd> (일반) / <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">2</kbd> (롱노트) / <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">3</kbd> (가짜)로 배치할 노트 종류를 선택합니다.</li>
-                                        <li><strong>노트 배치:</strong> 타임라인의 원하는 위치를 클릭하여 노트를 배치하거나 삭제합니다. 재생 중에도 키보드로 레인에 노트를 직접 찍을 수 있습니다. (레인 단축키: <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Q</kbd> <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">W</kbd> <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">E</kbd> <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">R</kbd> <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">T</kbd> <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Y</kbd> <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">U</kbd> <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">I</kbd> <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">O</kbd>)</li>
-                                        <li><strong>스냅 설정:</strong> 드롭다운으로 노트가 배치될 타이밍 격자의 세밀함을 조절합니다. (4분음표, 8분음표 등)</li>
-                                        <li><strong>트리거:</strong> 차트 중간에 BPM이나 노트 속도를 변경할 지점을 설정합니다. 타임라인에 노란 선으로 표시됩니다.</li>
-                                        <li><strong>마디 조절:</strong> '+'와 '-' 버튼으로 차트의 전체 길이를 자유롭게 조절할 수 있습니다.</li>
-                                        <li><strong>미리보기:</strong> '재생/일시정지'로 차트를 재생하면 우측 게임 화면에서 노트 낙하를 실시간으로 미리 볼 수 있습니다. 미리보기 레인 수를 별도로 설정할 수도 있습니다.</li>
-                                        <li><strong>관리:</strong> '저장'으로 차트를 JSON 파일로 내보내고, '열기'로 기존 차트를 불러옵니다. '재설정'은 배치된 노트를 모두 삭제합니다. <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Ctrl</kbd>+<kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Z</kbd>로 직전 작업을 취소할 수 있습니다. (최대 50단계)</li>
-                                    </ul>
-                                </div>
-                                <div>
-                                    <h3 class="text-xl font-semibold mb-2 text-white">7. 문의</h3>
-                                    <p>버그 리포트 및 기타 문의는 디스코드 서버 또는 개인 DM으로 연락 바랍니다.</p>
-                                </div>
+
                             </div>
                             <div id="tab-content-etc" class="tab-content hidden">
                                 <div>
