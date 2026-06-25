@@ -619,23 +619,27 @@ const CloudLoadModal = {
 
         this._renderList('<p style="color:#718096;font-size:0.85rem;text-align:center;margin-top:16px;">차트 데이터 다운로드 중…</p>');
 
-        const { data: chartData, error } = await CloudCharts.downloadChartData(c.chart_storage_path);
-        if (error) {
-            this._renderList(`<p style="color:#fc8181;font-size:0.85rem;">다운로드 실패: ${error.message}</p>`);
-            return;
+        try {
+            const { data: chartData, error } = await CloudCharts.downloadChartData(c.chart_storage_path);
+            if (error) {
+                this._renderList(`<p style="color:#fc8181;font-size:0.85rem;">다운로드 실패: ${error.message}</p>`);
+                return;
+            }
+
+            // 에디터에 로드
+            Editor.loadChart(chartData, c.title + '.json');
+
+            // 서버 메타 등록 → 이후 "서버에 업로드" 버튼이 update 모드로 동작
+            Editor.setCloudChart({ id: c.id, title: c.title });
+
+            this.close();
+
+            // 음악 파일 안내
+            const audioName = c.audio_storage_path.split('/').pop();
+            UI.showMessage('editor', `차트 로드 완료. 음악 파일(${audioName})을 별도로 다시 로드해주세요.`);
+        } catch (err) {
+            this._renderList(`<p style="color:#fc8181;font-size:0.85rem;">오류 발생: ${err.message}</p>`);
         }
-
-        // 에디터에 로드
-        Editor.loadChart(chartData, c.title + '.json');
-
-        // 서버 메타 등록 → 이후 "서버에 업로드" 버튼이 update 모드로 동작
-        Editor.setCloudChart({ id: c.id, title: c.title });
-
-        this.close();
-
-        // 음악 파일 안내
-        const audioName = c.audio_storage_path.split('/').pop();
-        UI.showMessage('editor', `차트 로드 완료. 음악 파일(${audioName})을 별도로 다시 로드해주세요.`);
     },
 
     close() {

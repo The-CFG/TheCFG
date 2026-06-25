@@ -10,7 +10,7 @@ const CloudCharts = {
 
         return await _supabase
             .from('beat_charts')
-            .select('id, title, artist, bpm, lane_count, difficulty_label, note_count, is_public, play_count, created_at, updated_at')
+            .select('id, title, artist, bpm, lane_count, difficulty_label, note_count, is_public, play_count, created_at, updated_at, chart_storage_path, audio_storage_path')
             .eq('owner_id', user.id)
             .order('updated_at', { ascending: false });
     },
@@ -182,12 +182,16 @@ const CloudCharts = {
 
     // ── Storage에서 차트 JSON 다운로드 ────────────────────────────────────────
     async downloadChartData(chartStoragePath) {
-        const { data, error } = await _supabase.storage
-            .from('beat-files')
-            .download(chartStoragePath);
-        if (error) return { error };
-        const text = await data.text();
-        return { data: JSON.parse(text) };
+        try {
+            const { data, error } = await _supabase.storage
+                .from('beat-files')
+                .download(chartStoragePath);
+            if (error) return { error };
+            const text = await data.text();
+            return { data: JSON.parse(text) };
+        } catch (err) {
+            return { error: err };
+        }
     },
 
     // ── Storage에서 오디오 공개 URL 가져오기 ──────────────────────────────────
