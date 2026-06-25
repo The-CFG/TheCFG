@@ -572,9 +572,15 @@ const Game = {
                     note._visible = timeUntilTail > 0;
                 }
 
-                // MISS 판정
-                if (!note.processed && timeToHit < -CONFIG.JUDGEMENT_WINDOWS_MS.miss) {
-                    this.handleJudgement('miss', note);
+                // MISS 판정 (판정선을 완전히 지난 노트)
+                // false 노트는 안 눌렀을 때 perfect이므로 판정선을 막 지난 순간 바로 처리
+                if (!note.processed) {
+                    const autoMissThreshold = note.type === 'false'
+                        ? -CONFIG.JUDGEMENT_WINDOWS_MS.perfect
+                        : -CONFIG.JUDGEMENT_WINDOWS_MS.miss;
+                    if (timeToHit < autoMissThreshold) {
+                        this.handleJudgement('miss', note);
+                    }
                 }
             }
         } catch (err) {
