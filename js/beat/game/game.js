@@ -588,7 +588,7 @@ const Game = {
         note.processed = true;
         // long_head + perfect/good: shrinking 수축 애니메이션 → updateNotes가 _visible 관리
         // 그 외(miss/bad 포함 모든 타입): 즉시 숨김
-        const willShrink = note.type === 'long_head' && judgement !== 'miss' && judgement !== 'bad';
+        const willShrink = note.type === 'long_head' && judgement !== 'miss';
         if (!willShrink) {
             note._visible = false;
         }
