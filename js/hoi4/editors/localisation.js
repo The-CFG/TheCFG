@@ -164,6 +164,10 @@ function _setupLocColorAdder(adderEl, targetEl) {
     const select = adderEl.querySelector('.loc-color-select');
     const input  = adderEl.querySelector('.loc-color-input');
     const btn    = adderEl.querySelector('.loc-color-add-btn');
+    // mousedown 시점에 preventDefault로 텍스트박스가 포커스를 잃지 않게 해서
+    // 선택 영역/커서 위치가 유지되도록 함 (안 그러면 클릭할 때 blur되어
+    // 일부 브라우저에서 selectionStart/End가 끝으로 리셋됨)
+    btn?.addEventListener('mousedown', e => e.preventDefault());
     btn?.addEventListener('click', () => {
         _locInsertColorTag(targetEl, select.value, input.value);
         input.value = '';
