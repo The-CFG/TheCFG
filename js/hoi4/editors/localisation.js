@@ -115,6 +115,61 @@ const LOC_COLOR_MAP = {
     P: '#c879ff',                 // 보라
 };
 
+// ── 색상 태그 추가 UI용 <option> 목록 (코드 하나당 하나씩만 노출) ─
+const LOC_COLOR_LABELS = {
+    R: '빨강 (R)', G: '초록 (G)', Y: '노랑 (Y)', B: '파랑 (B)',
+    b: '회색 (b)', W: '흰색 (W)', T: '청록 (T)', H: '주황·강조 (H)',
+    O: '주황 (O)', P: '보라 (P)',
+};
+const _locColorOptionsHtml = Object.entries(LOC_COLOR_LABELS)
+    .map(([code, label]) =>
+        `<option value="${code}" style="background:${LOC_COLOR_MAP[code]};color:#111;">${label}</option>`)
+    .join('');
+
+// ── 커서/선택 위치에 §X...§! 태그 삽입 ────────────────────
+// targetEl: input 또는 textarea. 선택된 텍스트가 있으면 그 텍스트를 감싸고,
+// 없으면 입력창에 적어둔 텍스트(또는 기본 placeholder)를 삽입한다.
+function _locInsertColorTag(targetEl, code, fallbackText) {
+    if (!targetEl) return;
+    const start = targetEl.selectionStart ?? targetEl.value.length;
+    const end   = targetEl.selectionEnd   ?? targetEl.value.length;
+    const selected = targetEl.value.slice(start, end);
+    const inner = selected || (fallbackText?.trim() || '텍스트');
+
+    const before = targetEl.value.slice(0, start);
+    const after  = targetEl.value.slice(end);
+    const tag    = `§${code}${inner}§!`;
+
+    targetEl.value = before + tag + after;
+    const caret = before.length + tag.length;
+    targetEl.focus();
+    targetEl.setSelectionRange(caret, caret);
+    // 기존 input 리스너가 저장 + 미리보기 갱신을 담당
+    targetEl.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+// ── 색상 추가 UI(선택 + 입력 + 버튼) 한 세트 생성 ──────────
+function _locColorAdderHtml() {
+    return `
+        <div class="loc-color-adder">
+            <select class="loc-color-select" title="색상 선택">${_locColorOptionsHtml}</select>
+            <input type="text" class="loc-color-input" placeholder="색칠할 텍스트 (미선택 시 사용)">
+            <button class="loc-color-add-btn" type="button" title="커서/선택 위치에 색상 태그 삽입">🎨 추가</button>
+        </div>`;
+}
+
+// ── 위 UI를 실제 필드(name/desc input/textarea)에 연결 ────
+function _setupLocColorAdder(adderEl, targetEl) {
+    if (!adderEl || !targetEl) return;
+    const select = adderEl.querySelector('.loc-color-select');
+    const input  = adderEl.querySelector('.loc-color-input');
+    const btn    = adderEl.querySelector('.loc-color-add-btn');
+    btn?.addEventListener('click', () => {
+        _locInsertColorTag(targetEl, select.value, input.value);
+        input.value = '';
+    });
+}
+
 function locRenderPreview(text) {
     if (!text) return '<span class="loc-preview-empty">(미리보기)</span>';
 
@@ -203,14 +258,21 @@ function renderLocalisationList() {
             <input type="text" class="loc-name" value="${escapeHtml(name)}"
                 placeholder="${escapeHtml(id)}의 ${LANG_NAMES[lang] || lang} 이름">
             <div class="loc-preview loc-preview-name">${locRenderPreview(name)}</div>
+            ${_locColorAdderHtml()}
             <label class="loc-label" style="margin-top:4px;">설명 (_desc)</label>
             <textarea class="loc-desc" placeholder="설명">${escapeHtml(desc)}</textarea>
             <div class="loc-preview loc-preview-desc">${locRenderPreview(desc)}</div>
+            ${_locColorAdderHtml()}
             <button class="loc-delete-btn danger" title="삭제">🗑 삭제</button>
         `;
 
         const namePreview = item.querySelector('.loc-preview-name');
         const descPreview = item.querySelector('.loc-preview-desc');
+        const nameField    = item.querySelector('.loc-name');
+        const descField    = item.querySelector('.loc-desc');
+        const [nameAdder, descAdder] = item.querySelectorAll('.loc-color-adder');
+        _setupLocColorAdder(nameAdder, nameField);
+        _setupLocColorAdder(descAdder, descField);
 
         const save = (nameVal, descVal) => {
             data[id] = { name: nameVal, desc: descVal };

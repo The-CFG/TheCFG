@@ -40,6 +40,34 @@
 }
 .loc-preview-empty { color: var(--text-muted); font-style: italic; }
 .loc-color-tag      { font-weight: 600; }
+
+/* 색상 태그(§X...§!) 빠른 삽입 UI */
+.loc-color-adder {
+    display: flex; gap: 6px; align-items: center;
+    margin-top: 4px;
+}
+.loc-color-select {
+    flex: 0 0 auto;
+    width: auto;
+    margin: 0;
+    padding: 3px 6px;
+    font-size: .78em;
+}
+.loc-color-input {
+    flex: 1;
+    min-width: 60px;
+    margin: 0;
+    padding: 3px 6px;
+    font-size: .78em;
+}
+.loc-color-add-btn {
+    flex: 0 0 auto;
+    width: auto;
+    margin: 0;
+    padding: 3px 8px;
+    font-size: .78em;
+    white-space: nowrap;
+}
 .loc-var-tag {
     display: inline-block;
     padding: 0 3px;
