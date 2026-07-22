@@ -564,6 +564,7 @@ async function _openCloudProject(name) {
     invalidateGfxSpriteCache();
     resetHistory();
     switchView('explorer-view');
+    _resetExplorerMain();
     renderExplorer();
 }
 
@@ -609,6 +610,7 @@ supported_version="1.16.*"
 
     if (nameEl) nameEl.value = '';
     switchView('explorer-view');
+    _resetExplorerMain();
     renderExplorer();
 }
 
@@ -741,6 +743,7 @@ async function _finalizeProjectLoad(proj) {
     }
 
     switchView('explorer-view');
+    _resetExplorerMain();
     renderExplorer();
     alert(`"${proj.name}" 불러오기 완료 (${selected.size}개 파일)`);
 }
