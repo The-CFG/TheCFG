@@ -132,7 +132,7 @@ const HOI4_EFFECTS = [
     },
     {
         key: "white_peace",
-        label: "대상 국가와 백색 강화를 체결합니다.",
+        label: "대상 국가와 무조건 평화 조약을 체결합니다.",
         params: [{"name": "tag", "type": "country_tag"}],
     },
     {
@@ -226,7 +226,7 @@ const HOI4_EFFECTS = [
     },
     {
         key: "add_popularity",
-        label: "Adjusts the popularity for the specified party in the current scope.",
+        label: "특정 정당의 지지율을 변화시킵니다.",
         params: [{"name": "ideology", "type": "ideology"}, {"name": "popularity", "type": "int"}],
     },
     {

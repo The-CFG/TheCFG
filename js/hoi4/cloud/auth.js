@@ -1050,14 +1050,28 @@ function setupAuthUI() {
                 renderRecentList();  // 클라우드 프로젝트 목록 즉시 갱신
             }
         } catch (err) {
-            if (err.message?.includes('Email not confirmed')) {
+            // 진단용: 실제 에러 객체는 콘솔에서 전체 확인 가능
+            console.error('인증 오류 (원본):', err);
+
+            const msg = err?.message || err?.error_description || err?.msg || err?.name;
+
+            if (msg?.includes('Email not confirmed')) {
                 alert(
                     '이메일 인증이 필요합니다.\n\n해결 방법:\n' +
                     '① Supabase 대시보드 → Authentication → Providers → Email → "Confirm email" 비활성화\n' +
                     '② 또는 가입 시 받은 인증 메일에서 링크 클릭 후 다시 로그인'
                 );
+            } else if (msg) {
+                alert('인증 오류: ' + msg);
             } else {
-                alert('인증 오류: ' + err.message);
+                // 필드에 담기지 않는 네트워크/CORS 레벨 오류 등
+                alert(
+                    '인증 오류: 서버에 연결하지 못했습니다.\n\n' +
+                    '가능한 원인:\n' +
+                    '① 인터넷 연결 또는 방화벽/광고 차단기가 Supabase 요청을 막고 있음\n' +
+                    '② Supabase 프로젝트가 일시 중지(pause)되었거나 URL/API 키가 잘못됨\n\n' +
+                    '(콘솔에 원본 에러가 출력되었습니다)'
+                );
             }
         } finally {
             executeBtn.disabled    = false;

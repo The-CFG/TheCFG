@@ -43,8 +43,8 @@ const FOLDER_DEFS = [
     { path: 'localisation/spanish',         label: '스페인어 (Spanish)',   type: 'localisation', ext: '.yml', parent: 'localisation' },
     { path: 'localisation/russian',         label: '러시아어 (Russian)',   type: 'localisation', ext: '.yml', parent: 'localisation' },
     { path: 'localisation/polish',          label: '폴란드어 (Polish)',    type: 'localisation', ext: '.yml', parent: 'localisation' },
-    { path: 'localisation/braz_por',        label: '포르투갈어 (Braz)',    type: 'localisation', ext: '.yml', parent: 'localisation' },
-    { path: 'localisation/simp_chinese',    label: '중국어 간체 (S.Chi)', type: 'localisation', ext: '.yml', parent: 'localisation' },
+    { path: 'localisation/braz_por',        label: '포르투갈어 (Portuguese(Brazil))',    type: 'localisation', ext: '.yml', parent: 'localisation' },
+    { path: 'localisation/simp_chinese',    label: '중국어 간체 (Chinese(Simplified))', type: 'localisation', ext: '.yml', parent: 'localisation' },
     // gfx 그룹
     { path: 'gfx/flags',           label: 'flags',     type: 'gfx_folder', ext: '.dds', parent: 'gfx' },
     { path: 'gfx/interface',       label: 'interface', type: 'gfx_folder', ext: '.dds', parent: 'gfx' },
