@@ -98,7 +98,7 @@ async function _renderMemberList(modal, ownerUserId, projectName, myRole, curren
         member_id: ownerUserId,
         role: 'owner',
         nickname: isOwnerUser
-            ? (await CloudAuth.getProfile())?.nickname
+            ? await CloudAuth.getNickname()
             : await CloudAuth.getNicknameByUserId(ownerUserId),
         isSelf: isOwnerUser,
         isOwner: true,

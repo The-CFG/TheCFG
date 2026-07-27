@@ -319,11 +319,8 @@ async function _setupAccountTab(modal) {
 
     if (emailEl) emailEl.innerHTML = `이메일: <b>${escapeHtml(user.email || '')}</b>`;
 
-    // 닉네임 user_profiles에서 로드
-    try {
-        const profile = await CloudAuth.getProfile();
-        if (nickInput) nickInput.value = profile?.nickname || '';
-    } catch { /* 무시 */ }
+    // 닉네임 로드 — auth 메타데이터(user_metadata.display_name)
+    if (nickInput) nickInput.value = user.user_metadata?.display_name || '';
 
     // 닉네임 저장
     nickBtn?.addEventListener('click', async () => {

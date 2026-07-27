@@ -85,17 +85,24 @@ const CloudAuth = {
 
     // ── 유저 프로필 ──────────────────────────────────────────
 
-    // 프로필 조회 (본인)
+    // 프로필 조회 (본인, 앱 설정 전용 — 닉네임은 auth 메타데이터로 이전됨)
     async getProfile() {
         const user = await this.getUser();
         if (!user) return null;
         const { data, error } = await _supabase
             .from('user_profiles')
-            .select('nickname, settings, updated_at')
+            .select('settings, updated_at')
             .eq('user_id', user.id)
             .single();
         if (error) { console.warn('getProfile 오류:', error.message); return null; }
         return data;
+    },
+
+    // 본인 닉네임 조회 — auth.users.user_metadata.display_name
+    // (Supabase 대시보드 Authentication 탭의 "Display Name" 컬럼과 동일한 값)
+    async getNickname() {
+        const user = await this.getUser();
+        return user?.user_metadata?.display_name || null;
     },
 
     // 특정 user_id의 닉네임 조회 (공동 작업 UI용)
@@ -120,14 +127,10 @@ const CloudAuth = {
         return map;
     },
 
-    // 닉네임 저장 (user_profiles)
+    // 닉네임 저장 — auth.users.user_metadata.display_name에 저장
+    // (updateUser의 data는 merge 방식이라 다른 메타데이터 키는 보존됨)
     async updateNickname(nickname) {
-        const user = await this.getUser();
-        if (!user) throw new Error('로그인 상태가 아닙니다.');
-        const { error } = await _supabase
-            .from('user_profiles')
-            .upsert({ user_id: user.id, nickname, updated_at: new Date().toISOString() },
-                    { onConflict: 'user_id' });
+        const { error } = await _supabase.auth.updateUser({ data: { display_name: nickname } });
         if (error) throw error;
     },
 
@@ -172,21 +175,19 @@ const CloudAuth = {
     async listMembers(ownerUserId, projectName) {
         const { data, error } = await _supabase
             .from('project_members')
-            .select(`
-                member_id,
-                role,
-                joined_at,
-                user_profiles ( nickname )
-            `)
+            .select('member_id, role, joined_at')
             .eq('owner_id', ownerUserId)
             .eq('project_name', projectName)
             .order('joined_at', { ascending: true });
         if (error) { console.error('listMembers 오류:', error.message); return []; }
-        return (data || []).map(m => ({
+        const members = data || [];
+        // 닉네임은 더 이상 user_profiles에 없으므로 auth 메타데이터 기반 RPC로 일괄 조회
+        const nickMap = await this._fetchNicknameMap(members.map(m => m.member_id));
+        return members.map(m => ({
             member_id: m.member_id,
             role:      m.role,
             joined_at: m.joined_at,
-            nickname:  m.user_profiles?.nickname || null,
+            nickname:  nickMap[m.member_id] || null,
         }));
     },
 

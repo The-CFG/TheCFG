@@ -43,20 +43,23 @@ const CloudAuth = {
         if (!user) return null;
         const { data, error } = await _supabase
             .from('user_profiles')
-            .select('nickname, settings, updated_at')
+            .select('settings, updated_at')
             .eq('user_id', user.id)
             .single();
         if (error) { console.warn('getProfile 오류:', error.message); return null; }
         return data;
     },
 
-    async updateNickname(nickname) {
+    // 본인 닉네임 조회 — auth.users.user_metadata.display_name
+    // (Supabase 대시보드 Authentication 탭의 "Display Name" 컬럼과 동일한 값)
+    async getNickname() {
         const user = await this.getUser();
-        if (!user) throw new Error('로그인 상태가 아닙니다.');
-        const { error } = await _supabase
-            .from('user_profiles')
-            .upsert({ user_id: user.id, nickname, updated_at: new Date().toISOString() },
-                    { onConflict: 'user_id' });
+        return user?.user_metadata?.display_name || null;
+    },
+
+    // 닉네임 저장 — auth.users.user_metadata.display_name에 저장 (merge 방식, 다른 메타데이터는 보존)
+    async updateNickname(nickname) {
+        const { error } = await _supabase.auth.updateUser({ data: { display_name: nickname } });
         if (error) throw error;
     },
 
@@ -124,9 +127,8 @@ async function _refreshView() {
         const emailEl = document.getElementById('profile-email');
         if (emailEl) emailEl.textContent = user.email;
 
-        const profile = await CloudAuth.getProfile();
         const nicknameInput = document.getElementById('nickname-input');
-        if (nicknameInput) nicknameInput.value = profile?.nickname || '';
+        if (nicknameInput) nicknameInput.value = user.user_metadata?.display_name || '';
     } else {
         _show(authSection);
         _hide(profileSection);
