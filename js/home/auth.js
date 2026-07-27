@@ -20,7 +20,7 @@ const CloudAuth = {
         return await _supabase.auth.signUp({
             email,
             password,
-            options: { emailRedirectTo: undefined }
+            options: { emailRedirectTo: `${location.origin}/confirmed.html` }
         });
     },
 
