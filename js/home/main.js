@@ -6,7 +6,7 @@ const TOOLS = [
     {
         path: '/hoi4',
         title: 'HOI4 Mod Editor',
-        version: 'v0.8',
+        version: 'v20260727',
         desc: '기존 edge.hoi4modding.com을 대체하는 용도로 제작되었습니다. 계속 업데이트 중입니다.',
         href: 'hoi4.html',
         status: 'live', // live | planned
@@ -15,7 +15,7 @@ const TOOLS = [
         path: '/beat',
         title: 'TheBeat',
         version: 'v2.0',
-        desc: '웹 리듬게임입니다. 지금은 파일 업/다운로드 시스템이지만 조만간 서버 시스템을 구축하겠습니다.',
+        desc: '키보드/터치로 플레이할 수 있는 리듬게임입니다. 여러분의 비트맵 투고를 기다립니다!',
         href: 'beat.html',
         status: 'live',
     },
