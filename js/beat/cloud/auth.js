@@ -53,12 +53,13 @@ const CloudAuth = {
 
 // ── 계정 아이콘 표시 갱신 ────────────────────────────────────
 function _updateAuthStatus(user) {
+    if (!user) _closeAccountPopover();
     const icons = document.querySelectorAll('.account-icon-btn');
     icons.forEach(btn => {
         const svg = btn.querySelector('svg');
         if (user) {
-            btn.title = `${user.email} (클릭하여 로그아웃)`;
-            btn.setAttribute('aria-label', `${user.email} - 로그아웃`);
+            btn.title = `${user.email} (클릭하여 계정 메뉴 열기)`;
+            btn.setAttribute('aria-label', '계정 메뉴');
             if (svg) svg.classList.add('text-teal-400');
             if (svg) svg.classList.remove('text-gray-300');
         } else {
@@ -68,6 +69,64 @@ function _updateAuthStatus(user) {
             if (svg) svg.classList.add('text-gray-300');
         }
     });
+}
+
+// ── 계정 팝오버 ──────────────────────────────────────────
+function _closeAccountPopover() {
+    document.getElementById('account-popover')?.remove();
+    document.removeEventListener('click', _onAccountPopoverOutsideClick, true);
+}
+
+function _onAccountPopoverOutsideClick(e) {
+    const pop = document.getElementById('account-popover');
+    const btn = document.getElementById('account-icon-menu');
+    if (!pop) return;
+    if (pop.contains(e.target) || btn?.contains(e.target)) return;
+    _closeAccountPopover();
+}
+
+function _openAccountPopover(user) {
+    _closeAccountPopover();
+
+    const wrap = document.getElementById('account-icon-wrap');
+    if (!wrap) return;
+
+    const nickname = user.user_metadata?.display_name || '(닉네임 미설정)';
+
+    const pop = document.createElement('div');
+    pop.id = 'account-popover';
+    pop.className = 'absolute right-0 mt-2 w-56 bg-gray-800 border border-gray-600 rounded-lg shadow-xl p-3 z-50';
+
+    const nickEl = document.createElement('p');
+    nickEl.className = 'text-sm font-bold text-white';
+    nickEl.textContent = `현재 계정: ${nickname}`;
+
+    const emailEl = document.createElement('p');
+    emailEl.className = 'text-xs text-gray-400 mt-0.5';
+    emailEl.textContent = user.email || '';
+
+    const hr = document.createElement('hr');
+    hr.className = 'border-gray-600 my-2';
+
+    const settingsLink = document.createElement('a');
+    settingsLink.href = 'accounts.html';
+    settingsLink.className = 'block px-2 py-1.5 rounded text-sm text-gray-200 hover:bg-gray-700 transition';
+    settingsLink.textContent = '계정 설정';
+
+    const logoutBtn = document.createElement('button');
+    logoutBtn.type = 'button';
+    logoutBtn.className = 'block w-full text-left px-2 py-1.5 rounded text-sm text-gray-200 hover:bg-gray-700 transition';
+    logoutBtn.textContent = '로그아웃';
+    logoutBtn.addEventListener('click', async () => {
+        await CloudAuth.logout();
+        _closeAccountPopover();
+    });
+
+    pop.append(nickEl, emailEl, hr, settingsLink, logoutBtn);
+    wrap.appendChild(pop);
+
+    // 다음 이벤트 루프부터 바깥 클릭 감지 (버튼 클릭 자체와 겹치지 않도록)
+    setTimeout(() => document.addEventListener('click', _onAccountPopoverOutsideClick, true), 0);
 }
 
 // ── 모달 열기 / 닫기 헬퍼 ──────────────────────────────────
@@ -91,14 +150,15 @@ function setupAuthUI() {
     const closeBtn   = document.getElementById('btn-auth-close');
     const accountBtns = document.querySelectorAll('.account-icon-btn');
 
-    // 계정 아이콘 클릭 — 로그인 상태면 로그아웃 확인, 아니면 로그인 모달 열기
+    // 계정 아이콘 클릭 — 로그인 상태면 팝오버 토글, 아니면 로그인 모달 열기
     accountBtns.forEach(btn => {
-        btn.addEventListener('click', async () => {
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
             const user = await CloudAuth.getUser();
             if (user) {
-                if (confirm(`${user.email} 에서 로그아웃하시겠습니까?`)) {
-                    await CloudAuth.logout();
-                }
+                document.getElementById('account-popover')
+                    ? _closeAccountPopover()
+                    : _openAccountPopover(user);
             } else {
                 isSignUpMode = false;
                 if (title)      title.textContent     = '서버 로그인';
