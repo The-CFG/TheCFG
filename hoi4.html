@@ -22,7 +22,16 @@
 ════════════════════════════════════════════════ -->
 <div id="home-view" class="view-fullscreen home-bg">
     <div class="home-card">
-        <h1 class="home-title"><a href="index.html" class="home-title-link" title="TheCFG 홈으로">TheCFG</a> HOI4 Mod Editor</h1>
+        <div class="home-title-row">
+            <h1 class="home-title"><a href="index.html" class="home-title-link" title="TheCFG 홈으로">TheCFG</a> HOI4 Mod Editor</h1>
+            <div id="account-icon-wrap" class="account-icon-wrap">
+                <button id="account-icon-btn" class="account-icon-btn" title="로그인" aria-label="로그인">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                    </svg>
+                </button>
+            </div>
+        </div>
         <p class="home-subtitle">Latest Update: 260727</p>
 
         <!-- 새 프로젝트 -->
@@ -51,15 +60,6 @@
         <div class="home-section-label">최근 프로젝트</div>
         <div id="recent-list"></div>
         <button id="btn-all-projects" class="home-all-projects-link" style="display:none;">모든 프로젝트 →</button>
-
-        <hr class="home-divider">
-
-        <!-- 로그인 상태 행 -->
-        <div id="home-auth-row" class="home-auth-row">
-            <span class="home-auth-icon">🌐</span>
-            <span id="auth-status-text" class="home-auth-text">로그인되지 않음</span>
-            <button id="btn-open-auth" class="home-auth-btn">로그인</button>
-        </div>
     </div>
 
     <!-- 모든 프로젝트 드로어 -->

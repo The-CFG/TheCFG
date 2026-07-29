@@ -186,20 +186,80 @@ body {
 }
 .home-all-projects-link:hover { color: var(--text); background: none; }
 
-/* 로그인 행 */
-.home-auth-row {
-    display: flex; align-items: center; gap: 10px;
-    padding: 9px 12px;
-    background: var(--bg-surface);
-    border: 1px solid var(--border);
+/* 제목 행 (계정 아이콘 포함) */
+.home-title-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+.home-title-row .home-title { margin: 0; }
+
+/* 계정 아이콘 버튼 */
+.account-icon-wrap { position: relative; flex-shrink: 0; }
+.account-icon-btn {
+    display: flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; padding: 0; margin: 0; flex-shrink: 0;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 50%;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: background .12s, color .12s, border-color .12s;
+}
+.account-icon-btn:hover  { background: var(--bg-hover); border-color: var(--border); color: var(--text); }
+.account-icon-btn.is-logged-in { color: var(--accent-h); }
+.account-icon-btn svg { width: 19px; height: 19px; }
+
+/* 계정 팝오버 */
+.account-popover {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 220px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-mid);
+    border-radius: var(--radius);
+    box-shadow: 0 16px 40px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.03);
+    padding: 14px;
+    z-index: 60;
+}
+.account-popover-nickname {
+    margin: 0;
+    font-size: .92em;
+    font-weight: 700;
+    color: #e8edf2;
+}
+.account-popover-email {
+    margin: 3px 0 0;
+    font-size: .76em;
+    color: var(--text-muted);
+}
+.account-popover-divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 10px 0;
+}
+.account-popover-link,
+.account-popover-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 7px 8px;
+    margin: 0 0 2px;
     border-radius: var(--radius-sm);
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-size: .85em;
+    font-family: var(--font);
+    text-decoration: none;
+    cursor: pointer;
+    transition: background .1s;
 }
-.home-auth-icon { font-size: 1.1em; flex-shrink: 0; }
-.home-auth-text { flex: 1; font-size: .82em; color: var(--text-muted); }
-.home-auth-btn {
-    width: auto; padding: 4px 12px; margin: 0;
-    font-size: .8em; flex-shrink: 0;
-}
+.account-popover-link:hover,
+.account-popover-btn:hover { background: var(--bg-hover); }
+.account-popover-btn:last-child { margin-bottom: 0; }
 
 /* 공유받은 프로젝트 섹션 */
 .home-section { margin-top: 4px; }
@@ -828,10 +888,15 @@ hr { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
     color: #111827;
 }
 [data-theme="light"] .home-divider { border-color: #e5e7eb; }
-[data-theme="light"] .home-auth-row {
-    background: #f3f4f6;
+[data-theme="light"] .account-icon-btn:hover { background: #e5e7eb; border-color: #9ca3af; color: #111827; }
+[data-theme="light"] .account-popover {
+    background: #ffffff;
     border-color: #d1d5db;
+    box-shadow: 0 16px 40px rgba(0,0,0,.15);
 }
+[data-theme="light"] .account-popover-nickname { color: #111827; }
+[data-theme="light"] .account-popover-link:hover,
+[data-theme="light"] .account-popover-btn:hover { background: #f3f4f6; }
 [data-theme="light"] .recent-item-icon {
     background: #f3f4f6;
     border-color: #d1d5db;

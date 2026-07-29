@@ -954,18 +954,56 @@ function _blobToBase64(blob) {
     });
 }
 
-// ── 로그인 상태 표시 ────────────────────────────────────────
+// ── 로그인 상태 표시 (계정 아이콘) ────────────────────────────
 function _updateAuthStatus(user) {
-    const statusEl = document.getElementById('auth-status-text');
-    const btnOpen  = document.getElementById('btn-open-auth');
-    if (!statusEl) return;
-    if (user) {
-        statusEl.textContent = user.email;
-        if (btnOpen) btnOpen.textContent = '로그아웃';
-    } else {
-        statusEl.textContent = '로그인되지 않음';
-        if (btnOpen) btnOpen.textContent = '로그인';
-    }
+    const btn = document.getElementById('account-icon-btn');
+    if (!btn) return;
+    btn.classList.toggle('is-logged-in', !!user);
+    btn.title = user ? `${user.email} (클릭하여 계정 메뉴 열기)` : '로그인';
+    btn.setAttribute('aria-label', user ? '계정 메뉴' : '로그인');
+}
+
+// ── 계정 팝오버 ──────────────────────────────────────────
+function _closeAccountPopover() {
+    document.getElementById('account-popover')?.remove();
+    document.removeEventListener('click', _onAccountPopoverOutsideClick, true);
+}
+
+function _onAccountPopoverOutsideClick(e) {
+    const pop = document.getElementById('account-popover');
+    const btn = document.getElementById('account-icon-btn');
+    if (!pop) return;
+    if (pop.contains(e.target) || btn?.contains(e.target)) return;
+    _closeAccountPopover();
+}
+
+function _openAccountPopover(user) {
+    _closeAccountPopover();
+
+    const wrap = document.getElementById('account-icon-wrap');
+    if (!wrap) return;
+
+    const nickname = user.user_metadata?.display_name || '(닉네임 미설정)';
+    const pop = document.createElement('div');
+    pop.id = 'account-popover';
+    pop.className = 'account-popover';
+    pop.innerHTML = `
+        <p class="account-popover-nickname">현재 계정: ${escapeHtml(nickname)}</p>
+        <p class="account-popover-email">${escapeHtml(user.email || '')}</p>
+        <hr class="account-popover-divider">
+        <a href="accounts.html" class="account-popover-link">계정 설정</a>
+        <button type="button" id="account-popover-logout" class="account-popover-btn">로그아웃</button>
+    `;
+    wrap.appendChild(pop);
+
+    pop.querySelector('#account-popover-logout').addEventListener('click', async () => {
+        await CloudAuth.logout();
+        _closeAccountPopover();
+        if (typeof renderRecentList === 'function') renderRecentList();
+    });
+
+    // 다음 이벤트 루프부터 바깥 클릭 감지 (버튼 클릭 자체와 겹치지 않도록)
+    setTimeout(() => document.addEventListener('click', _onAccountPopoverOutsideClick, true), 0);
 }
 
 // ── 모달 열기 / 닫기 헬퍼 ──────────────────────────────────
@@ -987,16 +1025,16 @@ function setupAuthUI() {
     const executeBtn = document.getElementById('btn-auth-execute');
     const switchBtn  = document.getElementById('auth-switch');
     const closeBtn   = document.getElementById('btn-auth-close');
-    const openBtn    = document.getElementById('btn-open-auth');
+    const openBtn    = document.getElementById('account-icon-btn');
 
-    // 로그인 버튼 / 로그아웃 분기
-    openBtn?.addEventListener('click', async () => {
+    // 계정 아이콘 클릭 — 로그인 상태면 팝오버 토글, 아니면 로그인 모달
+    openBtn?.addEventListener('click', async (e) => {
+        e.stopPropagation();
         const user = await CloudAuth.getUser();
         if (user) {
-            if (confirm(`${user.email} 에서 로그아웃하시겠습니까?`)) {
-                await CloudAuth.logout();
-                renderRecentList();  // 홈 목록 갱신
-            }
+            document.getElementById('account-popover')
+                ? _closeAccountPopover()
+                : _openAccountPopover(user);
         } else {
             isSignUpMode = false;
             if (title)      title.textContent     = '서버 로그인';

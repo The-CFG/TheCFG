@@ -272,13 +272,8 @@ function _renderSharedProjectsList(shared) {
     if (!section) {
         section = document.createElement('div');
         section.id = 'shared-projects-section';
-        // home-auth-row 바로 앞에 삽입 (카드 내부)
-        const authRow = document.getElementById('home-auth-row');
-        if (authRow?.parentNode) {
-            authRow.parentNode.insertBefore(section, authRow);
-        } else {
-            document.querySelector('.home-card')?.appendChild(section);
-        }
+        // 카드 맨 끝에 삽입 (기존엔 로그인 행 앞이었으나 해당 행이 계정 아이콘 팝오버로 대체됨)
+        document.querySelector('.home-card')?.appendChild(section);
     }
 
     section.style.display = '';
