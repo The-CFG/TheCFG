@@ -200,14 +200,14 @@ body {
 .account-icon-btn {
     display: flex; align-items: center; justify-content: center;
     width: 32px; height: 32px; padding: 0; margin: 0; flex-shrink: 0;
-    background: transparent;
+    background: transparent !important;
     border: 1px solid transparent;
     border-radius: 50%;
     color: var(--text-muted);
     cursor: pointer;
     transition: background .12s, color .12s, border-color .12s;
 }
-.account-icon-btn:hover  { background: var(--bg-hover); border-color: var(--border); color: var(--text); }
+.account-icon-btn:hover  { background: var(--bg-hover) !important; border-color: var(--border); color: var(--text); }
 .account-icon-btn.is-logged-in { color: var(--accent-h); }
 .account-icon-btn svg { width: 19px; height: 19px; }
 
