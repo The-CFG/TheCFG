@@ -881,7 +881,7 @@ const Editor = {
             // 레인 ID 매핑 가져오기
             const laneIds = CONFIG.LANE_KEY_MAPPING_ORDER[laneCount];
             
-            // 게임 화면 레인 설정
+            // 게임 화면 레인 설정 (터치 히트박스 전용 — 실제 렌더링은 Canvas가 담당)
             DOM.lanesContainer.innerHTML = '';
             DOM.lanesContainer.style.width = `${laneCount * 100}px`;
             
@@ -893,13 +893,12 @@ const Editor = {
                 if (laneIds && laneIds[i]) {
                     lane.dataset.laneId = laneIds[i]; // 레인 ID 저장
                 }
-                
-                const judgementLine = document.createElement('div');
-                judgementLine.className = 'judgement-line';
-                lane.appendChild(judgementLine);
-                
                 DOM.lanesContainer.appendChild(lane);
             }
+            
+            // 실제 플레이 화면과 동일한 Canvas 렌더러를 사용
+            Game.canvas.init();
+            Game.canvas.resize(laneCount);
             
             // 에디터 레인 하이라이트
             this.highlightEditorLanes(laneCount);
@@ -946,7 +945,6 @@ const Editor = {
                             duration: note.duration,
                             noteId: noteIdCounter++,
                             processed: false,
-                            element: null
                         };
                         this.state.previewNotes.push(newNote);
                         
@@ -957,7 +955,6 @@ const Editor = {
                             type: 'long_tail',
                             noteId: newNote.noteId,
                             processed: false,
-                            element: null
                         });
                     } else {
                         // 일반 노트 (tap, false)
@@ -966,7 +963,6 @@ const Editor = {
                             lane: gameLaneIndex,
                             type: note.type || 'tap',
                             processed: false,
-                            element: null
                         };
                         this.state.previewNotes.push(newNote);
                     }
@@ -995,45 +991,31 @@ const Editor = {
                 elapsedTime = elapsedMs;
             }
             
-            // 게임 영역 높이
-            const gameHeight = DOM.lanesContainer.clientHeight || 600;
+            const canvas = Game.canvas;
+            const gameHeight = canvas.h || DOM.lanesContainer.clientHeight || 600;
             
             // 노트 하강 속도 설정 (에디터 입력값 사용, 기본값은 BPM 기반)
             let noteSpeed = parseFloat(DOM.editor.noteFallSpeedInput?.value) || Math.max(1, Math.min(20, Math.round(this.state.bpm / 20)));
             
-            // 노트 생성 및 업데이트
+            const isCircle = document.body.classList.contains('circle-notes');
+            const noteH = isCircle ? canvas.NOTE_CIRCLE_D : canvas.NOTE_BAR_H;
+            const jY = canvas.judgementLineY();
+            
+            // 노트별 화면 표시 여부만 계산 (판정/점수 없는 순수 미리보기)
             this.state.previewNotes.forEach(note => {
+                if (note.type === 'long_tail') { note._visible = false; return; }
                 const timeToHit = note.time - elapsedTime;
-                
-                // 롱노트 여부 확인 및 높이 계산
-                const isLongNote = note.type === 'long_head';
-                const noteHeight = isLongNote && note.duration ? (note.duration / 10) * noteSpeed : 25;
-                
-                const noteBottomPosition = gameHeight - 100 - (timeToHit * noteSpeed / 10);
-                const noteTopPosition = noteBottomPosition - noteHeight;
-                
-                // 노트 생성
-                if (!note.element && !note.processed && (note.type === 'tap' || isLongNote || note.type === 'false')) {
-                    if (noteTopPosition < gameHeight && noteBottomPosition > -50) {
-                        this.createPreviewNoteElement(note, gameHeight, noteHeight);
-                    }
-                }
-                
-                // 노트 위치 업데이트
-                if (note.element && note.element.isConnected) {
-                    note.element.style.transform = `translateY(${noteTopPosition}px)`;
-                    
-                    // 화면 밖으로 나가면 제거
-                    if (noteTopPosition > gameHeight + 100) {
-                        note.element.remove();
-                        note.element = null;
-                        note.processed = true;
-                    }
-                } else if (note.processed && note.element) {
-                    note.element.remove();
-                    note.element = null;
-                }
+                const bodyH = note.type === 'long_head'
+                    ? Math.max((note.duration / 10) * noteSpeed, noteH)
+                    : noteH;
+                const noteBottomY = jY - (timeToHit * noteSpeed / 10);
+                const noteTopY = noteBottomY - bodyH;
+                note._visible = noteBottomY > -noteH && noteTopY < gameHeight;
             });
+            
+            // 실제 플레이 화면과 동일한 Canvas 렌더러로 그리기
+            const laneIdMapping = CONFIG.LANE_KEY_MAPPING_ORDER[this.state.previewLaneCount] || [];
+            canvas.render(this.state.previewNotes, this.state.previewLaneCount, {}, laneIdMapping, elapsedTime, noteSpeed);
             
             this.state.previewAnimationId = requestAnimationFrame(this.previewLoop.bind(this));
         } catch (err) {
@@ -1041,69 +1023,14 @@ const Editor = {
         }
     },
     
-    createPreviewNoteElement(note, gameHeight, noteHeight) {
-        try {
-            const lane = DOM.lanesContainer.querySelector(`[data-lane-index="${note.lane}"]`);
-            if (!lane) return;
-            
-            const noteEl = document.createElement('div');
-            noteEl.className = 'note';
-            
-            // 레인 ID 저장
-            const laneId = lane.dataset.laneId;
-            if (laneId) {
-                noteEl.dataset.lane = laneId;
-            }
-            
-            const isLongNote = note.type === 'long_head';
-            
-            if (isLongNote) {
-                noteEl.classList.add('long');
-                // 롱노트의 경우 높이 설정
-                if (noteHeight) {
-                    noteEl.style.height = `${noteHeight}px`;
-                }
-            }
-            if (note.type === 'false') {
-                noteEl.classList.add('false');
-            }
-            
-            // 레인별 색상 모드일 때 인라인 스타일 적용
-            if (Appearance.settings.colorMode === 'lane' && laneId) {
-                const color = Appearance.settings.laneColors[laneId];
-                if (color) {
-                    if (isLongNote) {
-                        const gradientStart = Appearance.adjustColor(color, -20);
-                        noteEl.style.background = `linear-gradient(to top, ${gradientStart}, ${color})`;
-                    } else {
-                        noteEl.style.backgroundColor = color;
-                        if (note.type === 'false') {
-                            noteEl.style.boxShadow = `0 0 8px ${color}`;
-                        }
-                    }
-                }
-            }
-            
-            lane.appendChild(noteEl);
-            note.element = noteEl;
-        } catch (err) {
-            Debugger.logError(err, 'Editor.createPreviewNoteElement');
-        }
-    },
-    
     clearPreview() {
         try {
-            // 모든 노트 요소 제거
-            if (this.state.previewNotes) {
-                this.state.previewNotes.forEach(note => {
-                    if (note.element) {
-                        note.element.remove();
-                        note.element = null;
-                    }
-                });
+            // Canvas 지우기
+            if (Game.canvas.ctx) {
+                Game.canvas.ctx.clearRect(0, 0, Game.canvas.w, Game.canvas.h);
             }
             
-            // 레인 초기화
+            // 레인(히트박스) 초기화
             DOM.lanesContainer.innerHTML = '';
             
             // 하이라이트는 유지 (제거하지 않음)
