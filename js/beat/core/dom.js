@@ -74,7 +74,6 @@ const DOM = {
         startTimeInput: document.getElementById('editor-start-time'),
         previewLanesSelector: document.getElementById('editor-preview-lanes'),
         bpmInput: document.getElementById('bpm-input'),
-        noteSpawnSpeedInput: document.getElementById('editor-note-spawn-speed'),
         noteFallSpeedInput: document.getElementById('editor-note-fall-speed'),
         snapSelector: document.getElementById('editor-snap-selector'),
         addMeasureBtn: document.getElementById('editor-add-measure-btn'),
@@ -125,7 +124,6 @@ const DOM = {
     triggerModal: {
         container: document.getElementById('trigger-modal'),
         bpmInput: document.getElementById('trigger-bpm'),
-        spawnSpeedInput: document.getElementById('trigger-spawn-speed'),
         fallSpeedInput: document.getElementById('trigger-fall-speed'),
         transitionInput: document.getElementById('trigger-transition'),
         confirmBtn: document.getElementById('trigger-confirm-btn'),

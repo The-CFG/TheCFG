@@ -479,7 +479,6 @@ const Editor = {
     showTriggerModal() {
         // 현재 설정값으로 모달 초기화
         DOM.triggerModal.bpmInput.value = this.state.bpm;
-        DOM.triggerModal.spawnSpeedInput.value = parseFloat(DOM.editor.noteSpawnSpeedInput?.value) || 1.5;
         DOM.triggerModal.fallSpeedInput.value = parseFloat(DOM.editor.noteFallSpeedInput?.value) || 7;
         DOM.triggerModal.transitionInput.value = 0.7;
         DOM.triggerModal.container.classList.remove('hidden');
@@ -495,7 +494,6 @@ const Editor = {
         if (time == null) return;
 
         const bpm = parseFloat(DOM.triggerModal.bpmInput.value);
-        const spawnSpeed = parseFloat(DOM.triggerModal.spawnSpeedInput.value);
         const fallSpeed = parseFloat(DOM.triggerModal.fallSpeedInput.value);
         const transitionSec = parseFloat(DOM.triggerModal.transitionInput.value);
         const transitionMs = Math.max(0, (isNaN(transitionSec) ? 0.7 : transitionSec) * 1000);
@@ -507,7 +505,6 @@ const Editor = {
         this.state.triggers.push({
             time,
             bpm,
-            spawnSpeed,
             fallSpeed,
             transitionMs
         });
@@ -542,7 +539,7 @@ const Editor = {
                 triggerEl.style.top = `${yPosition}px`;
                 
                 triggerEl.dataset.time = trigger.time;
-                triggerEl.title = `BPM: ${trigger.bpm}, 속도: ${trigger.spawnSpeed}x, 하강: ${trigger.fallSpeed}, 전환: ${((trigger.transitionMs ?? 700) / 1000).toFixed(1)}s`;
+                triggerEl.title = `BPM: ${trigger.bpm}, 하강: ${trigger.fallSpeed}, 전환: ${((trigger.transitionMs ?? 700) / 1000).toFixed(1)}s`;
                 
                 // 클릭 시 삭제
                 triggerEl.addEventListener('click', (e) => {
