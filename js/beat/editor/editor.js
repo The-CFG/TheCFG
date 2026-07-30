@@ -669,7 +669,7 @@ const Editor = {
             this.resetEditorState();
             this.state.history = [];
             this.state.bpm = chartData.bpm || 120;
-            this.state.triggers = chartData.triggers || [];
+            this.state.triggers = (chartData.triggers || []).slice().sort((a, b) => a.time - b.time);
             this.state.notes = chartData.notes.map(note => {
                 const measure = this._getMeasureFromTime(note.time);
                 let newNote = { ...note, measure };
@@ -994,8 +994,17 @@ const Editor = {
             const canvas = Game.canvas;
             const gameHeight = canvas.h || DOM.lanesContainer.clientHeight || 600;
             
-            // 노트 하강 속도 설정 (에디터 입력값 사용, 기본값은 BPM 기반)
-            let noteSpeed = parseFloat(DOM.editor.noteFallSpeedInput?.value) || Math.max(1, Math.min(20, Math.round(this.state.bpm / 20)));
+            // 노트 하강 속도 설정 (트리거가 있으면 우선 적용, 없으면 에디터 입력값/BPM 기반 기본값)
+            const baseNoteSpeed = parseFloat(DOM.editor.noteFallSpeedInput?.value) || Math.max(1, Math.min(20, Math.round(this.state.bpm / 20)));
+            let noteSpeed = baseNoteSpeed;
+            if (this.state.triggers && this.state.triggers.length > 0) {
+                let active = null;
+                for (const t of this.state.triggers) {
+                    if (t.time <= elapsedTime) active = t;
+                    else break; // triggers는 시간순 정렬되어 있음
+                }
+                if (active) noteSpeed = active.fallSpeed;
+            }
             
             const isCircle = document.body.classList.contains('circle-notes');
             const noteH = isCircle ? canvas.NOTE_CIRCLE_D : canvas.NOTE_BAR_H;

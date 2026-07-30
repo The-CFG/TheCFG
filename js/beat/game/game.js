@@ -39,6 +39,9 @@ const Game = {
         countdownIntervalId: null,
         unprocessedNoteIndex: 0,
         chartData: null,
+        triggers: [],       // 구간별 BPM/하강 속도 변경 트리거
+        baseBpm: 120,
+        baseNoteSpeed: 6,
     },
 
     // ─── Canvas 렌더러 ───────────────────────────────────────────────────────
@@ -279,6 +282,32 @@ const Game = {
     },
     // ────────────────────────────────────────────────────────────────────────
 
+    // 특정 시점에 적용 중인 트리거(가장 최근에 지난 트리거)를 찾는다.
+    // 트리거가 없거나 아직 첫 트리거에 도달하지 않았으면 null.
+    getActiveTrigger(elapsedTime) {
+        const triggers = this.state.triggers;
+        if (!triggers || triggers.length === 0) return null;
+        let active = null;
+        for (let i = 0; i < triggers.length; i++) {
+            if (triggers[i].time <= elapsedTime) active = triggers[i];
+            else break; // triggers는 시간순 정렬되어 있음
+        }
+        return active;
+    },
+
+    // 트리거에 따라 현재 BPM/하강 속도를 갱신한다.
+    applyActiveTrigger(elapsedTime) {
+        if (!this.state.triggers || this.state.triggers.length === 0) return;
+        const active = this.getActiveTrigger(elapsedTime);
+        if (active) {
+            this.state.settings.bpm = active.bpm;
+            this.state.settings.noteSpeed = active.fallSpeed;
+        } else {
+            this.state.settings.bpm = this.state.baseBpm;
+            this.state.settings.noteSpeed = this.state.baseNoteSpeed;
+        }
+    },
+
     resetState() {
         this.state.score = 0;
         this.state.combo = 0;
@@ -475,6 +504,8 @@ const Game = {
             } else {
                 elapsedTime = timestamp - self.state.gameStartTime - self.state.totalPausedTime;
             }
+
+            self.applyActiveTrigger(elapsedTime);
 
             self.updateNotes(elapsedTime);
 
@@ -958,6 +989,14 @@ const Game = {
             this.state.settings.bpm = chartBPM;
             const calculatedSpeed = Math.round(chartBPM / 20);
             this.state.settings.noteSpeed = Math.max(1, Math.min(20, calculatedSpeed));
+
+            // 트리거(구간별 BPM/하강 속도 변경) 로드 — 시간순 정렬 보장
+            this.state.triggers = Array.isArray(chartData.triggers)
+                ? [...chartData.triggers].sort((a, b) => a.time - b.time)
+                : [];
+            this.state.baseBpm = chartBPM;
+            this.state.baseNoteSpeed = this.state.settings.noteSpeed;
+
             const playerLaneCount = this.state.settings.lanes;
             const requiredLaneIds = CONFIG.LANE_KEY_MAPPING_ORDER[playerLaneCount];
             if (!requiredLaneIds) {
