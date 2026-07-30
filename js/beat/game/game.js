@@ -282,30 +282,50 @@ const Game = {
     },
     // ────────────────────────────────────────────────────────────────────────
 
+    // 트리거 전환 기본 소요 시간(ms) — 트리거에 개별 transitionMs가 없을 때(구버전 차트) 사용하는 기본값
+    TRIGGER_TRANSITION_MS: 700,
+
+    // 특정 시점 기준으로, 몇 번째 트리거가 적용 중인지 인덱스를 찾는다.
+    // (-1이면 아직 첫 트리거에 도달하지 않음)
+    _findActiveTriggerIndex(elapsedTime) {
+        const triggers = this.state.triggers;
+        if (!triggers || triggers.length === 0) return -1;
+        let idx = -1;
+        for (let i = 0; i < triggers.length; i++) {
+            if (triggers[i].time <= elapsedTime) idx = i;
+            else break; // triggers는 시간순 정렬되어 있음
+        }
+        return idx;
+    },
+
     // 특정 시점에 적용 중인 트리거(가장 최근에 지난 트리거)를 찾는다.
     // 트리거가 없거나 아직 첫 트리거에 도달하지 않았으면 null.
     getActiveTrigger(elapsedTime) {
-        const triggers = this.state.triggers;
-        if (!triggers || triggers.length === 0) return null;
-        let active = null;
-        for (let i = 0; i < triggers.length; i++) {
-            if (triggers[i].time <= elapsedTime) active = triggers[i];
-            else break; // triggers는 시간순 정렬되어 있음
-        }
-        return active;
+        const idx = this._findActiveTriggerIndex(elapsedTime);
+        return idx >= 0 ? this.state.triggers[idx] : null;
     },
 
     // 트리거에 따라 현재 BPM/하강 속도를 갱신한다.
+    // 트리거 시점부터 TRIGGER_TRANSITION_MS 동안 이전 값 → 목표 값으로 부드럽게(ease-in-out) 전환한다.
     applyActiveTrigger(elapsedTime) {
-        if (!this.state.triggers || this.state.triggers.length === 0) return;
-        const active = this.getActiveTrigger(elapsedTime);
-        if (active) {
-            this.state.settings.bpm = active.bpm;
-            this.state.settings.noteSpeed = active.fallSpeed;
-        } else {
-            this.state.settings.bpm = this.state.baseBpm;
-            this.state.settings.noteSpeed = this.state.baseNoteSpeed;
-        }
+        const triggers = this.state.triggers;
+        if (!triggers || triggers.length === 0) return;
+
+        const base = { bpm: this.state.baseBpm, fallSpeed: this.state.baseNoteSpeed };
+        const idx = this._findActiveTriggerIndex(elapsedTime);
+
+        const target = idx >= 0 ? triggers[idx] : base;
+        const from   = idx >= 1 ? triggers[idx - 1] : base;
+        const transitionStart = idx >= 0 ? triggers[idx].time : 0;
+
+        const progress = Math.min(1, Math.max(0, (elapsedTime - transitionStart) / (target.transitionMs ?? this.TRIGGER_TRANSITION_MS)));
+        // ease-in-out (급가속/급감속 없이 부드럽게 목표 속도에 도달)
+        const eased = progress < 0.5
+            ? 2 * progress * progress
+            : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+
+        this.state.settings.bpm       = from.bpm       + (target.bpm       - from.bpm)       * eased;
+        this.state.settings.noteSpeed = from.fallSpeed + (target.fallSpeed - from.fallSpeed) * eased;
     },
 
     resetState() {

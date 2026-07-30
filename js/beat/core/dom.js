@@ -127,6 +127,7 @@ const DOM = {
         bpmInput: document.getElementById('trigger-bpm'),
         spawnSpeedInput: document.getElementById('trigger-spawn-speed'),
         fallSpeedInput: document.getElementById('trigger-fall-speed'),
+        transitionInput: document.getElementById('trigger-transition'),
         confirmBtn: document.getElementById('trigger-confirm-btn'),
         cancelBtn: document.getElementById('trigger-cancel-btn')
     }

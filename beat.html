@@ -1042,6 +1042,11 @@
                         <label class="text-sm text-gray-300">하강 속도:</label>
                         <input type="number" id="trigger-fall-speed" class="w-full p-2 bg-gray-700 rounded text-white" value="7">
                     </div>
+                    <div>
+                        <label class="text-sm text-gray-300">전환 시간(초):</label>
+                        <input type="number" id="trigger-transition" class="w-full p-2 bg-gray-700 rounded text-white" value="0.7" min="0" step="0.1">
+                        <p class="text-xs text-gray-400 mt-1">이 시점부터 목표 속도까지 부드럽게 바뀌는 데 걸리는 시간입니다.</p>
+                    </div>
                 </div>
                 <div class="flex space-x-3 mt-6">
                     <button id="trigger-confirm-btn" class="flex-1 py-2 bg-green-600 hover:bg-green-500 rounded text-white">배치</button>
