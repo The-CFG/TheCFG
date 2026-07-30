@@ -7,7 +7,7 @@ const DOM = {
     comboEl: document.getElementById('combo'),
     judgementTextEl: document.getElementById('judgement-text'),
     comboTextEl: document.getElementById('combo-text'),
-    musicPlayer: document.getElementById('music-player'),
+    musicPlayer: AudioEngine, // Web Audio API 기반 AudioEngine (지연 최소화를 위해 <audio> 엘리먼트 대체)
     countdownTextEl: document.getElementById('countdown-text'),
     noteCountContainer: document.getElementById('note-count-container'),
     noteCountInput: document.getElementById('note-count-input'),

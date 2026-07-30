@@ -415,12 +415,10 @@ const Game = {
                 DOM.musicPlayer.src = this.state.settings.musicSrc;
             }
 
-            // Fix 1: 카운트다운 중에 오디오 시스템을 선행 워밍업
+            // AudioEngine은 src 할당 시점에 이미 fetch+decode를 시작하므로,
+            // 카운트다운 4초 동안 디코딩이 끝나 재생 시작 시 버퍼링 지연이 없다.
+            // (기존의 "미리 play 후 pause" 워밍업 트릭은 더 이상 필요 없음)
             DOM.musicPlayer.currentTime = this.state.settings.startTimeOffset;
-            DOM.musicPlayer.play().then(() => {
-                DOM.musicPlayer.pause();
-                DOM.musicPlayer.currentTime = this.state.settings.startTimeOffset;
-            }).catch(() => {});
         }
 
         const COUNTDOWN_DURATION_MS = 4000;
