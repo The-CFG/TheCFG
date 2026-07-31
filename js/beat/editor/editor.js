@@ -771,7 +771,7 @@ const Editor = {
                 Debugger.logError(new Error(`beatmaps[${index}] 없음`), 'Editor.loadBeatmapIntoFlatState');
                 return;
             }
-            this.resetEditorState();
+            this.resetEditorState(); // notes/오디오까지 전부 비움 — 아래에서 노래 단위 오디오를 다시 로드한다.
             this.state.activeBeatmapIndex = index;
             this.state.history = [];
             this.state.bpm = bm.bpm || 120;
@@ -790,13 +790,17 @@ const Editor = {
                 maxMeasure = Math.max(...this.state.notes.map(n => n.measure));
             }
             this.state.totalMeasures = maxMeasure + 5;
-            this.state.audioFileName = this.state.song.audioFileName || '';
+
+            // 오디오는 비트맵이 아니라 노래(song) 단위로 관리된다. 종합 창에서 이미 골라뒀다면
+            // 여기서 다시 로드해준다 (resetEditorState()가 위에서 플레이어를 비웠기 때문).
+            if (this.state.song.audioFileObject) {
+                this.loadAudioFromBlob(this.state.song.audioFileObject, this.state.song.audioFileName);
+            } else {
+                DOM.editor.audioFileNameEl.textContent = '선택된 파일 없음';
+            }
 
             DOM.editor.bpmInput.value = this.state.bpm;
             DOM.editor.startTimeInput.value = this.state.startTimeOffset;
-            DOM.editor.audioFileNameEl.textContent = this.state.audioFileName
-                ? `요구 파일: ${this.state.audioFileName}`
-                : '선택된 파일 없음';
             DOM.editor.chartFilenameInput.value = bm.difficultyLabel || '';
             if (bm.laneCount && DOM.editor.previewLanesSelector) {
                 DOM.editor.previewLanesSelector.value = bm.laneCount;

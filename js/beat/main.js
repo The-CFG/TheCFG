@@ -244,29 +244,34 @@ document.addEventListener('DOMContentLoaded', () => {
             UI.showScreen('editorHome');
         });
 
-        // ── Phase 3a: 에디터 홈 / 종합 창 네비게이션 (골격만, 실제 song/beatmap 상태는 3b~3d에서 연결) ──
+        // ── Phase 3: 에디터 홈 / 종합 창 네비게이션 ──
         document.getElementById('editor-home-back-btn').addEventListener('click', () => {
             UI.showScreen('menu');
         });
         document.getElementById('editor-home-new-song-btn').addEventListener('click', () => {
-            // TODO(3c): 여기서 Editor.state.song / Editor.state.beatmaps 초기화
-            UI.showScreen('editorSong');
+            EditorSong.newSong();
         });
         document.getElementById('editor-song-back-btn').addEventListener('click', () => {
             UI.showScreen('editorHome');
         });
         document.getElementById('editor-song-add-beatmap-btn').addEventListener('click', () => {
-            // TODO(3c): 여기서 새 beatmap을 배열에 push하고 activeBeatmapIndex를 맞춘 뒤 비트맵 창으로 이동
-            Editor.init();
-            setTimeout(() => {
-                Editor.drawTimeline();
-                Editor.renderNotes();
-            }, 0);
+            EditorSong.addBeatmap();
         });
         document.getElementById('editor-back-to-song-btn').addEventListener('click', () => {
             // Phase 3b: 현재 편집 상태를 beatmaps[activeBeatmapIndex]에 반영하고 종합 창으로 이동
             Editor.saveFlatStateToBeatmap();
             UI.showScreen('editorSong');
+            EditorSong.render();
+        });
+
+        // ── Phase 3c: 종합 창 로컬 기능 (노래 메타 입력 / 로컬 저장·불러오기) ──
+        DOM.editorSong.titleInput.addEventListener('input', (e) => EditorSong.onTitleInput(e.target.value));
+        DOM.editorSong.artistInput.addEventListener('input', (e) => EditorSong.onArtistInput(e.target.value));
+        DOM.editorSong.audioFileInput.addEventListener('change', (e) => EditorSong.handleAudioSelect(e.target.files[0]));
+        DOM.editorSong.saveLocalBtn.addEventListener('click', () => EditorSong.saveLocal());
+        DOM.editorSong.loadLocalInput.addEventListener('change', (e) => {
+            EditorSong.loadLocalFile(e.target.files[0]);
+            e.target.value = ''; // 같은 파일을 다시 골라도 change가 또 발생하도록
         });
 
         DOM.editor.backBtn.addEventListener('click', () => {

@@ -30,6 +30,7 @@ const DOM = {
     messages: {
         menu: document.getElementById('menu-message'),
         editor: document.getElementById('editor-message'),
+        editorSong: document.getElementById('editor-song-message'),
         settings: document.getElementById('settings-message'),
     },
     difficulty: {
@@ -97,6 +98,18 @@ const DOM = {
         loadInput: document.getElementById('editor-load-input'),
         statusLabel: document.getElementById('editor-status-label'),
         dirtyIndicator: document.getElementById('editor-dirty-indicator'),
+    },
+    // ── Phase 3: 종합 창 (노래 메타 + 난이도 목록) ──────────────────────────
+    editorSong: {
+        titleInput: document.getElementById('editor-song-title-input'),
+        artistInput: document.getElementById('editor-song-artist-input'),
+        audioFileInput: document.getElementById('editor-song-audio-input'),
+        audioNameEl: document.getElementById('editor-song-audio-name'),
+        beatmapList: document.getElementById('editor-song-beatmap-list'),
+        addBeatmapBtn: document.getElementById('editor-song-add-beatmap-btn'),
+        saveLocalBtn: document.getElementById('editor-song-save-local-btn'),
+        loadLocalInput: document.getElementById('editor-song-load-local-input'),
+        titleHeading: document.getElementById('editor-song-title'),
     },
     pauseGameBtn: document.getElementById('pause-game-btn'),
     resumeGameBtn: document.getElementById('resume-game-btn'),
