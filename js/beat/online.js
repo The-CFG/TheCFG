@@ -3,17 +3,20 @@
 const Online = {
     _subView: 'browse',
     _currentChartId: null,
+    _currentSongId: null,
     _browseState: { sort: 'newest', search: '', page: 0, hasMore: true },
     _browseCache: [],
 
     // ── 진입점 ────────────────────────────────────────────────────────────────
-    async show(subView = 'browse', chartId = null) {
+    // Phase 4: 홈(browse, 노래 목록) → song(노래 상세=난이도 리스트) → detail(난이도 상세=플레이 전 화면) → 플레이
+    async show(subView = 'browse', id = null) {
         this._subView = subView;
         UI.showScreen('online');
         this._renderShell();
         if (subView === 'browse')                    await this._loadBrowse(true);
         else if (subView === 'my')                   await this._loadMyCharts();
-        else if (subView === 'detail' && chartId)    await this._showDetail(chartId);
+        else if (subView === 'song' && id)           await this._showSongDetail(id);
+        else if (subView === 'detail' && id)         await this._showDetail(id);
     },
 
     // ── 공통 레이아웃 쉘 ─────────────────────────────────────────────────────
@@ -48,7 +51,7 @@ const Online = {
     _setContent(html) { document.getElementById('online-content').innerHTML = html; },
 
     // ════════════════════════════════════════════════════════════════════════
-    // 공개 라이브러리 탭
+    // 공개 라이브러리 탭 — 노래 목록 (Phase 4)
     // ════════════════════════════════════════════════════════════════════════
     async _loadBrowse(reset = false) {
         const s = this._browseState;
@@ -57,7 +60,7 @@ const Online = {
             this._setContent(this._skeleton());
         }
 
-        const { data, error } = await CloudBrowse.listPublicCharts({
+        const { data, error } = await CloudBrowse.listPublicSongs({
             sort: s.sort, search: s.search, page: s.page, pageSize: 20,
         });
 
@@ -108,37 +111,96 @@ const Online = {
         document.getElementById('sort-popular').addEventListener('click', () => { s.sort = 'popular'; this._loadBrowse(true); });
         document.getElementById('browse-more-btn')?.addEventListener('click', () => { s.page++; this._loadBrowse(false); });
         document.querySelectorAll('.browse-card-btn').forEach(btn =>
-            btn.addEventListener('click', () => this._showDetail(btn.dataset.id)));
+            btn.addEventListener('click', () => this.show('song', btn.dataset.id)));
     },
 
-    _chartCard(c) {
-        const diff = c.difficulty_label
-            ? `<span class="text-xs px-1.5 py-0.5 bg-gray-600 rounded">${_esc(c.difficulty_label)}</span>` : '';
+    // 노래 카드: 난이도 개수 / 레인 수 범위 / 총 플레이 수 요약만 보여준다.
+    // 실제 난이도 선택은 song 상세 화면(_showSongDetail)에서 한다.
+    _chartCard(s) {
+        const laneRange = s.laneCountMin == null
+            ? '—'
+            : (s.laneCountMin === s.laneCountMax ? `${s.laneCountMin}키` : `${s.laneCountMin}~${s.laneCountMax}키`);
         return `
-        <button class="browse-card-btn w-full text-left p-3 bg-gray-800 hover:bg-gray-700 rounded-lg transition" data-id="${c.id}">
+        <button class="browse-card-btn w-full text-left p-3 bg-gray-800 hover:bg-gray-700 rounded-lg transition" data-id="${s.id}">
             <div class="flex justify-between items-start">
                 <div class="flex-1 min-w-0">
-                    <p class="font-semibold text-white truncate">${_esc(c.title)}</p>
-                    <p class="text-sm text-gray-400 truncate">${_esc(c.artist || '—')}</p>
+                    <p class="font-semibold text-white truncate">${_esc(s.title)}</p>
+                    <p class="text-sm text-gray-400 truncate">${_esc(s.artist || '—')}</p>
                 </div>
                 <div class="flex flex-col items-end space-y-1 ml-2 flex-shrink-0">
-                    ${diff}
-                    <span class="text-xs text-gray-400">${c.lane_count}키 · ${c.note_count}노트</span>
-                    <span class="text-xs text-gray-500">▶ ${c.play_count}</span>
+                    <span class="text-xs px-1.5 py-0.5 bg-gray-600 rounded">난이도 ${s.beatmapCount}개</span>
+                    <span class="text-xs text-gray-400">${laneRange}</span>
+                    <span class="text-xs text-gray-500">▶ ${s.totalPlayCount}</span>
                 </div>
             </div>
         </button>`;
     },
 
     // ════════════════════════════════════════════════════════════════════════
-    // 차트 상세 + 리더보드
+    // 노래 상세 — 난이도(beatmap) 선택 화면
+    // ════════════════════════════════════════════════════════════════════════
+    async _showSongDetail(songId) {
+        this._currentSongId = songId;
+        this._setContent('<p class="text-gray-400 text-sm mt-8 text-center animate-pulse">불러오는 중…</p>');
+
+        const { data, error } = await CloudBrowse.getSongDetail(songId);
+        if (error) {
+            this._setContent(`<p class="text-red-400 text-sm">${error.message}</p>`);
+            return;
+        }
+
+        const { song, beatmaps } = data;
+        const cards = beatmaps.length === 0
+            ? '<p class="text-gray-400 text-sm text-center mt-8">등록된 난이도가 없습니다.</p>'
+            : beatmaps.map(bm => this._beatmapCard(bm)).join('');
+
+        this._setContent(`
+        <button id="song-back-btn" class="mb-3 text-sm text-gray-400 hover:text-white transition">← 목록으로</button>
+        <div class="p-4 bg-gray-800 rounded-lg mb-4">
+            <h2 class="text-xl font-bold text-white truncate">${_esc(song.title)}</h2>
+            <p class="text-gray-400 truncate">${_esc(song.artist || '—')}</p>
+        </div>
+        <h3 class="text-sm font-semibold text-gray-300 mb-2">난이도 선택</h3>
+        <div class="space-y-2">${cards}</div>
+        `);
+
+        document.getElementById('song-back-btn').addEventListener('click', () => {
+            this._subView = 'browse';
+            this._renderShell();
+            this._renderBrowse();
+        });
+        document.querySelectorAll('.beatmap-card-btn').forEach(btn =>
+            btn.addEventListener('click', () => this.show('detail', btn.dataset.id)));
+    },
+
+    _beatmapCard(bm) {
+        const diff = bm.difficulty_label
+            ? `<span class="text-xs px-1.5 py-0.5 bg-gray-600 rounded">${_esc(bm.difficulty_label)}</span>` : '';
+        return `
+        <button class="beatmap-card-btn w-full text-left p-3 bg-gray-800 hover:bg-gray-700 rounded-lg transition" data-id="${bm.id}">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-2 min-w-0">
+                    ${diff}
+                    <span class="text-sm text-gray-300">${bm.lane_count}키</span>
+                    ${bm.bpm ? `<span class="text-xs text-gray-500">BPM ${bm.bpm}</span>` : ''}
+                </div>
+                <div class="flex items-center space-x-2 flex-shrink-0 text-xs text-gray-400">
+                    <span>${bm.note_count}노트</span>
+                    <span>▶ ${bm.play_count}</span>
+                </div>
+            </div>
+        </button>`;
+    },
+
+    // ════════════════════════════════════════════════════════════════════════
+    // 난이도(beatmap) 상세 = 플레이 전 화면 + 리더보드
     // ════════════════════════════════════════════════════════════════════════
     async _showDetail(chartId) {
         this._currentChartId = chartId;
         this._setContent('<p class="text-gray-400 text-sm mt-8 text-center animate-pulse">불러오는 중…</p>');
 
         const [detailRes, lbRes, myRes, currentUser] = await Promise.all([
-            CloudBrowse.getChartDetail(chartId),
+            CloudBrowse.getBeatmapDetail(chartId),
             CloudScores.getLeaderboard(chartId, 10),
             CloudScores.getMyScore(chartId),
             CloudAuth.getUser(),
@@ -207,7 +269,7 @@ const Online = {
         }
 
         this._setContent(`
-        <button id="detail-back-btn" class="mb-3 text-sm text-gray-400 hover:text-white transition">← 목록으로</button>
+        <button id="detail-back-btn" class="mb-3 text-sm text-gray-400 hover:text-white transition">← 난이도 선택으로</button>
         <div class="p-4 bg-gray-800 rounded-lg mb-3">
             <h2 class="text-xl font-bold text-white truncate">${_esc(c.title)}</h2>
             <p class="text-gray-400 truncate">${_esc(c.artist || '—')}</p>
@@ -230,9 +292,8 @@ const Online = {
         `);
 
         document.getElementById('detail-back-btn').addEventListener('click', () => {
-            this._subView = 'browse';
-            this._renderShell();
-            this._renderBrowse();
+            if (this._currentSongId) this.show('song', this._currentSongId);
+            else { this._subView = 'browse'; this._renderShell(); this._renderBrowse(); }
         });
         document.getElementById('detail-play-btn').addEventListener('click', () => this._playOnlineChart(c));
     },

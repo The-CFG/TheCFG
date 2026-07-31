@@ -289,6 +289,7 @@ const EditorSong = {
 
             // 2) 아직 안 올라간 난이도들을 순서대로 추가
             let uploadedCount = 0;
+            let failure = null;
             for (const bm of pendingBeatmaps) {
                 const chartData = {
                     bpm: bm.bpm,
@@ -304,7 +305,7 @@ const EditorSong = {
                 };
                 const { data, error } = await CloudCharts.addBeatmapToSong(Editor.state.song.cloudSongId, meta, chartData);
                 if (error) {
-                    UI.showMessage('editorSong', `"${bm.difficultyLabel}" 업로드 실패: ${error.message}`);
+                    failure = { label: bm.difficultyLabel, message: error.message };
                     break;
                 }
                 bm.cloudChartId = data.id;
@@ -312,7 +313,13 @@ const EditorSong = {
             }
 
             this.render();
-            UI.showMessage('editorSong', `클라우드에 난이도 ${uploadedCount}개를 업로드했습니다.`);
+            if (failure) {
+                // 실패 전에 일부는 성공했을 수 있으니 진행 상황도 같이 알려준다.
+                const progressNote = uploadedCount > 0 ? ` (이전 ${uploadedCount}개는 성공)` : '';
+                UI.showMessage('editorSong', `"${failure.label}" 업로드 실패: ${failure.message}${progressNote}`);
+            } else {
+                UI.showMessage('editorSong', `클라우드에 난이도 ${uploadedCount}개를 업로드했습니다.`);
+            }
         } catch (err) {
             Debugger.logError(err, 'EditorSong.uploadToCloud');
             UI.showMessage('editorSong', `업로드 중 오류: ${err.message}`);
