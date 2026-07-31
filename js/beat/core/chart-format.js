@@ -9,9 +9,8 @@
  * 구버전 포맷 (기존): 노래 하나 = 비트맵 하나, 최상위에 필드가 바로 있음
  *   { songName, bpm, startTimeOffset, laneCount, notes, triggers }
  *
- * 지금 에디터/게임은 아직 "한 번에 비트맵 하나만" 다루므로(다중 난이도 관리 UI는 Phase 3),
- * normalize()는 항상 beatmaps[0](또는 구버전 파일 자체)만 꺼내서 돌려준다.
- * 여러 난이도가 든 파일을 불러오면 beatmapCount로 알려주기만 하고, 실제 선택 UI는 Phase 3에서 추가한다.
+ * 비트맵 창(단일 난이도 편집)에서는 여전히 normalize()/wrap()으로 beatmaps[0]만 다룬다.
+ * 종합 창(Phase 3, 여러 난이도를 한 번에 관리)에서는 normalizeAll()/wrapAll()로 beatmaps 배열 전체를 다룬다.
  */
 const ChartFormat = {
     CURRENT_VERSION: 2,
@@ -75,6 +74,71 @@ const ChartFormat = {
                     triggers,
                 },
             ],
+        };
+    },
+
+    // ── Phase 3: 종합 창 / 비트맵 창 다중 난이도 지원 ──────────────────────
+    // 신/구버전 아무 차트 파일이나 받아서 beatmaps 전체를
+    // { songName, artist, beatmaps: [{ difficultyLabel, laneCount, bpm, startTimeOffset, notes, triggers }, ...] }
+    // 형태로 통일해 돌려준다. normalize()와 달리 beatmaps[0]만 꺼내지 않고 배열 전체를 유지한다.
+    normalizeAll(raw) {
+        if (!raw || typeof raw !== 'object') {
+            throw new Error('빈 차트 데이터입니다.');
+        }
+
+        if (raw.formatVersion === 2 && Array.isArray(raw.beatmaps)) {
+            if (raw.beatmaps.length === 0) {
+                throw new Error('차트에 난이도(비트맵)가 없습니다.');
+            }
+            return {
+                songName: raw.songName || '',
+                artist: raw.artist || null,
+                beatmaps: raw.beatmaps.map(bm => ({
+                    difficultyLabel: bm.difficultyLabel || '기본',
+                    laneCount: bm.laneCount || 4,
+                    bpm: bm.bpm || 120,
+                    startTimeOffset: bm.startTimeOffset || 0,
+                    notes: bm.notes || [],
+                    triggers: bm.triggers || [],
+                })),
+            };
+        }
+
+        // 구버전: 단일 비트맵이 최상위 필드로 바로 있음 → beatmaps 배열 1개짜리로 변환해 하위호환 유지
+        return {
+            songName: raw.songName || '',
+            artist: null,
+            beatmaps: [
+                {
+                    difficultyLabel: raw.difficultyLabel || '기본',
+                    laneCount: raw.laneCount || 4,
+                    bpm: raw.bpm || 120,
+                    startTimeOffset: raw.startTimeOffset || 0,
+                    notes: raw.notes || [],
+                    triggers: raw.triggers || [],
+                },
+            ],
+        };
+    },
+
+    // 종합 창에서 노래 메타(song) + 난이도 목록(beatmaps) 전체를 v2 포맷으로 감싸서 저장용 객체를 만든다.
+    // song은 Editor.state.song(title/artist 필드) 또는 { songName, artist } 형태를 모두 받는다.
+    wrapAll(song, beatmaps) {
+        if (!Array.isArray(beatmaps) || beatmaps.length === 0) {
+            throw new Error('저장할 난이도(비트맵)가 없습니다.');
+        }
+        return {
+            formatVersion: this.CURRENT_VERSION,
+            songName: (song && (song.title || song.songName)) || '',
+            artist: (song && song.artist) || null,
+            beatmaps: beatmaps.map(bm => ({
+                difficultyLabel: bm.difficultyLabel || '기본',
+                laneCount: bm.laneCount || 4,
+                bpm: bm.bpm,
+                startTimeOffset: bm.startTimeOffset,
+                notes: bm.notes || [],
+                triggers: bm.triggers || [],
+            })),
         };
     },
 };

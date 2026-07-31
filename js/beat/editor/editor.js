@@ -22,6 +22,23 @@ const Editor = {
         // null이면 일반적인(신규) 차트 작업 상태. 업로드 버튼이 이 값에 따라
         // "신규 업로드" / "기존 차트 업데이트"를 자동으로 분기한다.
         cloudChart: null,
+
+        // ── Phase 3: 종합 창 / 비트맵 창 상태 모델 ─────────────────────────
+        // 노래 메타(제목/가수/오디오). 종합 창에서 편집. 비트맵 창의 flat 상태(위쪽 notes/bpm/...)와는
+        // 별개로, "노래 전체"를 다루는 종합 창이 만들어지기 전까지는 채워지지 않는다.
+        song: {
+            title: '',
+            artist: '',
+            audioFileObject: null,  // 로컬 File 객체
+            audioFileName: '',
+            cloudSongId: null,      // 클라우드에 이미 존재하는 노래면 beat_songs.id
+        },
+        // 노래에 딸린 난이도(비트맵) 목록. 각 항목은
+        // { difficultyLabel, laneCount, bpm, startTimeOffset, notes, triggers, cloudChartId } 형태.
+        // 비트맵 창에 들어가 있는 동안은 activeBeatmapIndex가 가리키는 항목이 지금의 flat 편집 상태
+        // (notes/bpm/triggers/startTimeOffset)와 동기화된다 — loadBeatmapIntoFlatState/saveFlatStateToBeatmap 참고.
+        beatmaps: [],
+        activeBeatmapIndex: 0,
     },
 
     init() {
@@ -712,6 +729,111 @@ const Editor = {
         } catch (err) {
             Debugger.logError(err, 'Editor.loadChart');
             UI.showMessage('editor', `차트 해석 오류: ${err.message}`);
+        }
+    },
+
+    // ── Phase 3: 종합 창 ↔ 비트맵 창 동기화 ──────────────────────────────
+    // (화면 자체는 아직 없음 — 3a/3c/3e에서 이 함수들을 호출하도록 연결 예정)
+
+    // 빈 난이도(비트맵) 객체를 하나 만든다. "새 노래 만들기"/"난이도 추가"에서 쓸 기본값.
+    createDefaultBeatmap(difficultyLabel) {
+        return {
+            difficultyLabel: difficultyLabel || '기본',
+            laneCount: 4,
+            bpm: 120,
+            startTimeOffset: 0,
+            notes: [],
+            triggers: [],
+            cloudChartId: null,
+        };
+    },
+
+    // state.song을 빈 상태로 되돌린다. resetEditorState()는 flat 편집 상태만 초기화하므로
+    // 종합 창 쪽 노래 메타는 별도로 이 함수로 초기화한다.
+    resetSongState() {
+        this.state.song = {
+            title: '',
+            artist: '',
+            audioFileObject: null,
+            audioFileName: '',
+            cloudSongId: null,
+        };
+        this.state.beatmaps = [];
+        this.state.activeBeatmapIndex = 0;
+    },
+
+    // beatmaps[index]에 저장된 난이도 데이터를 지금의 flat 편집 상태(notes/bpm/triggers/startTimeOffset)로
+    // 복사한다. 비트맵 창 진입 시 호출. loadChart()와 동일한 방식으로 노트에 measure/type을 재계산해 채운다.
+    loadBeatmapIntoFlatState(index) {
+        try {
+            const bm = this.state.beatmaps[index];
+            if (!bm) {
+                Debugger.logError(new Error(`beatmaps[${index}] 없음`), 'Editor.loadBeatmapIntoFlatState');
+                return;
+            }
+            this.resetEditorState();
+            this.state.activeBeatmapIndex = index;
+            this.state.history = [];
+            this.state.bpm = bm.bpm || 120;
+            this.state.startTimeOffset = bm.startTimeOffset || 0;
+            this.state.triggers = (bm.triggers || []).slice().sort((a, b) => a.time - b.time);
+            this.state.notes = (bm.notes || []).map(note => {
+                const measure = this._getMeasureFromTime(note.time);
+                let newNote = { ...note, measure };
+                if (note.duration) newNote.type = 'long_head';
+                else if (note.type === 'false') newNote.type = 'false';
+                else newNote.type = 'tap';
+                return newNote;
+            });
+            let maxMeasure = 0;
+            if (this.state.notes.length > 0) {
+                maxMeasure = Math.max(...this.state.notes.map(n => n.measure));
+            }
+            this.state.totalMeasures = maxMeasure + 5;
+            this.state.audioFileName = this.state.song.audioFileName || '';
+
+            DOM.editor.bpmInput.value = this.state.bpm;
+            DOM.editor.startTimeInput.value = this.state.startTimeOffset;
+            DOM.editor.audioFileNameEl.textContent = this.state.audioFileName
+                ? `요구 파일: ${this.state.audioFileName}`
+                : '선택된 파일 없음';
+            DOM.editor.chartFilenameInput.value = bm.difficultyLabel || '';
+            if (bm.laneCount && DOM.editor.previewLanesSelector) {
+                DOM.editor.previewLanesSelector.value = bm.laneCount;
+                this.highlightEditorLanes(bm.laneCount);
+            }
+            this.drawTimeline();
+            this.renderNotes();
+            this.setDirty(false);
+        } catch (err) {
+            Debugger.logError(err, 'Editor.loadBeatmapIntoFlatState');
+        }
+    },
+
+    // 지금의 flat 편집 상태를 beatmaps[index](기본값: activeBeatmapIndex)에 반영한다.
+    // 비트맵 창 이탈("← 종합 창") 또는 "현재 난이도만 빠르게 저장" 시 호출.
+    // getChartData()와 같은 방식으로 노트를 게임용 형태로 축약해 저장한다.
+    saveFlatStateToBeatmap(index) {
+        try {
+            const i = (index === undefined || index === null) ? this.state.activeBeatmapIndex : index;
+            const bm = this.state.beatmaps[i];
+            if (!bm) {
+                Debugger.logError(new Error(`beatmaps[${i}] 없음`), 'Editor.saveFlatStateToBeatmap');
+                return;
+            }
+            const gameNotes = this.state.notes.map(note => {
+                if (note.type === 'long_head') return { time: note.time, lane: note.lane, duration: note.duration };
+                if (note.type === 'tap') return { time: note.time, lane: note.lane };
+                return { time: note.time, lane: note.lane, type: note.type };
+            }).filter(note => note.type !== 'long_tail');
+
+            bm.laneCount = parseInt(DOM.editor.previewLanesSelector?.value) || 4;
+            bm.bpm = this.state.bpm;
+            bm.startTimeOffset = this.state.startTimeOffset;
+            bm.notes = gameNotes.sort((a, b) => a.time - b.time);
+            bm.triggers = this.state.triggers || [];
+        } catch (err) {
+            Debugger.logError(err, 'Editor.saveFlatStateToBeatmap');
         }
     },
 

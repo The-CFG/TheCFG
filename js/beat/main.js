@@ -264,7 +264,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 0);
         });
         document.getElementById('editor-back-to-song-btn').addEventListener('click', () => {
-            // TODO(3b): 여기서 현재 편집 상태를 beatmaps[activeBeatmapIndex]에 반영
+            // Phase 3b: 현재 편집 상태를 beatmaps[activeBeatmapIndex]에 반영하고 종합 창으로 이동
+            Editor.saveFlatStateToBeatmap();
             UI.showScreen('editorSong');
         });
 
