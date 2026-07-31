@@ -156,7 +156,7 @@ const CloudBrowse = {
 
         const { data: song, error: songErr } = await _supabase
             .from('beat_songs')
-            .select('id, title, artist, audio_storage_path, audio_mime')
+            .select('id, title, artist, audio_storage_path, audio_mime, preview_start_ms')
             .eq('id', chart.song_id)
             .eq('is_public', true)
             .single();
@@ -169,6 +169,7 @@ const CloudBrowse = {
                 artist: song.artist,
                 audio_storage_path: song.audio_storage_path,
                 audio_mime: song.audio_mime,
+                preview_start_ms: song.preview_start_ms || 0,
                 song_id: song.id,
             },
             error: null,

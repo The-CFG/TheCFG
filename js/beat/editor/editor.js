@@ -32,6 +32,7 @@ const Editor = {
             audioFileObject: null,  // 로컬 File 객체
             audioFileName: '',
             cloudSongId: null,      // 클라우드에 이미 존재하는 노래면 beat_songs.id
+            previewStartSec: 0,     // 온라인 화면 미리듣기 시작 시각(초). 0이면 처음부터.
         },
         // 노래에 딸린 난이도(비트맵) 목록. 각 항목은
         // { difficultyLabel, laneCount, bpm, startTimeOffset, notes, triggers, cloudChartId } 형태.
@@ -757,6 +758,7 @@ const Editor = {
             audioFileObject: null,
             audioFileName: '',
             cloudSongId: null,
+            previewStartSec: 0,
         };
         this.state.beatmaps = [];
         this.state.activeBeatmapIndex = 0;

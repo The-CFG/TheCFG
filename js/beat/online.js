@@ -10,6 +10,7 @@ const Online = {
     // ── 진입점 ────────────────────────────────────────────────────────────────
     // Phase 4: 홈(browse, 노래 목록) → song(노래 상세=난이도 리스트) → detail(난이도 상세=플레이 전 화면) → 플레이
     async show(subView = 'browse', id = null) {
+        SongPreview.stop(); // 화면 전환 시 이전 미리듣기(오디오/노트 미리보기)는 항상 정리
         this._subView = subView;
         UI.showScreen('online');
         this._renderShell();
@@ -43,6 +44,7 @@ const Online = {
         document.getElementById('online-tab-browse').addEventListener('click', () => this.show('browse'));
         document.getElementById('online-tab-my').addEventListener('click', () => this.show('my'));
         document.getElementById('online-back-btn').addEventListener('click', () => {
+            SongPreview.stop();
             Game.state.gameState = 'menu';
             UI.showScreen('menu');
         });
@@ -165,12 +167,18 @@ const Online = {
         `);
 
         document.getElementById('song-back-btn').addEventListener('click', () => {
+            SongPreview.stop();
             this._subView = 'browse';
             this._renderShell();
             this._renderBrowse();
         });
         document.querySelectorAll('.beatmap-card-btn').forEach(btn =>
             btn.addEventListener('click', () => this.show('detail', btn.dataset.id)));
+
+        // 노래 미리듣기 — 화면 진입 시 자동 재생, 오디오가 없으면 조용히 무시
+        if (song.audio_storage_path) {
+            SongPreview.playAudio(CloudCharts.getAudioUrl(song.audio_storage_path), song.preview_start_ms || 0);
+        }
     },
 
     _beatmapCard(bm) {
@@ -281,6 +289,9 @@ const Online = {
                 <span>▶ ${c.play_count}회</span>
             </div>
         </div>
+        <div id="online-preview-container" class="mb-4">
+            <p class="text-gray-500 text-xs text-center py-8 animate-pulse">미리보기 불러오는 중…</p>
+        </div>
         <button id="detail-play-btn" class="w-full py-3 mb-4 bg-blue-600 hover:bg-blue-500 rounded-lg font-bold transition text-lg">
             ▶ 플레이
         </button>
@@ -292,14 +303,42 @@ const Online = {
         `);
 
         document.getElementById('detail-back-btn').addEventListener('click', () => {
+            SongPreview.stop();
             if (this._currentSongId) this.show('song', this._currentSongId);
             else { this._subView = 'browse'; this._renderShell(); this._renderBrowse(); }
         });
         document.getElementById('detail-play-btn').addEventListener('click', () => this._playOnlineChart(c));
+
+        // 플레이 전 미리보기 — 노래(오디오) + 에디터와 동일한 방식의 노트 낙하 미리보기를
+        // 실제 플레이 화면 크기로 크게 보여준다. 차트 데이터 다운로드가 실패해도
+        // 오디오만이라도 재생되도록 별도 try/catch로 감싼다.
+        this._startDetailPreview(c);
+    },
+
+    async _startDetailPreview(c) {
+        const previewContainer = document.getElementById('online-preview-container');
+        if (!previewContainer) return;
+        try {
+            const { data: chartData, error } = await CloudCharts.downloadChartData(c.chart_storage_path);
+            // 그 사이 다른 난이도/화면으로 이동했으면 무시
+            if (this._currentChartId !== c.id) return;
+            if (error) throw error;
+            await SongPreview.start(previewContainer, {
+                chartData,
+                audioUrl: CloudCharts.getAudioUrl(c.audio_storage_path),
+                previewStartMs: c.preview_start_ms || 0,
+                laneCount: c.lane_count || chartData.laneCount || 4,
+            });
+        } catch (err) {
+            // 노트 미리보기 실패 시에도 오디오 미리듣기는 시도한다.
+            if (this._currentChartId !== c.id) return;
+            SongPreview.playAudio(CloudCharts.getAudioUrl(c.audio_storage_path), c.preview_start_ms || 0);
+        }
     },
 
     // ── 온라인 차트 플레이 ────────────────────────────────────────────────────
     async _playOnlineChart(c) {
+        SongPreview.stop();
         const btn = document.getElementById('detail-play-btn');
         btn.disabled = true;
         btn.textContent = '불러오는 중…';

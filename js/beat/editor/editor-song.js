@@ -34,6 +34,9 @@ const EditorSong = {
         if (DOM.editorSong.audioNameEl) {
             DOM.editorSong.audioNameEl.textContent = song.audioFileName || '선택된 파일 없음';
         }
+        if (DOM.editorSong.previewStartInput) {
+            DOM.editorSong.previewStartInput.value = song.previewStartSec || 0;
+        }
         if (DOM.editorSong.titleHeading) {
             DOM.editorSong.titleHeading.textContent = song.title ? song.title : '종합 창';
         }
@@ -177,6 +180,11 @@ const EditorSong = {
         Editor.state.song.artist = value;
     },
 
+    onPreviewStartInput(value) {
+        const sec = Math.max(0, parseFloat(value) || 0);
+        Editor.state.song.previewStartSec = sec;
+    },
+
     // 오디오는 노래(song) 단위로 한 번만 고르면 모든 난이도가 공유해서 쓴다.
     handleAudioSelect(file) {
         if (!file) return;
@@ -231,6 +239,7 @@ const EditorSong = {
                 Editor.resetSongState();
                 Editor.state.song.title = normalized.songName;
                 Editor.state.song.artist = normalized.artist || '';
+                Editor.state.song.previewStartSec = (normalized.previewStartMs || 0) / 1000;
                 Editor.state.beatmaps = normalized.beatmaps.map(bm => ({ ...bm, cloudChartId: null }));
                 Editor.state.activeBeatmapIndex = 0;
                 this.render();
@@ -267,7 +276,10 @@ const EditorSong = {
                 UI.showMessage('editorSong', '먼저 오디오 파일을 선택해주세요.');
                 return;
             }
-            if (pendingBeatmaps.length === 0 && dirtyBeatmaps.length === 0) {
+            // 난이도 변경사항이 없어도, 이미 클라우드에 있는 노래라면 제목/가수/미리듣기 시작 시각이
+            // 바뀌었을 수 있으니 아래로 계속 진행해서 노래 메타는 항상 갱신한다.
+            const noBeatmapChanges = pendingBeatmaps.length === 0 && dirtyBeatmaps.length === 0;
+            if (noBeatmapChanges && !Editor.state.song.cloudSongId) {
                 UI.showMessage('editorSong', '이미 모든 난이도가 클라우드와 동기화되어 있습니다.');
                 return;
             }
@@ -278,9 +290,10 @@ const EditorSong = {
             }
 
             // 1) 노래 자체가 아직 클라우드에 없으면 먼저 생성
+            const previewStartMs = Math.round((Editor.state.song.previewStartSec || 0) * 1000);
             if (!Editor.state.song.cloudSongId) {
                 const { data, error } = await CloudCharts.uploadSong(
-                    { title: Editor.state.song.title, artist: Editor.state.song.artist },
+                    { title: Editor.state.song.title, artist: Editor.state.song.artist, preview_start_ms: previewStartMs },
                     Editor.state.song.audioFileObject
                 );
                 if (error) {
@@ -288,6 +301,17 @@ const EditorSong = {
                     return;
                 }
                 Editor.state.song.cloudSongId = data.id;
+            } else {
+                // 이미 클라우드에 있는 노래면 제목/가수/미리듣기 시작 시각만 갱신해준다.
+                const { error: metaErr } = await CloudCharts.updateSongMeta(Editor.state.song.cloudSongId, {
+                    title: Editor.state.song.title,
+                    artist: Editor.state.song.artist,
+                    preview_start_ms: previewStartMs,
+                });
+                if (metaErr) {
+                    UI.showMessage('editorSong', `노래 정보 갱신 실패: ${metaErr.message}`);
+                    return;
+                }
             }
 
             // 2) 아직 안 올라간 난이도들을 순서대로 신규 추가
@@ -356,7 +380,9 @@ const EditorSong = {
                 const parts = [];
                 if (addedCount > 0) parts.push(`신규 ${addedCount}개`);
                 if (updatedCount > 0) parts.push(`수정 ${updatedCount}개`);
-                UI.showMessage('editorSong', `클라우드에 ${parts.join(', ')} 반영했습니다.`);
+                UI.showMessage('editorSong', parts.length > 0
+                    ? `클라우드에 ${parts.join(', ')} 반영했습니다.`
+                    : '노래 정보(제목/가수/미리듣기 시작 시각)를 갱신했습니다.');
             }
         } catch (err) {
             Debugger.logError(err, 'EditorSong.uploadToCloud');

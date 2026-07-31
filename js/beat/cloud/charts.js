@@ -209,7 +209,7 @@ const CloudCharts = {
     // ════════════════════════════════════════════════════════════════════════
 
     // ── 노래 업로드 (신규 beat_songs 행 + 오디오) ───────────────────────────
-    // meta: { title, artist }, audioFile: File 객체 (필수 — 노래 단위로 한 번만 올림)
+    // meta: { title, artist, preview_start_ms }, audioFile: File 객체 (필수 — 노래 단위로 한 번만 올림)
     async uploadSong(meta, audioFile) {
         const user = await CloudAuth.getUser();
         if (!user) return { error: new Error('로그인이 필요합니다.') };
@@ -231,6 +231,7 @@ const CloudCharts = {
                 owner_id: user.id,
                 title: meta.title,
                 artist: meta.artist || null,
+                preview_start_ms: meta.preview_start_ms || 0,
                 audio_storage_path: audioPath,
                 audio_mime: audioFile.type || 'audio/mpeg',
                 is_public: true,
@@ -244,6 +245,27 @@ const CloudCharts = {
         }
 
         return { data };
+    },
+
+    // ── 이미 클라우드에 있는 노래의 메타(제목/가수/미리듣기 시작 시각) 갱신 ───
+    // meta: { title, artist, preview_start_ms } — 오디오/난이도는 건드리지 않는다.
+    async updateSongMeta(songId, meta) {
+        const user = await CloudAuth.getUser();
+        if (!user) return { error: new Error('로그인이 필요합니다.') };
+
+        const { data, error } = await _supabase
+            .from('beat_songs')
+            .update({
+                title: meta.title,
+                artist: meta.artist || null,
+                preview_start_ms: meta.preview_start_ms || 0,
+            })
+            .eq('id', songId)
+            .eq('owner_id', user.id)
+            .select()
+            .single();
+
+        return { data, error };
     },
 
     // ── 기존 노래에 난이도(beatmap) 하나 추가 ───────────────────────────────

@@ -248,6 +248,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // ── Phase 3c: 종합 창 로컬 기능 (노래 메타 입력 / 로컬 저장·불러오기) ──
         DOM.editorSong.titleInput.addEventListener('input', (e) => EditorSong.onTitleInput(e.target.value));
         DOM.editorSong.artistInput.addEventListener('input', (e) => EditorSong.onArtistInput(e.target.value));
+        DOM.editorSong.previewStartInput.addEventListener('input', (e) => EditorSong.onPreviewStartInput(e.target.value));
         DOM.editorSong.audioFileInput.addEventListener('change', (e) => EditorSong.handleAudioSelect(e.target.files[0]));
         DOM.editorSong.saveLocalBtn.addEventListener('click', () => EditorSong.saveLocal());
         DOM.editorSong.loadLocalInput.addEventListener('change', (e) => {

@@ -104,6 +104,7 @@ const DOM = {
         artistInput: document.getElementById('editor-song-artist-input'),
         audioFileInput: document.getElementById('editor-song-audio-input'),
         audioNameEl: document.getElementById('editor-song-audio-name'),
+        previewStartInput: document.getElementById('editor-song-preview-start-input'),
         beatmapList: document.getElementById('editor-song-beatmap-list'),
         addBeatmapBtn: document.getElementById('editor-song-add-beatmap-btn'),
         saveLocalBtn: document.getElementById('editor-song-save-local-btn'),
