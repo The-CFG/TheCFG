@@ -391,7 +391,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const reader = new FileReader();
             reader.onload = (event) => {
                 try {
-                    const chartData = JSON.parse(event.target.result);
+                    const rawChartData = JSON.parse(event.target.result);
+                    const normalized = ChartFormat.normalize(rawChartData);
+                    if (normalized.beatmapCount > 1) {
+                        UI.showMessage('menu', `이 파일에는 난이도가 ${normalized.beatmapCount}개 있습니다. 첫 번째 난이도로 플레이합니다.`);
+                    }
+                    const chartData = { songName: normalized.songName, ...normalized.beatmap };
                     if (Game.loadChartNotes(chartData)) {
                         DOM.chartFileNameEl.textContent = `차트: ${file.name}`;
                         if (Game.state.settings.requiredSongName) {

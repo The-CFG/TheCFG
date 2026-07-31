@@ -644,13 +644,17 @@ const Editor = {
                 if (note.type === 'tap') return { time: note.time, lane: note.lane };
                 return { time: note.time, lane: note.lane, type: note.type };
             }).filter(note => note.type !== 'long_tail');
-            const chart = {
+            const laneCount = parseInt(DOM.editor.previewLanesSelector?.value) || 4;
+            const chart = ChartFormat.wrap({
                 songName: this.state.audioFileName,
+                artist: null, // 종합 창(Phase 3)이 생기기 전까지는 가수 입력 UI가 없음
+                difficultyLabel: null,
+                laneCount,
                 bpm: this.state.bpm,
                 startTimeOffset: this.state.startTimeOffset,
                 notes: gameNotes.sort((a, b) => a.time - b.time),
                 triggers: this.state.triggers || []
-            };
+            });
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(chart, null, 2));
             const downloadAnchorNode = document.createElement('a');
             downloadAnchorNode.setAttribute("href", dataStr);
@@ -665,8 +669,14 @@ const Editor = {
         }
     },
 
-    loadChart(chartData, loadedFileName) {
+    loadChart(rawChartData, loadedFileName) {
         try {
+            const normalized = ChartFormat.normalize(rawChartData);
+            if (normalized.beatmapCount > 1) {
+                UI.showMessage('editor', `이 파일에는 난이도가 ${normalized.beatmapCount}개 있습니다. 지금 에디터는 첫 번째 난이도만 불러옵니다 (다중 난이도 관리는 다음 업데이트 예정).`);
+            }
+            const chartData = { songName: normalized.songName, ...normalized.beatmap };
+
             this.resetEditorState();
             this.state.history = [];
             this.state.bpm = chartData.bpm || 120;

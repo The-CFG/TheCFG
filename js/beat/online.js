@@ -325,7 +325,12 @@ const Online = {
             const reader = new FileReader();
             reader.onload = ev => {
                 try {
-                    const chartData = JSON.parse(ev.target.result);
+                    const rawChartData = JSON.parse(ev.target.result);
+                    const normalized = ChartFormat.normalize(rawChartData);
+                    if (normalized.beatmapCount > 1) {
+                        UI.showMessage('online', `이 파일에는 난이도가 ${normalized.beatmapCount}개 있습니다. 첫 번째 난이도로 플레이합니다.`);
+                    }
+                    const chartData = { songName: normalized.songName, ...normalized.beatmap };
                     Game.loadChartNotes(chartData);
                     Game.state.settings.mode = 'music';
                     document.getElementById('local-chart-name').textContent = `차트: ${file.name}`;
