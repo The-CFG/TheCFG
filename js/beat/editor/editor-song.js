@@ -6,8 +6,11 @@
  * - 새 노래 만들기: Editor.state.song / beatmaps를 초기화하고 빈 난이도 1개로 시작
  * - 난이도 카드 목록: 추가 / 이름변경 / 복제 / 삭제 / 편집(비트맵 창 진입)
  * - 로컬 파일로 저장(ChartFormat.wrapAll) / 불러오기(ChartFormat.normalizeAll)
- *
- * 클라우드 연동(내 노래 목록 / 업로드)은 Phase 3d에서 추가 예정. 지금은 로컬에서만 완결된다.
+ * - Phase 3d: 클라우드 업로드(uploadToCloud) — 신규 노래면 CloudCharts.uploadSong으로 노래+오디오를
+ *   먼저 만들고, cloudChartId가 없는(=아직 안 올라간) 난이도들만 addBeatmapToSong으로 추가한다.
+ *   에디터 홈에서 클라우드 노래를 열면(EditorHome.open) 난이도는 메타만 채워지고 notes/triggers는
+ *   비어있는 채(_loaded: false)로 들어오는데, 편집/복제/전체저장 시점에 Editor.ensureBeatmapLoaded()로
+ *   그때그때 내려받는다.
  */
 const EditorSong = {
     // "새 노래 만들기" — 에디터 홈의 "+ 새 노래 만들기" 버튼에서 호출.
@@ -58,10 +61,12 @@ const EditorSong = {
             info.className = 'flex-1 min-w-0';
             const label = document.createElement('p');
             label.className = 'font-semibold truncate';
-            label.textContent = bm.difficultyLabel || '기본';
+            const cloudBadge = bm.cloudChartId ? ' ☁' : '';
+            label.textContent = `${bm.difficultyLabel || '기본'}${cloudBadge}`;
             const meta = document.createElement('p');
             meta.className = 'text-xs text-gray-400';
-            meta.textContent = `${bm.laneCount || 4}레인 · BPM ${bm.bpm || 120} · 노트 ${(bm.notes || []).length}개`;
+            const noteCountLabel = bm._loaded === false ? '노트 —' : `노트 ${(bm.notes || []).length}개`;
+            meta.textContent = `${bm.laneCount || 4}레인 · BPM ${bm.bpm || 120} · ${noteCountLabel}`;
             info.append(label, meta);
 
             const btns = document.createElement('div');
@@ -105,11 +110,18 @@ const EditorSong = {
         this.render();
     },
 
-    duplicateBeatmap(index) {
+    async duplicateBeatmap(index) {
         const bm = Editor.state.beatmaps[index];
         if (!bm) return;
+        if (bm._loaded === false) {
+            UI.showMessage('editorSong', '난이도 데이터를 불러오는 중…');
+            const ok = await Editor.ensureBeatmapLoaded(bm);
+            if (!ok) return;
+            this.render();
+        }
         const copy = JSON.parse(JSON.stringify(bm));
         copy.cloudChartId = null;
+        copy._loaded = true;
         copy.difficultyLabel = `${bm.difficultyLabel || '기본'} 사본`;
         Editor.state.beatmaps.splice(index + 1, 0, copy);
         this.render();
@@ -122,7 +134,10 @@ const EditorSong = {
             UI.showMessage('editorSong', '난이도는 최소 1개 이상 있어야 합니다.');
             return;
         }
-        if (!confirm(`"${bm.difficultyLabel || '기본'}" 난이도를 삭제할까요? 되돌릴 수 없습니다.`)) return;
+        const cloudNote = bm.cloudChartId
+            ? '\n(이 난이도는 클라우드에도 올라가 있습니다. 목록에서만 제거되며 클라우드 데이터는 남습니다.)'
+            : '';
+        if (!confirm(`"${bm.difficultyLabel || '기본'}" 난이도를 삭제할까요? 되돌릴 수 없습니다.${cloudNote}`)) return;
         Editor.state.beatmaps.splice(index, 1);
         if (Editor.state.activeBeatmapIndex >= Editor.state.beatmaps.length) {
             Editor.state.activeBeatmapIndex = Editor.state.beatmaps.length - 1;
@@ -131,7 +146,15 @@ const EditorSong = {
     },
 
     // 비트맵 창으로 들어가서 이 난이도를 편집한다.
-    editBeatmap(index) {
+    // 클라우드에서 메타만 받아온(_loaded: false) 난이도면 편집 진입 전에 notes/triggers를 먼저 내려받는다.
+    async editBeatmap(index) {
+        const bm = Editor.state.beatmaps[index];
+        if (!bm) return;
+        if (bm._loaded === false) {
+            UI.showMessage('editorSong', '난이도 데이터를 불러오는 중…');
+            const ok = await Editor.ensureBeatmapLoaded(bm);
+            if (!ok) { this.render(); return; }
+        }
         UI.showScreen('editor');
         Editor.loadBeatmapIntoFlatState(index);
         // 화면 전환 직후 캔버스 레이아웃이 아직 안 잡혀있을 수 있어 한 프레임 뒤 다시 그린다.
@@ -163,11 +186,20 @@ const EditorSong = {
     },
 
     // ── 로컬 파일 저장/불러오기 ───────────────────────────────────────
-    saveLocal() {
+    async saveLocal() {
         try {
             if (Editor.state.beatmaps.length === 0) {
                 UI.showMessage('editorSong', '저장할 난이도가 없습니다.');
                 return;
+            }
+            const unloaded = Editor.state.beatmaps.filter(bm => bm._loaded === false);
+            if (unloaded.length > 0) {
+                UI.showMessage('editorSong', '난이도 데이터를 불러오는 중…');
+                for (const bm of unloaded) {
+                    const ok = await Editor.ensureBeatmapLoaded(bm);
+                    if (!ok) return;
+                }
+                this.render();
             }
             const chart = ChartFormat.wrapAll(Editor.state.song, Editor.state.beatmaps);
             const filename = (Editor.state.song.title || '').trim() || 'untitled';
@@ -208,5 +240,87 @@ const EditorSong = {
             }
         };
         reader.readAsText(file);
+    },
+
+    // ── Phase 3d: 클라우드 업로드 ─────────────────────────────────────
+    // 신규 노래(song.cloudSongId 없음)면 CloudCharts.uploadSong으로 노래+오디오를 먼저 만들고,
+    // 기존 노래면 오디오는 건드리지 않고 아직 안 올라간(cloudChartId 없는) 난이도들만
+    // addBeatmapToSong으로 추가한다. 이미 클라우드에 올라간 난이도(수정분 포함)는 이번 단계에서
+    // 갱신하지 않는다 — 난이도 수정 반영은 이후 단계 과제로 남겨둔다.
+    async uploadToCloud() {
+        try {
+            const user = await CloudAuth.getUser();
+            if (!user) {
+                UI.showMessage('editorSong', '로그인이 필요합니다. 우측 상단 계정 아이콘을 클릭해주세요.');
+                return;
+            }
+            if (!(Editor.state.song.title || '').trim()) {
+                UI.showMessage('editorSong', '노래 제목을 입력해주세요.');
+                return;
+            }
+            const pendingBeatmaps = Editor.state.beatmaps.filter(bm => !bm.cloudChartId);
+            if (!Editor.state.song.cloudSongId && !Editor.state.song.audioFileObject) {
+                // 신규 노래 업로드 — 오디오 필수
+                UI.showMessage('editorSong', '먼저 오디오 파일을 선택해주세요.');
+                return;
+            }
+            if (pendingBeatmaps.length === 0) {
+                UI.showMessage('editorSong', '이미 모든 난이도가 클라우드에 업로드되어 있습니다.');
+                return;
+            }
+
+            if (DOM.editorSong.uploadCloudBtn) {
+                DOM.editorSong.uploadCloudBtn.disabled = true;
+                DOM.editorSong.uploadCloudBtn.textContent = '업로드 중…';
+            }
+
+            // 1) 노래 자체가 아직 클라우드에 없으면 먼저 생성
+            if (!Editor.state.song.cloudSongId) {
+                const { data, error } = await CloudCharts.uploadSong(
+                    { title: Editor.state.song.title, artist: Editor.state.song.artist },
+                    Editor.state.song.audioFileObject
+                );
+                if (error) {
+                    UI.showMessage('editorSong', `노래 업로드 실패: ${error.message}`);
+                    return;
+                }
+                Editor.state.song.cloudSongId = data.id;
+            }
+
+            // 2) 아직 안 올라간 난이도들을 순서대로 추가
+            let uploadedCount = 0;
+            for (const bm of pendingBeatmaps) {
+                const chartData = {
+                    bpm: bm.bpm,
+                    startTimeOffset: bm.startTimeOffset,
+                    laneCount: bm.laneCount,
+                    notes: bm.notes || [],
+                    triggers: bm.triggers || [],
+                };
+                const meta = {
+                    difficulty_label: bm.difficultyLabel,
+                    lane_count: bm.laneCount,
+                    bpm: bm.bpm,
+                };
+                const { data, error } = await CloudCharts.addBeatmapToSong(Editor.state.song.cloudSongId, meta, chartData);
+                if (error) {
+                    UI.showMessage('editorSong', `"${bm.difficultyLabel}" 업로드 실패: ${error.message}`);
+                    break;
+                }
+                bm.cloudChartId = data.id;
+                uploadedCount++;
+            }
+
+            this.render();
+            UI.showMessage('editorSong', `클라우드에 난이도 ${uploadedCount}개를 업로드했습니다.`);
+        } catch (err) {
+            Debugger.logError(err, 'EditorSong.uploadToCloud');
+            UI.showMessage('editorSong', `업로드 중 오류: ${err.message}`);
+        } finally {
+            if (DOM.editorSong.uploadCloudBtn) {
+                DOM.editorSong.uploadCloudBtn.disabled = false;
+                DOM.editorSong.uploadCloudBtn.textContent = '☁ 클라우드에 업로드';
+            }
+        }
     },
 };

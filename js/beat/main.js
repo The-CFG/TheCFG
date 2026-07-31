@@ -242,6 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Phase 3a: '에디터' 버튼은 이제 비트맵 창으로 바로 안 들어가고 에디터 홈으로 감
             Game.state.gameState = 'editor';
             UI.showScreen('editorHome');
+            EditorHome.refresh(); // Phase 3d: 내 노래(클라우드) 목록 새로고침
         });
 
         // ── Phase 3: 에디터 홈 / 종합 창 네비게이션 ──
@@ -253,6 +254,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         document.getElementById('editor-song-back-btn').addEventListener('click', () => {
             UI.showScreen('editorHome');
+            EditorHome.refresh(); // Phase 3d: 방금 업로드했을 수 있으니 목록 새로고침
         });
         document.getElementById('editor-song-add-beatmap-btn').addEventListener('click', () => {
             EditorSong.addBeatmap();
@@ -273,6 +275,9 @@ document.addEventListener('DOMContentLoaded', () => {
             EditorSong.loadLocalFile(e.target.files[0]);
             e.target.value = ''; // 같은 파일을 다시 골라도 change가 또 발생하도록
         });
+
+        // ── Phase 3d: 종합 창 클라우드 업로드 ──
+        DOM.editorSong.uploadCloudBtn.addEventListener('click', () => EditorSong.uploadToCloud());
 
         DOM.editor.backBtn.addEventListener('click', () => {
             if (Editor._confirmDiscardChanges()) {

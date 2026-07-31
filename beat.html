@@ -930,6 +930,9 @@
                             <label for="editor-song-load-local-input" class="flex-1 text-center cursor-pointer py-2 px-3 bg-gray-600 hover:bg-gray-500 rounded text-sm">📂 로컬 파일 불러오기</label>
                             <input type="file" id="editor-song-load-local-input" accept=".json" class="hidden">
                         </div>
+                        <div class="flex gap-2">
+                            <button id="editor-song-upload-cloud-btn" class="flex-1 py-2 px-3 bg-teal-700 hover:bg-teal-600 rounded text-sm font-semibold">☁ 클라우드에 업로드</button>
+                        </div>
                     </div>
                     <h3 class="text-sm font-semibold text-gray-300 mb-2">난이도 목록</h3>
                     <div id="editor-song-beatmap-list" class="space-y-2 flex-1 overflow-y-auto">
@@ -1211,6 +1214,7 @@
         <script defer src="js/beat/appearance/theme.js"></script>
         <script defer src="js/beat/editor/editor.js"></script>
         <script defer src="js/beat/editor/editor-song.js"></script>
+        <script defer src="js/beat/editor/editor-home.js"></script>
         <script defer src="js/beat/game/game.js"></script>
         <script defer src="js/beat/game/ui.js"></script>
         <script defer src="js/beat/cloud/auth.js"></script>

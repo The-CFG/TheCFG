@@ -110,6 +110,11 @@ const DOM = {
         saveLocalBtn: document.getElementById('editor-song-save-local-btn'),
         loadLocalInput: document.getElementById('editor-song-load-local-input'),
         titleHeading: document.getElementById('editor-song-title'),
+        uploadCloudBtn: document.getElementById('editor-song-upload-cloud-btn'),
+    },
+    // ── Phase 3d: 에디터 홈 (내 노래 클라우드 목록) ──────────────────────────
+    editorHome: {
+        songList: document.getElementById('editor-home-song-list'),
     },
     pauseGameBtn: document.getElementById('pause-game-btn'),
     resumeGameBtn: document.getElementById('resume-game-btn'),

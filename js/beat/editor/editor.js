@@ -762,6 +762,29 @@ const Editor = {
         this.state.activeBeatmapIndex = 0;
     },
 
+    // Phase 3d: 클라우드에서 불러온 노래는 getSongWithBeatmaps()로 난이도 "메타"만 받아오고
+    // (notes/triggers는 안 옴), 실제로 편집/복제/전체저장이 필요해지는 시점에만 이 함수로
+    // chart_storage_path를 다운로드해서 채운다. bm._loaded === false 인 항목에서만 동작한다.
+    async ensureBeatmapLoaded(bm) {
+        if (!bm || bm._loaded === undefined || bm._loaded !== false) return true; // 이미 로컬에 있는(신규/로컬불러오기) 난이도
+        if (!bm.chartStoragePath) {
+            Debugger.logError(new Error('chartStoragePath 없음'), 'Editor.ensureBeatmapLoaded');
+            return false;
+        }
+        const { data, error } = await CloudCharts.downloadChartData(bm.chartStoragePath);
+        if (error) {
+            UI.showMessage('editorSong', `난이도 데이터 다운로드 실패: ${error.message}`);
+            return false;
+        }
+        bm.notes = data.notes || [];
+        bm.triggers = data.triggers || [];
+        bm.startTimeOffset = data.startTimeOffset || 0;
+        if (data.bpm) bm.bpm = data.bpm;
+        if (data.laneCount) bm.laneCount = data.laneCount;
+        bm._loaded = true;
+        return true;
+    },
+
     // beatmaps[index]에 저장된 난이도 데이터를 지금의 flat 편집 상태(notes/bpm/triggers/startTimeOffset)로
     // 복사한다. 비트맵 창 진입 시 호출. loadChart()와 동일한 방식으로 노트에 measure/type을 재계산해 채운다.
     loadBeatmapIntoFlatState(index) {
