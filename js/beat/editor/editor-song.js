@@ -61,7 +61,7 @@ const EditorSong = {
             info.className = 'flex-1 min-w-0';
             const label = document.createElement('p');
             label.className = 'font-semibold truncate';
-            const cloudBadge = bm.cloudChartId ? ' ☁' : '';
+            const cloudBadge = bm.cloudChartId ? (bm._cloudDirty ? ' ☁·수정됨' : ' ☁') : '';
             label.textContent = `${bm.difficultyLabel || '기본'}${cloudBadge}`;
             const meta = document.createElement('p');
             meta.className = 'text-xs text-gray-400';
@@ -107,6 +107,7 @@ const EditorSong = {
         const label = prompt('난이도 이름을 입력하세요.', bm.difficultyLabel || '');
         if (label === null) return;
         bm.difficultyLabel = label.trim() || '기본';
+        if (bm.cloudChartId) bm._cloudDirty = true; // 이미 올라간 난이도면 다음 업로드 시 메타를 다시 보내야 함
         this.render();
     },
 
@@ -242,11 +243,12 @@ const EditorSong = {
         reader.readAsText(file);
     },
 
-    // ── Phase 3d: 클라우드 업로드 ─────────────────────────────────────
+    // ── Phase 3d/4d: 클라우드 업로드 ────────────────────────────────────
     // 신규 노래(song.cloudSongId 없음)면 CloudCharts.uploadSong으로 노래+오디오를 먼저 만들고,
-    // 기존 노래면 오디오는 건드리지 않고 아직 안 올라간(cloudChartId 없는) 난이도들만
-    // addBeatmapToSong으로 추가한다. 이미 클라우드에 올라간 난이도(수정분 포함)는 이번 단계에서
-    // 갱신하지 않는다 — 난이도 수정 반영은 이후 단계 과제로 남겨둔다.
+    // 기존 노래면 오디오는 건드리지 않는다. 그 다음 두 종류의 난이도를 처리한다:
+    //   - 아직 안 올라간(cloudChartId 없는) 난이도 → addBeatmapToSong으로 신규 추가
+    //   - 이미 올라갔지만 이름변경/편집 후 손대지 않은(cloudChartId 있고 _cloudDirty === true) 난이도
+    //     → updateBeatmap으로 메타(+ 편집 화면을 열었다면 notes/triggers까지) 갱신
     async uploadToCloud() {
         try {
             const user = await CloudAuth.getUser();
@@ -259,13 +261,14 @@ const EditorSong = {
                 return;
             }
             const pendingBeatmaps = Editor.state.beatmaps.filter(bm => !bm.cloudChartId);
+            const dirtyBeatmaps = Editor.state.beatmaps.filter(bm => bm.cloudChartId && bm._cloudDirty);
             if (!Editor.state.song.cloudSongId && !Editor.state.song.audioFileObject) {
                 // 신규 노래 업로드 — 오디오 필수
                 UI.showMessage('editorSong', '먼저 오디오 파일을 선택해주세요.');
                 return;
             }
-            if (pendingBeatmaps.length === 0) {
-                UI.showMessage('editorSong', '이미 모든 난이도가 클라우드에 업로드되어 있습니다.');
+            if (pendingBeatmaps.length === 0 && dirtyBeatmaps.length === 0) {
+                UI.showMessage('editorSong', '이미 모든 난이도가 클라우드와 동기화되어 있습니다.');
                 return;
             }
 
@@ -287,8 +290,8 @@ const EditorSong = {
                 Editor.state.song.cloudSongId = data.id;
             }
 
-            // 2) 아직 안 올라간 난이도들을 순서대로 추가
-            let uploadedCount = 0;
+            // 2) 아직 안 올라간 난이도들을 순서대로 신규 추가
+            let addedCount = 0;
             let failure = null;
             for (const bm of pendingBeatmaps) {
                 const chartData = {
@@ -309,16 +312,51 @@ const EditorSong = {
                     break;
                 }
                 bm.cloudChartId = data.id;
-                uploadedCount++;
+                addedCount++;
+            }
+
+            // 3) 이미 올라갔지만 이름변경/편집으로 바뀐 난이도들을 갱신
+            //    (1)에서 실패했다면 굳이 더 진행하지 않고 여기서 멈춘다.
+            let updatedCount = 0;
+            if (!failure) {
+                for (const bm of dirtyBeatmaps) {
+                    const meta = {
+                        difficulty_label: bm.difficultyLabel,
+                        lane_count: bm.laneCount,
+                        bpm: bm.bpm,
+                    };
+                    // 편집 화면을 열어 notes/triggers를 갖고 있는 상태(_loaded !== false)일 때만
+                    // 차트 데이터도 같이 보낸다. 이름변경만 했다면 메타만 보내 기존 노트를 보존한다.
+                    const chartData = bm._loaded === false ? null : {
+                        bpm: bm.bpm,
+                        startTimeOffset: bm.startTimeOffset,
+                        laneCount: bm.laneCount,
+                        notes: bm.notes || [],
+                        triggers: bm.triggers || [],
+                    };
+                    const { error } = await CloudCharts.updateBeatmap(bm.cloudChartId, meta, chartData);
+                    if (error) {
+                        failure = { label: bm.difficultyLabel, message: error.message };
+                        break;
+                    }
+                    bm._cloudDirty = false;
+                    updatedCount++;
+                }
             }
 
             this.render();
             if (failure) {
                 // 실패 전에 일부는 성공했을 수 있으니 진행 상황도 같이 알려준다.
-                const progressNote = uploadedCount > 0 ? ` (이전 ${uploadedCount}개는 성공)` : '';
+                const progressParts = [];
+                if (addedCount > 0) progressParts.push(`신규 ${addedCount}개`);
+                if (updatedCount > 0) progressParts.push(`수정 ${updatedCount}개`);
+                const progressNote = progressParts.length > 0 ? ` (이전에 ${progressParts.join(', ')} 성공)` : '';
                 UI.showMessage('editorSong', `"${failure.label}" 업로드 실패: ${failure.message}${progressNote}`);
             } else {
-                UI.showMessage('editorSong', `클라우드에 난이도 ${uploadedCount}개를 업로드했습니다.`);
+                const parts = [];
+                if (addedCount > 0) parts.push(`신규 ${addedCount}개`);
+                if (updatedCount > 0) parts.push(`수정 ${updatedCount}개`);
+                UI.showMessage('editorSong', `클라우드에 ${parts.join(', ')} 반영했습니다.`);
             }
         } catch (err) {
             Debugger.logError(err, 'EditorSong.uploadToCloud');

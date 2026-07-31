@@ -859,6 +859,7 @@ const Editor = {
             bm.startTimeOffset = this.state.startTimeOffset;
             bm.notes = gameNotes.sort((a, b) => a.time - b.time);
             bm.triggers = this.state.triggers || [];
+            if (bm.cloudChartId) bm._cloudDirty = true; // 이미 올라간 난이도면 다음 업로드 시 갱신이 필요함
         } catch (err) {
             Debugger.logError(err, 'Editor.saveFlatStateToBeatmap');
         }

@@ -356,4 +356,48 @@ const CloudCharts = {
 
         return { data: { song, beatmaps: beatmaps || [] }, error: null };
     },
+
+    // ── 이미 클라우드에 올라간 난이도(beatmap) 메타/데이터 수정 ─────────────
+    // meta: { difficulty_label, lane_count, bpm } 중 바뀐 필드만 넘기면 됨.
+    // chartData: null이면 노트/트리거는 그대로 두고 메타만 갱신한다 (이름변경만 했을 때 등,
+    // 편집 화면을 열지 않아 최신 notes/triggers를 갖고 있지 않은 경우 이 경로를 탄다).
+    async updateBeatmap(chartId, meta, chartData = null) {
+        const user = await CloudAuth.getUser();
+        if (!user) return { error: new Error('로그인이 필요합니다.') };
+
+        const { data: existing, error: fetchErr } = await _supabase
+            .from('beat_charts')
+            .select('chart_storage_path, owner_id')
+            .eq('id', chartId)
+            .single();
+        if (fetchErr) return { error: fetchErr };
+        if (existing.owner_id !== user.id) return { error: new Error('권한이 없습니다.') };
+
+        const updates = { ...meta };
+
+        if (chartData) {
+            const chartBlob = new Blob([JSON.stringify(chartData)], { type: 'application/json' });
+            const { error: chartErr } = await _supabase.storage
+                .from('beat-files')
+                .update(existing.chart_storage_path, chartBlob, { contentType: 'application/json', upsert: true });
+            if (chartErr) return { error: chartErr };
+            updates.note_count = Array.isArray(chartData.notes)
+                ? chartData.notes.filter(n => n.type !== 'long_tail').length
+                : 0;
+        }
+
+        // 구버전 title 컬럼 방어적 동기화 (addBeatmapToSong과 동일 정책 — 난이도명이 바뀌면 같이 맞춰준다).
+        if (updates.difficulty_label !== undefined) {
+            updates.title = updates.difficulty_label || '기본';
+        }
+
+        const { data, error: dbErr } = await _supabase
+            .from('beat_charts')
+            .update(updates)
+            .eq('id', chartId)
+            .select()
+            .single();
+
+        return { data, error: dbErr };
+    },
 };
