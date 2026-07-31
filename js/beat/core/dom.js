@@ -87,15 +87,14 @@ const DOM = {
         playBtn: document.getElementById('editor-play-btn'),
         stopBtn: document.getElementById('editor-stop-btn'),
         chartFilenameInput: document.getElementById('editor-chart-filename'),
-        saveBtn: document.getElementById('editor-save-btn'),
-        loadBtn: document.getElementById('editor-load-btn'),
+        quickSaveBtn: document.getElementById('editor-quick-save-btn'),
         resetBtn: document.getElementById('editor-reset-btn'),
         backBtn: document.getElementById('editor-back-btn'),
-        uploadBtn: document.getElementById('editor-upload-btn'),
-        cloudStatusEl: document.getElementById('editor-cloud-status'),
-        
+        backToSongBtn: document.getElementById('editor-back-to-song-btn'),
+        uploadBtn: document.getElementById('editor-upload-btn'), // Phase 3e: HTML에서 제거됨, null로 남음 (Editor._updateCloudUI가 null 체크함)
+        cloudStatusEl: document.getElementById('editor-cloud-status'), // 위와 동일
+
         // 기타 UI
-        loadInput: document.getElementById('editor-load-input'),
         statusLabel: document.getElementById('editor-status-label'),
         dirtyIndicator: document.getElementById('editor-dirty-indicator'),
     },

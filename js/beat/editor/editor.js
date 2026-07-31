@@ -864,6 +864,19 @@ const Editor = {
         }
     },
 
+    // Phase 3e: 비트맵 창의 "⚡ 빠른 저장" 버튼. saveFlatStateToBeatmap()과 달리 종합 창으로
+    // 돌아가지 않고 그 자리에서 beatmaps[activeBeatmapIndex]만 갱신한다.
+    quickSaveBeatmap() {
+        try {
+            this.saveFlatStateToBeatmap();
+            this.setDirty(false);
+            UI.showMessage('editor', '현재 난이도를 저장했습니다. (종합 창에서 "로컬에 저장"/"클라우드에 업로드"로 전체 반영)');
+        } catch (err) {
+            Debugger.logError(err, 'Editor.quickSaveBeatmap');
+            UI.showMessage('editor', `저장 실패: ${err.message}`);
+        }
+    },
+
     async handlePlayPause() {
         try {
             const isMusicLoaded = !!DOM.musicPlayer.src;

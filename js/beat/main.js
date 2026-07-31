@@ -208,30 +208,9 @@ document.addEventListener('DOMContentLoaded', () => {
             Online.show('browse');
         });
 
-        // 에디터 업로드 버튼
-        document.getElementById('editor-upload-btn').addEventListener('click', async () => {
-            const user = await CloudAuth.getUser();
-            if (!user) {
-                alert('로그인이 필요합니다. 우측 상단 계정 아이콘을 클릭해주세요.');
-                return;
-            }
-            const cloudChart = Editor.state.cloudChart;
-            if (cloudChart) {
-                UploadModal.open('update', cloudChart.id);
-            } else {
-                UploadModal.open('upload');
-            }
-        });
-
-        document.getElementById('editor-cloud-load-btn').addEventListener('click', async () => {
-            const user = await CloudAuth.getUser();
-            if (!user) {
-                alert('로그인이 필요합니다. 우측 상단 계정 아이콘을 클릭해주세요.');
-                return;
-            }
-            await CloudLoadModal.open();
-        });
-
+        // Phase 3e: 비트맵 창의 개별 서버 업로드/불러오기 버튼은 제거됨.
+        // 클라우드 업로드는 종합 창(EditorSong.uploadToCloud), 불러오기는 에디터 홈(EditorHome.open)에서 한다.
+        // (upload-modal/cloud-load-modal 자체는 아직 DOM에 남아있지만 트리거 버튼이 없어 열리지 않는다.)
         document.getElementById('cloud-load-cancel-btn').addEventListener('click', () => CloudLoadModal.close());
 
         // 업로드 모달 버튼
@@ -515,26 +494,7 @@ document.addEventListener('DOMContentLoaded', () => {
         DOM.editor.removeMeasureBtn.addEventListener('click', () => Editor.removeMeasure());
         DOM.editor.playBtn.addEventListener('click', () => Editor.handlePlayPause());
         DOM.editor.stopBtn.addEventListener('click', () => Editor.stopPlayback());
-        DOM.editor.saveBtn.addEventListener('click', () => Editor.saveChart());
-        DOM.editor.loadBtn.addEventListener('click', () => DOM.editor.loadInput.click());
-        DOM.editor.loadInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                if (Editor._confirmDiscardChanges('저장하지 않은 변경사항이 있습니다. 새 차트를 불러오시겠습니까?')) {
-                    try {
-                        const chartData = JSON.parse(event.target.result);
-                        Editor.loadChart(chartData, file.name);
-                    } catch (err) {
-                        Debugger.logError(err, 'Editor.handleChartLoad');
-                        UI.showMessage('editor', `잘못된 차트 파일 형식입니다: ${err.message}`);
-                    }
-                }
-            };
-            reader.readAsText(file);
-            e.target.value = null;
-        });
+        DOM.editor.quickSaveBtn.addEventListener('click', () => Editor.quickSaveBeatmap());
         DOM.editor.resetBtn.addEventListener('click', () => Editor.handleReset());
         DOM.editor.notesContainer.addEventListener('click', (e) => Editor.handleTimelineClick(e));
     }
