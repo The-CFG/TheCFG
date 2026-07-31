@@ -174,15 +174,15 @@ const Online = {
     },
 
     _beatmapCard(bm) {
-        const diff = bm.difficulty_label
-            ? `<span class="text-xs px-1.5 py-0.5 bg-gray-600 rounded">${_esc(bm.difficulty_label)}</span>` : '';
+        const laneBadge = `<span class="text-xs px-1.5 py-0.5 bg-gray-600 rounded flex-shrink-0">${bm.lane_count}키</span>`;
+        const label = bm.difficulty_label ? _esc(bm.difficulty_label) : '기본';
         return `
         <button class="beatmap-card-btn w-full text-left p-3 bg-gray-800 hover:bg-gray-700 rounded-lg transition" data-id="${bm.id}">
             <div class="flex justify-between items-center">
                 <div class="flex items-center space-x-2 min-w-0">
-                    ${diff}
-                    <span class="text-sm text-gray-300">${bm.lane_count}키</span>
-                    ${bm.bpm ? `<span class="text-xs text-gray-500">BPM ${bm.bpm}</span>` : ''}
+                    ${laneBadge}
+                    <span class="text-sm text-gray-300 truncate">${label}</span>
+                    ${bm.bpm ? `<span class="text-xs text-gray-500 flex-shrink-0">BPM ${bm.bpm}</span>` : ''}
                 </div>
                 <div class="flex items-center space-x-2 flex-shrink-0 text-xs text-gray-400">
                     <span>${bm.note_count}노트</span>
