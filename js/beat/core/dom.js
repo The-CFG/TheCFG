@@ -21,6 +21,8 @@ const DOM = {
         practice: document.getElementById('practice-screen'),
         playing: document.getElementById('playing-screen'),
         result: document.getElementById('result-screen'),
+        editorHome: document.getElementById('editor-home-screen'),
+        editorSong: document.getElementById('editor-song-screen'),
         editor: document.getElementById('editor-screen'),
         settings: document.getElementById('settings-screen'),
         online: document.getElementById('online-screen'),

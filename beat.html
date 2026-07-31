@@ -889,12 +889,46 @@
                 </div>
                 <!-- Online Screen -->
                 <div id="online-screen" class="hidden h-full flex flex-col overflow-y-auto p-1" style="-webkit-overflow-scrolling: touch;"></div>
-                <!-- Editor Screen -->
+
+                <!-- Editor Home Screen (Phase 3a: 골격만) -->
+                <div id="editor-home-screen" class="hidden flex flex-col h-full text-white overflow-y-auto" style="-webkit-overflow-scrolling: touch;">
+                    <div class="flex items-center justify-between mb-4 gap-2">
+                        <h2 class="text-3xl font-bold">에디터</h2>
+                        <button id="editor-home-back-btn" class="flex-shrink-0 py-2 px-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm">← 메인 메뉴</button>
+                    </div>
+                    <button id="editor-home-new-song-btn" class="w-full py-3 mb-4 bg-teal-600 hover:bg-teal-500 rounded-lg font-semibold">+ 새 노래 만들기</button>
+                    <h3 class="text-sm font-semibold text-gray-300 mb-2">☁ 내 노래</h3>
+                    <div id="editor-home-song-list" class="space-y-2 flex-1 overflow-y-auto">
+                        <!-- Phase 3d에서 CloudCharts.listMySongs()로 채움 -->
+                        <p class="text-gray-400 text-sm text-center mt-8">로그인 후 클라우드에 저장된 노래가 여기 표시됩니다. (아직 연결 전)</p>
+                    </div>
+                </div>
+
+                <!-- Editor Song Screen (종합 창) (Phase 3a: 골격만) -->
+                <div id="editor-song-screen" class="hidden flex flex-col h-full text-white overflow-y-auto" style="-webkit-overflow-scrolling: touch;">
+                    <div class="flex items-center justify-between mb-4 gap-2">
+                        <h2 class="text-3xl font-bold" id="editor-song-title">종합 창</h2>
+                        <button id="editor-song-back-btn" class="flex-shrink-0 py-2 px-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm">← 에디터 홈</button>
+                    </div>
+                    <div class="p-4 bg-gray-800 rounded-lg mb-4">
+                        <p class="text-sm text-gray-400">노래 제목/가수/오디오 관리 영역 (Phase 3c에서 채움)</p>
+                    </div>
+                    <h3 class="text-sm font-semibold text-gray-300 mb-2">난이도 목록</h3>
+                    <div id="editor-song-beatmap-list" class="space-y-2 flex-1 overflow-y-auto">
+                        <!-- Phase 3c에서 beatmaps 카드 목록으로 채움 -->
+                    </div>
+                    <button id="editor-song-add-beatmap-btn" class="w-full py-2 mt-2 bg-teal-600 hover:bg-teal-500 rounded-lg text-sm font-semibold">+ 새 난이도 추가</button>
+                </div>
+
+                <!-- Editor Screen (비트맵 창) -->
                 <div id="editor-screen" class="hidden flex flex-col h-full text-white overflow-y-auto" style="-webkit-overflow-scrolling: touch;">
                     <div class="flex-shrink-0 touch-auto">
                         <div class="flex items-center justify-between mb-4 gap-2">
                             <h2 class="text-3xl font-bold" data-i18n="editor_title">차트 에디터<span id="editor-dirty-indicator" class="text-yellow-400 ml-2"></span></h2>
-                            <button id="editor-back-btn" class="flex-shrink-0 py-2 px-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm">← 메인 메뉴</button>
+                            <div class="flex gap-2 flex-shrink-0">
+                                <button id="editor-back-to-song-btn" class="py-2 px-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm">← 종합 창</button>
+                                <button id="editor-back-btn" class="py-2 px-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm">← 메인 메뉴</button>
+                            </div>
                         </div>
                         <div id="editor-message" class="hidden p-3 mb-4 text-center bg-red-500 rounded-lg"></div>
                         <!-- 상단 컨트롤 영역 -->

@@ -239,13 +239,33 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('upload-cancel-btn').addEventListener('click', () => UploadModal.close());
 
         document.getElementById('editor-btn').addEventListener('click', () => {
-            // 화면 비율은 항상 3:2로 고정
+            // Phase 3a: '에디터' 버튼은 이제 비트맵 창으로 바로 안 들어가고 에디터 홈으로 감
             Game.state.gameState = 'editor';
+            UI.showScreen('editorHome');
+        });
+
+        // ── Phase 3a: 에디터 홈 / 종합 창 네비게이션 (골격만, 실제 song/beatmap 상태는 3b~3d에서 연결) ──
+        document.getElementById('editor-home-back-btn').addEventListener('click', () => {
+            UI.showScreen('menu');
+        });
+        document.getElementById('editor-home-new-song-btn').addEventListener('click', () => {
+            // TODO(3c): 여기서 Editor.state.song / Editor.state.beatmaps 초기화
+            UI.showScreen('editorSong');
+        });
+        document.getElementById('editor-song-back-btn').addEventListener('click', () => {
+            UI.showScreen('editorHome');
+        });
+        document.getElementById('editor-song-add-beatmap-btn').addEventListener('click', () => {
+            // TODO(3c): 여기서 새 beatmap을 배열에 push하고 activeBeatmapIndex를 맞춘 뒤 비트맵 창으로 이동
             Editor.init();
             setTimeout(() => {
                 Editor.drawTimeline();
                 Editor.renderNotes();
             }, 0);
+        });
+        document.getElementById('editor-back-to-song-btn').addEventListener('click', () => {
+            // TODO(3b): 여기서 현재 편집 상태를 beatmaps[activeBeatmapIndex]에 반영
+            UI.showScreen('editorSong');
         });
 
         DOM.editor.backBtn.addEventListener('click', () => {
