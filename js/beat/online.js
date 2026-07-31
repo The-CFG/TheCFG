@@ -325,7 +325,10 @@ const Online = {
             await SongPreview.start({
                 chartData,
                 audioUrl: CloudCharts.getAudioUrl(c.audio_storage_path),
-                previewStartMs: c.preview_start_ms || 0,
+                // 노트 미리보기는 실제 플레이와 동일하게 항상 처음(0)부터 재생한다.
+                // preview_start_ms는 난이도 선택(노래 상세) 화면의 "미리듣기"에만 쓰인다 —
+                // 여기서 그 값을 그대로 쓰면 노트 타이밍과 어긋나 노트가 하나도 안 보일 수 있다.
+                previewStartMs: 0,
                 laneCount: c.lane_count || chartData.laneCount || 4,
             });
             if (hintEl) hintEl.textContent = '◀ 왼쪽 게임 화면에서 미리보기가 재생됩니다.';
