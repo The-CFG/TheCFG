@@ -483,6 +483,12 @@ const Game = {
     prepareNotesFromChartData() {
         const chartData = JSON.parse(JSON.stringify(this.state.chartData));
 
+        // loadChartNotes()가 미리 settings.lanes를 chartData.laneCount로 맞춰주지만,
+        // 이 함수가 실제 게임플레이 노트를 최종적으로 만드는 지점이므로
+        // 여기서도 직접 한 번 더 확인해 어떤 호출 경로로 오든 항상 정확한 레인 수를 쓰도록 한다.
+        if (chartData.laneCount && CONFIG.LANE_KEY_MAPPING_ORDER[chartData.laneCount]) {
+            this.state.settings.lanes = chartData.laneCount;
+        }
         const playerLaneCount = this.state.settings.lanes;
         const requiredLaneIds = CONFIG.LANE_KEY_MAPPING_ORDER[playerLaneCount];
 
@@ -1015,6 +1021,14 @@ const Game = {
             this.state.baseBpm = chartBPM;
             this.state.baseNoteSpeed = this.state.settings.noteSpeed;
 
+            // 버그 수정: 지금까지 여기서 settings.lanes(기본값 4)를 그대로 썼기 때문에,
+            // 5키 이상으로 저장된 차트를 불러와도 항상 4키 매핑으로 강제되어
+            // 5번째 레인 이상의 노트가 전부 누락되는 문제가 있었다.
+            // 차트에 저장된 laneCount를 실제 플레이 레인 수로 반영한다.
+            const chartLaneCount = chartData.laneCount;
+            if (chartLaneCount && CONFIG.LANE_KEY_MAPPING_ORDER[chartLaneCount]) {
+                this.state.settings.lanes = chartLaneCount;
+            }
             const playerLaneCount = this.state.settings.lanes;
             const requiredLaneIds = CONFIG.LANE_KEY_MAPPING_ORDER[playerLaneCount];
             if (!requiredLaneIds) {
