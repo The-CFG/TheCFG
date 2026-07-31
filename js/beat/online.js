@@ -289,8 +289,8 @@ const Online = {
                 <span>▶ ${c.play_count}회</span>
             </div>
         </div>
-        <div id="online-preview-container" class="mb-4">
-            <p class="text-gray-500 text-xs text-center py-8 animate-pulse">미리보기 불러오는 중…</p>
+        <div id="online-preview-hint" class="mb-4 p-3 bg-gray-800 rounded-lg text-center text-xs text-gray-400">
+            불러오는 중…
         </div>
         <button id="detail-play-btn" class="w-full py-3 mb-4 bg-blue-600 hover:bg-blue-500 rounded-lg font-bold transition text-lg">
             ▶ 플레이
@@ -316,23 +316,24 @@ const Online = {
     },
 
     async _startDetailPreview(c) {
-        const previewContainer = document.getElementById('online-preview-container');
-        if (!previewContainer) return;
+        const hintEl = document.getElementById('online-preview-hint');
         try {
             const { data: chartData, error } = await CloudCharts.downloadChartData(c.chart_storage_path);
             // 그 사이 다른 난이도/화면으로 이동했으면 무시
             if (this._currentChartId !== c.id) return;
             if (error) throw error;
-            await SongPreview.start(previewContainer, {
+            await SongPreview.start({
                 chartData,
                 audioUrl: CloudCharts.getAudioUrl(c.audio_storage_path),
                 previewStartMs: c.preview_start_ms || 0,
                 laneCount: c.lane_count || chartData.laneCount || 4,
             });
+            if (hintEl) hintEl.textContent = '◀ 왼쪽 게임 화면에서 미리보기가 재생됩니다.';
         } catch (err) {
             // 노트 미리보기 실패 시에도 오디오 미리듣기는 시도한다.
             if (this._currentChartId !== c.id) return;
             SongPreview.playAudio(CloudCharts.getAudioUrl(c.audio_storage_path), c.preview_start_ms || 0);
+            if (hintEl) hintEl.textContent = '🎵 노래 미리듣기만 재생 중입니다.';
         }
     },
 
