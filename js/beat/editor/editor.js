@@ -518,14 +518,19 @@ const Editor = {
             }
 
             const container = DOM.editor.container;
-            // 노트/레인 좌표는 타임라인(gridContainer) 기준으로 계산해야 한다.
-            // #editor-container에는 왼쪽에 시크 거터가 붙어있어 container 기준으로 계산하면 어긋난다.
+            // 레인(X)은 타임라인(gridContainer) 기준으로 계산해야 한다 — #editor-container에는
+            // 왼쪽에 시크 거터가 붙어있어 container 기준 X로 계산하면 거터 폭만큼 어긋난다.
             const gridRect = DOM.editor.gridContainer.getBoundingClientRect();
             const laneWidth = gridRect.width / CONFIG.EDITOR_LANE_IDS.length;
             const x = e.clientX - gridRect.left;
             const laneIndex = Math.floor(x / laneWidth);
             const laneId = CONFIG.EDITOR_LANE_IDS[laneIndex];
-            const y = e.clientY - gridRect.top + container.scrollTop;
+            // 시간(Y)은 반드시 스크롤되지 않는 container의 rect를 기준으로 + scrollTop을 더해야 한다.
+            // gridContainer는 스크롤되는 내용물 안에 있어서 자신의 rect.top 자체가 스크롤할 때마다
+            // 바뀌므로, 여기에 scrollTop을 또 더하면 스크롤량이 두 번 반영돼 롱노트처럼 스크롤 위치가
+            // 달라진 두 지점을 연속 클릭하는 경우 시간 계산이 크게 어긋나는 버그가 있었다.
+            const containerRect = container.getBoundingClientRect();
+            const y = e.clientY - containerRect.top + container.scrollTop;
             
             // 그리드 라인과 정확히 일치하는 계산
             const adjustedBeatHeight = this._getAdjustedBeatHeight();
