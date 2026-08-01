@@ -374,6 +374,12 @@ const Online = {
 
             const audioUrl = CloudCharts.getAudioUrl(c.audio_storage_path);
 
+            // 채보 파일에 저장된 startTimeOffset(노트 타이밍 기준점)은 무시하고
+            // 노래의 start_offset_ms(종합 창 "시작(초)")로 덮어쓴다.
+            // 그래야 오디오 재생 시작 위치(songStartOffset)와 노트 타이밍 기준점이 항상 일치한다
+            // (안 그러면 종합 창에서 "시작(초)"를 바꿔도 노트 타이밍에는 반영되지 않는 문제가 생긴다).
+            chartData.startTimeOffset = (c.start_offset_ms || 0) / 1000;
+
             Game.loadChartNotes(chartData);
             Game.state._onlineChartId = c.id;
             Game.state.settings.mode = 'music';
