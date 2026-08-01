@@ -40,17 +40,19 @@ const UI = {
             setTimeout(() => DOM.comboTextEl.classList.remove('show'), CONFIG.JUDGEMENT_ANIMATION_MS);
         }
     },
+    // 점수/총 노트 수 → 랭크(S/A/B/C) 계산. 결과 화면과 온라인 리더보드에서 공용으로 쓴다.
+    calculateRank(score, totalNotes) {
+        if (!totalNotes || totalNotes <= 0) return 'C';
+        const maxScore = totalNotes * CONFIG.POINTS.perfect;
+        const percentage = (score / maxScore) * 100;
+        if (percentage === 100) return 'S';
+        if (percentage >= 90) return 'A';
+        if (percentage >= 70) return 'B';
+        return 'C';
+    },
     updateResultScreen() {
         DOM.finalScoreEl.textContent = Game.state.score;
-        let rank = 'C';
-        if (Game.state.totalNotes > 0) {
-            const maxScore = Game.state.totalNotes * CONFIG.POINTS.perfect;
-            const percentage = (Game.state.score / maxScore) * 100;
-            if (percentage === 100) rank = 'S';
-            else if (percentage >= 90) rank = 'A';
-            else if (percentage >= 70) rank = 'B';
-        }
-        DOM.rankEl.textContent = rank;
+        DOM.rankEl.textContent = this.calculateRank(Game.state.score, Game.state.totalNotes);
         DOM.finalPerfectEl.textContent = Game.state.judgements.perfect;
         DOM.finalGoodEl.textContent = Game.state.judgements.good;
         DOM.finalBadEl.textContent = Game.state.judgements.bad;

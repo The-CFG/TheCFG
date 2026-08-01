@@ -251,6 +251,7 @@ const Online = {
                 const isMe = !!(currentUser && s.user_id === currentUser.id);
                 const displayName = s.nickname ? _esc(s.nickname) : `${_esc(s.user_id.slice(0, 8))}…`;
                 const acc = (+(s.accuracy) || 0).toFixed(1);
+                const rank = UI.calculateRank(s.score, c.note_count);
                 const rankBadge = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`;
                 const rowCls = isMe
                     ? 'bg-teal-900 border border-teal-600 rounded'
@@ -259,6 +260,7 @@ const Online = {
                 <div class="flex items-center justify-between py-2 px-2 ${rowCls} text-sm ${isMe ? 'text-teal-200' : 'text-gray-300'}">
                     <span class="w-7 text-center font-bold flex-shrink-0">${rankBadge}</span>
                     <span class="flex-1 px-2 truncate font-medium">${displayName}${isMe ? ' <span class="text-xs text-teal-400 ml-1">(나)</span>' : ''}</span>
+                    <span class="${_rankGradeClass(rank)} font-bold w-6 text-center flex-shrink-0">${rank}</span>
                     <span class="font-mono font-bold w-20 text-right flex-shrink-0">${s.score.toLocaleString()}</span>
                     <span class="text-xs text-gray-500 w-12 text-right flex-shrink-0">${acc}%</span>
                     <span class="text-xs text-gray-500 w-14 text-right flex-shrink-0">${s.max_combo}콤보</span>
@@ -271,6 +273,7 @@ const Online = {
             myPanel = `<p class="mt-3 text-xs text-gray-500 text-center">로그인 후 플레이하면 기록이 등록됩니다.</p>`;
         } else if (myScore) {
             const rankTxt = myRank ? `${myRank}위` : `TOP ${lb.length} 밖`;
+            const myGrade = UI.calculateRank(myScore.score, c.note_count);
             const p = myScore.judge_perfect || 0;
             const g = myScore.judge_good    || 0;
             const m = myScore.judge_miss    || 0;
@@ -278,7 +281,10 @@ const Online = {
             <div class="mt-3 p-3 bg-teal-950 border border-teal-700 rounded-lg">
                 <div class="flex justify-between items-center text-sm text-teal-200">
                     <span class="font-semibold">내 최고 기록 <span class="text-xs text-teal-400">(${rankTxt})</span></span>
-                    <span class="font-mono font-bold text-base">${myScore.score.toLocaleString()}</span>
+                    <span class="flex items-center gap-2">
+                        <span class="${_rankGradeClass(myGrade)} font-bold text-base">${myGrade}</span>
+                        <span class="font-mono font-bold text-base">${myScore.score.toLocaleString()}</span>
+                    </span>
                 </div>
                 <div class="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 text-xs text-teal-400">
                     <span>정확도 ${(+(myScore.accuracy) || 0).toFixed(1)}%</span>
@@ -546,6 +552,16 @@ function _esc(str) {
     return String(str)
         .replace(/&/g, '&amp;').replace(/</g, '&lt;')
         .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// ── 랭크(S/A/B/C) 등급별 색상 클래스 ──────────────────────────────────────────
+function _rankGradeClass(rank) {
+    switch (rank) {
+        case 'S': return 'text-yellow-400';
+        case 'A': return 'text-teal-400';
+        case 'B': return 'text-blue-400';
+        default:  return 'text-gray-400';
+    }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
