@@ -132,7 +132,7 @@ const CloudBrowse = {
 
         const { data: beatmaps, error: bmErr } = await _supabase
             .from('beat_charts')
-            .select('id, difficulty_label, lane_count, bpm, note_count, play_count, created_at')
+            .select('id, difficulty_label, lane_count, bpm, note_count, play_count, created_at, owner_id')
             .eq('song_id', songId)
             .eq('is_public', true)
             .order('lane_count', { ascending: true })

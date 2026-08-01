@@ -152,9 +152,10 @@ const Online = {
         }
 
         const { song, beatmaps } = data;
+        const nickMap = await CloudAuth._fetchNicknameMap(beatmaps.map(bm => bm.owner_id).filter(Boolean));
         const cards = beatmaps.length === 0
             ? '<p class="text-gray-400 text-sm text-center mt-8">등록된 난이도가 없습니다.</p>'
-            : beatmaps.map(bm => this._beatmapCard(bm)).join('');
+            : beatmaps.map(bm => this._beatmapCard(bm, nickMap)).join('');
 
         this._setContent(`
         <button id="song-back-btn" class="mb-3 text-sm text-gray-400 hover:text-white transition">← 목록으로</button>
@@ -181,9 +182,12 @@ const Online = {
         }
     },
 
-    _beatmapCard(bm) {
+    _beatmapCard(bm, nickMap = {}) {
         const laneBadge = `<span class="text-xs px-1.5 py-0.5 bg-gray-600 rounded flex-shrink-0">${bm.lane_count}키</span>`;
         const label = bm.difficulty_label ? _esc(bm.difficulty_label) : '기본';
+        const creatorName = bm.owner_id
+            ? (nickMap[bm.owner_id] ? _esc(nickMap[bm.owner_id]) : `${_esc(bm.owner_id.slice(0, 8))}…`)
+            : '';
         return `
         <button class="beatmap-card-btn w-full text-left p-3 bg-gray-800 hover:bg-gray-700 rounded-lg transition" data-id="${bm.id}">
             <div class="flex justify-between items-center">
@@ -197,6 +201,7 @@ const Online = {
                     <span>▶ ${bm.play_count}</span>
                 </div>
             </div>
+            ${creatorName ? `<div class="mt-1 text-xs text-gray-500 truncate">제작자: ${creatorName}</div>` : ''}
         </button>`;
     },
 
@@ -222,6 +227,10 @@ const Online = {
         const c = detailRes.data;
         const lb = lbRes.data || [];
         const myScore = myRes.data;
+        const creatorNickMap = c.owner_id ? await CloudAuth._fetchNicknameMap([c.owner_id]) : {};
+        const creatorName = c.owner_id
+            ? (creatorNickMap[c.owner_id] ? _esc(creatorNickMap[c.owner_id]) : `${_esc(c.owner_id.slice(0, 8))}…`)
+            : '';
 
         // 내 순위 계산
         let myRank = null;
@@ -287,6 +296,7 @@ const Online = {
                 ${c.difficulty_label ? `<span>${_esc(c.difficulty_label)}</span>` : ''}
                 <span>${c.note_count}노트</span>
                 <span>▶ ${c.play_count}회</span>
+                ${creatorName ? `<span>제작자: ${creatorName}</span>` : ''}
             </div>
         </div>
         <div id="online-preview-hint" class="mb-4 p-3 bg-gray-800 rounded-lg text-center text-xs text-gray-400">

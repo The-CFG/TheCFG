@@ -260,13 +260,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // ── Phase 3d: 종합 창 클라우드 업로드 ──
         DOM.editorSong.uploadCloudBtn.addEventListener('click', () => EditorSong.uploadToCloud());
 
-        DOM.editor.backBtn.addEventListener('click', () => {
-            if (Editor._confirmDiscardChanges()) {
-                Game.state.gameState = 'menu';
-                UI.showScreen('menu');
-            }
-        });
-
         // Trigger modal event listeners
         DOM.triggerModal.confirmBtn.addEventListener('click', () => {
             Editor.confirmTrigger();

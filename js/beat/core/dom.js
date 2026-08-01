@@ -90,7 +90,6 @@ const DOM = {
         chartFilenameInput: document.getElementById('editor-chart-filename'),
         quickSaveBtn: document.getElementById('editor-quick-save-btn'),
         resetBtn: document.getElementById('editor-reset-btn'),
-        backBtn: document.getElementById('editor-back-btn'),
         backToSongBtn: document.getElementById('editor-back-to-song-btn'),
         uploadBtn: document.getElementById('editor-upload-btn'), // Phase 3e: HTML에서 제거됨, null로 남음 (Editor._updateCloudUI가 null 체크함)
         cloudStatusEl: document.getElementById('editor-cloud-status'), // 위와 동일
