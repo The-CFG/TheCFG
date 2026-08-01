@@ -53,6 +53,9 @@
 <div id="app-shell" class="w-full h-full flex flex-col lg:flex-row overflow-hidden">
     <!-- Game Area -->
     <div id="game-area" class="w-full lg:w-3/5 h-1/3 lg:h-full bg-black relative flex justify-center touch-none flex-shrink-0">
+        <!-- 노래 커버 이미지 배경 (노래 선택~결과 화면 동안 표시). GameBackground.set()/clear()가 제어. -->
+        <div id="game-area-bg" class="absolute inset-0 bg-cover bg-center" style="z-index:0;"></div>
+        <div id="game-area-bg-dim" class="absolute inset-0 bg-black pointer-events-none" style="z-index:0;opacity:0.55;"></div>
         <!-- Canvas: 노트/판정선/레인 경계선 렌더링 전담 -->
         <canvas id="game-canvas" style="position:absolute;top:0;left:50%;transform:translateX(-50%);pointer-events:none;z-index:1;"></canvas>
         <div id="lanes-container" class="h-full flex relative" style="z-index:2;">
@@ -926,6 +929,11 @@
                             <span id="editor-song-audio-name" class="text-xs text-gray-400 flex-1 truncate">선택된 파일 없음</span>
                         </div>
                         <div class="flex items-center gap-2">
+                            <label for="editor-song-cover-input" class="cursor-pointer flex-shrink-0 py-2 px-3 bg-teal-600 hover:bg-teal-500 rounded text-sm">이미지 선택</label>
+                            <input type="file" id="editor-song-cover-input" accept="image/*" class="hidden">
+                            <span id="editor-song-cover-name" class="text-xs text-gray-400 flex-1 truncate">선택된 파일 없음 (선택)</span>
+                        </div>
+                        <div class="flex items-center gap-2">
                             <label for="editor-song-preview-start-input" class="text-sm w-auto flex-shrink-0 whitespace-nowrap">미리듣기 시작(초)</label>
                             <input type="number" id="editor-song-preview-start-input" min="0" step="1" value="0" placeholder="0" class="w-20 p-2 bg-gray-700 rounded text-sm">
                             <span class="text-xs text-gray-500 flex-1">온라인 화면 미리듣기가 시작될 지점 (비워두면 처음부터)</span>
@@ -1209,6 +1217,7 @@
         <script defer src="js/beat/core/audio.js"></script>
         <script defer src="js/beat/core/audio-engine.js"></script>
         <script defer src="js/beat/core/dom.js"></script>
+        <script defer src="js/beat/core/game-background.js"></script>
         <script defer src="js/beat/core/i18n.js"></script>
         <script defer src="js/beat/appearance/appearance.js"></script>
         <script defer src="js/beat/appearance/theme.js"></script>

@@ -45,6 +45,7 @@ const Online = {
         document.getElementById('online-tab-my').addEventListener('click', () => this.show('my'));
         document.getElementById('online-back-btn').addEventListener('click', () => {
             SongPreview.stop();
+            GameBackground.clear();
             Game.state.gameState = 'menu';
             UI.showScreen('menu');
         });
@@ -56,6 +57,7 @@ const Online = {
     // 공개 라이브러리 탭 — 노래 목록 (Phase 4)
     // ════════════════════════════════════════════════════════════════════════
     async _loadBrowse(reset = false) {
+        GameBackground.clear();
         const s = this._browseState;
         if (reset) {
             s.page = 0; s.hasMore = true; this._browseCache = [];
@@ -152,6 +154,7 @@ const Online = {
         }
 
         const { song, beatmaps } = data;
+        GameBackground.set(CloudCharts.getCoverUrl(song.cover_storage_path));
         const nickMap = await CloudAuth._fetchNicknameMap(beatmaps.map(bm => bm.owner_id).filter(Boolean));
         const cards = beatmaps.length === 0
             ? '<p class="text-gray-400 text-sm text-center mt-8">등록된 난이도가 없습니다.</p>'
@@ -169,6 +172,7 @@ const Online = {
 
         document.getElementById('song-back-btn').addEventListener('click', () => {
             SongPreview.stop();
+            GameBackground.clear();
             this._subView = 'browse';
             this._renderShell();
             this._renderBrowse();
@@ -227,6 +231,7 @@ const Online = {
         const c = detailRes.data;
         const lb = lbRes.data || [];
         const myScore = myRes.data;
+        GameBackground.set(CloudCharts.getCoverUrl(c.cover_storage_path));
         const creatorNickMap = c.owner_id ? await CloudAuth._fetchNicknameMap([c.owner_id]) : {};
         const creatorName = c.owner_id
             ? (creatorNickMap[c.owner_id] ? _esc(creatorNickMap[c.owner_id]) : `${_esc(c.owner_id.slice(0, 8))}…`)
@@ -387,6 +392,7 @@ const Online = {
     // 내 차트 탭
     // ════════════════════════════════════════════════════════════════════════
     async _loadMyCharts() {
+        GameBackground.clear();
         this._setContent('<p class="text-gray-400 text-sm mt-8 text-center animate-pulse">불러오는 중…</p>');
 
         const user = await CloudAuth.getUser();

@@ -34,6 +34,9 @@ const EditorSong = {
         if (DOM.editorSong.audioNameEl) {
             DOM.editorSong.audioNameEl.textContent = song.audioFileName || '선택된 파일 없음';
         }
+        if (DOM.editorSong.coverNameEl) {
+            DOM.editorSong.coverNameEl.textContent = song.coverFileName || '선택된 파일 없음 (선택)';
+        }
         if (DOM.editorSong.previewStartInput) {
             DOM.editorSong.previewStartInput.value = song.previewStartSec || 0;
         }
@@ -204,6 +207,14 @@ const EditorSong = {
         // 실제 AudioEngine 로드는 비트맵 창 진입 시(Editor.loadBeatmapIntoFlatState)로 미룬다.
     },
 
+    // 노래 커버 이미지(선택) — 노래 선택 화면부터 결과 화면까지 왼쪽 game-area 배경으로 쓰인다.
+    handleCoverSelect(file) {
+        if (!file) return;
+        Editor.state.song.coverFileObject = file;
+        Editor.state.song.coverFileName = file.name;
+        if (DOM.editorSong.coverNameEl) DOM.editorSong.coverNameEl.textContent = file.name;
+    },
+
     // ── 로컬 파일 저장/불러오기 ───────────────────────────────────────
     async saveLocal() {
         try {
@@ -306,7 +317,8 @@ const EditorSong = {
             if (!Editor.state.song.cloudSongId) {
                 const { data, error } = await CloudCharts.uploadSong(
                     { title: Editor.state.song.title, artist: Editor.state.song.artist, preview_start_ms: previewStartMs, start_offset_ms: startOffsetMs },
-                    Editor.state.song.audioFileObject
+                    Editor.state.song.audioFileObject,
+                    Editor.state.song.coverFileObject
                 );
                 if (error) {
                     UI.showMessage('editorSong', `노래 업로드 실패: ${error.message}`);
@@ -314,13 +326,13 @@ const EditorSong = {
                 }
                 Editor.state.song.cloudSongId = data.id;
             } else {
-                // 이미 클라우드에 있는 노래면 제목/가수/미리듣기 시작 시각/시작(초)만 갱신해준다.
+                // 이미 클라우드에 있는 노래면 제목/가수/미리듣기 시작 시각/시작(초)/커버 이미지(고른 경우)만 갱신해준다.
                 const { error: metaErr } = await CloudCharts.updateSongMeta(Editor.state.song.cloudSongId, {
                     title: Editor.state.song.title,
                     artist: Editor.state.song.artist,
                     preview_start_ms: previewStartMs,
                     start_offset_ms: startOffsetMs,
-                });
+                }, Editor.state.song.coverFileObject);
                 if (metaErr) {
                     UI.showMessage('editorSong', `노래 정보 갱신 실패: ${metaErr.message}`);
                     return;

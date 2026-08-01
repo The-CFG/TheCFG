@@ -202,15 +202,25 @@ const CloudCharts = {
         return data.publicUrl;
     },
 
+    // ── Storage에서 커버 이미지 공개 URL 가져오기 ─────────────────────────────
+    getCoverUrl(coverStoragePath) {
+        if (!coverStoragePath) return null;
+        const { data } = _supabase.storage
+            .from('beat-files')
+            .getPublicUrl(coverStoragePath);
+        return data.publicUrl;
+    },
+
     // ════════════════════════════════════════════════════════════════════════
     // Phase 3d: 노래(beat_songs) / 난이도(beat_charts.song_id) 모델
     // 위쪽의 uploadChart/updateChart/listMyCharts/getMyChartDetail은 song_id가 없던
     // 구버전 단일-차트 흐름(CloudLoadModal 등)을 위해 그대로 남겨둔다.
     // ════════════════════════════════════════════════════════════════════════
 
-    // ── 노래 업로드 (신규 beat_songs 행 + 오디오) ───────────────────────────
-    // meta: { title, artist, preview_start_ms }, audioFile: File 객체 (필수 — 노래 단위로 한 번만 올림)
-    async uploadSong(meta, audioFile) {
+    // ── 노래 업로드 (신규 beat_songs 행 + 오디오 [+ 커버 이미지]) ────────────
+    // meta: { title, artist, preview_start_ms, start_offset_ms }, audioFile: File 객체 (필수),
+    // coverFile: File 객체 (선택 — 노래 선택~결과 화면 배경으로 쓰임)
+    async uploadSong(meta, audioFile, coverFile) {
         const user = await CloudAuth.getUser();
         if (!user) return { error: new Error('로그인이 필요합니다.') };
         if (!audioFile) return { error: new Error('음악 파일을 선택해주세요.') };
@@ -224,6 +234,19 @@ const CloudCharts = {
             .upload(audioPath, audioFile, { contentType: audioFile.type || 'audio/mpeg', upsert: false });
         if (audioErr) return { error: audioErr };
 
+        let coverPath = null;
+        if (coverFile) {
+            const coverExt = (coverFile.name.split('.').pop() || 'jpg').toLowerCase();
+            coverPath = `${user.id}/songs/${songId}/cover.${coverExt}`;
+            const { error: coverErr } = await _supabase.storage
+                .from('beat-files')
+                .upload(coverPath, coverFile, { contentType: coverFile.type || 'image/jpeg', upsert: false });
+            if (coverErr) {
+                await _supabase.storage.from('beat-files').remove([audioPath]);
+                return { error: coverErr };
+            }
+        }
+
         const { data, error: dbErr } = await _supabase
             .from('beat_songs')
             .insert({
@@ -235,33 +258,48 @@ const CloudCharts = {
                 start_offset_ms: meta.start_offset_ms || 0,
                 audio_storage_path: audioPath,
                 audio_mime: audioFile.type || 'audio/mpeg',
+                cover_storage_path: coverPath,
                 is_public: true,
             })
             .select()
             .single();
 
         if (dbErr) {
-            await _supabase.storage.from('beat-files').remove([audioPath]);
+            const toRemove = coverPath ? [audioPath, coverPath] : [audioPath];
+            await _supabase.storage.from('beat-files').remove(toRemove);
             return { error: dbErr };
         }
 
         return { data };
     },
 
-    // ── 이미 클라우드에 있는 노래의 메타(제목/가수/미리듣기 시작 시각) 갱신 ───
-    // meta: { title, artist, preview_start_ms } — 오디오/난이도는 건드리지 않는다.
-    async updateSongMeta(songId, meta) {
+    // ── 이미 클라우드에 있는 노래의 메타(제목/가수/미리듣기 시각/시작(초)) [+ 커버 이미지] 갱신 ───
+    // meta: { title, artist, preview_start_ms, start_offset_ms } — 오디오/난이도는 건드리지 않는다.
+    // coverFile: File 객체 (선택 — 넘기면 새 커버로 교체, 안 넘기면 기존 커버 유지)
+    async updateSongMeta(songId, meta, coverFile) {
         const user = await CloudAuth.getUser();
         if (!user) return { error: new Error('로그인이 필요합니다.') };
 
+        const updatePayload = {
+            title: meta.title,
+            artist: meta.artist || null,
+            preview_start_ms: meta.preview_start_ms || 0,
+            start_offset_ms: meta.start_offset_ms || 0,
+        };
+
+        if (coverFile) {
+            const coverExt = (coverFile.name.split('.').pop() || 'jpg').toLowerCase();
+            const coverPath = `${user.id}/songs/${songId}/cover.${coverExt}`;
+            const { error: coverErr } = await _supabase.storage
+                .from('beat-files')
+                .upload(coverPath, coverFile, { contentType: coverFile.type || 'image/jpeg', upsert: true });
+            if (coverErr) return { error: coverErr };
+            updatePayload.cover_storage_path = coverPath;
+        }
+
         const { data, error } = await _supabase
             .from('beat_songs')
-            .update({
-                title: meta.title,
-                artist: meta.artist || null,
-                preview_start_ms: meta.preview_start_ms || 0,
-                start_offset_ms: meta.start_offset_ms || 0,
-            })
+            .update(updatePayload)
             .eq('id', songId)
             .eq('owner_id', user.id)
             .select()

@@ -31,6 +31,8 @@ const Editor = {
             artist: '',
             audioFileObject: null,  // 로컬 File 객체
             audioFileName: '',
+            coverFileObject: null,  // 로컬 File 객체 (선택)
+            coverFileName: '',
             cloudSongId: null,      // 클라우드에 이미 존재하는 노래면 beat_songs.id
             previewStartSec: 0,     // 온라인 화면 미리듣기 시작 시각(초). 0이면 처음부터.
             startOffsetSec: 0,      // 실제 플레이 시 노래가 재생되기 시작하는 지점(초). 0이면 처음부터.
@@ -859,6 +861,8 @@ const Editor = {
             artist: '',
             audioFileObject: null,
             audioFileName: '',
+            coverFileObject: null,
+            coverFileName: '',
             cloudSongId: null,
             previewStartSec: 0,
             startOffsetSec: 0,

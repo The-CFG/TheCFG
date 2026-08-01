@@ -104,6 +104,8 @@ const DOM = {
         artistInput: document.getElementById('editor-song-artist-input'),
         audioFileInput: document.getElementById('editor-song-audio-input'),
         audioNameEl: document.getElementById('editor-song-audio-name'),
+        coverFileInput: document.getElementById('editor-song-cover-input'),
+        coverNameEl: document.getElementById('editor-song-cover-name'),
         previewStartInput: document.getElementById('editor-song-preview-start-input'),
         startTimeInput: document.getElementById('editor-song-start-time-input'),
         beatmapList: document.getElementById('editor-song-beatmap-list'),
