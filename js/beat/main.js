@@ -239,6 +239,8 @@ document.addEventListener('DOMContentLoaded', () => {
             EditorSong.addBeatmap();
         });
         document.getElementById('editor-back-to-song-btn').addEventListener('click', () => {
+            // 재생/미리보기 중이었다면 나가기 전에 완전히 정지 (안 그러면 오디오/애니메이션이 백그라운드에 남음)
+            Editor.stopPlayback();
             // Phase 3b: 현재 편집 상태를 beatmaps[activeBeatmapIndex]에 반영하고 종합 창으로 이동
             Editor.saveFlatStateToBeatmap();
             UI.showScreen('editorSong');
@@ -444,12 +446,19 @@ document.addEventListener('DOMContentLoaded', () => {
             DOM.settings.musicVolumeValue.textContent = value;
             Audio.setMusicVolume(value);
         });
+        // 드래그가 끝났을 때(change)만 계정에 저장 — input마다 저장하면 요청이 너무 잦음
+        DOM.settings.musicVolumeSlider.addEventListener('change', () => {
+            CloudAuth.saveVolumeSettings(Game.state.settings.musicVolume, Game.state.settings.sfxVolume);
+        });
 
         DOM.settings.sfxVolumeSlider.addEventListener('input', (e) => {
             const value = parseInt(e.target.value);
             Game.state.settings.sfxVolume = value;
             DOM.settings.sfxVolumeValue.textContent = value;
             Audio.setSfxVolume(value);
+        });
+        DOM.settings.sfxVolumeSlider.addEventListener('change', () => {
+            CloudAuth.saveVolumeSettings(Game.state.settings.musicVolume, Game.state.settings.sfxVolume);
         });
 
         DOM.settings.controls.keybindBoxes.forEach(box => {
@@ -627,6 +636,25 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('#difficulty-selector button').forEach(b => b.classList.remove('active'));
     }
 
+    // ── 계정 볼륨 설정 자동 적용 ──────────────────────────────────
+    // 로그인 상태가 될 때(최초 로드 시 세션 복원 포함 / 로그인 직후) 계정에 저장된
+    // 볼륨을 불러와 적용한다. 같은 유저에 대해 중복 적용되지 않도록 가드한다.
+    let _lastVolumeAppliedUserId = null;
+    async function applyAccountVolume(user) {
+        if (!user || user.id === _lastVolumeAppliedUserId) return;
+        _lastVolumeAppliedUserId = user.id;
+        const vol = await CloudAuth.getVolumeSettings();
+        if (!vol) return; // 아직 저장한 적 없는 계정 → 기본값 유지
+        Game.state.settings.musicVolume = vol.musicVolume;
+        Game.state.settings.sfxVolume = vol.sfxVolume;
+        Audio.setMusicVolume(vol.musicVolume);
+        Audio.setSfxVolume(vol.sfxVolume);
+        DOM.settings.musicVolumeSlider.value = vol.musicVolume;
+        DOM.settings.musicVolumeValue.textContent = vol.musicVolume;
+        DOM.settings.sfxVolumeSlider.value = vol.sfxVolume;
+        DOM.settings.sfxVolumeValue.textContent = vol.sfxVolume;
+    }
+
     function initialize() {
         setupEventListeners();
         document.querySelector('#difficulty-selector button[data-difficulty="normal"]').classList.add('active');
@@ -635,6 +663,12 @@ document.addEventListener('DOMContentLoaded', () => {
         I18n.init();
         Appearance.init();
         if (typeof setupAuthUI === 'function') setupAuthUI();
+
+        // 최초 세션 복원 / 로그인 / 로그아웃 시 볼륨 동기화
+        _supabase.auth.onAuthStateChange((_event, session) => {
+            if (session?.user) applyAccountVolume(session.user);
+            else _lastVolumeAppliedUserId = null;
+        });
     }
 
     initialize();
