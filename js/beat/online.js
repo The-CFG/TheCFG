@@ -357,6 +357,7 @@ const Online = {
             Game.state._onlineChartId = c.id;
             Game.state.settings.mode = 'music';
             Game.state.settings.musicSrc = audioUrl;
+            Game.state.settings.songStartOffset = (c.start_offset_ms || 0) / 1000;
             DOM.musicPlayer.src = audioUrl;
 
             UI.showScreen('menu');
@@ -437,6 +438,7 @@ const Online = {
                     const chartData = { songName: normalized.songName, ...normalized.beatmap };
                     Game.loadChartNotes(chartData);
                     Game.state.settings.mode = 'music';
+                    Game.state.settings.songStartOffset = 0;
                     document.getElementById('local-chart-name').textContent = `차트: ${file.name}`;
                     document.getElementById('local-chart-name').classList.remove('hidden');
                     if (chartData.songName) {

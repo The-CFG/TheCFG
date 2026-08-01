@@ -232,6 +232,7 @@ const CloudCharts = {
                 title: meta.title,
                 artist: meta.artist || null,
                 preview_start_ms: meta.preview_start_ms || 0,
+                start_offset_ms: meta.start_offset_ms || 0,
                 audio_storage_path: audioPath,
                 audio_mime: audioFile.type || 'audio/mpeg',
                 is_public: true,
@@ -259,6 +260,7 @@ const CloudCharts = {
                 title: meta.title,
                 artist: meta.artist || null,
                 preview_start_ms: meta.preview_start_ms || 0,
+                start_offset_ms: meta.start_offset_ms || 0,
             })
             .eq('id', songId)
             .eq('owner_id', user.id)

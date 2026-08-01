@@ -930,6 +930,11 @@
                             <input type="number" id="editor-song-preview-start-input" min="0" step="1" value="0" placeholder="0" class="w-20 p-2 bg-gray-700 rounded text-sm">
                             <span class="text-xs text-gray-500 flex-1">온라인 화면 미리듣기가 시작될 지점 (비워두면 처음부터)</span>
                         </div>
+                        <div class="flex items-center gap-2">
+                            <label for="editor-song-start-time-input" class="text-sm w-auto flex-shrink-0 whitespace-nowrap">시작(초)</label>
+                            <input type="number" id="editor-song-start-time-input" min="0" step="0.1" value="0" placeholder="0" class="w-20 p-2 bg-gray-700 rounded text-sm">
+                            <span class="text-xs text-gray-500 flex-1">실제 플레이 시 노래가 재생되기 시작하는 지점 (비워두면 처음부터)</span>
+                        </div>
                         <div class="flex gap-2 pt-1">
                             <button id="editor-song-save-local-btn" class="flex-1 py-2 px-3 bg-blue-600 hover:bg-blue-500 rounded text-sm">💾 로컬에 저장</button>
                             <label for="editor-song-load-local-input" class="flex-1 text-center cursor-pointer py-2 px-3 bg-gray-600 hover:bg-gray-500 rounded text-sm">📂 로컬 파일 불러오기</label>
@@ -968,7 +973,7 @@
                                     <span id="audio-file-name-editor" class="text-xs text-gray-400 flex-1 truncate">선택된 파일 없음</span>
                                 </div>
                                 <div class="flex items-center space-x-2">
-                                    <label for="editor-start-time" class="text-sm">시작(초):</label>
+                                    <label for="editor-start-time" class="text-sm">미리보기 시작(초):</label>
                                     <input type="number" id="editor-start-time" value="0" min="0" class="w-20 p-1 bg-gray-700 rounded text-sm">
                                 </div>
                                 <div class="flex items-center space-x-2">

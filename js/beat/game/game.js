@@ -17,7 +17,8 @@ const Game = {
             musicVolume: 100,
             sfxVolume: 100,
             bpm: 120,
-            startTimeOffset: 0,
+            startTimeOffset: 0, // 채보 박자 계산 기준점 (bpm/noteoffset 등 노트 타이밍용)
+            songStartOffset: 0, // 실제 오디오 재생을 시작할 지점 (종합 창의 "시작(초)")
             userKeyMappings: null,
             requiredSongName: null,
         },
@@ -418,7 +419,7 @@ const Game = {
             // AudioEngine은 src 할당 시점에 이미 fetch+decode를 시작하므로,
             // 카운트다운 4초 동안 디코딩이 끝나 재생 시작 시 버퍼링 지연이 없다.
             // (기존의 "미리 play 후 pause" 워밍업 트릭은 더 이상 필요 없음)
-            DOM.musicPlayer.currentTime = this.state.settings.startTimeOffset;
+            DOM.musicPlayer.currentTime = this.state.settings.songStartOffset || 0;
         }
 
         const COUNTDOWN_DURATION_MS = 4000;
@@ -429,7 +430,7 @@ const Game = {
         this.runCountdown(() => {
             this.state.gameState = 'playing';
             if (this.state.settings.mode === 'music' && DOM.musicPlayer.src) {
-                DOM.musicPlayer.currentTime = this.state.settings.startTimeOffset;
+                DOM.musicPlayer.currentTime = this.state.settings.songStartOffset || 0;
                 DOM.musicPlayer.play().then(() => {
                     this.state.audioReady = true;
                 }).catch(() => {});
@@ -1009,6 +1010,7 @@ const Game = {
             this.state.chartData = chartData;
             this.state.settings.requiredSongName = chartData.songName || null;
             this.state.settings.startTimeOffset = chartData.startTimeOffset || 0;
+            this.state.settings.songStartOffset = 0;
             const chartBPM = chartData.bpm || 120;
             this.state.settings.bpm = chartBPM;
             const calculatedSpeed = Math.round(chartBPM / 20);

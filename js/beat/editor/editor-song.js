@@ -37,6 +37,9 @@ const EditorSong = {
         if (DOM.editorSong.previewStartInput) {
             DOM.editorSong.previewStartInput.value = song.previewStartSec || 0;
         }
+        if (DOM.editorSong.startTimeInput) {
+            DOM.editorSong.startTimeInput.value = song.startOffsetSec || 0;
+        }
         if (DOM.editorSong.titleHeading) {
             DOM.editorSong.titleHeading.textContent = song.title ? song.title : '종합 창';
         }
@@ -185,6 +188,13 @@ const EditorSong = {
         Editor.state.song.previewStartSec = sec;
     },
 
+    // 실제 플레이 시 노래가 재생되기 시작하는 지점(초). 비트맵 창의 "미리보기 시작(초)"와
+    // 별개이며, 여기 값만 실제 게임 재생(Game.start)에 쓰인다.
+    onStartTimeInput(value) {
+        const sec = Math.max(0, parseFloat(value) || 0);
+        Editor.state.song.startOffsetSec = sec;
+    },
+
     // 오디오는 노래(song) 단위로 한 번만 고르면 모든 난이도가 공유해서 쓴다.
     handleAudioSelect(file) {
         if (!file) return;
@@ -240,6 +250,7 @@ const EditorSong = {
                 Editor.state.song.title = normalized.songName;
                 Editor.state.song.artist = normalized.artist || '';
                 Editor.state.song.previewStartSec = (normalized.previewStartMs || 0) / 1000;
+                Editor.state.song.startOffsetSec = (normalized.startOffsetMs || 0) / 1000;
                 Editor.state.beatmaps = normalized.beatmaps.map(bm => ({ ...bm, cloudChartId: null }));
                 Editor.state.activeBeatmapIndex = 0;
                 this.render();
@@ -291,9 +302,10 @@ const EditorSong = {
 
             // 1) 노래 자체가 아직 클라우드에 없으면 먼저 생성
             const previewStartMs = Math.round((Editor.state.song.previewStartSec || 0) * 1000);
+            const startOffsetMs = Math.round((Editor.state.song.startOffsetSec || 0) * 1000);
             if (!Editor.state.song.cloudSongId) {
                 const { data, error } = await CloudCharts.uploadSong(
-                    { title: Editor.state.song.title, artist: Editor.state.song.artist, preview_start_ms: previewStartMs },
+                    { title: Editor.state.song.title, artist: Editor.state.song.artist, preview_start_ms: previewStartMs, start_offset_ms: startOffsetMs },
                     Editor.state.song.audioFileObject
                 );
                 if (error) {
@@ -302,11 +314,12 @@ const EditorSong = {
                 }
                 Editor.state.song.cloudSongId = data.id;
             } else {
-                // 이미 클라우드에 있는 노래면 제목/가수/미리듣기 시작 시각만 갱신해준다.
+                // 이미 클라우드에 있는 노래면 제목/가수/미리듣기 시작 시각/시작(초)만 갱신해준다.
                 const { error: metaErr } = await CloudCharts.updateSongMeta(Editor.state.song.cloudSongId, {
                     title: Editor.state.song.title,
                     artist: Editor.state.song.artist,
                     preview_start_ms: previewStartMs,
+                    start_offset_ms: startOffsetMs,
                 });
                 if (metaErr) {
                     UI.showMessage('editorSong', `노래 정보 갱신 실패: ${metaErr.message}`);

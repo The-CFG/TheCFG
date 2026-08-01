@@ -94,6 +94,7 @@ const ChartFormat = {
                 songName: raw.songName || '',
                 artist: raw.artist || null,
                 previewStartMs: raw.previewStartMs || 0,
+                startOffsetMs: raw.startOffsetMs || 0,
                 beatmaps: raw.beatmaps.map(bm => ({
                     difficultyLabel: bm.difficultyLabel || '기본',
                     laneCount: bm.laneCount || 4,
@@ -110,6 +111,7 @@ const ChartFormat = {
             songName: raw.songName || '',
             artist: null,
             previewStartMs: 0,
+            startOffsetMs: 0,
             beatmaps: [
                 {
                     difficultyLabel: raw.difficultyLabel || '기본',
@@ -134,6 +136,7 @@ const ChartFormat = {
             songName: (song && (song.title || song.songName)) || '',
             artist: (song && song.artist) || null,
             previewStartMs: Math.round(((song && song.previewStartSec) || 0) * 1000),
+            startOffsetMs: Math.round(((song && song.startOffsetSec) || 0) * 1000),
             beatmaps: beatmaps.map(bm => ({
                 difficultyLabel: bm.difficultyLabel || '기본',
                 laneCount: bm.laneCount || 4,

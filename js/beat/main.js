@@ -249,6 +249,7 @@ document.addEventListener('DOMContentLoaded', () => {
         DOM.editorSong.titleInput.addEventListener('input', (e) => EditorSong.onTitleInput(e.target.value));
         DOM.editorSong.artistInput.addEventListener('input', (e) => EditorSong.onArtistInput(e.target.value));
         DOM.editorSong.previewStartInput.addEventListener('input', (e) => EditorSong.onPreviewStartInput(e.target.value));
+        DOM.editorSong.startTimeInput.addEventListener('input', (e) => EditorSong.onStartTimeInput(e.target.value));
         DOM.editorSong.audioFileInput.addEventListener('change', (e) => EditorSong.handleAudioSelect(e.target.files[0]));
         DOM.editorSong.saveLocalBtn.addEventListener('click', () => EditorSong.saveLocal());
         DOM.editorSong.loadLocalInput.addEventListener('change', (e) => {
