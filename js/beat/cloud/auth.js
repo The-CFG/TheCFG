@@ -49,6 +49,39 @@ const CloudAuth = {
         for (const row of (data || [])) map[row.user_id] = row.nickname || null;
         return map;
     },
+
+    // ── 볼륨 설정 (계정별 저장) ──────────────────────────────
+    // user_profiles.beat_music_volume / beat_sfx_volume 컬럼 사용.
+    // HOI4Editor가 쓰는 settings jsonb 컬럼과는 별개 (같은 프로젝트 공유이므로 충돌 방지).
+    async getVolumeSettings() {
+        const user = await this.getUser();
+        if (!user) return null;
+        const { data, error } = await _supabase
+            .from('user_profiles')
+            .select('beat_music_volume, beat_sfx_volume')
+            .eq('user_id', user.id)
+            .single();
+        if (error) {
+            // PGRST116 = 행 없음 (아직 한 번도 저장 안 한 계정) → 정상, 기본값 사용
+            if (error.code !== 'PGRST116') console.warn('getVolumeSettings 오류:', error.message);
+            return null;
+        }
+        return { musicVolume: data.beat_music_volume, sfxVolume: data.beat_sfx_volume };
+    },
+
+    async saveVolumeSettings(musicVolume, sfxVolume) {
+        const user = await this.getUser();
+        if (!user) return;
+        const { error } = await _supabase
+            .from('user_profiles')
+            .upsert({
+                user_id: user.id,
+                beat_music_volume: musicVolume,
+                beat_sfx_volume: sfxVolume,
+                updated_at: new Date().toISOString(),
+            }, { onConflict: 'user_id' });
+        if (error) console.warn('saveVolumeSettings 오류:', error.message);
+    },
 };
 
 // ── 계정 아이콘 표시 갱신 ────────────────────────────────────
