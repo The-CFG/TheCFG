@@ -482,7 +482,20 @@ document.addEventListener('DOMContentLoaded', () => {
         DOM.editor.startTimeInput.addEventListener('input', (e) => {
             Editor.state.startTimeOffset = parseFloat(e.target.value) || 0;
             Editor.setDirty(true);
+            Editor._setPlayheadTop(Editor._secondsToY(Editor.state.startTimeOffset));
+            if (DOM.musicPlayer.src) DOM.musicPlayer.currentTime = Editor.state.startTimeOffset;
         });
+        // 재생헤드 드래그 / 시크 거터 클릭·드래그로 재생 위치 이동 (아이디어 1, 2)
+        DOM.editor.playhead.addEventListener('mousedown', (e) => {
+            e.stopPropagation();
+            Editor.handleSeekPointerDown(e);
+        });
+        DOM.editor.playhead.addEventListener('touchstart', (e) => {
+            e.stopPropagation();
+            Editor.handleSeekPointerDown(e);
+        }, { passive: false });
+        DOM.editor.seekGutter.addEventListener('mousedown', (e) => Editor.handleSeekPointerDown(e));
+        DOM.editor.seekGutter.addEventListener('touchstart', (e) => Editor.handleSeekPointerDown(e), { passive: false });
         DOM.editor.bpmInput.addEventListener('input', (e) => {
             Editor.state.bpm = parseInt(e.target.value) || 120;
             Editor.setDirty(true);

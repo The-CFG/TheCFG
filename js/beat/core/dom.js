@@ -66,6 +66,7 @@ const DOM = {
     finalMissEl: document.getElementById('final-miss'),
     editor: {
         container: document.getElementById('editor-container'),
+        seekGutter: document.getElementById('editor-seek-gutter'),
         timeline: document.getElementById('editor-timeline'),
         gridContainer: document.getElementById('editor-grid-container'),
         notesContainer: document.getElementById('editor-notes-container'),

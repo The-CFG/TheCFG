@@ -183,6 +183,95 @@ const Editor = {
         return CONFIG.EDITOR_BEAT_HEIGHT * scaleFactor;
     },
 
+    // ===== 재생 위치 탐색(seek): 재생헤드 드래그 / 시크 거터 클릭·드래그 =====
+
+    _setPlayheadTop(px) {
+        DOM.editor.playhead.style.top = `${px}px`;
+    },
+
+    _yToSeconds(y) {
+        const adjustedBeatHeight = this._getAdjustedBeatHeight();
+        const beatsPerSecond = this.state.bpm / 60;
+        const totalBeats = Math.max(0, y) / adjustedBeatHeight;
+        return totalBeats / beatsPerSecond;
+    },
+
+    _secondsToY(seconds) {
+        const adjustedBeatHeight = this._getAdjustedBeatHeight();
+        const beatsPerSecond = this.state.bpm / 60;
+        return Math.max(0, seconds) * beatsPerSecond * adjustedBeatHeight;
+    },
+
+    // 정지 상태에서만 호출됨. isPlaying이면 드래그 시작 시점에 먼저 멈춘다.
+    _pauseForSeek() {
+        if (!this.state.isPlaying) return;
+        this.state.isPlaying = false;
+        cancelAnimationFrame(this.state.animationFrameId);
+        if (this.state.previewAnimationId) {
+            cancelAnimationFrame(this.state.previewAnimationId);
+            this.state.previewAnimationId = null;
+        }
+        if (DOM.musicPlayer.src) DOM.musicPlayer.pause();
+        DOM.editor.playBtn.textContent = "재생";
+    },
+
+    // clientY(화면 좌표)를 재생 위치(초)로 변환해 playhead/오디오/입력값을 모두 갱신한다.
+    seekToClientY(clientY) {
+        try {
+            const container = DOM.editor.container;
+            const rect = container.getBoundingClientRect();
+            const rawY = clientY - rect.top + container.scrollTop;
+            let seconds = this._yToSeconds(rawY);
+
+            const isMusicLoaded = !!DOM.musicPlayer.src;
+            if (isMusicLoaded && isFinite(DOM.musicPlayer.duration) && DOM.musicPlayer.duration > 0) {
+                seconds = Math.min(seconds, DOM.musicPlayer.duration);
+            }
+            seconds = Math.max(0, seconds);
+
+            this.state.startTimeOffset = seconds;
+            DOM.editor.startTimeInput.value = seconds.toFixed(2);
+            this._setPlayheadTop(this._secondsToY(seconds));
+
+            if (isMusicLoaded) {
+                DOM.musicPlayer.currentTime = seconds;
+            }
+        } catch (err) {
+            Debugger.logError(err, 'Editor.seekToClientY');
+        }
+    },
+
+    // 재생헤드 핸들 또는 시크 거터에서 mousedown/touchstart 시 호출.
+    handleSeekPointerDown(e) {
+        try {
+            e.preventDefault();
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+            this._pauseForSeek();
+            this.setDirty(true);
+            DOM.editor.playhead.classList.add('dragging');
+            this.seekToClientY(clientY);
+
+            const onMove = (moveEvt) => {
+                const y = moveEvt.touches ? moveEvt.touches[0].clientY : moveEvt.clientY;
+                this.seekToClientY(y);
+            };
+            const onUp = () => {
+                DOM.editor.playhead.classList.remove('dragging');
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+                document.removeEventListener('touchmove', onMove);
+                document.removeEventListener('touchend', onUp);
+            };
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+            document.addEventListener('touchmove', onMove, { passive: false });
+            document.addEventListener('touchend', onUp);
+        } catch (err) {
+            Debugger.logError(err, 'Editor.handleSeekPointerDown');
+        }
+    },
+
     _updateDirtyIndicator() {
         DOM.editor.dirtyIndicator.textContent = this.state.isDirty ? '*' : '';
     },
@@ -414,6 +503,9 @@ const Editor = {
     handleTimelineClick(e) {
         try {
             if (this.state.isPlaying) return;
+            // 재생헤드(드래그로 재생 위치를 옮기는 핸들)를 클릭한 경우엔
+            // 노트를 찍지 않는다 — handleSeekPointerDown이 별도로 처리함.
+            if (e.target === DOM.editor.playhead || e.target.closest?.('#editor-playhead')) return;
             this.setDirty(true);
             this._saveStateForUndo();
 
@@ -426,12 +518,14 @@ const Editor = {
             }
 
             const container = DOM.editor.container;
-            const rect = container.getBoundingClientRect();
-            const laneWidth = container.clientWidth / CONFIG.EDITOR_LANE_IDS.length;
-            const x = e.clientX - rect.left;
+            // 노트/레인 좌표는 타임라인(gridContainer) 기준으로 계산해야 한다.
+            // #editor-container에는 왼쪽에 시크 거터가 붙어있어 container 기준으로 계산하면 어긋난다.
+            const gridRect = DOM.editor.gridContainer.getBoundingClientRect();
+            const laneWidth = gridRect.width / CONFIG.EDITOR_LANE_IDS.length;
+            const x = e.clientX - gridRect.left;
             const laneIndex = Math.floor(x / laneWidth);
             const laneId = CONFIG.EDITOR_LANE_IDS[laneIndex];
-            const y = e.clientY - rect.top + container.scrollTop;
+            const y = e.clientY - gridRect.top + container.scrollTop;
             
             // 그리드 라인과 정확히 일치하는 계산
             const adjustedBeatHeight = this._getAdjustedBeatHeight();
@@ -577,10 +671,11 @@ const Editor = {
     renderNotes() {
         try {
             DOM.editor.notesContainer.querySelectorAll('.editor-note').forEach(n => n.remove());
-            const container = DOM.editor.container;
-            if (container.clientWidth === 0) return;
+            // 노트는 타임라인(시크 거터를 뺀 나머지 영역) 너비를 기준으로 배치해야 한다.
+            const timelineWidth = DOM.editor.timeline.clientWidth;
+            if (timelineWidth === 0) return;
             const adjustedBeatHeight = this._getAdjustedBeatHeight();
-            const laneWidth = container.clientWidth / CONFIG.EDITOR_LANE_IDS.length;
+            const laneWidth = timelineWidth / CONFIG.EDITOR_LANE_IDS.length;
             const beatsPerSecond = this.state.bpm / 60;
 
             this.state.notes.forEach(note => {
@@ -726,6 +821,7 @@ const Editor = {
             }
             this.drawTimeline();
             this.renderNotes();
+            this._setPlayheadTop(this._secondsToY(this.state.startTimeOffset));
             this.setDirty(false);
         } catch (err) {
             Debugger.logError(err, 'Editor.loadChart');
@@ -833,6 +929,7 @@ const Editor = {
             }
             this.drawTimeline();
             this.renderNotes();
+            this._setPlayheadTop(this._secondsToY(this.state.startTimeOffset));
             this.setDirty(false);
         } catch (err) {
             Debugger.logError(err, 'Editor.loadBeatmapIntoFlatState');
@@ -949,7 +1046,7 @@ const Editor = {
             const beatsPerSecond = this.state.bpm / 60;
             const offsetBeats = this.state.startTimeOffset * beatsPerSecond;
             const playheadPosition = offsetBeats * adjustedBeatHeight;
-            DOM.editor.playhead.style.top = `${playheadPosition}px`;
+            this._setPlayheadTop(playheadPosition);
             DOM.editor.container.scrollTop = playheadPosition - DOM.editor.container.clientHeight / 2;
             
             // 게임 화면 초기화
@@ -974,7 +1071,7 @@ const Editor = {
             const beatsPerSecond = this.state.bpm / 60;
             const beats = ((isMusicLoaded ? elapsedSeconds : this.state.startTimeOffset + elapsedSeconds)) * beatsPerSecond;
             const playheadPosition = beats * adjustedBeatHeight;
-            DOM.editor.playhead.style.top = `${playheadPosition}px`;
+            this._setPlayheadTop(playheadPosition);
             DOM.editor.container.scrollTop = playheadPosition - DOM.editor.container.clientHeight / 2;
         } catch (err) {
             // 플레이헤드 표시 등 화면 갱신 중 발생한 오류일 뿐이므로
