@@ -1,7 +1,12 @@
 const UI = {
+    // 현재 표시 중인 화면 키 (DOM.screens의 키와 동일). showScreen() 호출마다 갱신된다.
+    // 설정 화면을 닫을 때 "실제로 어느 화면에 있었는지"를 정확히 복원하기 위해 쓴다.
+    currentScreen: 'menu',
+
     showScreen(screenName) {
         Object.values(DOM.screens).forEach(screen => screen.classList.add('hidden'));
         DOM.screens[screenName].classList.remove('hidden');
+        this.currentScreen = screenName;
     },
     showMessage(type, message) {
         const el = DOM.messages[type];

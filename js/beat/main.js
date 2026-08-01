@@ -580,7 +580,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function showSettingsScreen() {
         if (Game.state.gameState === 'playing' && !Game.state.isPaused) return;
-        Game.state.previousScreen = Game.state.gameState === 'countdown' ? 'playing' : Game.state.gameState;
+        // Game.state.gameState는 editorHome/editorSong/editor를 뭉뚱그려 'editor'로만 표시하기 때문에
+        // (에디터 진입 시 한 번만 설정되고 하위 화면 전환 때 갱신되지 않음) previousScreen으로 쓰면
+        // 설정을 닫을 때 항상 에디터(비트맵 편집) 화면으로 돌아가버리는 버그가 있었다.
+        // 실제로 표시 중이던 화면(UI.currentScreen)을 그대로 기억해서 정확히 복원한다.
+        Game.state.previousScreen = UI.currentScreen;
         Game.state.gameState = 'settings';
         UI.showScreen('settings');
         populateKeybindUI();
