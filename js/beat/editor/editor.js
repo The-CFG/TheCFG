@@ -1254,14 +1254,19 @@ const Editor = {
             if (!this.state.isPlaying) return;
             
             // 경과 시간 계산
+            // note.time은 항상 "곡 시작(0)" 기준 절대 시간이므로, elapsedTime도 절대 시간이어야
+            // note.time과 그대로 비교할 수 있다. loop()(피아노롤 재생헤드)는 이미 이렇게
+            // 계산하고 있어서 시작 지점을 옮겨도 정상 작동했지만, 여기(게임 화면 미리보기)는
+            // currentTime에서 startTimeOffset을 한 번 더 빼는 바람에 매번 elapsedTime이 0부터
+            // 시작해버려 "항상 처음부터 재생되는 것처럼" 보였다.
             let elapsedTime;
             const isMusicLoaded = !!DOM.musicPlayer.src;
             
             if (isMusicLoaded && !DOM.musicPlayer.paused) {
-                elapsedTime = (DOM.musicPlayer.currentTime - this.state.startTimeOffset) * 1000;
+                elapsedTime = DOM.musicPlayer.currentTime * 1000;
             } else {
                 const elapsedMs = performance.now() - this.state.playbackStartTime;
-                elapsedTime = elapsedMs;
+                elapsedTime = (this.state.startTimeOffset * 1000) + elapsedMs;
             }
             
             const canvas = Game.canvas;
