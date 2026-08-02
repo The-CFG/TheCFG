@@ -80,6 +80,7 @@ const CONFIG = {
     MESSAGE_DURATION_MS: 3000,
     JUDGEMENT_ANIMATION_MS: 300,
     EDITOR_BEAT_HEIGHT: 20,
+    EDITOR_ZOOM_DIVISION: 32, // 에디터 타임라인 줌을 이 분할값(1/32)에 고정
     EDITOR_KEY_LANE_MAP: {
         'KeyQ': 'L4', 'KeyW': 'L3', 'KeyE': 'L2', 'KeyR': 'L1',
         'KeyT': 'C1',

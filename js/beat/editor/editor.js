@@ -180,7 +180,8 @@ const Editor = {
     },
 
     _getAdjustedBeatHeight() {
-        const scaleFactor = Math.max(1, this.state.snapDivision / 4);
+        // 줌은 더 이상 snapDivision(스냅 선택)에 연동되지 않고 항상 1/32 기준으로 고정된다.
+        const scaleFactor = Math.max(1, CONFIG.EDITOR_ZOOM_DIVISION / 4);
         return CONFIG.EDITOR_BEAT_HEIGHT * scaleFactor;
     },
 
@@ -376,19 +377,29 @@ const Editor = {
             DOM.editor.gridContainer.style.height = `${timelineHeight}px`;
 
             const measureHeight = beatsPerMeasure * adjustedBeatHeight;
+            const zoomDivision = CONFIG.EDITOR_ZOOM_DIVISION; // 항상 1/32 해상도로 그린다
+
+            // 분할 레벨별 선 색상. 굵은(분모가 작은) 분할일수록 위쪽에서 먼저 매칭되도록
+            // 분모가 작은 순서(1/2 → 1/4 → 1/8 → 1/16 → 1/32)로 검사한다.
+            const DIVISION_COLORS = [
+                { every: zoomDivision / 2, color: '#6b7280' },  // 1/2 — 기존 회색 그대로
+                { every: zoomDivision / 4, color: '#ef4444' },  // 1/4 — 빨강
+                { every: zoomDivision / 8, color: '#3b82f6' },  // 1/8 — 파랑
+                { every: zoomDivision / 16, color: '#a855f7' }, // 1/16 — 보라
+                { every: zoomDivision / 32, color: '#eab308' }, // 1/32 — 노랑
+            ];
 
             for (let i = 0; i < this.state.totalMeasures; i++) {
-                for (let j = 0; j < this.state.snapDivision; j++) {
+                for (let j = 0; j < zoomDivision; j++) {
                     const line = document.createElement('div');
                     line.className = 'beat-line';
                     if (j === 0) {
                         line.classList.add('measure');
-                    } else if (j % (this.state.snapDivision / 4) === 0) {
-                        line.style.backgroundColor = '#6b7280';
                     } else {
-                        line.style.backgroundColor = '#4a5568';
+                        const division = DIVISION_COLORS.find(d => j % d.every === 0);
+                        line.style.backgroundColor = division.color;
                     }
-                    const yPosition = (i * measureHeight) + (j / this.state.snapDivision) * measureHeight;
+                    const yPosition = (i * measureHeight) + (j / zoomDivision) * measureHeight;
                     line.style.top = `${yPosition}px`;
                     line.style.width = '100%';
                     DOM.editor.notesContainer.insertBefore(line, DOM.editor.playhead);
