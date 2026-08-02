@@ -795,11 +795,22 @@ const Editor = {
         this.showTriggerModal();
     },
 
-    showTriggerModal() {
-        // 현재 설정값으로 모달 초기화
-        DOM.triggerModal.bpmInput.value = this.state.bpm;
-        DOM.triggerModal.fallSpeedInput.value = parseFloat(DOM.editor.noteFallSpeedInput?.value) || 7;
-        DOM.triggerModal.transitionInput.value = 0.7;
+    // 기존 트리거 마커를 클릭했을 때 — 같은 모달을 그 트리거의 현재 값으로 채워서 연다.
+    // 확인을 누르면 confirmTrigger()가 같은 시간의 트리거를 교체하므로 자연히 "수정"이 된다.
+    editTrigger(trigger) {
+        this.state.pendingTriggerTime = trigger.time;
+        this.showTriggerModal(trigger);
+    },
+
+    showTriggerModal(existingTrigger = null) {
+        // 기존 트리거를 수정하는 경우 그 트리거의 값으로, 새로 만드는 경우 현재 설정값으로 모달을 채운다.
+        DOM.triggerModal.bpmInput.value = existingTrigger ? existingTrigger.bpm : this.state.bpm;
+        DOM.triggerModal.fallSpeedInput.value = existingTrigger
+            ? existingTrigger.fallSpeed
+            : (parseFloat(DOM.editor.noteFallSpeedInput?.value) || 7);
+        DOM.triggerModal.transitionInput.value = existingTrigger
+            ? ((existingTrigger.transitionMs ?? 700) / 1000)
+            : 0.7;
         DOM.triggerModal.container.classList.remove('hidden');
     },
 
@@ -860,12 +871,13 @@ const Editor = {
                 triggerEl.style.top = `${yPosition}px`;
                 
                 triggerEl.dataset.time = trigger.time;
-                triggerEl.title = `BPM: ${trigger.bpm}, 하강: ${trigger.fallSpeed}, 전환: ${((trigger.transitionMs ?? 700) / 1000).toFixed(1)}s`;
+                triggerEl.title = `클릭: 수정 / 우클릭: 삭제\nBPM: ${trigger.bpm}, 하강: ${trigger.fallSpeed}, 전환: ${((trigger.transitionMs ?? 700) / 1000).toFixed(1)}s`;
                 
-                // 좌클릭으로는 아무 동작도 하지 않는다 (배치 클릭이 아래로 전파되는 것만 막는다).
-                // 삭제는 우클릭(컨텍스트 메뉴) 전용 — 도구와 무관하게 항상 동작한다.
+                // 좌클릭 — 이 트리거를 수정하는 모달을 연다 (배치 클릭이 아래로 전파되는 것도 막는다).
+                // 우클릭(컨텍스트 메뉴) — 삭제. 도구와 무관하게 항상 동작한다.
                 triggerEl.addEventListener('click', (e) => {
                     e.stopPropagation();
+                    this.editTrigger(trigger);
                 });
                 triggerEl.addEventListener('contextmenu', (e) => {
                     e.preventDefault();
