@@ -574,15 +574,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const seconds = Math.max(0, parseFloat(e.target.value) || 0);
             Editor.setStartOffsetSec(seconds);
         });
-        // 재생헤드 드래그 / 시크 거터 클릭·드래그로 재생 위치 이동 (아이디어 1, 2)
-        DOM.editor.playhead.addEventListener('mousedown', (e) => {
-            e.stopPropagation();
-            Editor.handleSeekPointerDown(e);
-        });
-        DOM.editor.playhead.addEventListener('touchstart', (e) => {
-            e.stopPropagation();
-            Editor.handleSeekPointerDown(e);
-        }, { passive: false });
+        // 재생헤드는 왼쪽 시크 거터(#editor-seek-gutter)에서만 드래그로 잡을 수 있다.
+        // (재생헤드 선 자체는 CSS에서 pointer-events:none으로 꺼서 노트 찍는 영역
+        //  클릭을 가로채지 않도록 함 — editor.css 참고)
         DOM.editor.seekGutter.addEventListener('mousedown', (e) => Editor.handleSeekPointerDown(e));
         DOM.editor.seekGutter.addEventListener('touchstart', (e) => Editor.handleSeekPointerDown(e), { passive: false });
         DOM.editor.bpmInput.addEventListener('input', (e) => {

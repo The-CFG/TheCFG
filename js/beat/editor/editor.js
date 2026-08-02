@@ -388,6 +388,38 @@ const Editor = {
         DOM.editor.dirtyIndicator.textContent = this.state.isDirty ? '*' : '';
     },
 
+    // 위/아래 화살표 키: 재생헤드를 현재 스냅 격자(snapDivision 기준 그리드 선) 상에서
+    // 한 칸 전/다음 선으로 옮긴다. direction: -1 = 이전(위) 선, 1 = 다음(아래) 선.
+    movePlayheadBySnapStep(direction) {
+        try {
+            if (this.state.isPlaying) return;
+            const adjustedBeatHeight = this._getAdjustedBeatHeight();
+            const beatsPerMeasure = 4;
+            const measureHeight = beatsPerMeasure * adjustedBeatHeight;
+            const snapHeight = measureHeight / this.state.snapDivision;
+
+            const currentY = parseFloat(DOM.editor.playhead.style.top) || 0;
+            // 현재 위치가 정확히 격자 선 위가 아닐 수도 있으니(오디오 로드 등으로 어긋난 경우)
+            // 먼저 가장 가까운 선으로 스냅한 뒤 한 칸 이동한다.
+            const currentIndex = Math.round(currentY / snapHeight);
+            const newIndex = Math.max(0, currentIndex + direction);
+            const newY = newIndex * snapHeight;
+
+            let seconds = this._yToSeconds(newY);
+            const isMusicLoaded = !!DOM.musicPlayer.src;
+            if (isMusicLoaded && isFinite(DOM.musicPlayer.duration) && DOM.musicPlayer.duration > 0) {
+                seconds = Math.min(seconds, DOM.musicPlayer.duration);
+            }
+            seconds = Math.max(0, seconds);
+
+            this._pauseForSeek();
+            this.setStartOffsetSec(seconds);
+            DOM.editor.container.scrollTop = newY - DOM.editor.container.clientHeight / 2;
+        } catch (err) {
+            Debugger.logError(err, 'Editor.movePlayheadBySnapStep');
+        }
+    },
+
     setDirty(isDirty) {
         if (this.state.isDirty === isDirty) return;
         this.state.isDirty = isDirty;
@@ -641,9 +673,8 @@ const Editor = {
     handleTimelineClick(e) {
         try {
             if (this.state.isPlaying) return;
-            // 재생헤드(드래그로 재생 위치를 옮기는 핸들)를 클릭한 경우엔
-            // 노트를 찍지 않는다 — handleSeekPointerDown이 별도로 처리함.
-            if (e.target === DOM.editor.playhead || e.target.closest?.('#editor-playhead')) return;
+            // 재생헤드 선은 pointer-events:none이라 e.target이 될 수 없음 —
+            // 드래그는 시크 거터(#editor-seek-gutter)에서만 가능 (handleSeekPointerDown 참고)
 
             // 기존 노트를 좌클릭한 경우: 아무 동작도 하지 않는다.
             // 삭제는 우클릭(컨텍스트 메뉴) 전용 — handleTimelineContextMenu 참고.
@@ -708,7 +739,6 @@ const Editor = {
         try {
             if (this.state.activeTool !== 'edit') return;
             if (this.state.isPlaying) return;
-            if (e.target === DOM.editor.playhead || e.target.closest?.('#editor-playhead')) return;
             if (e.button !== 0) return; // 좌클릭만 (우클릭은 삭제 컨텍스트 메뉴)
 
             if (e.target.classList.contains('editor-note')) {
@@ -1906,6 +1936,11 @@ const Editor = {
         }
 
         if (e.ctrlKey || e.altKey || e.metaKey) return;
+
+        switch (e.key) {
+            case 'ArrowUp': e.preventDefault(); this.movePlayheadBySnapStep(-1); return;
+            case 'ArrowDown': e.preventDefault(); this.movePlayheadBySnapStep(1); return;
+        }
 
         switch (e.key) {
             case '1': e.preventDefault(); this.setSelectedNoteType('tap'); return;
