@@ -364,6 +364,20 @@ const Editor = {
         }
     },
 
+    // j/total을 기약분수로 줄였을 때의 분모를 구한다 (예: snapDivision=8일 때 j=4 → 1/2 → 분모 2)
+    _gcd(a, b) {
+        return b === 0 ? a : this._gcd(b, a % b);
+    },
+
+    // 분모(1/2, 1/4, 1/8, 1/16, 1/32)에 따른 선 색상. 그 외(3연음 등 32에 안 맞아떨어지는 분할)는 노랑으로 처리.
+    _beatLineColorForDenominator(denominator) {
+        if (denominator <= 2) return '#6b7280';  // 1/2 — 기존 회색 그대로
+        if (denominator <= 4) return '#ef4444';  // 1/4 — 빨강
+        if (denominator <= 8) return '#3b82f6';  // 1/8 — 파랑
+        if (denominator <= 16) return '#a855f7'; // 1/16 — 보라
+        return '#eab308';                        // 1/32 이하 — 노랑
+    },
+
     drawGrid() {
         try {
             DOM.editor.notesContainer.querySelectorAll('.beat-line').forEach(l => l.remove());
@@ -377,29 +391,19 @@ const Editor = {
             DOM.editor.gridContainer.style.height = `${timelineHeight}px`;
 
             const measureHeight = beatsPerMeasure * adjustedBeatHeight;
-            const zoomDivision = CONFIG.EDITOR_ZOOM_DIVISION; // 항상 1/32 해상도로 그린다
-
-            // 분할 레벨별 선 색상. 굵은(분모가 작은) 분할일수록 위쪽에서 먼저 매칭되도록
-            // 분모가 작은 순서(1/2 → 1/4 → 1/8 → 1/16 → 1/32)로 검사한다.
-            const DIVISION_COLORS = [
-                { every: zoomDivision / 2, color: '#6b7280' },  // 1/2 — 기존 회색 그대로
-                { every: zoomDivision / 4, color: '#ef4444' },  // 1/4 — 빨강
-                { every: zoomDivision / 8, color: '#3b82f6' },  // 1/8 — 파랑
-                { every: zoomDivision / 16, color: '#a855f7' }, // 1/16 — 보라
-                { every: zoomDivision / 32, color: '#eab308' }, // 1/32 — 노랑
-            ];
+            const snapDivision = this.state.snapDivision; // 현재 선택된 분할 — 이 값까지의 선만 그린다
 
             for (let i = 0; i < this.state.totalMeasures; i++) {
-                for (let j = 0; j < zoomDivision; j++) {
+                for (let j = 0; j < snapDivision; j++) {
                     const line = document.createElement('div');
                     line.className = 'beat-line';
                     if (j === 0) {
                         line.classList.add('measure');
                     } else {
-                        const division = DIVISION_COLORS.find(d => j % d.every === 0);
-                        line.style.backgroundColor = division.color;
+                        const denominator = snapDivision / this._gcd(j, snapDivision);
+                        line.style.backgroundColor = this._beatLineColorForDenominator(denominator);
                     }
-                    const yPosition = (i * measureHeight) + (j / zoomDivision) * measureHeight;
+                    const yPosition = (i * measureHeight) + (j / snapDivision) * measureHeight;
                     line.style.top = `${yPosition}px`;
                     line.style.width = '100%';
                     DOM.editor.notesContainer.insertBefore(line, DOM.editor.playhead);
