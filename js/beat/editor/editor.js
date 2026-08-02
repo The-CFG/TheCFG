@@ -16,7 +16,7 @@ const Editor = {
         activeTool: 'create',
         // Edit 도구에서 드래그/클릭으로 선택된 노트들 — [{ time, lane }, ...]
         selectedNotes: [],
-        // Ctrl+C로 복사된 노트의 전체 데이터. 붙여넣기(Ctrl+V)는 아직 구현되지 않았다 — placeholder.
+        // Ctrl+C로 복사된 노트의 전체 데이터. Ctrl+V(pasteNotes)가 재생헤드 위치를 기준으로 붙여넣는다.
         clipboardNotes: [],
         isPlacingLongNote: false,
         longNoteStart: null,
@@ -948,7 +948,6 @@ const Editor = {
     },
 
     // ── Edit 도구: 복사 / 붙여넣기 ─────────────────────────────────────
-    // 붙여넣기는 아직 구현되지 않았다 — 자리만 마련해둔 상태.
     copySelectedNotes() {
         if (!this.state.selectedNotes.length) return;
         const selectedKeys = new Set(this.state.selectedNotes.map(n => `${n.time}|${n.lane}`));
@@ -960,8 +959,59 @@ const Editor = {
         }
     },
 
+    // 클립보드에 복사해 둔 노트들을 (스냅 격자에 맞춘) 현재 재생헤드 위치를 기준으로
+    // 붙여넣는다. 복사한 노트들 중 가장 이른 시각을 기준점 삼아, 그 노트가 재생헤드
+    // 위치에 오도록 나머지 노트들도 같은 만큼 통째로 시간축을 밀어서 배치한다 —
+    // 복사했던 노트들 사이의 상대적인 배치(간격/레인 구성)는 그대로 유지된다.
     pasteNotes() {
-        UI.showMessage('editor', '붙여넣기는 아직 구현되지 않았습니다.');
+        try {
+            if (!this.state.clipboardNotes.length) {
+                UI.showMessage('editor', '복사된 노트가 없습니다. 먼저 Ctrl+C로 복사하세요.');
+                return;
+            }
+
+            const playheadTop = parseFloat(DOM.editor.playhead.style.top) || 0;
+            const targetTimeMs = this._yToSnappedRelativeTimeMs(playheadTop);
+
+            const anchorTime = Math.min(...this.state.clipboardNotes.map(n => n.time));
+            const deltaMs = targetTimeMs - anchorTime;
+
+            const newNotes = this.state.clipboardNotes.map(note => {
+                const newTime = note.time + deltaMs;
+                return { ...note, time: newTime, measure: this._getMeasureFromTime(newTime) };
+            });
+
+            // 시작 지점(오프셋)보다 앞으로 밀려나는 노트가 하나라도 있으면 전체를 취소한다 —
+            // 일부만 잘려서 붙여넣어지면 오히려 헷갈리기 때문.
+            if (newNotes.some(n => n.time < 0)) {
+                UI.showMessage('editor', '재생헤드 위치가 너무 앞이라 붙여넣을 수 없습니다 (시작 지점보다 앞).');
+                return;
+            }
+
+            // 이미 노트가 있는 자리는 덮어쓰지 않고 건너뛴다.
+            const existingKeys = new Set(this.state.notes.map(n => `${n.time}|${n.lane}`));
+            const toInsert = newNotes.filter(n => !existingKeys.has(`${n.time}|${n.lane}`));
+
+            if (!toInsert.length) {
+                UI.showMessage('editor', '붙여넣을 자리에 이미 노트가 있습니다.');
+                return;
+            }
+
+            this._saveStateForUndo();
+            this.setDirty(true);
+            this.state.notes.push(...toInsert);
+            this.state.selectedNotes = toInsert.map(n => ({ time: n.time, lane: n.lane }));
+            this.renderNotes();
+
+            const skipped = newNotes.length - toInsert.length;
+            if (DOM.editor.statusLabel) {
+                DOM.editor.statusLabel.textContent = skipped > 0
+                    ? `${toInsert.length}개 붙여넣음 (${skipped}개는 자리가 겹쳐서 건너뜀)`
+                    : `${toInsert.length}개 노트를 붙여넣었습니다.`;
+            }
+        } catch (err) {
+            Debugger.logError(err, 'Editor.pasteNotes');
+        }
     },
 
     placeSimpleNote(time, laneId) {
@@ -1612,7 +1662,7 @@ const Editor = {
             this.renderNotes();
         }
         if (tool === 'edit') {
-            DOM.editor.statusLabel.textContent = '드래그 또는 클릭으로 노트를 선택하세요. (Ctrl+C: 복사)';
+            DOM.editor.statusLabel.textContent = '드래그 또는 클릭으로 노트를 선택하세요. (Ctrl+C: 복사, Ctrl+V: 붙여넣기)';
         } else if (DOM.editor.statusLabel) {
             DOM.editor.statusLabel.textContent = '';
         }
@@ -1623,6 +1673,34 @@ const Editor = {
         this.state.snapDivision = parseInt(e.target.value) || 4;
         this.drawGrid();
         this.renderNotes();
+    },
+
+    // 왼쪽/오른쪽 화살표 키: 스냅 분할(#editor-snap-selector의 <option> 목록 기준)을
+    // 이전/다음 단계로 바꾼다. 12·24처럼 2배씩 늘어나지 않는 옵션도 있어서 숫자를 직접
+    // 연산하지 않고 select의 실제 옵션 순서를 따라간다. direction: -1 = 더 큰 분할(왼쪽),
+    // 1 = 더 작은 분할(오른쪽).
+    adjustSnapDivision(direction) {
+        try {
+            const select = DOM.editor.snapSelector;
+            if (!select || !select.options.length) return;
+            const options = Array.from(select.options).map(o => parseInt(o.value, 10));
+            const currentIndex = options.indexOf(this.state.snapDivision);
+            const baseIndex = currentIndex === -1 ? 0 : currentIndex;
+            const newIndex = Math.min(options.length - 1, Math.max(0, baseIndex + direction));
+            const newDivision = options[newIndex];
+            if (newDivision === this.state.snapDivision) return;
+
+            this.state.snapDivision = newDivision;
+            select.value = String(newDivision);
+            this.setDirty(true);
+            this.drawGrid();
+            this.renderNotes();
+            if (DOM.editor.statusLabel) {
+                DOM.editor.statusLabel.textContent = `스냅 분할: 1/${newDivision}`;
+            }
+        } catch (err) {
+            Debugger.logError(err, 'Editor.adjustSnapDivision');
+        }
     },
 
     setSelectedNoteType(type) {
@@ -1938,8 +2016,16 @@ const Editor = {
         if (e.ctrlKey || e.altKey || e.metaKey) return;
 
         switch (e.key) {
+            case ' ':
+            case 'Spacebar': // 일부 구형 브라우저 호환
+                e.preventDefault();
+                if (e.repeat) return; // 꾹 누르고 있을 때 반복 토글되는 것 방지
+                this.handlePlayPause();
+                return;
             case 'ArrowUp': e.preventDefault(); this.movePlayheadBySnapStep(-1); return;
             case 'ArrowDown': e.preventDefault(); this.movePlayheadBySnapStep(1); return;
+            case 'ArrowLeft': e.preventDefault(); this.adjustSnapDivision(-1); return;
+            case 'ArrowRight': e.preventDefault(); this.adjustSnapDivision(1); return;
         }
 
         switch (e.key) {
