@@ -602,6 +602,7 @@ document.addEventListener('DOMContentLoaded', () => {
         DOM.editor.resetBtn.addEventListener('click', () => Editor.handleReset());
         DOM.editor.notesContainer.addEventListener('click', (e) => Editor.handleTimelineClick(e));
         DOM.editor.notesContainer.addEventListener('contextmenu', (e) => Editor.handleTimelineContextMenu(e));
+        DOM.editor.notesContainer.addEventListener('mousedown', (e) => Editor.handleEditorMouseDown(e));
     }
 
     function populateKeybindUI() {

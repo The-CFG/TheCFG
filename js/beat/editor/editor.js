@@ -14,6 +14,10 @@ const Editor = {
         // selectedNoteType이 "무엇을 찍을지"를 고른다. 'edit'는 아직 옮길 기능이
         // 없어 자리만 마련해둔 상태 — placeholder.
         activeTool: 'create',
+        // Edit 도구에서 드래그/클릭으로 선택된 노트들 — [{ time, lane }, ...]
+        selectedNotes: [],
+        // Ctrl+C로 복사된 노트의 전체 데이터. 붙여넣기(Ctrl+V)는 아직 구현되지 않았다 — placeholder.
+        clipboardNotes: [],
         isPlacingLongNote: false,
         longNoteStart: null,
         // 미리보기 관련 상태
@@ -110,6 +114,8 @@ const Editor = {
             this.state.audioFileName = '';
             this.state.selectedNoteType = 'tap';
             this.state.activeTool = 'create';
+            this.state.selectedNotes = [];
+            this.state.clipboardNotes = [];
             this.state.totalMeasures = 100;
             this.state.cloudChart = null;
 
@@ -623,10 +629,134 @@ const Editor = {
             const time = parseFloat(e.target.dataset.time);
             const lane = e.target.dataset.lane;
             this.state.notes = this.state.notes.filter(note => note.time !== time || note.lane !== lane);
+            this.state.selectedNotes = this.state.selectedNotes.filter(n => n.time !== time || n.lane !== lane);
             this.renderNotes();
         } catch (err) {
             Debugger.logError(err, 'Editor.handleTimelineContextMenu');
         }
+    },
+
+    // ── Edit 도구: 노트 선택(드래그 박스 / 클릭) ─────────────────────────
+    // 빈 칸에서 mousedown하면 드래그로 사각 영역을 그려 겹치는 노트를 모두 선택하고,
+    // 노트를 직접 mousedown하면 그 노트 하나를 선택한다. Shift를 누른 채로 하면 기존
+    // 선택에 추가/제거된다.
+    handleEditorMouseDown(e) {
+        try {
+            if (this.state.activeTool !== 'edit') return;
+            if (this.state.isPlaying) return;
+            if (e.target === DOM.editor.playhead || e.target.closest?.('#editor-playhead')) return;
+            if (e.button !== 0) return; // 좌클릭만 (우클릭은 삭제 컨텍스트 메뉴)
+
+            if (e.target.classList.contains('editor-note')) {
+                const time = parseFloat(e.target.dataset.time);
+                const lane = e.target.dataset.lane;
+                this._toggleNoteSelection(time, lane, e.shiftKey);
+                return;
+            }
+
+            if (!e.shiftKey) {
+                this.state.selectedNotes = [];
+                this.renderNotes();
+            }
+
+            const gridRect = DOM.editor.gridContainer.getBoundingClientRect();
+            const containerRect = DOM.editor.container.getBoundingClientRect();
+            const startX = e.clientX - gridRect.left;
+            const startY = e.clientY - containerRect.top + DOM.editor.container.scrollTop;
+
+            const boxEl = document.createElement('div');
+            boxEl.className = 'editor-selection-box';
+            DOM.editor.notesContainer.appendChild(boxEl);
+
+            const updateBox = (curX, curY) => {
+                const left = Math.min(startX, curX);
+                const top = Math.min(startY, curY);
+                const width = Math.abs(curX - startX);
+                const height = Math.abs(curY - startY);
+                boxEl.style.left = `${left}px`;
+                boxEl.style.top = `${top}px`;
+                boxEl.style.width = `${width}px`;
+                boxEl.style.height = `${height}px`;
+                return { left, top, width, height };
+            };
+            let lastRect = updateBox(startX, startY);
+
+            const onMove = (moveEvt) => {
+                const curX = moveEvt.clientX - gridRect.left;
+                const curY = moveEvt.clientY - containerRect.top + DOM.editor.container.scrollTop;
+                lastRect = updateBox(curX, curY);
+            };
+            const onUp = () => {
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+                boxEl.remove();
+                this._applyBoxSelection(lastRect, e.shiftKey);
+            };
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+        } catch (err) {
+            Debugger.logError(err, 'Editor.handleEditorMouseDown');
+        }
+    },
+
+    _toggleNoteSelection(time, lane, additive) {
+        const idx = this.state.selectedNotes.findIndex(n => n.time === time && n.lane === lane);
+        if (additive) {
+            if (idx === -1) this.state.selectedNotes.push({ time, lane });
+            else this.state.selectedNotes.splice(idx, 1);
+        } else {
+            this.state.selectedNotes = [{ time, lane }];
+        }
+        this.renderNotes();
+    },
+
+    _applyBoxSelection(rect, additive) {
+        // 실질적으로 클릭에 가까운(거의 움직이지 않은) 드래그는 새로 선택할 노트가 없다 —
+        // additive가 아니면 이미 위에서 선택을 비워뒀으므로 다시 그리기만 한다.
+        if (rect.width < 2 && rect.height < 2) {
+            this.renderNotes();
+            return;
+        }
+        const boxLeft = rect.left, boxTop = rect.top;
+        const boxRight = rect.left + rect.width, boxBottom = rect.top + rect.height;
+        const picked = [];
+        DOM.editor.notesContainer.querySelectorAll('.editor-note').forEach(noteEl => {
+            const left = parseFloat(noteEl.style.left) || 0;
+            const top = parseFloat(noteEl.style.top) || 0;
+            const right = left + noteEl.offsetWidth;
+            const bottom = top + noteEl.offsetHeight;
+            const intersects = left < boxRight && right > boxLeft && top < boxBottom && bottom > boxTop;
+            if (intersects) {
+                picked.push({ time: parseFloat(noteEl.dataset.time), lane: noteEl.dataset.lane });
+            }
+        });
+        if (additive) {
+            picked.forEach(p => {
+                if (!this.state.selectedNotes.some(n => n.time === p.time && n.lane === p.lane)) {
+                    this.state.selectedNotes.push(p);
+                }
+            });
+        } else {
+            this.state.selectedNotes = picked;
+        }
+        this.renderNotes();
+    },
+
+    // ── Edit 도구: 복사 / 붙여넣기 ─────────────────────────────────────
+    // 붙여넣기는 아직 구현되지 않았다 — 자리만 마련해둔 상태.
+    copySelectedNotes() {
+        if (!this.state.selectedNotes.length) return;
+        const selectedKeys = new Set(this.state.selectedNotes.map(n => `${n.time}|${n.lane}`));
+        this.state.clipboardNotes = this.state.notes
+            .filter(note => selectedKeys.has(`${note.time}|${note.lane}`))
+            .map(note => ({ ...note }));
+        if (DOM.editor.statusLabel) {
+            DOM.editor.statusLabel.textContent = `${this.state.clipboardNotes.length}개 노트를 복사했습니다.`;
+        }
+    },
+
+    pasteNotes() {
+        UI.showMessage('editor', '붙여넣기는 아직 구현되지 않았습니다.');
     },
 
     placeSimpleNote(time, laneId) {
@@ -768,6 +898,9 @@ const Editor = {
                 noteEl.className = 'editor-note';
                 if (note.duration) noteEl.classList.add('long');
                 if (note.type === 'false') noteEl.classList.add('false');
+                if (this.state.selectedNotes.some(n => n.time === note.time && n.lane === note.lane)) {
+                    noteEl.classList.add('selected');
+                }
                 const laneIndex = CONFIG.EDITOR_LANE_IDS.indexOf(note.lane);
                 if (laneIndex === -1) return;
                 noteEl.style.width = `${laneWidth}px`;
@@ -1234,8 +1367,13 @@ const Editor = {
         this.updateToolUI();
         // 도구를 바꾸면 진행 중이던 롱노트 배치는 취소한다.
         this.resetLongNotePlacement();
+        // Edit 도구를 벗어나면 선택 상태도 함께 비운다.
+        if (tool !== 'edit' && this.state.selectedNotes.length) {
+            this.state.selectedNotes = [];
+            this.renderNotes();
+        }
         if (tool === 'edit') {
-            DOM.editor.statusLabel.textContent = '편집 도구는 준비 중입니다.';
+            DOM.editor.statusLabel.textContent = '드래그 또는 클릭으로 노트를 선택하세요. (Ctrl+C: 복사)';
         } else if (DOM.editor.statusLabel) {
             DOM.editor.statusLabel.textContent = '';
         }
@@ -1544,6 +1682,18 @@ const Editor = {
         if (e.ctrlKey && e.key.toLowerCase() === 'z') {
             e.preventDefault();
             this.handleUndo();
+            return;
+        }
+
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
+            e.preventDefault();
+            this.copySelectedNotes();
+            return;
+        }
+
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
+            e.preventDefault();
+            this.pasteNotes();
             return;
         }
 

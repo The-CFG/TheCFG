@@ -104,6 +104,22 @@ body:not(.lane-color-mode) .editor-note.false {
     cursor: not-allowed;
     pointer-events: none;
 }
+
+/* Edit 도구에서 선택된 노트 강조 */
+.editor-note.selected {
+    outline: 2px solid #38bdf8;
+    outline-offset: -2px;
+    box-shadow: 0 0 6px rgba(56, 189, 248, 0.8);
+}
+
+/* Edit 도구의 드래그 박스 선택 영역 */
+.editor-selection-box {
+    position: absolute;
+    border: 1px dashed #38bdf8;
+    background-color: rgba(56, 189, 248, 0.15);
+    pointer-events: none;
+    z-index: 20;
+}
 #editor-timeline {
     position: relative; /* 자식 레이어들의 위치 기준 */
     background-color: #1a202c;
