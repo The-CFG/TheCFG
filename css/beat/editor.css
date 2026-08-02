@@ -92,7 +92,7 @@ body:not(.lane-color-mode) .editor-note.false {
     transform: scale(1.05);
 }
 
-/* 도구(Create/Edit/Delete) 선택 버튼의 활성 상태 스타일 */
+/* 도구(Create/Edit) 선택 버튼의 활성 상태 스타일. 삭제는 별도 도구가 아니라 우클릭으로 처리한다. */
 #editor-tool-selector button.active {
     box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.5);
     background-color: #4a5568;

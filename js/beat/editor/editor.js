@@ -553,22 +553,11 @@ const Editor = {
             // 노트를 찍지 않는다 — handleSeekPointerDown이 별도로 처리함.
             if (e.target === DOM.editor.playhead || e.target.closest?.('#editor-playhead')) return;
 
-            // 기존 노트를 클릭한 경우: Delete 도구일 때만 삭제한다.
-            // Create/Edit 도구에서는 기존 노트를 클릭해도 아무 동작을 하지 않는다
-            // (Create는 중복 방지, Edit은 아직 옮길 기능이 없는 placeholder).
-            if (e.target.classList.contains('editor-note')) {
-                if (this.state.activeTool !== 'delete') return;
-                this.setDirty(true);
-                this._saveStateForUndo();
-                const time = parseFloat(e.target.dataset.time);
-                const lane = e.target.dataset.lane;
-                this.state.notes = this.state.notes.filter(note => note.time !== time || note.lane !== lane);
-                this.renderNotes();
-                return;
-            }
+            // 기존 노트를 좌클릭한 경우: 아무 동작도 하지 않는다.
+            // 삭제는 우클릭(컨텍스트 메뉴) 전용 — handleTimelineContextMenu 참고.
+            if (e.target.classList.contains('editor-note')) return;
 
             // 빈 칸 클릭: Create 도구일 때만 새 노트를 찍는다.
-            // Delete 도구로 빈 칸을 클릭하면 아무 동작도 하지 않고,
             // Edit 도구는 아직 담을 기능이 없어 자리만 마련해둔 상태다.
             if (this.state.activeTool !== 'create') return;
 
@@ -620,6 +609,23 @@ const Editor = {
             }
         } catch (err) {
             Debugger.logError(err, 'Editor.handleTimelineClick');
+        }
+    },
+
+    // 우클릭(컨텍스트 메뉴)으로 기존 노트를 삭제한다. 도구(생성/편집)와 무관하게 항상 동작한다.
+    handleTimelineContextMenu(e) {
+        try {
+            if (this.state.isPlaying) return;
+            if (!e.target.classList.contains('editor-note')) return;
+            e.preventDefault();
+            this.setDirty(true);
+            this._saveStateForUndo();
+            const time = parseFloat(e.target.dataset.time);
+            const lane = e.target.dataset.lane;
+            this.state.notes = this.state.notes.filter(note => note.time !== time || note.lane !== lane);
+            this.renderNotes();
+        } catch (err) {
+            Debugger.logError(err, 'Editor.handleTimelineContextMenu');
         }
     },
 
@@ -726,12 +732,14 @@ const Editor = {
                 triggerEl.dataset.time = trigger.time;
                 triggerEl.title = `BPM: ${trigger.bpm}, 하강: ${trigger.fallSpeed}, 전환: ${((trigger.transitionMs ?? 700) / 1000).toFixed(1)}s`;
                 
-                // 클릭 시 삭제 — Delete 도구가 활성화된 경우에만 동작한다.
-                // stopPropagation은 도구와 무관하게 유지해, 트리거 마커 위 클릭이
-                // 타임라인 클릭(노트 배치)으로 전파되지 않게 한다.
+                // 좌클릭으로는 아무 동작도 하지 않는다 (배치 클릭이 아래로 전파되는 것만 막는다).
+                // 삭제는 우클릭(컨텍스트 메뉴) 전용 — 도구와 무관하게 항상 동작한다.
                 triggerEl.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    if (this.state.activeTool !== 'delete') return;
+                });
+                triggerEl.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
                     this.state.triggers = this.state.triggers.filter(t => t.time !== trigger.time);
                     this.renderTriggers();
                     this.setDirty(true);
@@ -1548,11 +1556,11 @@ const Editor = {
         }
 
         // 도구 전환 단축키. Q/W/E/R/T/Y/U/I/O는 이미 EDITOR_KEY_LANE_MAP에서
-        // 레인 배치 키로 쓰이고 있어서 겹치지 않는 Z/X/C를 사용한다.
+        // 레인 배치 키로 쓰이고 있어서 겹치지 않는 Z/X를 사용한다.
+        // 삭제는 별도 도구가 아니라 우클릭(컨텍스트 메뉴)으로 대체되었다.
         switch (e.key.toLowerCase()) {
             case 'z': e.preventDefault(); this.setActiveTool('create'); return;
             case 'x': e.preventDefault(); this.setActiveTool('edit'); return;
-            case 'c': e.preventDefault(); this.setActiveTool('delete'); return;
         }
 
         const laneId = CONFIG.EDITOR_KEY_LANE_MAP[e.code];

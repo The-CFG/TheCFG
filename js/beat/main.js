@@ -601,6 +601,7 @@ document.addEventListener('DOMContentLoaded', () => {
         DOM.editor.quickSaveBtn.addEventListener('click', () => Editor.quickSaveBeatmap());
         DOM.editor.resetBtn.addEventListener('click', () => Editor.handleReset());
         DOM.editor.notesContainer.addEventListener('click', (e) => Editor.handleTimelineClick(e));
+        DOM.editor.notesContainer.addEventListener('contextmenu', (e) => Editor.handleTimelineContextMenu(e));
     }
 
     function populateKeybindUI() {
