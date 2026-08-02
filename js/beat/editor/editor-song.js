@@ -193,13 +193,13 @@ const EditorSong = {
 
     // 실제 플레이 시 노래가 재생되기 시작하는 지점(초). 비트맵 창의 "미리보기 시작(초)"와
     // 별개이며, 여기 값만 실제 게임 재생(Game.start)에 쓰인다.
+    // Editor.setStartOffsetSec()을 그대로 재사용한다 — 이 값이 바뀌면 이미 찍혀있는 모든
+    // 난이도의 note.time/trigger.time(오프셋 기준 상대시간)도 델타만큼 같이 보정해줘야
+    // 노트들의 실제 위치가 밀리지 않는다. (비트맵 창의 동일 입력과 로직을 공유)
+    // 종합 창에는 오디오가 아직 안 로드돼있을 수 있어 오디오 seek는 건너뛴다.
     onStartTimeInput(value) {
         const sec = Math.max(0, parseFloat(value) || 0);
-        Editor.state.song.startOffsetSec = sec;
-        // 모든 난이도가 이 값을 공유한다(비트맵별 startTimeOffset은 저장 시 이 값을 그대로
-        // 미러링함). 이미 클라우드에 올라간 난이도가 있다면, 열어보지 않아도 다음 업로드 때
-        // 채보 파일(chart_storage_path)의 startTimeOffset까지 같이 갱신되도록 dirty 표시한다.
-        Editor.state.beatmaps.forEach(bm => { if (bm.cloudChartId) bm._cloudDirty = true; });
+        Editor.setStartOffsetSec(sec, { seekAudio: false });
     },
 
     // 오디오는 노래(song) 단위로 한 번만 고르면 모든 난이도가 공유해서 쓴다.

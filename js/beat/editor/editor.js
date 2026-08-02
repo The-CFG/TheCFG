@@ -50,6 +50,12 @@ const Editor = {
         // (notes/bpm/triggers/startTimeOffset)와 동기화된다 — loadBeatmapIntoFlatState/saveFlatStateToBeatmap 참고.
         beatmaps: [],
         activeBeatmapIndex: 0,
+        // 지금 state.notes/state.triggers(flat 상태)가 실제로 beatmaps[] 중 어느 항목의
+        // 내용을 대표하고 있는지. loadBeatmapIntoFlatState()에서 그 인덱스로 채워지고,
+        // resetSongState()에서 null로 비워진다. setStartOffsetSec()이 오프셋 변경분을
+        // 다른 난이도들에도 전파할 때, 이 인덱스와 같은 항목은 flat 상태 쪽에서 이미
+        // 보정하므로 건너뛰기 위해 쓴다.
+        _flatBeatmapIndex: null,
     },
 
     init() {
@@ -244,9 +250,15 @@ const Editor = {
         if (deltaMs !== 0) {
             this.state.notes.forEach(note => { note.time -= deltaMs; });
             this.state.triggers.forEach(trigger => { trigger.time -= deltaMs; });
+            // startOffsetSec은 노래 전체가 공유하는 단일 값이므로, 지금 flat 상태로 열려있지
+            // 않은 다른 난이도들의 notes/triggers도 같은 만큼 같이 보정해야 한다. 안 그러면
+            // 나중에 그 난이도를 열었을 때(또는 그대로 저장/업로드했을 때) 노트가 델타만큼
+            // 밀린 채로 나타난다 — 종합 창에서 시작 시각만 바꾸고 바로 저장하는 경우가 대표적.
+            this._applyOffsetDeltaToOtherBeatmaps(deltaMs);
         }
         this.state.song.startOffsetSec = newOffsetSec;
         DOM.editor.startTimeInput.value = newOffsetSec.toFixed(2);
+        if (DOM.editorSong.startTimeInput) DOM.editorSong.startTimeInput.value = newOffsetSec.toFixed(2);
         this._setPlayheadTop(this._secondsToY(newOffsetSec));
         if (seekAudio && DOM.musicPlayer.src) {
             DOM.musicPlayer.currentTime = newOffsetSec;
@@ -255,6 +267,27 @@ const Editor = {
             this.setDirty(true);
             this.renderNotes(); // 노트/트리거를 보정된 시간으로 다시 그림 (절대 위치는 그대로 보임)
         }
+    },
+
+    // startOffsetSec 변경분(deltaMs)을 지금 flat 상태가 대표하지 않는 다른 난이도들에 전파한다.
+    // - 이미 로컬에 데이터가 있는 난이도(_loaded !== false): notes/triggers를 바로 보정하고,
+    //   클라우드에 이미 올라간 난이도라면 다음 업로드 때 갱신되도록 dirty 표시한다.
+    // - 아직 서버에서 안 받아온 난이도(_loaded === false): 지금은 보정할 데이터가 없으므로
+    //   _pendingOffsetDeltaMs에 누적해두고, ensureBeatmapLoaded()가 실제로 데이터를
+    //   받아온 직후 한 번에 적용한다.
+    _applyOffsetDeltaToOtherBeatmaps(deltaMs) {
+        if (!deltaMs) return;
+        const liveIndex = this.state._flatBeatmapIndex;
+        this.state.beatmaps.forEach((bm, i) => {
+            if (i === liveIndex) return; // flat 상태 쪽에서 이미 보정됨
+            if (bm._loaded === false) {
+                bm._pendingOffsetDeltaMs = (bm._pendingOffsetDeltaMs || 0) + deltaMs;
+                return;
+            }
+            (bm.notes || []).forEach(note => { note.time -= deltaMs; });
+            (bm.triggers || []).forEach(trigger => { trigger.time -= deltaMs; });
+            if (bm.cloudChartId) bm._cloudDirty = true;
+        });
     },
 
     // clientY(화면 좌표)를 재생 위치(초)로 변환해 playhead/오디오를 갱신한다.
@@ -327,8 +360,13 @@ const Editor = {
         return confirm(message);
     },
 
+    // notes와 triggers를 함께 스냅샷한다. 이전에는 notes만 저장해서 트리거 추가/삭제가
+    // Ctrl+Z로 되돌려지지 않는 문제가 있었다.
     _saveStateForUndo() {
-        this.state.history.push(JSON.parse(JSON.stringify(this.state.notes)));
+        this.state.history.push({
+            notes: JSON.parse(JSON.stringify(this.state.notes)),
+            triggers: JSON.parse(JSON.stringify(this.state.triggers)),
+        });
         if (this.state.history.length > CONFIG.EDITOR_UNDO_HISTORY_LIMIT) {
             this.state.history.shift();
         }
@@ -567,9 +605,10 @@ const Editor = {
             // Edit 도구는 아직 담을 기능이 없어 자리만 마련해둔 상태다.
             if (this.state.activeTool !== 'create') return;
 
-            this.setDirty(true);
-            this._saveStateForUndo();
-
+            // setDirty/undo 저장은 여기서 미리 하지 않는다 — 트리거 클릭(모달만 열림)이나
+            // 롱노트 시작점 클릭(아직 노트 미생성)처럼 실제로는 아무것도 안 바뀌는 클릭까지
+            // undo 히스토리를 채우던 문제가 있었다. 대신 각 place*() 함수가 실제로 데이터를
+            // 바꾸는 시점에 알아서 저장한다.
             const container = DOM.editor.container;
             // 레인(X)은 타임라인(gridContainer) 기준으로 계산해야 한다 — #editor-container에는
             // 왼쪽에 시크 거터가 붙어있어 container 기준 X로 계산하면 거터 폭만큼 어긋난다.
@@ -761,6 +800,8 @@ const Editor = {
 
     placeSimpleNote(time, laneId) {
         if (!this.state.notes.some(n => Math.abs(n.time - time) < 10 && n.lane === laneId)) {
+            this._saveStateForUndo();
+            this.setDirty(true);
             const measure = this._getMeasureFromTime(time);
             this.state.notes.push({ time, lane: laneId, type: this.state.selectedNoteType, measure });
             this.renderNotes();
@@ -769,6 +810,8 @@ const Editor = {
 
     placeLongNote(time, laneId) {
         if (!this.state.isPlacingLongNote) {
+            // 시작 지점만 지정하는 단계 — 아직 노트가 생기지 않으므로 undo/dirty는 다음
+            // (끝 지점을 찍어 실제로 노트가 추가되는) 단계에서만 저장한다.
             this.state.longNoteStart = { time, lane: laneId };
             this.state.isPlacingLongNote = true;
             DOM.editor.statusLabel.textContent = '롱노트의 끝 지점을 지정해주세요.';
@@ -781,6 +824,8 @@ const Editor = {
                 UI.showMessage('editor', '끝 지점은 시작 지점보다 뒤에 있어야 합니다.');
                 return;
             }
+            this._saveStateForUndo();
+            this.setDirty(true);
             const duration = time - this.state.longNoteStart.time;
             const measure = this._getMeasureFromTime(this.state.longNoteStart.time);
             this.state.notes.push({ ...this.state.longNoteStart, duration, type: 'long_head', measure });
@@ -827,6 +872,8 @@ const Editor = {
         const fallSpeed = parseFloat(DOM.triggerModal.fallSpeedInput.value);
         const transitionSec = parseFloat(DOM.triggerModal.transitionInput.value);
         const transitionMs = Math.max(0, (isNaN(transitionSec) ? 0.7 : transitionSec) * 1000);
+
+        this._saveStateForUndo();
 
         // 기존 동일 시간 트리거 제거
         this.state.triggers = this.state.triggers.filter(t => Math.abs(t.time - time) >= 10);
@@ -882,6 +929,7 @@ const Editor = {
                 triggerEl.addEventListener('contextmenu', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
+                    this._saveStateForUndo();
                     this.state.triggers = this.state.triggers.filter(t => t.time !== trigger.time);
                     this.renderTriggers();
                     this.setDirty(true);
@@ -1097,6 +1145,7 @@ const Editor = {
         };
         this.state.beatmaps = [];
         this.state.activeBeatmapIndex = 0;
+        this.state._flatBeatmapIndex = null;
     },
 
     // Phase 3d: 클라우드에서 불러온 노래는 getSongWithBeatmaps()로 난이도 "메타"만 받아오고
@@ -1118,6 +1167,15 @@ const Editor = {
         bm.startTimeOffset = data.startTimeOffset || 0;
         if (data.bpm) bm.bpm = data.bpm;
         if (data.laneCount) bm.laneCount = data.laneCount;
+        // 이 난이도를 아직 안 불러온 사이에 종합 창에서 시작 시각(startOffsetSec)이 바뀐 적이
+        // 있으면, 그동안 쌓인 델타를 지금 막 받아온 notes/triggers에 한 번에 적용해준다.
+        if (bm._pendingOffsetDeltaMs) {
+            const delta = bm._pendingOffsetDeltaMs;
+            bm.notes.forEach(note => { note.time -= delta; });
+            bm.triggers.forEach(trigger => { trigger.time -= delta; });
+            bm._pendingOffsetDeltaMs = 0;
+            if (bm.cloudChartId) bm._cloudDirty = true;
+        }
         bm._loaded = true;
         return true;
     },
@@ -1171,6 +1229,9 @@ const Editor = {
             this.renderNotes();
             this._setPlayheadTop(this._secondsToY(this.state.song.startOffsetSec));
             this.setDirty(false);
+            // 이 순간부터 flat 상태(notes/triggers)가 beatmaps[index]를 대표한다 —
+            // setStartOffsetSec()이 오프셋 변경분을 다른 난이도에 전파할 때 이 인덱스는 건너뛴다.
+            this.state._flatBeatmapIndex = index;
         } catch (err) {
             Debugger.logError(err, 'Editor.loadBeatmapIntoFlatState');
         }
@@ -1411,8 +1472,6 @@ const Editor = {
 
     placeNoteAtPlayhead(laneId) {
         if (!laneId) return;
-        this.setDirty(true);
-        this._saveStateForUndo();
         const playheadTop = parseFloat(DOM.editor.playhead.style.top) || 0;
         const adjustedBeatHeight = this._getAdjustedBeatHeight();
         const beatsPerSecond = this.state.bpm / 60;
@@ -1431,9 +1490,10 @@ const Editor = {
     handleUndo() {
         if (this.state.history.length > 0) {
             this.setDirty(true);
-            const previousNotes = this.state.history.pop();
-            this.state.notes = previousNotes;
-            this.renderNotes();
+            const previous = this.state.history.pop();
+            this.state.notes = previous.notes;
+            this.state.triggers = previous.triggers;
+            this.renderNotes(); // 내부에서 renderTriggers()도 함께 호출됨
         }
     },
 
@@ -1710,13 +1770,11 @@ const Editor = {
         }
 
         if (e.ctrlKey || e.altKey || e.metaKey) return;
-        
-        if (this.state.activeTool === 'create') {
-            switch (e.key) {
+
+        switch (e.key) {
             case '1': e.preventDefault(); this.setSelectedNoteType('tap'); return;
             case '2': e.preventDefault(); this.setSelectedNoteType('long'); return;
             case '3': e.preventDefault(); this.setSelectedNoteType('false'); return;
-            }
         }
 
         // 도구 전환 단축키. Q/W/E/R/T/Y/U/I/O는 이미 EDITOR_KEY_LANE_MAP에서
@@ -1725,8 +1783,6 @@ const Editor = {
         switch (e.key.toLowerCase()) {
             case 'z': e.preventDefault(); this.setActiveTool('create'); return;
             case 'x': e.preventDefault(); this.setActiveTool('edit'); return;
-            case '-': e.preventDefault(); this.removeMeasure(); return;
-            case '=': e.preventDefault(); this.addMeasure(); return;
         }
 
         const laneId = CONFIG.EDITOR_KEY_LANE_MAP[e.code];
