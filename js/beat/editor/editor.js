@@ -217,7 +217,12 @@ const Editor = {
         DOM.editor.playBtn.textContent = "재생";
     },
 
-    // clientY(화면 좌표)를 재생 위치(초)로 변환해 playhead/오디오/입력값을 모두 갱신한다.
+    // clientY(화면 좌표)를 재생 위치(초)로 변환해 playhead/오디오를 갱신한다.
+    // 주의: 여기서는 song.startOffsetSec(=노트 시간의 기준점이자 실제 게임 시작 지점)를
+    // 건드리지 않는다. 이건 어디까지나 "미리듣기용 스크럽"이며, 이 값이 스크럽마다 바뀌면
+    // note.time(오프셋 기준 상대시간)의 기준이 같이 흔들려서 노트 미리보기가 항상 처음부터
+    // 다시 계산되는 버그가 생긴다. 실제 시작 오프셋은 "미리보기 시작(초)" 입력창을 직접
+    // 편집할 때만 바뀐다(main.js의 startTimeInput 리스너 참고).
     seekToClientY(clientY) {
         try {
             const container = DOM.editor.container;
@@ -231,8 +236,6 @@ const Editor = {
             }
             seconds = Math.max(0, seconds);
 
-            this.state.song.startOffsetSec = seconds;
-            DOM.editor.startTimeInput.value = seconds.toFixed(2);
             this._setPlayheadTop(this._secondsToY(seconds));
 
             if (isMusicLoaded) {
@@ -250,7 +253,6 @@ const Editor = {
             const clientY = e.touches ? e.touches[0].clientY : e.clientY;
 
             this._pauseForSeek();
-            this.setDirty(true);
             DOM.editor.playhead.classList.add('dragging');
             this.seekToClientY(clientY);
 
