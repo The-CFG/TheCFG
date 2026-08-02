@@ -222,6 +222,35 @@ const Editor = {
         return Math.max(0, seconds) * beatsPerSecond * adjustedBeatHeight;
     },
 
+    // container 기준 스크롤 보정된 Y 좌표(px) → 그리드에 스냅되고 오프셋(빨간선) 기준으로
+    // 변환된 상대 시간(ms). handleTimelineClick과 노트 드래그 이동에서 공통으로 쓴다.
+    // 오프셋보다 앞선 위치는 0으로 clamp한다(호출부에서 필요하면 별도로 막을 것).
+    _yToSnappedRelativeTimeMs(y) {
+        const adjustedBeatHeight = this._getAdjustedBeatHeight();
+        const beatsPerMeasure = 4;
+        const measureHeight = beatsPerMeasure * adjustedBeatHeight;
+        const snapHeight = measureHeight / this.state.snapDivision;
+        const snapIndex = Math.round(y / snapHeight);
+        const snappedY = snapIndex * snapHeight;
+        const beatsPerSecond = this.state.bpm / 60;
+        const totalBeats = snappedY / adjustedBeatHeight;
+        const absoluteTimeInMs = Math.round((totalBeats / beatsPerSecond) * 1000);
+        const offsetMs = Math.round((this.state.song.startOffsetSec || 0) * 1000);
+        return absoluteTimeInMs - offsetMs; // 0 미만일 수 있음 — clamp/경고는 호출부에서 처리
+    },
+
+    // 화면 좌표(clientX) → 타임라인 레인 ID. 범위를 벗어나면 가장 가까운 레인으로 clamp한다.
+    _xToLaneId(clientX) {
+        const gridRect = DOM.editor.gridContainer.getBoundingClientRect();
+        const laneWidth = gridRect.width / CONFIG.EDITOR_LANE_IDS.length;
+        const x = clientX - gridRect.left;
+        const laneIndex = Math.min(
+            CONFIG.EDITOR_LANE_IDS.length - 1,
+            Math.max(0, Math.floor(x / laneWidth))
+        );
+        return CONFIG.EDITOR_LANE_IDS[laneIndex];
+    },
+
     // 정지 상태에서만 호출됨. isPlaying이면 드래그 시작 시점에 먼저 멈춘다.
     _pauseForSeek() {
         if (!this.state.isPlaying) return;
@@ -610,38 +639,15 @@ const Editor = {
             // undo 히스토리를 채우던 문제가 있었다. 대신 각 place*() 함수가 실제로 데이터를
             // 바꾸는 시점에 알아서 저장한다.
             const container = DOM.editor.container;
-            // 레인(X)은 타임라인(gridContainer) 기준으로 계산해야 한다 — #editor-container에는
-            // 왼쪽에 시크 거터가 붙어있어 container 기준 X로 계산하면 거터 폭만큼 어긋난다.
-            const gridRect = DOM.editor.gridContainer.getBoundingClientRect();
-            const laneWidth = gridRect.width / CONFIG.EDITOR_LANE_IDS.length;
-            const x = e.clientX - gridRect.left;
-            const laneIndex = Math.floor(x / laneWidth);
-            const laneId = CONFIG.EDITOR_LANE_IDS[laneIndex];
             // 시간(Y)은 반드시 스크롤되지 않는 container의 rect를 기준으로 + scrollTop을 더해야 한다.
             // gridContainer는 스크롤되는 내용물 안에 있어서 자신의 rect.top 자체가 스크롤할 때마다
             // 바뀌므로, 여기에 scrollTop을 또 더하면 스크롤량이 두 번 반영돼 롱노트처럼 스크롤 위치가
             // 달라진 두 지점을 연속 클릭하는 경우 시간 계산이 크게 어긋나는 버그가 있었다.
             const containerRect = container.getBoundingClientRect();
             const y = e.clientY - containerRect.top + container.scrollTop;
-            
-            // 그리드 라인과 정확히 일치하는 계산
-            const adjustedBeatHeight = this._getAdjustedBeatHeight();
-            const beatsPerMeasure = 4;
-            const measureHeight = beatsPerMeasure * adjustedBeatHeight;
-            const snapHeight = measureHeight / this.state.snapDivision;
-            
-            // 가장 가까운 스냅 포인트 찾기
-            const snapIndex = Math.round(y / snapHeight);
-            const snappedY = snapIndex * snapHeight;
-            
-            // 시간 계산 (비트 -> 밀리초, 절대 타임라인 기준)
-            const beatsPerSecond = this.state.bpm / 60;
-            const totalBeats = snappedY / adjustedBeatHeight;
-            const absoluteTimeInMs = Math.round((totalBeats / beatsPerSecond) * 1000);
-            // 게임(game.js)은 노트 시간을 "오프셋(빨간선) 이후 경과 시간" 기준으로 판정하므로
-            // 여기서도 절대 시간에서 오프셋을 빼서 저장해야 빨간선 기준으로 정확히 맞는다.
-            const offsetMs = Math.round((this.state.song.startOffsetSec || 0) * 1000);
-            const timeInMs = absoluteTimeInMs - offsetMs;
+
+            const laneId = this._xToLaneId(e.clientX);
+            const timeInMs = this._yToSnappedRelativeTimeMs(y);
             if (timeInMs < 0) {
                 UI.showMessage('editor', '시작 지점(빨간선)보다 앞에는 노트를 찍을 수 없습니다.');
                 return;
@@ -687,9 +693,25 @@ const Editor = {
             if (e.button !== 0) return; // 좌클릭만 (우클릭은 삭제 컨텍스트 메뉴)
 
             if (e.target.classList.contains('editor-note')) {
+                e.preventDefault();
                 const time = parseFloat(e.target.dataset.time);
                 const lane = e.target.dataset.lane;
-                this._toggleNoteSelection(time, lane, e.shiftKey);
+
+                if (e.shiftKey) {
+                    // Shift-클릭은 다중 선택 구성 전용 — 드래그로 넘어가지 않는다.
+                    this._toggleNoteSelection(time, lane, true);
+                    return;
+                }
+
+                const alreadySelected = this.state.selectedNotes.some(n => n.time === time && n.lane === lane);
+                if (!alreadySelected) {
+                    // 선택 안 된 노트를 클릭 → 그 노트 하나만 선택
+                    this.state.selectedNotes = [{ time, lane }];
+                    this.renderNotes();
+                }
+                // 이미 여러 개가 선택된 상태에서 그중 하나를 클릭한 경우엔 선택을 그대로
+                // 유지해서 전체를 함께 드래그할 수 있게 한다.
+                this._startNoteDrag(e, time, lane);
                 return;
             }
 
@@ -746,6 +768,101 @@ const Editor = {
         } else {
             this.state.selectedNotes = [{ time, lane }];
         }
+        this.renderNotes();
+    },
+
+    // ── Edit 도구: 선택한 노트를 드래그로 이동 ─────────────────────────
+    // 여러 노트가 선택된 상태면 시간(Y)만 옮기고 레인(X)은 고정한다 — 서로 다른 레인의
+    // 노트를 한꺼번에 옆 레인으로 옮기면 뭘 어디로 보낼지 모호해지기 때문이다.
+    // 선택이 하나뿐이면 레인 이동도 허용한다.
+    _startNoteDrag(e, clickedTime, clickedLane) {
+        const containerRect = DOM.editor.container.getBoundingClientRect();
+        const startClientX = e.clientX;
+        const startClientY = e.clientY;
+        const isSingle = this.state.selectedNotes.length <= 1;
+
+        // 드래그 대상 노트들의 실제 state.notes 참조를 찾아 원본 time/lane을 기억해둔다.
+        // 참조를 직접 들고 있어야 드래그 중 실시간으로 위치를 바꿔가며 미리보기를 그릴 수 있다.
+        const draggedKeys = new Set(this.state.selectedNotes.map(n => `${n.time}|${n.lane}`));
+        const originals = this.state.notes
+            .filter(n => draggedKeys.has(`${n.time}|${n.lane}`))
+            .map(n => ({ ref: n, time: n.time, lane: n.lane }));
+        if (!originals.length) return;
+
+        const DRAG_THRESHOLD_PX = 4;
+        let isDragging = false;
+
+        const onMove = (moveEvt) => {
+            const dx = moveEvt.clientX - startClientX;
+            const dy = moveEvt.clientY - startClientY;
+            if (!isDragging) {
+                if (Math.hypot(dx, dy) < DRAG_THRESHOLD_PX) return;
+                isDragging = true;
+                this._saveStateForUndo(); // 실제로 옮기기 시작하는 순간에만 undo 스냅샷 1회 저장
+            }
+
+            const curY = moveEvt.clientY - containerRect.top + DOM.editor.container.scrollTop;
+            const newTimeAtCursor = this._yToSnappedRelativeTimeMs(curY);
+            const deltaMs = newTimeAtCursor - clickedTime;
+
+            let deltaLaneIndex = 0;
+            if (isSingle) {
+                const newLaneId = this._xToLaneId(moveEvt.clientX);
+                const fromIdx = CONFIG.EDITOR_LANE_IDS.indexOf(clickedLane);
+                const toIdx = CONFIG.EDITOR_LANE_IDS.indexOf(newLaneId);
+                deltaLaneIndex = toIdx - fromIdx;
+            }
+
+            originals.forEach(o => {
+                o.ref.time = Math.max(0, o.time + deltaMs);
+                if (deltaLaneIndex !== 0) {
+                    const idx = CONFIG.EDITOR_LANE_IDS.indexOf(o.lane);
+                    const clampedIdx = Math.min(CONFIG.EDITOR_LANE_IDS.length - 1, Math.max(0, idx + deltaLaneIndex));
+                    o.ref.lane = CONFIG.EDITOR_LANE_IDS[clampedIdx];
+                }
+            });
+            this.state.selectedNotes = originals.map(o => ({ time: o.ref.time, lane: o.ref.lane }));
+            this.renderNotes();
+        };
+
+        const onUp = () => {
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+
+            if (!isDragging) {
+                // 실제로는 안 움직인 순수 클릭 — 클릭한 노트 하나로 선택을 좁힌다.
+                this.state.selectedNotes = [{ time: clickedTime, lane: clickedLane }];
+                this.renderNotes();
+                return;
+            }
+            this._finishNoteDrag(originals);
+        };
+
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+    },
+
+    _finishNoteDrag(originals) {
+        const draggedRefs = new Set(originals.map(o => o.ref));
+        // 옮긴 자리에 드래그 대상이 아닌 다른 노트가 이미 있으면(같은 레인, 10ms 이내) 충돌로
+        // 보고 전체 이동을 취소한다 — 노트가 겹쳐써지는 것을 막기 위함.
+        const collided = originals.some(o =>
+            this.state.notes.some(n => !draggedRefs.has(n) && n.lane === o.ref.lane && Math.abs(n.time - o.ref.time) < 10)
+        );
+        if (collided) {
+            originals.forEach(o => { o.ref.time = o.time; o.ref.lane = o.lane; });
+            this.state.selectedNotes = originals.map(o => ({ time: o.ref.time, lane: o.ref.lane }));
+            // 취소된 이동이라 undo 스냅샷도 의미가 없으니 방금 저장한 것을 버린다.
+            this.state.history.pop();
+            UI.showMessage('editor', '다른 노트와 겹쳐서 이동을 취소했습니다.');
+            this.renderNotes();
+            return;
+        }
+        // measure 필드도 새 시간 기준으로 갱신 — 타임라인 길이 계산(마디 자동 늘리기 등)이
+        // 이 필드를 참조하므로 이동 후에도 정확해야 한다.
+        originals.forEach(o => { o.ref.measure = this._getMeasureFromTime(o.ref.time); });
+        this.state.selectedNotes = originals.map(o => ({ time: o.ref.time, lane: o.ref.lane }));
+        this.setDirty(true);
         this.renderNotes();
     },
 
