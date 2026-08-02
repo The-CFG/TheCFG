@@ -71,12 +71,14 @@ const DOM = {
         gridContainer: document.getElementById('editor-grid-container'),
         notesContainer: document.getElementById('editor-notes-container'),
         playhead: document.getElementById('editor-playhead'),
+        timingStartMarker: document.getElementById('editor-timing-start-marker'),
         
         // 상단 컨트롤
         audioFileInput: document.getElementById('audio-file-input-editor'),
         audioDropzone: document.getElementById('editor-audio-dropzone'),
         audioFileNameEl: document.getElementById('audio-file-name-editor'),
         startTimeInput: document.getElementById('editor-start-time'),
+        timingStartInput: document.getElementById('editor-timing-start-input'),
         previewLanesSelector: document.getElementById('editor-preview-lanes'),
         bpmInput: document.getElementById('bpm-input'),
         noteFallSpeedInput: document.getElementById('editor-note-fall-speed'),
@@ -111,6 +113,7 @@ const DOM = {
         coverNameEl: document.getElementById('editor-song-cover-name'),
         previewStartInput: document.getElementById('editor-song-preview-start-input'),
         startTimeInput: document.getElementById('editor-song-start-time-input'),
+        timingStartInput: document.getElementById('editor-song-timing-start-input'),
         beatmapList: document.getElementById('editor-song-beatmap-list'),
         addBeatmapBtn: document.getElementById('editor-song-add-beatmap-btn'),
         saveLocalBtn: document.getElementById('editor-song-save-local-btn'),

@@ -49,6 +49,7 @@ const Editor = {
             cloudSongId: null,      // 클라우드에 이미 존재하는 노래면 beat_songs.id
             previewStartSec: 0,     // 온라인 화면 미리듣기 시작 시각(초). 0이면 처음부터.
             startOffsetSec: 0,      // 실제 플레이 시 노래가 재생되기 시작하는 지점(초). 0이면 처음부터.
+            timingStartSec: 0,      // 그리드(격자선)가 존재하기 시작하는 노래 절대 시각(초). startOffsetSec과 독립적. 0이면 기존과 동일(제약 없음).
         },
         // 노래에 딸린 난이도(비트맵) 목록. 각 항목은
         // { difficultyLabel, laneCount, bpm, startTimeOffset, notes, triggers, cloudChartId } 형태.
@@ -141,6 +142,7 @@ const Editor = {
             DOM.editor.snapSelector.value = this.state.snapDivision;
             this.state.previewSeekSec = this.state.song.startOffsetSec || 0;
             DOM.editor.startTimeInput.value = this.state.previewSeekSec;
+            if (DOM.editor.timingStartInput) DOM.editor.timingStartInput.value = this.state.song.timingStartSec || 0;
             DOM.editor.audioFileNameEl.textContent = '선택된 파일 없음';
             DOM.editor.chartFilenameInput.value = '';
 
@@ -315,6 +317,32 @@ const Editor = {
             this.setDirty(true);
             this.renderNotes(); // 노트/트리거를 보정된 시간으로 다시 그림 (절대 위치는 그대로 보임)
         }
+        // 타이밍 시작 하한선(_minAllowedRelativeTimeMs)이 startOffsetSec에도 의존하므로
+        // 그리드도 다시 그려서 "노트 못 찍는 구간" 표시를 최신 상태로 맞춘다.
+        this.drawGrid();
+    },
+
+    // "타이밍 시작(초)"(=state.song.timingStartSec)을 바꾼다. startOffsetSec과 달리
+    // 노트 시간의 좌표 원점이 아니므로 note.time을 보정할 필요가 없다 — 그리드와
+    // "노트 못 찍는 구간" 표시만 다시 그리면 된다.
+    setTimingStartSec(newTimingStartSec) {
+        const sec = Math.max(0, newTimingStartSec || 0);
+        this.state.song.timingStartSec = sec;
+        if (DOM.editorSong.timingStartInput) DOM.editorSong.timingStartInput.value = sec.toFixed(2);
+        if (DOM.editor.timingStartInput) DOM.editor.timingStartInput.value = sec.toFixed(2);
+        this.setDirty(true);
+        this.drawGrid();
+        this.renderNotes();
+    },
+
+    // startOffsetSec 기준 "상대시간"(ms)으로, 실제 노트를 찍을 수 있는 하한선.
+    // 두 제약(시작 지점 이전 금지 / 타이밍 시작 이전 그리드 없음) 중 더 엄격한 쪽 = 큰 값.
+    // = max(0, (timingStartSec - startOffsetSec)를 ms로 환산한 값).
+    _minAllowedRelativeTimeMs() {
+        const startOffsetSec = this.state.song.startOffsetSec || 0;
+        const timingStartSec = this.state.song.timingStartSec || 0;
+        const timingStartRelativeMs = Math.round((timingStartSec - startOffsetSec) * 1000);
+        return Math.max(0, timingStartRelativeMs);
     },
 
     // startOffsetSec 변경분(deltaMs)을 지금 flat 상태가 대표하지 않는 다른 난이도들에 전파한다.
@@ -565,9 +593,17 @@ const Editor = {
 
             const measureHeight = beatsPerMeasure * adjustedBeatHeight;
             const snapDivision = this.state.snapDivision; // 현재 선택된 분할 — 이 값까지의 선만 그린다
+            const offsetMs = Math.round((this.state.song.startOffsetSec || 0) * 1000);
+            const minAllowedMs = this._minAllowedRelativeTimeMs();
 
             for (let i = 0; i < this.state.totalMeasures; i++) {
                 for (let j = 0; j < snapDivision; j++) {
+                    const yPosition = (i * measureHeight) + (j / snapDivision) * measureHeight;
+                    // 이 선의 상대시간(시작 지점 기준)이 하한(시작 지점 자체 또는 타이밍 시작 중
+                    // 더 엄격한 쪽)보다 앞이면 그리지 않는다 — 어차피 여기엔 노트를 못 찍는다.
+                    const lineRelativeMs = Math.round(this._yToSeconds(yPosition) * 1000) - offsetMs;
+                    if (lineRelativeMs < minAllowedMs) continue;
+
                     const line = document.createElement('div');
                     line.className = 'beat-line';
                     if (j === 0) {
@@ -576,7 +612,6 @@ const Editor = {
                         const denominator = snapDivision / this._gcd(j, snapDivision);
                         line.style.backgroundColor = this._beatLineColorForDenominator(denominator);
                     }
-                    const yPosition = (i * measureHeight) + (j / snapDivision) * measureHeight;
                     line.style.top = `${yPosition}px`;
                     line.style.width = '100%';
                     DOM.editor.notesContainer.insertBefore(line, DOM.editor.playhead);
@@ -585,6 +620,17 @@ const Editor = {
             
             // 레인 라벨 재생성
             this.addLaneLabels();
+
+            // 타이밍 시작 경계선 마커 — timingStartSec이 0(제약 없음)이면 숨긴다.
+            if (DOM.editor.timingStartMarker) {
+                const timingStartSec = this.state.song.timingStartSec || 0;
+                if (timingStartSec > 0) {
+                    DOM.editor.timingStartMarker.style.display = 'block';
+                    DOM.editor.timingStartMarker.style.top = `${this._secondsToY(timingStartSec)}px`;
+                } else {
+                    DOM.editor.timingStartMarker.style.display = 'none';
+                }
+            }
         } catch (err) {
             Debugger.logError(err, 'Editor.drawGrid');
         }
@@ -717,8 +763,8 @@ const Editor = {
 
             const laneId = this._xToLaneId(e.clientX);
             const timeInMs = this._yToSnappedRelativeTimeMs(y);
-            if (timeInMs < 0) {
-                UI.showMessage('editor', '시작 지점(빨간선)보다 앞에는 노트를 찍을 수 없습니다.');
+            if (timeInMs < this._minAllowedRelativeTimeMs()) {
+                UI.showMessage('editor', '시작 지점 또는 타이밍 시작보다 앞에는 노트를 찍을 수 없습니다.');
                 return;
             }
 
@@ -882,7 +928,7 @@ const Editor = {
             }
 
             originals.forEach(o => {
-                o.ref.time = Math.max(0, o.time + deltaMs);
+                o.ref.time = Math.max(this._minAllowedRelativeTimeMs(), o.time + deltaMs);
                 if (deltaLaneIndex !== 0) {
                     const idx = CONFIG.EDITOR_LANE_IDS.indexOf(o.lane);
                     const clampedIdx = Math.min(CONFIG.EDITOR_LANE_IDS.length - 1, Math.max(0, idx + deltaLaneIndex));
@@ -1000,10 +1046,11 @@ const Editor = {
                 return { ...note, time: newTime, measure: this._getMeasureFromTime(newTime) };
             });
 
-            // 시작 지점(오프셋)보다 앞으로 밀려나는 노트가 하나라도 있으면 전체를 취소한다 —
-            // 일부만 잘려서 붙여넣어지면 오히려 헷갈리기 때문.
-            if (newNotes.some(n => n.time < 0)) {
-                UI.showMessage('editor', '재생헤드 위치가 너무 앞이라 붙여넣을 수 없습니다 (시작 지점보다 앞).');
+            // 시작 지점(오프셋) 또는 타이밍 시작보다 앞으로 밀려나는 노트가 하나라도 있으면
+            // 전체를 취소한다 — 일부만 잘려서 붙여넣어지면 오히려 헷갈리기 때문.
+            const minAllowedMs = this._minAllowedRelativeTimeMs();
+            if (newNotes.some(n => n.time < minAllowedMs)) {
+                UI.showMessage('editor', '재생헤드 위치가 너무 앞이라 붙여넣을 수 없습니다 (시작 지점 또는 타이밍 시작보다 앞).');
                 return;
             }
 
@@ -1330,6 +1377,7 @@ const Editor = {
             DOM.editor.bpmInput.value = this.state.bpm;
             this.state.previewSeekSec = this.state.song.startOffsetSec || 0;
             DOM.editor.startTimeInput.value = this.state.previewSeekSec;
+            if (DOM.editor.timingStartInput) DOM.editor.timingStartInput.value = this.state.song.timingStartSec || 0;
             DOM.editor.audioFileNameEl.textContent = `요구 파일: ${chartData.songName || '없음'}`;
             if (loadedFileName) {
                 DOM.editor.chartFilenameInput.value = loadedFileName.split('.').slice(0, -1).join('.');
@@ -1378,6 +1426,7 @@ const Editor = {
             cloudSongId: null,
             previewStartSec: 0,
             startOffsetSec: 0,
+            timingStartSec: 0,
         };
         this.state.beatmaps = [];
         this.state.activeBeatmapIndex = 0;
@@ -1457,6 +1506,7 @@ const Editor = {
             DOM.editor.bpmInput.value = this.state.bpm;
             this.state.previewSeekSec = this.state.song.startOffsetSec || 0;
             DOM.editor.startTimeInput.value = this.state.previewSeekSec;
+            if (DOM.editor.timingStartInput) DOM.editor.timingStartInput.value = this.state.song.timingStartSec || 0;
             DOM.editor.chartFilenameInput.value = bm.difficultyLabel || '';
             if (bm.laneCount && DOM.editor.previewLanesSelector) {
                 DOM.editor.previewLanesSelector.value = bm.laneCount;
@@ -1496,6 +1546,8 @@ const Editor = {
             // startTimeOffset은 더 이상 비트맵별 독립값이 아니라 song.startOffsetSec의 미러다.
             // (저장 포맷/game.js 하위호환을 위해 필드 자체는 유지하되 항상 같은 값으로 채운다.)
             bm.startTimeOffset = this.state.song.startOffsetSec;
+            // timingStartSec도 같은 패턴 — song.timingStartSec의 미러일 뿐, 비트맵별 독립값이 아니다.
+            bm.timingStartSec = this.state.song.timingStartSec || 0;
             bm.notes = gameNotes.sort((a, b) => a.time - b.time);
             bm.triggers = this.state.triggers || [];
             if (bm.cloudChartId) bm._cloudDirty = true; // 이미 올라간 난이도면 다음 업로드 시 갱신이 필요함
@@ -1738,17 +1790,9 @@ const Editor = {
     placeNoteAtPlayhead(laneId) {
         if (!laneId) return;
         const playheadTop = parseFloat(DOM.editor.playhead.style.top) || 0;
-        const adjustedBeatHeight = this._getAdjustedBeatHeight();
-        const beatsPerSecond = this.state.bpm / 60;
-        const snapsPerBeat = this.state.snapDivision / 4;
-        const snapHeight = adjustedBeatHeight / snapsPerBeat;
-        const snapIndex = Math.round(playheadTop / snapHeight);
-        const snappedBeat = snapIndex / snapsPerBeat;
-        const absoluteTimeInMs = Math.round((snappedBeat / beatsPerSecond) * 1000);
-        // handleTimelineClick과 동일하게 오프셋(빨간선) 기준 상대시간으로 저장한다.
-        const offsetMs = Math.round((this.state.song.startOffsetSec || 0) * 1000);
-        const timeInMs = absoluteTimeInMs - offsetMs;
-        if (timeInMs < 0) return; // 시작 지점보다 앞에는 찍지 않음
+        // handleTimelineClick과 동일한 계산이라 중복을 없애고 공용 헬퍼를 재사용한다.
+        const timeInMs = this._yToSnappedRelativeTimeMs(playheadTop);
+        if (timeInMs < this._minAllowedRelativeTimeMs()) return; // 시작 지점/타이밍 시작보다 앞에는 찍지 않음
         this.placeSimpleNote(timeInMs, laneId);
     },
 

@@ -318,6 +318,9 @@ document.addEventListener('DOMContentLoaded', () => {
         DOM.editorSong.artistInput.addEventListener('input', (e) => EditorSong.onArtistInput(e.target.value));
         DOM.editorSong.previewStartInput.addEventListener('input', (e) => EditorSong.onPreviewStartInput(e.target.value));
         DOM.editorSong.startTimeInput.addEventListener('input', (e) => EditorSong.onStartTimeInput(e.target.value));
+        if (DOM.editorSong.timingStartInput) {
+            DOM.editorSong.timingStartInput.addEventListener('input', (e) => EditorSong.onTimingStartInput(e.target.value));
+        }
         DOM.editorSong.audioFileInput.addEventListener('change', (e) => EditorSong.handleAudioSelect(e.target.files[0]));
         DOM.editorSong.coverFileInput.addEventListener('change', (e) => EditorSong.handleCoverSelect(e.target.files[0]));
         DOM.editorSong.saveLocalBtn.addEventListener('click', () => EditorSong.saveLocal());
@@ -577,6 +580,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const seconds = Math.max(0, parseFloat(e.target.value) || 0);
             Editor.seekPreviewTo(seconds);
         });
+        if (DOM.editor.timingStartInput) {
+            DOM.editor.timingStartInput.addEventListener('input', (e) => {
+                Editor.setTimingStartSec(parseFloat(e.target.value) || 0);
+            });
+        }
         // 재생헤드는 왼쪽 시크 거터(#editor-seek-gutter)에서만 드래그로 잡을 수 있다.
         // (재생헤드 선 자체는 CSS에서 pointer-events:none으로 꺼서 노트 찍는 영역
         //  클릭을 가로채지 않도록 함 — editor.css 참고)

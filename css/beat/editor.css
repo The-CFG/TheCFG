@@ -168,6 +168,19 @@ body:not(.lane-color-mode) .editor-note.false {
     background-color: #fc8181;
 }
 
+/* 타이밍 시작 경계선 — 순수 표시용(드래그 불가), 재생헤드(빨간선)와 구분되도록 청록색.
+   timingStartSec이 0(제약 없음)이면 JS에서 display:none으로 숨긴다. */
+#editor-timing-start-marker {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background-color: #22d3ee;
+    pointer-events: none;
+    z-index: 11;
+    display: none;
+}
+
 /* 배경 레이어 (레인, 비트라인) */
 #editor-grid-container {
     position: absolute;

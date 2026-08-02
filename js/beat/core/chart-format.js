@@ -4,7 +4,8 @@
  * 로컬 파일로 저장/불러오는 차트의 포맷을 다룬다.
  *
  * v2 포맷 (신규): 노래 하나에 여러 난이도(비트맵)를 한 파일에 담을 수 있음
- *   { formatVersion: 2, songName, artist, beatmaps: [{ difficultyLabel, laneCount, bpm, startTimeOffset, notes, triggers }, ...] }
+ *   { formatVersion: 2, songName, artist, previewStartMs, startOffsetMs, timingStartMs,
+ *     beatmaps: [{ difficultyLabel, laneCount, bpm, startTimeOffset, timingStartSec, notes, triggers }, ...] }
  *
  * 구버전 포맷 (기존): 노래 하나 = 비트맵 하나, 최상위에 필드가 바로 있음
  *   { songName, bpm, startTimeOffset, laneCount, notes, triggers }
@@ -95,11 +96,13 @@ const ChartFormat = {
                 artist: raw.artist || null,
                 previewStartMs: raw.previewStartMs || 0,
                 startOffsetMs: raw.startOffsetMs || 0,
+                timingStartMs: raw.timingStartMs || 0,
                 beatmaps: raw.beatmaps.map(bm => ({
                     difficultyLabel: bm.difficultyLabel || '기본',
                     laneCount: bm.laneCount || 4,
                     bpm: bm.bpm || 120,
                     startTimeOffset: bm.startTimeOffset || 0,
+                    timingStartSec: bm.timingStartSec || 0,
                     notes: bm.notes || [],
                     triggers: bm.triggers || [],
                 })),
@@ -112,12 +115,14 @@ const ChartFormat = {
             artist: null,
             previewStartMs: 0,
             startOffsetMs: 0,
+            timingStartMs: 0,
             beatmaps: [
                 {
                     difficultyLabel: raw.difficultyLabel || '기본',
                     laneCount: raw.laneCount || 4,
                     bpm: raw.bpm || 120,
                     startTimeOffset: raw.startTimeOffset || 0,
+                    timingStartSec: 0,
                     notes: raw.notes || [],
                     triggers: raw.triggers || [],
                 },
@@ -137,11 +142,13 @@ const ChartFormat = {
             artist: (song && song.artist) || null,
             previewStartMs: Math.round(((song && song.previewStartSec) || 0) * 1000),
             startOffsetMs: Math.round(((song && song.startOffsetSec) || 0) * 1000),
+            timingStartMs: Math.round(((song && song.timingStartSec) || 0) * 1000),
             beatmaps: beatmaps.map(bm => ({
                 difficultyLabel: bm.difficultyLabel || '기본',
                 laneCount: bm.laneCount || 4,
                 bpm: bm.bpm,
                 startTimeOffset: bm.startTimeOffset,
+                timingStartSec: bm.timingStartSec || 0,
                 notes: bm.notes || [],
                 triggers: bm.triggers || [],
             })),

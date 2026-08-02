@@ -928,6 +928,11 @@
                             <input type="number" id="editor-song-start-time-input" min="0" step="0.1" value="0" placeholder="0" class="w-20 p-2 bg-gray-700 rounded text-sm">
                             <span class="text-xs text-gray-500 flex-1">실제 플레이 시 노래가 재생되기 시작하는 지점 (비워두면 처음부터)</span>
                         </div>
+                        <div class="flex items-center gap-2">
+                            <label for="editor-song-timing-start-input" class="text-sm w-auto flex-shrink-0 whitespace-nowrap">타이밍 시작(초)</label>
+                            <input type="number" id="editor-song-timing-start-input" min="0" step="0.1" value="0" placeholder="0" class="w-20 p-2 bg-gray-700 rounded text-sm">
+                            <span class="text-xs text-gray-500 flex-1">이 시각 이전에는 그리드/노트가 없음. 시작(초)과 별개 값 (비워두면 제약 없음)</span>
+                        </div>
                         <div class="flex gap-2 pt-1">
                             <button id="editor-song-save-local-btn" class="flex-1 py-2 px-3 bg-blue-600 hover:bg-blue-500 rounded text-sm">💾 로컬에 저장</button>
                             <label for="editor-song-load-local-input" class="flex-1 text-center cursor-pointer py-2 px-3 bg-gray-600 hover:bg-gray-500 rounded text-sm">📂 로컬 파일 불러오기</label>
@@ -968,6 +973,10 @@
                                 <div class="flex items-center space-x-2">
                                     <label for="editor-start-time" class="text-sm">미리보기 시작(초):</label>
                                     <input type="number" id="editor-start-time" value="0" min="0" title="이 비트맵 창 안에서만 쓰는 미리듣기 위치입니다. 종합 창의 '시작(초)'과는 별개입니다." class="w-20 p-1 bg-gray-700 rounded text-sm">
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <label for="editor-timing-start-input" class="text-sm">타이밍 시작(초):</label>
+                                    <input type="number" id="editor-timing-start-input" value="0" min="0" title="이 시각(절대) 이전에는 그리드/노트가 없습니다. '시작(초)'과는 별개 값입니다." class="w-20 p-1 bg-gray-700 rounded text-sm">
                                 </div>
                                 <div class="flex items-center space-x-2">
                                     <label for="editor-preview-lanes" class="text-sm">미리보기:</label>
@@ -1044,6 +1053,7 @@
                         <div id="editor-timeline">
                             <div id="editor-grid-container"></div>
                             <div id="editor-notes-container">
+                                <div id="editor-timing-start-marker"></div>
                                 <div id="editor-playhead"></div>
                             </div>
                         </div>

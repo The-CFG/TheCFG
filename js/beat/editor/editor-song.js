@@ -43,6 +43,9 @@ const EditorSong = {
         if (DOM.editorSong.startTimeInput) {
             DOM.editorSong.startTimeInput.value = song.startOffsetSec || 0;
         }
+        if (DOM.editorSong.timingStartInput) {
+            DOM.editorSong.timingStartInput.value = song.timingStartSec || 0;
+        }
         if (DOM.editorSong.titleHeading) {
             DOM.editorSong.titleHeading.textContent = song.title ? song.title : '종합 창';
         }
@@ -202,6 +205,13 @@ const EditorSong = {
         Editor.setStartOffsetSec(sec, { seekAudio: false });
     },
 
+    // "타이밍 시작(초)" — startOffsetSec과 완전히 독립된 값. 좌표 원점이 아니므로
+    // Editor.setStartOffsetSec()과 달리 note.time 보정이 필요 없다.
+    onTimingStartInput(value) {
+        const sec = Math.max(0, parseFloat(value) || 0);
+        Editor.setTimingStartSec(sec);
+    },
+
     // 오디오는 노래(song) 단위로 한 번만 고르면 모든 난이도가 공유해서 쓴다.
     handleAudioSelect(file) {
         if (!file) return;
@@ -266,6 +276,7 @@ const EditorSong = {
                 Editor.state.song.artist = normalized.artist || '';
                 Editor.state.song.previewStartSec = (normalized.previewStartMs || 0) / 1000;
                 Editor.state.song.startOffsetSec = (normalized.startOffsetMs || 0) / 1000;
+                Editor.state.song.timingStartSec = (normalized.timingStartMs || 0) / 1000;
                 Editor.state.beatmaps = normalized.beatmaps.map(bm => ({ ...bm, cloudChartId: null }));
                 Editor.state.activeBeatmapIndex = 0;
                 this.render();
