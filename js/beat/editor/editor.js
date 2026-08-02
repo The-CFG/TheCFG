@@ -25,6 +25,12 @@ const Editor = {
         previewAnimationId: null,
         previewStartTime: 0,
         previewLaneCount: 4,
+        // 비트맵 창 자체의 "미리보기 시작(초)" — 재생헤드 드래그/화살표 이동/이 필드 직접
+        // 입력, 이 셋만 이 값을 바꾼다. song.startOffsetSec(=종합 창의 "시작(초)")과는
+        // 완전히 별개의 값으로, 서로 절대 덮어쓰지 않는다. 비트맵 창을 새로 열 때
+        // 초기값만 song.startOffsetSec을 참고해서 채워준다(편의상 시작점 근처에서
+        // 미리듣기를 시작하도록) — 그 이후로는 독립적으로 움직인다.
+        previewSeekSec: 0,
         // 온라인 차트를 "편집"으로 불러온 경우, 그 차트의 메타 정보가 들어간다.
         // null이면 일반적인(신규) 차트 작업 상태. 업로드 버튼이 이 값에 따라
         // "신규 업로드" / "기존 차트 업데이트"를 자동으로 분기한다.
@@ -133,7 +139,8 @@ const Editor = {
             DOM.musicPlayer.load();
             DOM.editor.bpmInput.value = this.state.bpm;
             DOM.editor.snapSelector.value = this.state.snapDivision;
-            DOM.editor.startTimeInput.value = this.state.song.startOffsetSec;
+            this.state.previewSeekSec = this.state.song.startOffsetSec || 0;
+            DOM.editor.startTimeInput.value = this.state.previewSeekSec;
             DOM.editor.audioFileNameEl.textContent = '선택된 파일 없음';
             DOM.editor.chartFilenameInput.value = '';
 
@@ -276,8 +283,10 @@ const Editor = {
         DOM.editor.playBtn.textContent = "재생";
     },
 
-    // "미리보기 시작(초)"(=state.song.startOffsetSec)을 바꾼다. 재생헤드 드래그와
-    // 입력창 직접 수정 둘 다 이 함수를 통해서만 오프셋을 바꿔야 한다.
+    // "미리보기 시작(초)"(=state.song.startOffsetSec)을 바꾼다. 이제 이 값은 종합 창의
+    // "시작(초)" 입력창(EditorSong.onStartTimeInput)에서만 바꿔야 한다 — 비트맵 창의
+    // 재생헤드 드래그/화살표 이동은 더 이상 이 함수를 호출하지 않는다(순수 seek로 분리됨,
+    // seekPreviewTo() 참고).
     // note.time/trigger.time은 이 오프셋 기준 "상대시간"으로 저장되기 때문에, 오프셋만
     // 바꾸고 이 값들을 그대로 두면 이미 찍어놓은 모든 노트의 절대(실제) 위치가 오프셋이
     // 바뀐 만큼 그대로 밀려버린다 — 그러면 재생/미리보기 시작 시점(경과시간 0)이 항상
@@ -298,9 +307,7 @@ const Editor = {
             this._applyOffsetDeltaToOtherBeatmaps(deltaMs);
         }
         this.state.song.startOffsetSec = newOffsetSec;
-        DOM.editor.startTimeInput.value = newOffsetSec.toFixed(2);
         if (DOM.editorSong.startTimeInput) DOM.editorSong.startTimeInput.value = newOffsetSec.toFixed(2);
-        this._setPlayheadTop(this._secondsToY(newOffsetSec));
         if (seekAudio && DOM.musicPlayer.src) {
             DOM.musicPlayer.currentTime = newOffsetSec;
         }
@@ -331,10 +338,22 @@ const Editor = {
         });
     },
 
-    // clientY(화면 좌표)를 재생 위치(초)로 변환해 playhead/오디오를 갱신한다.
-    // 주의: 여기서 song.startOffsetSec(=노트 시간의 기준점이자 실제 게임 시작 지점)도 함께
-    // 옮겨진다 — setStartOffsetSec()이 오프셋 변화량만큼 note.time/trigger.time을 반대로
-    // 보정해주므로, 노트들의 절대 위치는 유지되면서 "시작 지점"만 재생헤드를 따라간다.
+    // 재생헤드를 seconds 위치로 옮기고, 비트맵 창 자체의 "미리보기 시작(초)"
+    // (state.previewSeekSec)과 오디오 미리듣기 위치를 갱신하는 순수 seek.
+    // song.startOffsetSec(=종합 창의 "시작(초)")은 절대 건드리지 않는다 — 그 값은
+    // 종합 창의 입력창(EditorSong.onStartTimeInput)에서만 바꿀 수 있다. 노트 위치
+    // 보정도 하지 않으므로 setDirty()도 호출하지 않는다.
+    seekPreviewTo(seconds) {
+        this.state.previewSeekSec = seconds;
+        DOM.editor.startTimeInput.value = seconds.toFixed(2);
+        this._setPlayheadTop(this._secondsToY(seconds));
+        if (DOM.musicPlayer.src) {
+            DOM.musicPlayer.currentTime = seconds;
+        }
+    },
+
+    // clientY(화면 좌표)를 재생 위치(초)로 변환해 playhead/오디오 미리듣기 위치만 갱신한다.
+    // (Phase: 재생헤드 드래그를 순수 seek로 분리 — song.startOffsetSec은 더 이상 바뀌지 않음)
     seekToClientY(clientY) {
         try {
             const container = DOM.editor.container;
@@ -348,7 +367,7 @@ const Editor = {
             }
             seconds = Math.max(0, seconds);
 
-            this.setStartOffsetSec(seconds);
+            this.seekPreviewTo(seconds);
         } catch (err) {
             Debugger.logError(err, 'Editor.seekToClientY');
         }
@@ -413,7 +432,7 @@ const Editor = {
             seconds = Math.max(0, seconds);
 
             this._pauseForSeek();
-            this.setStartOffsetSec(seconds);
+            this.seekPreviewTo(seconds);
             DOM.editor.container.scrollTop = newY - DOM.editor.container.clientHeight / 2;
         } catch (err) {
             Debugger.logError(err, 'Editor.movePlayheadBySnapStep');
@@ -1309,7 +1328,8 @@ const Editor = {
                 this.state.song.startOffsetSec = chartData.startTimeOffset;
             }
             DOM.editor.bpmInput.value = this.state.bpm;
-            DOM.editor.startTimeInput.value = this.state.song.startOffsetSec;
+            this.state.previewSeekSec = this.state.song.startOffsetSec || 0;
+            DOM.editor.startTimeInput.value = this.state.previewSeekSec;
             DOM.editor.audioFileNameEl.textContent = `요구 파일: ${chartData.songName || '없음'}`;
             if (loadedFileName) {
                 DOM.editor.chartFilenameInput.value = loadedFileName.split('.').slice(0, -1).join('.');
@@ -1321,7 +1341,7 @@ const Editor = {
             }
             this.drawTimeline();
             this.renderNotes();
-            this._setPlayheadTop(this._secondsToY(this.state.song.startOffsetSec));
+            this._setPlayheadTop(this._secondsToY(this.state.previewSeekSec));
             this.setDirty(false);
         } catch (err) {
             Debugger.logError(err, 'Editor.loadChart');
@@ -1435,7 +1455,8 @@ const Editor = {
             }
 
             DOM.editor.bpmInput.value = this.state.bpm;
-            DOM.editor.startTimeInput.value = this.state.song.startOffsetSec;
+            this.state.previewSeekSec = this.state.song.startOffsetSec || 0;
+            DOM.editor.startTimeInput.value = this.state.previewSeekSec;
             DOM.editor.chartFilenameInput.value = bm.difficultyLabel || '';
             if (bm.laneCount && DOM.editor.previewLanesSelector) {
                 DOM.editor.previewLanesSelector.value = bm.laneCount;
@@ -1443,7 +1464,7 @@ const Editor = {
             }
             this.drawTimeline();
             this.renderNotes();
-            this._setPlayheadTop(this._secondsToY(this.state.song.startOffsetSec));
+            this._setPlayheadTop(this._secondsToY(this.state.previewSeekSec));
             this.setDirty(false);
             // 이 순간부터 flat 상태(notes/triggers)가 beatmaps[index]를 대표한다 —
             // setStartOffsetSec()이 오프셋 변경분을 다른 난이도에 전파할 때 이 인덱스는 건너뛴다.

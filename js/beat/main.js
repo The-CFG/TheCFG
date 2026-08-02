@@ -570,9 +570,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         DOM.editor.audioFileInput.addEventListener('change', (e) => Editor.handleAudioLoad(e));
         setupFileDropzone(DOM.editor.audioDropzone, () => DOM.editor.audioFileInput);
+        // 비트맵 창 자체의 "미리보기 시작(초)" — song.startOffsetSec(종합 창의 "시작(초)")과는
+        // 완전히 별개의 값(state.previewSeekSec)이다. 여기서 숫자를 바꿔도 종합 창 값에는
+        // 전혀 영향이 없다.
         DOM.editor.startTimeInput.addEventListener('input', (e) => {
             const seconds = Math.max(0, parseFloat(e.target.value) || 0);
-            Editor.setStartOffsetSec(seconds);
+            Editor.seekPreviewTo(seconds);
         });
         // 재생헤드는 왼쪽 시크 거터(#editor-seek-gutter)에서만 드래그로 잡을 수 있다.
         // (재생헤드 선 자체는 CSS에서 pointer-events:none으로 꺼서 노트 찍는 영역
