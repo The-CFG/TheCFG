@@ -1032,6 +1032,18 @@ const Editor = {
             if (!this.state.isPlaying) {
                 this.state.playbackStartTime = performance.now() - (this.state.timeWhenPaused || 0);
                 if (isMusicLoaded) {
+                    // 차트/난이도를 방금 불러온 직후처럼 오디오의 currentTime이 아직
+                    // 플레이헤드 위치와 어긋나 있을 수 있으므로(항상 0에서 시작하는 버그의 원인),
+                    // 재생 직전에 플레이헤드 위치를 기준으로 currentTime을 맞춰준다.
+                    // (일시정지 후 재개인 경우 두 값이 이미 같으므로 별다른 점프 없이 이어서 재생된다.)
+                    const playheadTop = parseFloat(DOM.editor.playhead.style.top) || 0;
+                    let seekSeconds = this._yToSeconds(playheadTop);
+                    if (isFinite(DOM.musicPlayer.duration) && DOM.musicPlayer.duration > 0) {
+                        seekSeconds = Math.min(seekSeconds, DOM.musicPlayer.duration);
+                    }
+                    if (Math.abs(DOM.musicPlayer.currentTime - seekSeconds) > 0.02) {
+                        DOM.musicPlayer.currentTime = seekSeconds;
+                    }
                     try {
                         await DOM.musicPlayer.play();
                     } catch (playErr) {
