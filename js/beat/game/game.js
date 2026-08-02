@@ -75,7 +75,17 @@ const Game = {
             this.el.height = this.h * dpr;
             this.el.style.width  = `${this.w}px`;
             this.el.style.height = `${this.h}px`;
-            this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+            // 업스크롤: 모든 그리기 로직(다운스크롤 기준 좌표 계산)은 그대로 두고,
+            // 캔버스 좌표계 자체를 세로로 뒤집어서 렌더링만 반전시킨다.
+            // (판정선 Y는 항상 h - margin으로 계산되지만, 뒤집힌 좌표계에서는
+            //  화면상 위쪽에 그려지고, 노트는 아래에서 위로 올라오게 된다)
+            const isUpscroll = Appearance.settings.scrollDirection === 'up';
+            if (isUpscroll) {
+                this.ctx.setTransform(dpr, 0, 0, -dpr, 0, this.h * dpr);
+            } else {
+                this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            }
         },
 
         // 판정선 Y 좌표 (상단 기준)

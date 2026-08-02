@@ -42,6 +42,9 @@ const I18n = {
             'info': '정보',
             
             // 모양 설정
+            'note_direction': '노트 방향',
+            'scroll_down': '다운스크롤',
+            'scroll_up': '업스크롤',
             'note_shape': '노트 모양',
             'bar_shape': '막대형',
             'circle_shape': '원형',
@@ -147,6 +150,9 @@ const I18n = {
             'info': 'Information',
             
             // Appearance settings
+            'note_direction': 'Note Direction',
+            'scroll_down': 'Downscroll',
+            'scroll_up': 'Upscroll',
             'note_shape': 'Note Shape',
             'bar_shape': 'Bar',
             'circle_shape': 'Circle',

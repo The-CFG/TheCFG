@@ -1,5 +1,6 @@
 const Appearance = {
     settings: {
+        scrollDirection: 'down', // 'down' or 'up'
         noteShape: 'bar', // 'bar' or 'circle'
         colorMode: 'note-type', // 'note-type' or 'lane'
         colors: {
@@ -44,6 +45,7 @@ const Appearance = {
             // 초기 UI 반영
             this.applySettings();
             this.updateColorModeUI();
+            this.updateScrollDirectionUI();
             this.updatePresetSlotsUI();
             
             // 미리보기 요소가 있을 때만 업데이트
@@ -60,6 +62,18 @@ const Appearance = {
 
     setupEventListeners() {
         try {
+            // 노트 방향(스크롤) 선택
+            const scrollDirectionSelector = document.getElementById('scroll-direction-selector');
+            if (scrollDirectionSelector) {
+                scrollDirectionSelector.addEventListener('click', (e) => {
+                    if (e.target.tagName === 'BUTTON') {
+                        const direction = e.target.dataset.direction;
+                        this.settings.scrollDirection = direction;
+                        this.updateScrollDirectionUI();
+                    }
+                });
+            }
+
             // 노트 모양 선택
             const shapeSelector = document.getElementById('note-shape-selector');
             if (shapeSelector) {
@@ -299,8 +313,20 @@ const Appearance = {
             this.updateShapeUI();
             this.updateColorInputs();
             this.updateColorModeUI();
+            this.updateScrollDirectionUI();
         } catch (err) {
             this._logError(err, 'Appearance.applySettings');
+        }
+    },
+
+    updateScrollDirectionUI() {
+        try {
+            const buttons = document.querySelectorAll('#scroll-direction-selector button');
+            buttons.forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.direction === this.settings.scrollDirection);
+            });
+        } catch (err) {
+            this._logError(err, 'Appearance.updateScrollDirectionUI');
         }
     },
 
@@ -349,6 +375,7 @@ const Appearance = {
     resetSettings() {
         try {
             this.settings = {
+                scrollDirection: 'down',
                 noteShape: 'bar',
                 colorMode: 'note-type',
                 colors: {
@@ -371,6 +398,7 @@ const Appearance = {
             this.updateColorInputs();
             this.updateShapeUI();
             this.updateColorModeUI();
+            this.updateScrollDirectionUI();
             this.applySettings();
         } catch (err) {
             this._logError(err, 'Appearance.resetSettings');
