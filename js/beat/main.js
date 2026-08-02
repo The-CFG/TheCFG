@@ -128,7 +128,15 @@ const Debugger = {
 document.addEventListener('DOMContentLoaded', () => {
     let isListeningForKey = false;
     let currentBindingElement = null;
-    let tempKeyMappings = {};
+    let currentKeybindLanes = 4; // 환경설정에서 현재 편집 중인 레인 수 그룹
+    let tempKeyMappingsByLanes = {}; // { 4: {L2:'D', ...}, 5: {...}, ... } — 저장 전까지의 임시 편집본
+
+    // 레인 id -> 라벨 i18n 키 (조작 탭에서 각 키 상자 옆에 표시할 텍스트)
+    const KEYBIND_LABEL_I18N = {
+        L4: 'left_4', L3: 'left_3', L2: 'left_2', L1: 'left_1',
+        C1: 'center',
+        R1: 'right_1', R2: 'right_2', R3: 'right_3', R4: 'right_4'
+    };
 
     // ── Phase 3: 드래그앤드롭 파일 가져오기 ──────────────────────────────
     // dropzoneEl 영역(카드/패널 전체) 어디에 파일을 놓아도 인식한다.
@@ -530,11 +538,20 @@ document.addEventListener('DOMContentLoaded', () => {
             CloudAuth.saveVolumeSettings(Game.state.settings.musicVolume, Game.state.settings.sfxVolume);
         });
 
-        DOM.settings.controls.keybindBoxes.forEach(box => {
-            box.addEventListener('click', () => {
-                if (isListeningForKey) cancelKeyBinding();
-                startKeyBinding(box);
-            });
+        // 키 상자는 레인 수 그룹에 따라 동적으로 생성되므로 이벤트 위임으로 처리
+        DOM.settings.controls.rowsContainer.addEventListener('click', (e) => {
+            const box = e.target.closest('.keybind-box');
+            if (!box) return;
+            if (isListeningForKey) cancelKeyBinding();
+            startKeyBinding(box);
+        });
+
+        DOM.settings.controls.lanesSelector.addEventListener('click', (e) => {
+            if (e.target.tagName !== 'BUTTON') return;
+            if (isListeningForKey) cancelKeyBinding();
+            currentKeybindLanes = parseInt(e.target.dataset.lanes, 10);
+            updateKeybindLanesSelectorUI();
+            renderKeybindGroup(currentKeybindLanes);
         });
 
         DOM.settings.controls.saveBtn.addEventListener('click', () => saveKeyBindings());
@@ -588,13 +605,54 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function populateKeybindUI() {
-        const currentMappings = Game.state.settings.userKeyMappings || CONFIG.DEFAULT_KEYS;
-        tempKeyMappings = { ...currentMappings };
-        DOM.settings.controls.keybindBoxes.forEach(box => {
-            const keyId = box.dataset.keyId;
-            let keyName = tempKeyMappings[keyId] || '';
+        // 저장된(또는 기본) 매핑을 레인 수마다 복사해서 임시 편집본을 만든다.
+        const savedMappings = Game.state.settings.userKeyMappingsByLanes || {};
+        tempKeyMappingsByLanes = {};
+        CONFIG.VALID_LANES.forEach(laneCount => {
+            const base = savedMappings[laneCount] || CONFIG.getDefaultKeyMap(laneCount);
+            tempKeyMappingsByLanes[laneCount] = { ...base };
+        });
+
+        currentKeybindLanes = 4;
+        updateKeybindLanesSelectorUI();
+        renderKeybindGroup(currentKeybindLanes);
+    }
+
+    // 레인 수 선택 버튼의 active 상태를 currentKeybindLanes에 맞춰 갱신
+    function updateKeybindLanesSelectorUI() {
+        DOM.settings.controls.lanesSelector.querySelectorAll('button').forEach(btn => {
+            const laneCount = parseInt(btn.dataset.lanes, 10);
+            btn.classList.toggle('active', laneCount === currentKeybindLanes);
+        });
+    }
+
+    // 선택된 레인 수에 해당하는 키 상자 목록을 그린다
+    function renderKeybindGroup(laneCount) {
+        const keyOrder = CONFIG.LANE_KEY_MAPPING_ORDER[laneCount];
+        const mapping = tempKeyMappingsByLanes[laneCount] || CONFIG.getDefaultKeyMap(laneCount);
+        const rowsContainer = DOM.settings.controls.rowsContainer;
+        rowsContainer.innerHTML = '';
+
+        keyOrder.forEach(keyId => {
+            let keyName = mapping[keyId] || '';
             if (keyName === ' ') keyName = 'Space';
+
+            const row = document.createElement('div');
+            row.className = 'flex justify-between items-center p-2 rounded-lg hover:bg-gray-700';
+
+            const label = document.createElement('span');
+            const labelI18nKey = KEYBIND_LABEL_I18N[keyId];
+            label.setAttribute('data-i18n', labelI18nKey);
+            label.textContent = I18n.t(labelI18nKey);
+
+            const box = document.createElement('div');
+            box.className = 'keybind-box w-28 text-center';
+            box.dataset.keyId = keyId;
             box.textContent = keyName.replace('Semicolon', ';');
+
+            row.appendChild(label);
+            row.appendChild(box);
+            rowsContainer.appendChild(row);
         });
     }
 
@@ -616,7 +674,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (keyName === ' ') keyName = 'Space';
         if (e.code === 'Semicolon') keyName = 'Semicolon';
         const keyId = currentBindingElement.dataset.keyId;
-        tempKeyMappings[keyId] = keyName;
+        tempKeyMappingsByLanes[currentKeybindLanes][keyId] = keyName;
         currentBindingElement.textContent = keyName.replace('Semicolon', ';');
         currentBindingElement.classList.remove('listening');
         isListeningForKey = false;
@@ -627,7 +685,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function cancelKeyBinding() {
         if (!isListeningForKey) return;
         const keyId = currentBindingElement.dataset.keyId;
-        const originalMappings = Game.state.settings.userKeyMappings || CONFIG.DEFAULT_KEYS;
+        const savedMappings = Game.state.settings.userKeyMappingsByLanes || {};
+        const originalMappings = savedMappings[currentKeybindLanes] || CONFIG.getDefaultKeyMap(currentKeybindLanes);
         let originalKeyName = originalMappings[keyId] || '';
         if (originalKeyName === ' ') originalKeyName = 'Space';
         currentBindingElement.textContent = originalKeyName.replace('Semicolon', ';');
@@ -638,7 +697,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function saveKeyBindings() {
-        Game.state.settings.userKeyMappings = { ...tempKeyMappings };
+        const savedMappings = {};
+        CONFIG.VALID_LANES.forEach(laneCount => {
+            savedMappings[laneCount] = { ...tempKeyMappingsByLanes[laneCount] };
+        });
+        Game.state.settings.userKeyMappingsByLanes = savedMappings;
         UI.showMessage('settings', '키 설정이 저장되었습니다.');
         DOM.settings.controls.statusLabel.textContent = '저장되었습니다!';
         setTimeout(() => {

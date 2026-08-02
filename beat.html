@@ -486,43 +486,19 @@
                                 </div>
                             </div>
                             <div id="tab-content-controls" class="tab-content hidden space-y-4 text-gray-300">
-                                <div class="space-y-2 text-sm sm:text-base">
-                                    <div class="flex justify-between items-center p-2 rounded-lg hover:bg-gray-700">
-                                        <span data-i18n="left_4">좌측 4</span>
-                                        <div class="keybind-box w-28 text-center" data-key-id="L4"></div>
+                                <div>
+                                    <h3 class="text-sm font-semibold mb-2 text-white" data-i18n="keybind_select_lanes">레인 수 선택</h3>
+                                    <div class="flex space-x-2 btn-group" id="keybind-lanes-selector">
+                                        <button data-lanes="4" class="flex-1 py-2 px-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition text-sm">4</button>
+                                        <button data-lanes="5" class="flex-1 py-2 px-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition text-sm">5</button>
+                                        <button data-lanes="6" class="flex-1 py-2 px-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition text-sm">6</button>
+                                        <button data-lanes="7" class="flex-1 py-2 px-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition text-sm">7</button>
+                                        <button data-lanes="8" class="flex-1 py-2 px-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition text-sm">8</button>
                                     </div>
-                                    <div class="flex justify-between items-center p-2 rounded-lg hover:bg-gray-700">
-                                        <span data-i18n="left_3">좌측 3</span>
-                                        <div class="keybind-box w-28 text-center" data-key-id="L3"></div>
-                                    </div>
-                                    <div class="flex justify-between items-center p-2 rounded-lg hover:bg-gray-700">
-                                        <span data-i18n="left_2">좌측 2</span>
-                                        <div class="keybind-box w-28 text-center" data-key-id="L2"></div>
-                                    </div>
-                                    <div class="flex justify-between items-center p-2 rounded-lg hover:bg-gray-700">
-                                        <span data-i18n="left_1">좌측 1</span>
-                                        <div class="keybind-box w-28 text-center" data-key-id="L1"></div>
-                                    </div>
-                                    <div class="flex justify-between items-center p-2 rounded-lg hover:bg-gray-700">
-                                        <span data-i18n="center">중앙</span>
-                                        <div class="keybind-box w-28 text-center" data-key-id="C1"></div>
-                                    </div>
-                                    <div class="flex justify-between items-center p-2 rounded-lg hover:bg-gray-700">
-                                        <span data-i18n="right_1">우측 1</span>
-                                        <div class="keybind-box w-28 text-center" data-key-id="R1"></div>
-                                    </div>
-                                    <div class="flex justify-between items-center p-2 rounded-lg hover:bg-gray-700">
-                                        <span data-i18n="right_2">우측 2</span>
-                                        <div class="keybind-box w-28 text-center" data-key-id="R2"></div>
-                                    </div>
-                                    <div class="flex justify-between items-center p-2 rounded-lg hover:bg-gray-700">
-                                        <span data-i18n="right_3">우측 3</span>
-                                        <div class="keybind-box w-28 text-center" data-key-id="R3"></div>
-                                    </div>
-                                    <div class="flex justify-between items-center p-2 rounded-lg hover:bg-gray-700">
-                                        <span data-i18n="right_4">우측 4</span>
-                                        <div class="keybind-box w-28 text-center" data-key-id="R4"></div>
-                                    </div>
+                                    <p class="text-xs text-gray-500 mt-2" data-i18n="keybind_instruction">레인 수마다 키를 따로 지정할 수 있습니다. 위에서 레인 수를 고른 뒤 아래에서 키를 바꿔보세요.</p>
+                                </div>
+                                <div id="keybind-rows-container" class="space-y-2 text-sm sm:text-base">
+                                    <!-- populateKeybindUI()/renderKeybindGroup()가 채움 -->
                                 </div>
                                 <div class="pt-4 text-center">
                                     <p id="keybind-status-label" class="h-6 text-yellow-400"></p>

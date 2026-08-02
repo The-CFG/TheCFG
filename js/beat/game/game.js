@@ -19,7 +19,7 @@ const Game = {
             bpm: 120,
             startTimeOffset: 0, // 채보 박자 계산 기준점 (bpm/noteoffset 등 노트 타이밍용)
             songStartOffset: 0, // 실제 오디오 재생을 시작할 지점 (종합 창의 "시작(초)")
-            userKeyMappings: null,
+            userKeyMappingsByLanes: null,
             requiredSongName: null,
         },
         keyMapping: [],
@@ -862,7 +862,8 @@ const Game = {
         this.state.activeLanes = Array(this.state.settings.lanes).fill(false);
         const laneCount = this.state.settings.lanes;
         const keyOrder = CONFIG.LANE_KEY_MAPPING_ORDER[laneCount];
-        const activeKeyMap = this.state.settings.userKeyMappings || CONFIG.DEFAULT_KEYS;
+        const activeKeyMap = (this.state.settings.userKeyMappingsByLanes && this.state.settings.userKeyMappingsByLanes[laneCount])
+            || CONFIG.getDefaultKeyMap(laneCount);
         if (!keyOrder) {
             console.error(`Invalid number of lanes: ${laneCount}.`);
             UI.showScreen('menu');

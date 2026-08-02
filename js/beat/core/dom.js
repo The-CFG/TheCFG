@@ -141,7 +141,8 @@ const DOM = {
         sfxVolumeValue: document.getElementById('volume-value-sfx'),
         debugModeToggle: document.getElementById('debug-mode-toggle'),
         controls: {
-            keybindBoxes: document.querySelectorAll('.keybind-box'),
+            lanesSelector: document.getElementById('keybind-lanes-selector'),
+            rowsContainer: document.getElementById('keybind-rows-container'),
             statusLabel: document.getElementById('keybind-status-label'),
             saveBtn: document.getElementById('save-keybinds-btn')
         }

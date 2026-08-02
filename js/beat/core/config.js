@@ -39,12 +39,33 @@ const CONFIG = {
         R1: 'J', R2: 'K', R3: 'L', R4: 'Semicolon'
     },
 
+    // 레인 수별 독립 키 설정의 기본값. 인덱스는 왼쪽부터 순서(=LANE_KEY_MAPPING_ORDER와 동일 순서).
+    // 기존 DEFAULT_KEYS(레인 id 기준)와 값은 동일하게 유지해 기본 조작감이 바뀌지 않도록 함.
+    DEFAULT_KEYS_BY_LANES: {
+        4: ['D', 'F', 'J', 'K'],
+        5: ['D', 'F', 'Space', 'J', 'K'],
+        6: ['S', 'D', 'F', 'J', 'K', 'L'],
+        7: ['S', 'D', 'F', 'Space', 'J', 'K', 'L'],
+        8: ['A', 'S', 'D', 'F', 'J', 'K', 'L', 'Semicolon'],
+    },
+
     LANE_KEY_MAPPING_ORDER: {
         4: ['L2', 'L1', 'R1', 'R2'],
         5: ['L2', 'L1', 'C1', 'R1', 'R2'],
         6: ['L3', 'L2', 'L1', 'R1', 'R2', 'R3'],
         7: ['L3', 'L2', 'L1', 'C1', 'R1', 'R2', 'R3'],
         8: ['L4', 'L3', 'L2', 'L1', 'R1', 'R2', 'R3', 'R4'],
+    },
+
+    // 레인 수(laneCount)에 대한 기본 키 매핑(레인 id -> 키)을 생성해서 반환.
+    // LANE_KEY_MAPPING_ORDER와 DEFAULT_KEYS_BY_LANES를 순서대로 짝지어 만든다.
+    getDefaultKeyMap(laneCount) {
+        const order = this.LANE_KEY_MAPPING_ORDER[laneCount];
+        const keys = this.DEFAULT_KEYS_BY_LANES[laneCount];
+        if (!order || !keys) return { ...this.DEFAULT_KEYS };
+        const map = {};
+        order.forEach((id, i) => { map[id] = keys[i]; });
+        return map;
     },
 
     KEY_CODES: {
