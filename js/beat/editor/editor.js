@@ -217,12 +217,38 @@ const Editor = {
         DOM.editor.playBtn.textContent = "재생";
     },
 
+    // "미리보기 시작(초)"(=state.song.startOffsetSec)을 바꾼다. 재생헤드 드래그와
+    // 입력창 직접 수정 둘 다 이 함수를 통해서만 오프셋을 바꿔야 한다.
+    // note.time/trigger.time은 이 오프셋 기준 "상대시간"으로 저장되기 때문에, 오프셋만
+    // 바꾸고 이 값들을 그대로 두면 이미 찍어놓은 모든 노트의 절대(실제) 위치가 오프셋이
+    // 바뀐 만큼 그대로 밀려버린다 — 그러면 재생/미리보기 시작 시점(경과시간 0)이 항상
+    // 방금 옮긴 위치와 거의 일치하게 되어, 노트 낙하 계산은 매번 "차트 맨 처음" 노트들만
+    // 보여주는 것처럼 보이는 버그가 생긴다. 그래서 오프셋이 바뀐 만큼 note.time/trigger.time을
+    // 반대 방향으로 같이 보정해서, 노트들의 실제 위치(그리고 재생 시 낙하 타이밍)는 그대로
+    // 유지한 채 "게임이 시작되는 지점"만 옮겨지도록 한다.
+    setStartOffsetSec(newOffsetSec, { seekAudio = true } = {}) {
+        const oldOffsetSec = this.state.song.startOffsetSec || 0;
+        const deltaMs = Math.round((newOffsetSec - oldOffsetSec) * 1000);
+        if (deltaMs !== 0) {
+            this.state.notes.forEach(note => { note.time -= deltaMs; });
+            this.state.triggers.forEach(trigger => { trigger.time -= deltaMs; });
+        }
+        this.state.song.startOffsetSec = newOffsetSec;
+        DOM.editor.startTimeInput.value = newOffsetSec.toFixed(2);
+        this._setPlayheadTop(this._secondsToY(newOffsetSec));
+        if (seekAudio && DOM.musicPlayer.src) {
+            DOM.musicPlayer.currentTime = newOffsetSec;
+        }
+        if (deltaMs !== 0) {
+            this.setDirty(true);
+            this.renderNotes(); // 노트/트리거를 보정된 시간으로 다시 그림 (절대 위치는 그대로 보임)
+        }
+    },
+
     // clientY(화면 좌표)를 재생 위치(초)로 변환해 playhead/오디오를 갱신한다.
-    // 주의: 여기서는 song.startOffsetSec(=노트 시간의 기준점이자 실제 게임 시작 지점)를
-    // 건드리지 않는다. 이건 어디까지나 "미리듣기용 스크럽"이며, 이 값이 스크럽마다 바뀌면
-    // note.time(오프셋 기준 상대시간)의 기준이 같이 흔들려서 노트 미리보기가 항상 처음부터
-    // 다시 계산되는 버그가 생긴다. 실제 시작 오프셋은 "미리보기 시작(초)" 입력창을 직접
-    // 편집할 때만 바뀐다(main.js의 startTimeInput 리스너 참고).
+    // 주의: 여기서 song.startOffsetSec(=노트 시간의 기준점이자 실제 게임 시작 지점)도 함께
+    // 옮겨진다 — setStartOffsetSec()이 오프셋 변화량만큼 note.time/trigger.time을 반대로
+    // 보정해주므로, 노트들의 절대 위치는 유지되면서 "시작 지점"만 재생헤드를 따라간다.
     seekToClientY(clientY) {
         try {
             const container = DOM.editor.container;
@@ -236,11 +262,7 @@ const Editor = {
             }
             seconds = Math.max(0, seconds);
 
-            this._setPlayheadTop(this._secondsToY(seconds));
-
-            if (isMusicLoaded) {
-                DOM.musicPlayer.currentTime = seconds;
-            }
+            this.setStartOffsetSec(seconds);
         } catch (err) {
             Debugger.logError(err, 'Editor.seekToClientY');
         }
