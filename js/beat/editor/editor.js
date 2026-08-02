@@ -1710,11 +1710,13 @@ const Editor = {
         }
 
         if (e.ctrlKey || e.altKey || e.metaKey) return;
-
-        switch (e.key) {
+        
+        if (this.state.activeTool === 'create') {
+            switch (e.key) {
             case '1': e.preventDefault(); this.setSelectedNoteType('tap'); return;
             case '2': e.preventDefault(); this.setSelectedNoteType('long'); return;
             case '3': e.preventDefault(); this.setSelectedNoteType('false'); return;
+            }
         }
 
         // 도구 전환 단축키. Q/W/E/R/T/Y/U/I/O는 이미 EDITOR_KEY_LANE_MAP에서
@@ -1723,6 +1725,8 @@ const Editor = {
         switch (e.key.toLowerCase()) {
             case 'z': e.preventDefault(); this.setActiveTool('create'); return;
             case 'x': e.preventDefault(); this.setActiveTool('edit'); return;
+            case '-': e.preventDefault(); this.removeMeasure(); return;
+            case '=': e.preventDefault(); this.addMeasure(); return;
         }
 
         const laneId = CONFIG.EDITOR_KEY_LANE_MAP[e.code];
