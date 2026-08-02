@@ -216,6 +216,18 @@ const Editor = {
         return totalBeats / beatsPerSecond;
     },
 
+    // Y좌표(px)를 노트 배치와 같은 그리드(snapDivision) 기준으로 스냅한 뒤 절대 초로 변환한다.
+    // 재생헤드를 클릭/드래그로 옮길 때 가장 가까운 구분선에 딱 맞춰지도록 seekToClientY에서 쓴다.
+    _snapYToSeconds(y) {
+        const adjustedBeatHeight = this._getAdjustedBeatHeight();
+        const beatsPerMeasure = 4;
+        const measureHeight = beatsPerMeasure * adjustedBeatHeight;
+        const snapHeight = measureHeight / this.state.snapDivision;
+        const snapIndex = Math.round(Math.max(0, y) / snapHeight);
+        const snappedY = snapIndex * snapHeight;
+        return this._yToSeconds(snappedY);
+    },
+
     _secondsToY(seconds) {
         const adjustedBeatHeight = this._getAdjustedBeatHeight();
         const beatsPerSecond = this.state.bpm / 60;
@@ -328,7 +340,7 @@ const Editor = {
             const container = DOM.editor.container;
             const rect = container.getBoundingClientRect();
             const rawY = clientY - rect.top + container.scrollTop;
-            let seconds = this._yToSeconds(rawY);
+            let seconds = this._snapYToSeconds(rawY);
 
             const isMusicLoaded = !!DOM.musicPlayer.src;
             if (isMusicLoaded && isFinite(DOM.musicPlayer.duration) && DOM.musicPlayer.duration > 0) {
