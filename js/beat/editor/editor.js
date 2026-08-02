@@ -504,6 +504,13 @@ const Editor = {
             DOM.editor.timeline.style.height = `${timelineHeight}px`;
             DOM.editor.notesContainer.style.height = `${timelineHeight}px`;
             DOM.editor.gridContainer.style.height = `${timelineHeight}px`;
+            // 재생헤드 드래그용 좌측 거터(#editor-seek-gutter)는 flex 자식이라 명시적으로
+            // 높이를 지정해주지 않으면 컨테이너에 보이는 영역까지만 늘어나고, 그 아래로
+            // 스크롤되는 나머지 타임라인 구간에는 따라오지 않는다 (마디가 늘어도 첫 화면
+            // 높이에서 끊겨 보이는 원인). 타임라인과 항상 같은 높이로 맞춰준다.
+            if (DOM.editor.seekGutter) {
+                DOM.editor.seekGutter.style.height = `${timelineHeight}px`;
+            }
 
             const measureHeight = beatsPerMeasure * adjustedBeatHeight;
             const snapDivision = this.state.snapDivision; // 현재 선택된 분할 — 이 값까지의 선만 그린다
