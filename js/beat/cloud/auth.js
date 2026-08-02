@@ -26,6 +26,15 @@ const CloudAuth = {
         return await _supabase.auth.signInWithPassword({ email, password });
     },
 
+    // 디스코드 OAuth 로그인 — 리다이렉트 방식이라 이 호출 자체는 곧바로 페이지를 벗어난다.
+    // 인증 완료 후 redirectTo로 돌아오면 onAuthStateChange가 세션을 감지해 UI를 갱신한다.
+    async loginWithDiscord() {
+        return await _supabase.auth.signInWithOAuth({
+            provider: 'discord',
+            options: { redirectTo: location.href }
+        });
+    },
+
     async logout() {
         await _supabase.auth.signOut();
         _updateAuthStatus(null);
@@ -182,6 +191,20 @@ function setupAuthUI() {
     const switchBtn  = document.getElementById('auth-switch');
     const closeBtn   = document.getElementById('btn-auth-close');
     const accountBtns = document.querySelectorAll('.account-icon-btn');
+    const discordBtn = document.getElementById('btn-auth-discord');
+
+    discordBtn?.addEventListener('click', async () => {
+        discordBtn.disabled = true;
+        try {
+            const { error } = await CloudAuth.loginWithDiscord();
+            if (error) throw error;
+            // 성공 시 Discord로 리다이렉트되므로 이후 로직은 실행되지 않는다.
+        } catch (err) {
+            console.error('디스코드 로그인 오류:', err);
+            alert('디스코드 로그인 오류: ' + (err?.message || '알 수 없는 오류'));
+            discordBtn.disabled = false;
+        }
+    });
 
     // 계정 아이콘 클릭 — 로그인 상태면 팝오버 토글, 아니면 로그인 모달 열기
     accountBtns.forEach(btn => {
