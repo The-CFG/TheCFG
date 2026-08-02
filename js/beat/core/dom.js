@@ -74,6 +74,7 @@ const DOM = {
         
         // 상단 컨트롤
         audioFileInput: document.getElementById('audio-file-input-editor'),
+        audioDropzone: document.getElementById('editor-audio-dropzone'),
         audioFileNameEl: document.getElementById('audio-file-name-editor'),
         startTimeInput: document.getElementById('editor-start-time'),
         previewLanesSelector: document.getElementById('editor-preview-lanes'),
@@ -103,8 +104,10 @@ const DOM = {
         titleInput: document.getElementById('editor-song-title-input'),
         artistInput: document.getElementById('editor-song-artist-input'),
         audioFileInput: document.getElementById('editor-song-audio-input'),
+        audioDropzone: document.getElementById('editor-song-audio-dropzone'),
         audioNameEl: document.getElementById('editor-song-audio-name'),
         coverFileInput: document.getElementById('editor-song-cover-input'),
+        coverDropzone: document.getElementById('editor-song-cover-dropzone'),
         coverNameEl: document.getElementById('editor-song-cover-name'),
         previewStartInput: document.getElementById('editor-song-preview-start-input'),
         startTimeInput: document.getElementById('editor-song-start-time-input'),
@@ -112,6 +115,7 @@ const DOM = {
         addBeatmapBtn: document.getElementById('editor-song-add-beatmap-btn'),
         saveLocalBtn: document.getElementById('editor-song-save-local-btn'),
         loadLocalInput: document.getElementById('editor-song-load-local-input'),
+        loadLocalDropzone: document.getElementById('editor-song-load-local-dropzone'),
         titleHeading: document.getElementById('editor-song-title'),
         uploadCloudBtn: document.getElementById('editor-song-upload-cloud-btn'),
     },

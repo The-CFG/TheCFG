@@ -130,6 +130,42 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentBindingElement = null;
     let tempKeyMappings = {};
 
+    // ── Phase 3: 드래그앤드롭 파일 가져오기 ──────────────────────────────
+    // dropzoneEl에 파일을 드롭하면 inputEl.files에 반영하고 기존 'change'
+    // 리스너(handleAudioSelect 등)를 그대로 재사용하도록 change 이벤트를 발생시킨다.
+    function setupFileDropzone(dropzoneEl, inputEl) {
+        if (!dropzoneEl || !inputEl) return;
+
+        dropzoneEl.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzoneEl.classList.add('dropzone-active');
+        });
+
+        dropzoneEl.addEventListener('dragleave', (e) => {
+            // 자식 요소로 이동하며 발생하는 dragleave는 무시 (깜빡임 방지)
+            if (!dropzoneEl.contains(e.relatedTarget)) {
+                dropzoneEl.classList.remove('dropzone-active');
+            }
+        });
+
+        dropzoneEl.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzoneEl.classList.remove('dropzone-active');
+
+            const files = e.dataTransfer && e.dataTransfer.files;
+            if (!files || files.length === 0) return;
+
+            const dt = new DataTransfer();
+            dt.items.add(files[0]); // 입력당 파일 1개만 취급 (동시 드롭은 범위 밖)
+            inputEl.files = dt.files;
+            inputEl.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+    }
+
+    // 드롭존 밖(페이지 전체)에 파일을 놓으면 브라우저가 새 탭으로 여는 기본 동작 방지
+    window.addEventListener('dragover', (e) => e.preventDefault());
+    window.addEventListener('drop', (e) => e.preventDefault());
+
     function setupEventListeners() {
         window.addEventListener('keydown', (e) => {
             if (isListeningForKey) {
@@ -259,6 +295,9 @@ document.addEventListener('DOMContentLoaded', () => {
             EditorSong.loadLocalFile(e.target.files[0]);
             e.target.value = ''; // 같은 파일을 다시 골라도 change가 또 발생하도록
         });
+        setupFileDropzone(DOM.editorSong.audioDropzone, DOM.editorSong.audioFileInput);
+        setupFileDropzone(DOM.editorSong.coverDropzone, DOM.editorSong.coverFileInput);
+        setupFileDropzone(DOM.editorSong.loadLocalDropzone, DOM.editorSong.loadLocalInput);
 
         // ── Phase 3d: 종합 창 클라우드 업로드 ──
         DOM.editorSong.uploadCloudBtn.addEventListener('click', () => EditorSong.uploadToCloud());
@@ -483,6 +522,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         DOM.editor.audioFileInput.addEventListener('change', (e) => Editor.handleAudioLoad(e));
+        setupFileDropzone(DOM.editor.audioDropzone, DOM.editor.audioFileInput);
         DOM.editor.startTimeInput.addEventListener('input', (e) => {
             Editor.state.startTimeOffset = parseFloat(e.target.value) || 0;
             Editor.setDirty(true);

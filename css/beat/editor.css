@@ -294,3 +294,11 @@ body:not(.lane-color-mode) .editor-note.false {
     pointer-events: none;
     z-index: 5;
 }
+
+/* Phase 3: 드래그앤드롭 파일 가져오기 - 드롭존 시각 피드백 */
+.dropzone-active {
+    outline: 2px dashed #38b2ac;
+    outline-offset: 2px;
+    background-color: rgba(56, 178, 172, 0.12);
+    border-radius: 6px;
+}
