@@ -131,10 +131,13 @@ document.addEventListener('DOMContentLoaded', () => {
     let tempKeyMappings = {};
 
     // ── Phase 3: 드래그앤드롭 파일 가져오기 ──────────────────────────────
-    // dropzoneEl에 파일을 드롭하면 inputEl.files에 반영하고 기존 'change'
-    // 리스너(handleAudioSelect 등)를 그대로 재사용하도록 change 이벤트를 발생시킨다.
-    function setupFileDropzone(dropzoneEl, inputEl) {
-        if (!dropzoneEl || !inputEl) return;
+    // dropzoneEl 영역(카드/패널 전체) 어디에 파일을 놓아도 인식한다.
+    // resolveTarget(file)이 파일 종류에 맞는 <input type=file>을 돌려주면
+    // 그 input.files에 반영하고 기존 'change' 리스너(handleAudioSelect 등)를
+    // 그대로 재사용하도록 change 이벤트를 발생시킨다. 매칭되는 input이 없으면
+    // (지원하지 않는 파일 형식) unsupportedMessage를 보여준다.
+    function setupFileDropzone(dropzoneEl, resolveTarget, messageType, unsupportedMessage) {
+        if (!dropzoneEl) return;
 
         dropzoneEl.addEventListener('dragover', (e) => {
             e.preventDefault();
@@ -150,21 +153,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
         dropzoneEl.addEventListener('drop', (e) => {
             e.preventDefault();
+            // 이 존에서 처리했음을 표시 -> window의 전역 낙제 안내 메시지로 새지 않게 함
+            e.stopPropagation();
             dropzoneEl.classList.remove('dropzone-active');
 
             const files = e.dataTransfer && e.dataTransfer.files;
             if (!files || files.length === 0) return;
+            const file = files[0]; // 입력당 파일 1개만 취급 (동시 드롭은 범위 밖)
+
+            const inputEl = resolveTarget(file);
+            if (!inputEl) {
+                if (messageType) UI.showMessage(messageType, unsupportedMessage || '지원하지 않는 파일 형식입니다.');
+                return;
+            }
 
             const dt = new DataTransfer();
-            dt.items.add(files[0]); // 입력당 파일 1개만 취급 (동시 드롭은 범위 밖)
+            dt.items.add(file);
             inputEl.files = dt.files;
             inputEl.dispatchEvent(new Event('change', { bubbles: true }));
         });
     }
 
-    // 드롭존 밖(페이지 전체)에 파일을 놓으면 브라우저가 새 탭으로 여는 기본 동작 방지
+    // 드롭존 밖(페이지 전체)에 파일을 놓으면 브라우저가 새 탭으로 여는 기본 동작을 막고,
+    // 종합 창/에디터 화면에서 놓친 경우 어디에 놓아야 하는지 안내한다.
+    // (드롭존의 drop 핸들러는 stopPropagation()하므로, 여기 도달했다는 건
+    //  유효한 드롭존 밖에 놓았다는 뜻)
     window.addEventListener('dragover', (e) => e.preventDefault());
-    window.addEventListener('drop', (e) => e.preventDefault());
+    window.addEventListener('drop', (e) => {
+        e.preventDefault();
+        if (UI.currentScreen === 'editorSong') {
+            UI.showMessage('editorSong', '회색 카드 영역 안에 놓아주세요 (오디오/이미지/json 파일 자동 인식됩니다)');
+        } else if (UI.currentScreen === 'editor') {
+            UI.showMessage('editor', '🎵 음악 설정 박스 안에 놓아주세요');
+        }
+    });
 
     function setupEventListeners() {
         window.addEventListener('keydown', (e) => {
@@ -295,9 +317,17 @@ document.addEventListener('DOMContentLoaded', () => {
             EditorSong.loadLocalFile(e.target.files[0]);
             e.target.value = ''; // 같은 파일을 다시 골라도 change가 또 발생하도록
         });
-        setupFileDropzone(DOM.editorSong.audioDropzone, DOM.editorSong.audioFileInput);
-        setupFileDropzone(DOM.editorSong.coverDropzone, DOM.editorSong.coverFileInput);
-        setupFileDropzone(DOM.editorSong.loadLocalDropzone, DOM.editorSong.loadLocalInput);
+        setupFileDropzone(
+            DOM.editorSong.infoCardDropzone,
+            (file) => {
+                if (file.type.startsWith('audio/')) return DOM.editorSong.audioFileInput;
+                if (file.type.startsWith('image/')) return DOM.editorSong.coverFileInput;
+                if (file.name.toLowerCase().endsWith('.json')) return DOM.editorSong.loadLocalInput;
+                return null;
+            },
+            'editorSong',
+            '오디오/이미지/json(로컬 채보) 파일만 끌어다 놓을 수 있습니다.'
+        );
 
         // ── Phase 3d: 종합 창 클라우드 업로드 ──
         DOM.editorSong.uploadCloudBtn.addEventListener('click', () => EditorSong.uploadToCloud());
@@ -522,7 +552,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         DOM.editor.audioFileInput.addEventListener('change', (e) => Editor.handleAudioLoad(e));
-        setupFileDropzone(DOM.editor.audioDropzone, DOM.editor.audioFileInput);
+        setupFileDropzone(DOM.editor.audioDropzone, () => DOM.editor.audioFileInput);
         DOM.editor.startTimeInput.addEventListener('input', (e) => {
             Editor.state.startTimeOffset = parseFloat(e.target.value) || 0;
             Editor.setDirty(true);

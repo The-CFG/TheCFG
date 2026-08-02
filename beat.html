@@ -923,7 +923,7 @@
                         <button id="editor-song-back-btn" class="flex-shrink-0 py-2 px-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm">← 에디터 홈</button>
                     </div>
                     <div id="editor-song-message" class="hidden p-3 mb-4 text-center bg-red-500 rounded-lg"></div>
-                    <div class="p-4 bg-gray-800 rounded-lg mb-4 space-y-2">
+                    <div id="editor-song-info-card" class="p-4 bg-gray-800 rounded-lg mb-4 space-y-2">
                         <div class="flex items-center gap-2">
                             <label for="editor-song-title-input" class="text-sm w-12 flex-shrink-0">제목</label>
                             <input type="text" id="editor-song-title-input" placeholder="노래 제목" class="flex-1 p-2 bg-gray-700 rounded text-sm">
@@ -932,12 +932,12 @@
                             <label for="editor-song-artist-input" class="text-sm w-12 flex-shrink-0">가수</label>
                             <input type="text" id="editor-song-artist-input" placeholder="가수 (선택)" class="flex-1 p-2 bg-gray-700 rounded text-sm">
                         </div>
-                        <div id="editor-song-audio-dropzone" class="flex items-center gap-2">
+                        <div class="flex items-center gap-2">
                             <label for="editor-song-audio-input" class="cursor-pointer flex-shrink-0 py-2 px-3 bg-teal-600 hover:bg-teal-500 rounded text-sm">오디오 선택</label>
                             <input type="file" id="editor-song-audio-input" accept="audio/*" class="hidden">
                             <span id="editor-song-audio-name" class="text-xs text-gray-400 flex-1 truncate">선택된 파일 없음</span>
                         </div>
-                        <div id="editor-song-cover-dropzone" class="flex items-center gap-2">
+                        <div class="flex items-center gap-2">
                             <label for="editor-song-cover-input" class="cursor-pointer flex-shrink-0 py-2 px-3 bg-teal-600 hover:bg-teal-500 rounded text-sm">이미지 선택</label>
                             <input type="file" id="editor-song-cover-input" accept="image/*" class="hidden">
                             <span id="editor-song-cover-name" class="text-xs text-gray-400 flex-1 truncate">선택된 파일 없음 (선택)</span>
@@ -954,14 +954,13 @@
                         </div>
                         <div class="flex gap-2 pt-1">
                             <button id="editor-song-save-local-btn" class="flex-1 py-2 px-3 bg-blue-600 hover:bg-blue-500 rounded text-sm">💾 로컬에 저장</button>
-                            <div id="editor-song-load-local-dropzone" class="flex-1">
-                                <label for="editor-song-load-local-input" class="block text-center cursor-pointer py-2 px-3 bg-gray-600 hover:bg-gray-500 rounded text-sm">📂 로컬 파일 불러오기</label>
-                                <input type="file" id="editor-song-load-local-input" accept=".json" class="hidden">
-                            </div>
+                            <label for="editor-song-load-local-input" class="flex-1 text-center cursor-pointer py-2 px-3 bg-gray-600 hover:bg-gray-500 rounded text-sm">📂 로컬 파일 불러오기</label>
+                            <input type="file" id="editor-song-load-local-input" accept=".json" class="hidden">
                         </div>
                         <div class="flex gap-2">
                             <button id="editor-song-upload-cloud-btn" class="flex-1 py-2 px-3 bg-teal-700 hover:bg-teal-600 rounded text-sm font-semibold">☁ 클라우드에 업로드</button>
                         </div>
+                        <p class="text-[11px] text-gray-500 text-center pt-1">💡 이 카드 안 어디에든 오디오·이미지·채보(json) 파일을 끌어다 놓아도 자동으로 인식됩니다</p>
                     </div>
                     <h3 class="text-sm font-semibold text-gray-300 mb-2">난이도 목록</h3>
                     <div id="editor-song-beatmap-list" class="space-y-2 flex-1 overflow-y-auto">
@@ -983,9 +982,9 @@
                         <!-- 상단 컨트롤 영역 -->
                         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                             <!-- 1. 음악 설정 -->
-                            <div class="flex flex-col space-y-2 p-4 bg-gray-800 rounded-lg">
+                            <div id="editor-audio-dropzone" class="flex flex-col space-y-2 p-4 bg-gray-800 rounded-lg">
                                 <h3 class="text-xs font-bold uppercase tracking-wide text-gray-400 border-b border-gray-600 pb-2 mb-1">🎵 음악 설정</h3>
-                                <div id="editor-audio-dropzone" class="flex items-center space-x-2">
+                                <div class="flex items-center space-x-2">
                                     <label for="audio-file-input-editor" class="cursor-pointer text-center flex-1 py-2 px-3 bg-teal-600 hover:bg-teal-500 rounded transition text-sm">음악 불러오기</label>
                                     <input type="file" id="audio-file-input-editor" accept="*" class="hidden">
                                     <span id="audio-file-name-editor" class="text-xs text-gray-400 flex-1 truncate">선택된 파일 없음</span>
