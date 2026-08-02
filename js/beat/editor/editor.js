@@ -10,6 +10,10 @@ const Editor = {
         isPlaying: false,
         animationFrameId: null,
         selectedNoteType: 'tap',
+        // 타임라인 클릭이 어떤 동작을 할지 결정하는 도구. 'create'(생성) 아래에서
+        // selectedNoteType이 "무엇을 찍을지"를 고른다. 'edit'는 아직 옮길 기능이
+        // 없어 자리만 마련해둔 상태 — placeholder.
+        activeTool: 'create',
         isPlacingLongNote: false,
         longNoteStart: null,
         // 미리보기 관련 상태
@@ -105,6 +109,7 @@ const Editor = {
             this.state.snapDivision = 4;
             this.state.audioFileName = '';
             this.state.selectedNoteType = 'tap';
+            this.state.activeTool = 'create';
             this.state.totalMeasures = 100;
             this.state.cloudChart = null;
 
@@ -121,6 +126,7 @@ const Editor = {
             DOM.editor.chartFilenameInput.value = '';
 
             this.updateNoteTypeUI();
+            this.updateToolUI();
             this.drawTimeline();
             this.renderNotes();
             this.setDirty(false);
@@ -546,16 +552,28 @@ const Editor = {
             // 재생헤드(드래그로 재생 위치를 옮기는 핸들)를 클릭한 경우엔
             // 노트를 찍지 않는다 — handleSeekPointerDown이 별도로 처리함.
             if (e.target === DOM.editor.playhead || e.target.closest?.('#editor-playhead')) return;
-            this.setDirty(true);
-            this._saveStateForUndo();
 
+            // 기존 노트를 클릭한 경우: Delete 도구일 때만 삭제한다.
+            // Create/Edit 도구에서는 기존 노트를 클릭해도 아무 동작을 하지 않는다
+            // (Create는 중복 방지, Edit은 아직 옮길 기능이 없는 placeholder).
             if (e.target.classList.contains('editor-note')) {
+                if (this.state.activeTool !== 'delete') return;
+                this.setDirty(true);
+                this._saveStateForUndo();
                 const time = parseFloat(e.target.dataset.time);
                 const lane = e.target.dataset.lane;
                 this.state.notes = this.state.notes.filter(note => note.time !== time || note.lane !== lane);
                 this.renderNotes();
                 return;
             }
+
+            // 빈 칸 클릭: Create 도구일 때만 새 노트를 찍는다.
+            // Delete 도구로 빈 칸을 클릭하면 아무 동작도 하지 않고,
+            // Edit 도구는 아직 담을 기능이 없어 자리만 마련해둔 상태다.
+            if (this.state.activeTool !== 'create') return;
+
+            this.setDirty(true);
+            this._saveStateForUndo();
 
             const container = DOM.editor.container;
             // 레인(X)은 타임라인(gridContainer) 기준으로 계산해야 한다 — #editor-container에는
@@ -708,9 +726,12 @@ const Editor = {
                 triggerEl.dataset.time = trigger.time;
                 triggerEl.title = `BPM: ${trigger.bpm}, 하강: ${trigger.fallSpeed}, 전환: ${((trigger.transitionMs ?? 700) / 1000).toFixed(1)}s`;
                 
-                // 클릭 시 삭제
+                // 클릭 시 삭제 — Delete 도구가 활성화된 경우에만 동작한다.
+                // stopPropagation은 도구와 무관하게 유지해, 트리거 마커 위 클릭이
+                // 타임라인 클릭(노트 배치)으로 전파되지 않게 한다.
                 triggerEl.addEventListener('click', (e) => {
                     e.stopPropagation();
+                    if (this.state.activeTool !== 'delete') return;
                     this.state.triggers = this.state.triggers.filter(t => t.time !== trigger.time);
                     this.renderTriggers();
                     this.setDirty(true);
@@ -1182,6 +1203,36 @@ const Editor = {
         this.setSelectedNoteType(e.target.dataset.type);
     },
 
+    // ── 도구(Create/Edit/Delete) 선택 ─────────────────────────────────
+    updateToolUI() {
+        DOM.editor.toolSelector.querySelectorAll('button').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.tool === this.state.activeTool);
+        });
+        // Create 도구가 아닐 때는 노트타입 선택이 의미가 없으므로 비활성/dim 처리한다.
+        const isCreate = this.state.activeTool === 'create';
+        DOM.editor.noteTypeSelector.classList.toggle('tool-disabled', !isCreate);
+        DOM.editor.noteTypeSelector.querySelectorAll('button').forEach(btn => {
+            btn.disabled = !isCreate;
+        });
+    },
+
+    handleToolSelect(e) {
+        if (e.target.tagName !== 'BUTTON') return;
+        this.setActiveTool(e.target.dataset.tool);
+    },
+
+    setActiveTool(tool) {
+        this.state.activeTool = tool;
+        this.updateToolUI();
+        // 도구를 바꾸면 진행 중이던 롱노트 배치는 취소한다.
+        this.resetLongNotePlacement();
+        if (tool === 'edit') {
+            DOM.editor.statusLabel.textContent = '편집 도구는 준비 중입니다.';
+        } else if (DOM.editor.statusLabel) {
+            DOM.editor.statusLabel.textContent = '';
+        }
+    },
+
     handleSnapChange(e) {
         this.setDirty(true);
         this.state.snapDivision = parseInt(e.target.value) || 4;
@@ -1494,6 +1545,14 @@ const Editor = {
             case '1': e.preventDefault(); this.setSelectedNoteType('tap'); return;
             case '2': e.preventDefault(); this.setSelectedNoteType('long'); return;
             case '3': e.preventDefault(); this.setSelectedNoteType('false'); return;
+        }
+
+        // 도구 전환 단축키. Q/W/E/R/T/Y/U/I/O는 이미 EDITOR_KEY_LANE_MAP에서
+        // 레인 배치 키로 쓰이고 있어서 겹치지 않는 Z/X/C를 사용한다.
+        switch (e.key.toLowerCase()) {
+            case 'z': e.preventDefault(); this.setActiveTool('create'); return;
+            case 'x': e.preventDefault(); this.setActiveTool('edit'); return;
+            case 'c': e.preventDefault(); this.setActiveTool('delete'); return;
         }
 
         const laneId = CONFIG.EDITOR_KEY_LANE_MAP[e.code];

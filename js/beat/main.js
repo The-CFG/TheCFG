@@ -593,6 +593,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         DOM.editor.snapSelector.addEventListener('change', (e) => Editor.handleSnapChange(e));
         DOM.editor.noteTypeSelector.addEventListener('click', (e) => Editor.handleNoteTypeSelect(e));
+        DOM.editor.toolSelector.addEventListener('click', (e) => Editor.handleToolSelect(e));
         DOM.editor.addMeasureBtn.addEventListener('click', () => Editor.addMeasure());
         DOM.editor.removeMeasureBtn.addEventListener('click', () => Editor.removeMeasure());
         DOM.editor.playBtn.addEventListener('click', () => Editor.handlePlayPause());

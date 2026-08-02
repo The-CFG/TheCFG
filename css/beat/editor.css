@@ -91,6 +91,19 @@ body:not(.lane-color-mode) .editor-note.false {
     box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.5);
     transform: scale(1.05);
 }
+
+/* 도구(Create/Edit/Delete) 선택 버튼의 활성 상태 스타일 */
+#editor-tool-selector button.active {
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.5);
+    background-color: #4a5568;
+}
+
+/* Create 도구가 아닐 때는 노트타입 선택이 의미가 없으므로 비활성/dim 처리 */
+#editor-note-type-selector.tool-disabled button {
+    opacity: 0.35;
+    cursor: not-allowed;
+    pointer-events: none;
+}
 #editor-timeline {
     position: relative; /* 자식 레이어들의 위치 기준 */
     background-color: #1a202c;
