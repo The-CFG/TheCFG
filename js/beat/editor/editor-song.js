@@ -196,6 +196,10 @@ const EditorSong = {
     onStartTimeInput(value) {
         const sec = Math.max(0, parseFloat(value) || 0);
         Editor.state.song.startOffsetSec = sec;
+        // 모든 난이도가 이 값을 공유한다(비트맵별 startTimeOffset은 저장 시 이 값을 그대로
+        // 미러링함). 이미 클라우드에 올라간 난이도가 있다면, 열어보지 않아도 다음 업로드 때
+        // 채보 파일(chart_storage_path)의 startTimeOffset까지 같이 갱신되도록 dirty 표시한다.
+        Editor.state.beatmaps.forEach(bm => { if (bm.cloudChartId) bm._cloudDirty = true; });
     },
 
     // 오디오는 노래(song) 단위로 한 번만 고르면 모든 난이도가 공유해서 쓴다.

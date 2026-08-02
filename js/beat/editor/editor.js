@@ -6,7 +6,6 @@ const Editor = {
         snapDivision: 4,
         history: [],
         isDirty: false,
-        startTimeOffset: 0,
         audioFileName: '',
         isPlaying: false,
         animationFrameId: null,
@@ -104,7 +103,6 @@ const Editor = {
             this.state.triggers = [];
             this.state.bpm = 120;
             this.state.snapDivision = 4;
-            this.state.startTimeOffset = 0;
             this.state.audioFileName = '';
             this.state.selectedNoteType = 'tap';
             this.state.totalMeasures = 100;
@@ -118,7 +116,7 @@ const Editor = {
             DOM.musicPlayer.load();
             DOM.editor.bpmInput.value = this.state.bpm;
             DOM.editor.snapSelector.value = this.state.snapDivision;
-            DOM.editor.startTimeInput.value = this.state.startTimeOffset;
+            DOM.editor.startTimeInput.value = this.state.song.startOffsetSec;
             DOM.editor.audioFileNameEl.textContent = '선택된 파일 없음';
             DOM.editor.chartFilenameInput.value = '';
 
@@ -232,7 +230,7 @@ const Editor = {
             }
             seconds = Math.max(0, seconds);
 
-            this.state.startTimeOffset = seconds;
+            this.state.song.startOffsetSec = seconds;
             DOM.editor.startTimeInput.value = seconds.toFixed(2);
             this._setPlayheadTop(this._secondsToY(seconds));
 
@@ -545,10 +543,18 @@ const Editor = {
             const snapIndex = Math.round(y / snapHeight);
             const snappedY = snapIndex * snapHeight;
             
-            // 시간 계산 (비트 -> 밀리초)
+            // 시간 계산 (비트 -> 밀리초, 절대 타임라인 기준)
             const beatsPerSecond = this.state.bpm / 60;
             const totalBeats = snappedY / adjustedBeatHeight;
-            const timeInMs = Math.round((totalBeats / beatsPerSecond) * 1000);
+            const absoluteTimeInMs = Math.round((totalBeats / beatsPerSecond) * 1000);
+            // 게임(game.js)은 노트 시간을 "오프셋(빨간선) 이후 경과 시간" 기준으로 판정하므로
+            // 여기서도 절대 시간에서 오프셋을 빼서 저장해야 빨간선 기준으로 정확히 맞는다.
+            const offsetMs = Math.round((this.state.song.startOffsetSec || 0) * 1000);
+            const timeInMs = absoluteTimeInMs - offsetMs;
+            if (timeInMs < 0) {
+                UI.showMessage('editor', '시작 지점(빨간선)보다 앞에는 노트를 찍을 수 없습니다.');
+                return;
+            }
 
             switch (this.state.selectedNoteType) {
                 case 'long': this.placeLongNote(timeInMs, laneId); break;
@@ -642,6 +648,7 @@ const Editor = {
             if (container.clientWidth === 0) return;
             const adjustedBeatHeight = this._getAdjustedBeatHeight();
             const beatsPerSecond = this.state.bpm / 60;
+            const offsetSec = this.state.song.startOffsetSec || 0;
 
             this.state.triggers.forEach(trigger => {
                 const triggerEl = document.createElement('div');
@@ -654,7 +661,8 @@ const Editor = {
                 triggerEl.style.cursor = 'pointer';
                 triggerEl.style.zIndex = '5';
                 
-                const beats = (trigger.time / 1000) * beatsPerSecond;
+                // trigger.time도 오프셋 기준 상대시간 — 노트와 동일하게 오프셋을 더해 그린다.
+                const beats = ((trigger.time / 1000) + offsetSec) * beatsPerSecond;
                 const yPosition = beats * adjustedBeatHeight;
                 triggerEl.style.top = `${yPosition}px`;
                 
@@ -685,6 +693,7 @@ const Editor = {
             const adjustedBeatHeight = this._getAdjustedBeatHeight();
             const laneWidth = timelineWidth / CONFIG.EDITOR_LANE_IDS.length;
             const beatsPerSecond = this.state.bpm / 60;
+            const offsetSec = this.state.song.startOffsetSec || 0;
 
             this.state.notes.forEach(note => {
                 const noteEl = document.createElement('div');
@@ -696,8 +705,9 @@ const Editor = {
                 noteEl.style.width = `${laneWidth}px`;
                 noteEl.style.left = `${laneIndex * laneWidth}px`;
                 
-                // 그리드 라인과 정확히 일치하도록 위치 계산
-                const beats = (note.time / 1000) * beatsPerSecond;
+                // note.time은 오프셋(빨간선) 기준 상대시간이므로, 절대 타임라인 좌표로
+                // 그리려면 오프셋을 다시 더해줘야 그리드/빨간선과 정확히 일치한다.
+                const beats = ((note.time / 1000) + offsetSec) * beatsPerSecond;
                 const yPosition = beats * adjustedBeatHeight;
                 noteEl.style.top = `${yPosition}px`;
                 
@@ -743,7 +753,7 @@ const Editor = {
         return {
             songName: this.state.audioFileName || '',
             bpm: this.state.bpm,
-            startTimeOffset: this.state.startTimeOffset,
+            startTimeOffset: this.state.song.startOffsetSec,
             laneCount: parseInt(DOM.editor.previewLanesSelector?.value) || 4,
             notes: gameNotes.sort((a, b) => a.time - b.time),
             triggers: this.state.triggers || [],
@@ -772,7 +782,7 @@ const Editor = {
                 difficultyLabel: null,
                 laneCount,
                 bpm: this.state.bpm,
-                startTimeOffset: this.state.startTimeOffset,
+                startTimeOffset: this.state.song.startOffsetSec,
                 notes: gameNotes.sort((a, b) => a.time - b.time),
                 triggers: this.state.triggers || []
             });
@@ -815,9 +825,14 @@ const Editor = {
                 maxMeasure = Math.max(...this.state.notes.map(n => n.measure));
             }
             this.state.totalMeasures = maxMeasure + 5;
-            this.state.startTimeOffset = chartData.startTimeOffset || 0;
+            // 이 파일에 startTimeOffset이 있으면 마이그레이션 기본값으로 채택한다.
+            // 단, 종합 창에서 이미 song.startOffsetSec를 잡아둔 상태라면(예: 기존 노래에
+            // 새 난이도만 불러오는 경우) 덮어쓰지 않는다.
+            if (chartData.startTimeOffset) {
+                this.state.song.startOffsetSec = chartData.startTimeOffset;
+            }
             DOM.editor.bpmInput.value = this.state.bpm;
-            DOM.editor.startTimeInput.value = this.state.startTimeOffset;
+            DOM.editor.startTimeInput.value = this.state.song.startOffsetSec;
             DOM.editor.audioFileNameEl.textContent = `요구 파일: ${chartData.songName || '없음'}`;
             if (loadedFileName) {
                 DOM.editor.chartFilenameInput.value = loadedFileName.split('.').slice(0, -1).join('.');
@@ -829,7 +844,7 @@ const Editor = {
             }
             this.drawTimeline();
             this.renderNotes();
-            this._setPlayheadTop(this._secondsToY(this.state.startTimeOffset));
+            this._setPlayheadTop(this._secondsToY(this.state.song.startOffsetSec));
             this.setDirty(false);
         } catch (err) {
             Debugger.logError(err, 'Editor.loadChart');
@@ -907,7 +922,8 @@ const Editor = {
             this.state.activeBeatmapIndex = index;
             this.state.history = [];
             this.state.bpm = bm.bpm || 120;
-            this.state.startTimeOffset = bm.startTimeOffset || 0;
+            // startTimeOffset은 더 이상 비트맵별로 따로 읽지 않는다 — song.startOffsetSec가
+            // 유일한 소스이며 resetEditorState()에서도 건드리지 않으므로 여기 그대로 유지된다.
             this.state.triggers = (bm.triggers || []).slice().sort((a, b) => a.time - b.time);
             this.state.notes = (bm.notes || []).map(note => {
                 const measure = this._getMeasureFromTime(note.time);
@@ -932,7 +948,7 @@ const Editor = {
             }
 
             DOM.editor.bpmInput.value = this.state.bpm;
-            DOM.editor.startTimeInput.value = this.state.startTimeOffset;
+            DOM.editor.startTimeInput.value = this.state.song.startOffsetSec;
             DOM.editor.chartFilenameInput.value = bm.difficultyLabel || '';
             if (bm.laneCount && DOM.editor.previewLanesSelector) {
                 DOM.editor.previewLanesSelector.value = bm.laneCount;
@@ -940,7 +956,7 @@ const Editor = {
             }
             this.drawTimeline();
             this.renderNotes();
-            this._setPlayheadTop(this._secondsToY(this.state.startTimeOffset));
+            this._setPlayheadTop(this._secondsToY(this.state.song.startOffsetSec));
             this.setDirty(false);
         } catch (err) {
             Debugger.logError(err, 'Editor.loadBeatmapIntoFlatState');
@@ -966,7 +982,9 @@ const Editor = {
 
             bm.laneCount = parseInt(DOM.editor.previewLanesSelector?.value) || 4;
             bm.bpm = this.state.bpm;
-            bm.startTimeOffset = this.state.startTimeOffset;
+            // startTimeOffset은 더 이상 비트맵별 독립값이 아니라 song.startOffsetSec의 미러다.
+            // (저장 포맷/game.js 하위호환을 위해 필드 자체는 유지하되 항상 같은 값으로 채운다.)
+            bm.startTimeOffset = this.state.song.startOffsetSec;
             bm.notes = gameNotes.sort((a, b) => a.time - b.time);
             bm.triggers = this.state.triggers || [];
             if (bm.cloudChartId) bm._cloudDirty = true; // 이미 올라간 난이도면 다음 업로드 시 갱신이 필요함
@@ -1050,12 +1068,12 @@ const Editor = {
             this.state.timeWhenPaused = 0;
             if (DOM.musicPlayer.src) {
                 DOM.musicPlayer.pause();
-                DOM.musicPlayer.currentTime = this.state.startTimeOffset;
+                DOM.musicPlayer.currentTime = this.state.song.startOffsetSec;
             }
             DOM.editor.playBtn.textContent = "재생";
             const adjustedBeatHeight = this._getAdjustedBeatHeight();
             const beatsPerSecond = this.state.bpm / 60;
-            const offsetBeats = this.state.startTimeOffset * beatsPerSecond;
+            const offsetBeats = this.state.song.startOffsetSec * beatsPerSecond;
             const playheadPosition = offsetBeats * adjustedBeatHeight;
             this._setPlayheadTop(playheadPosition);
             DOM.editor.container.scrollTop = playheadPosition - DOM.editor.container.clientHeight / 2;
@@ -1080,7 +1098,7 @@ const Editor = {
             }
             const adjustedBeatHeight = this._getAdjustedBeatHeight();
             const beatsPerSecond = this.state.bpm / 60;
-            const beats = ((isMusicLoaded ? elapsedSeconds : this.state.startTimeOffset + elapsedSeconds)) * beatsPerSecond;
+            const beats = ((isMusicLoaded ? elapsedSeconds : this.state.song.startOffsetSec + elapsedSeconds)) * beatsPerSecond;
             const playheadPosition = beats * adjustedBeatHeight;
             this._setPlayheadTop(playheadPosition);
             DOM.editor.container.scrollTop = playheadPosition - DOM.editor.container.clientHeight / 2;
@@ -1142,7 +1160,11 @@ const Editor = {
         const snapHeight = adjustedBeatHeight / snapsPerBeat;
         const snapIndex = Math.round(playheadTop / snapHeight);
         const snappedBeat = snapIndex / snapsPerBeat;
-        const timeInMs = Math.round((snappedBeat / beatsPerSecond) * 1000);
+        const absoluteTimeInMs = Math.round((snappedBeat / beatsPerSecond) * 1000);
+        // handleTimelineClick과 동일하게 오프셋(빨간선) 기준 상대시간으로 저장한다.
+        const offsetMs = Math.round((this.state.song.startOffsetSec || 0) * 1000);
+        const timeInMs = absoluteTimeInMs - offsetMs;
+        if (timeInMs < 0) return; // 시작 지점보다 앞에는 찍지 않음
         this.placeSimpleNote(timeInMs, laneId);
     },
 
@@ -1265,19 +1287,19 @@ const Editor = {
             if (!this.state.isPlaying) return;
             
             // 경과 시간 계산
-            // note.time은 항상 "곡 시작(0)" 기준 절대 시간이므로, elapsedTime도 절대 시간이어야
-            // note.time과 그대로 비교할 수 있다. loop()(피아노롤 재생헤드)는 이미 이렇게
-            // 계산하고 있어서 시작 지점을 옮겨도 정상 작동했지만, 여기(게임 화면 미리보기)는
-            // currentTime에서 startTimeOffset을 한 번 더 빼는 바람에 매번 elapsedTime이 0부터
-            // 시작해버려 "항상 처음부터 재생되는 것처럼" 보였다.
+            // note.time은 이제 "오프셋(빨간선) 이후 경과 시간" 기준으로 저장된다(실제 게임의
+            // elapsedTime = 오디오위치 - 오프셋 과 동일한 기준). 그래서 여기서도 절대 오디오
+            // 위치에서 오프셋을 빼야 note.time과 같은 기준으로 비교할 수 있다.
             let elapsedTime;
             const isMusicLoaded = !!DOM.musicPlayer.src;
+            const offsetMs = (this.state.song.startOffsetSec || 0) * 1000;
             
             if (isMusicLoaded && !DOM.musicPlayer.paused) {
-                elapsedTime = DOM.musicPlayer.currentTime * 1000;
+                elapsedTime = Math.max(0, DOM.musicPlayer.currentTime * 1000 - offsetMs);
             } else {
-                const elapsedMs = performance.now() - this.state.playbackStartTime;
-                elapsedTime = (this.state.startTimeOffset * 1000) + elapsedMs;
+                // 오디오 없이 재생 중일 때의 가짜 시계는 재생 시작 시점(=오프셋 지점)을
+                // 기준으로 이미 0부터 세고 있으므로 그대로 쓴다.
+                elapsedTime = performance.now() - this.state.playbackStartTime;
             }
             
             const canvas = Game.canvas;
