@@ -241,11 +241,16 @@ const Editor = {
         return this._yToSeconds(snappedY);
     },
 
+    // 주의: 여기서는 (seconds - timingStartSec)를 0으로 clamp하지 않는다. 재생헤드/미리보기
+    // 시작(초)처럼 타이밍 시작(초)보다 앞선 시각도 있을 수 있는데, 여기서 0으로 눌러버리면
+    // 그 앞 구간 전체가 타이밍 시작 위치(y=0)에 눌러붙어 보인다 — 재생헤드가 실제 재생 위치
+    // 대신 타이밍 시작(초)에 멈춰있는 것처럼 보이는 버그의 원인이었다. 좌표가 음수(그리드
+    // 맨 위보다 위)가 되는 건 정상이며, 실제로 그 구간엔 그리드/노트가 없을 뿐이다.
     _secondsToY(seconds) {
         const adjustedBeatHeight = this._getAdjustedBeatHeight();
         const beatsPerSecond = this.state.bpm / 60;
         const timingStartSec = this.state.song.timingStartSec || 0;
-        return Math.max(0, seconds - timingStartSec) * beatsPerSecond * adjustedBeatHeight;
+        return (seconds - timingStartSec) * beatsPerSecond * adjustedBeatHeight;
     },
 
     // container 기준 스크롤 보정된 Y 좌표(px) → 그리드에 스냅되고 오프셋(빨간선) 기준으로
