@@ -205,8 +205,11 @@ const EditorSong = {
         Editor.setStartOffsetSec(sec, { seekAudio: false });
     },
 
-    // "타이밍 시작(초)" — startOffsetSec과 완전히 독립된 값. 좌표 원점이 아니므로
-    // Editor.setStartOffsetSec()과 달리 note.time 보정이 필요 없다.
+    // "타이밍 시작(초)" — startOffsetSec과 완전히 독립된 값. BPM 그리드/박자 계산은
+    // 항상 이 시각을 0박째로 삼아 세어나간다(Editor._yToSeconds/_secondsToY 참고).
+    // 다만 note.time/trigger.time 자체는 startOffsetSec 기준 상대시간으로 저장되는
+    // 별개의 좌표계라, Editor.setStartOffsetSec()과 달리 이 값이 바뀌어도 note.time을
+    // 보정할 필요는 없다 — 그리드가 다시 그려지는 것만으로 충분하다.
     onTimingStartInput(value) {
         const sec = Math.max(0, parseFloat(value) || 0);
         Editor.setTimingStartSec(sec);

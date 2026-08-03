@@ -218,11 +218,15 @@ const Editor = {
         DOM.editor.playhead.style.top = `${px}px`;
     },
 
+    // y=0을 "타이밍 시작(초)"에 고정한다 — 박자(BPM) 계산은 항상 이 지점을 0박째로 삼아
+    // 세어나간다. (기존에는 y=0이 노래 절대 0초였고 timingStartSec은 그 이전 구간을
+    // 가려주는 하한선 역할만 해서, 그리드의 "위상"이 timingStartSec만큼 어긋나 있었다.)
     _yToSeconds(y) {
         const adjustedBeatHeight = this._getAdjustedBeatHeight();
         const beatsPerSecond = this.state.bpm / 60;
+        const timingStartSec = this.state.song.timingStartSec || 0;
         const totalBeats = Math.max(0, y) / adjustedBeatHeight;
-        return totalBeats / beatsPerSecond;
+        return timingStartSec + (totalBeats / beatsPerSecond);
     },
 
     // Y좌표(px)를 노트 배치와 같은 그리드(snapDivision) 기준으로 스냅한 뒤 절대 초로 변환한다.
@@ -240,7 +244,8 @@ const Editor = {
     _secondsToY(seconds) {
         const adjustedBeatHeight = this._getAdjustedBeatHeight();
         const beatsPerSecond = this.state.bpm / 60;
-        return Math.max(0, seconds) * beatsPerSecond * adjustedBeatHeight;
+        const timingStartSec = this.state.song.timingStartSec || 0;
+        return Math.max(0, seconds - timingStartSec) * beatsPerSecond * adjustedBeatHeight;
     },
 
     // container 기준 스크롤 보정된 Y 좌표(px) → 그리드에 스냅되고 오프셋(빨간선) 기준으로
@@ -253,9 +258,7 @@ const Editor = {
         const snapHeight = measureHeight / this.state.snapDivision;
         const snapIndex = Math.round(y / snapHeight);
         const snappedY = snapIndex * snapHeight;
-        const beatsPerSecond = this.state.bpm / 60;
-        const totalBeats = snappedY / adjustedBeatHeight;
-        const absoluteTimeInMs = Math.round((totalBeats / beatsPerSecond) * 1000);
+        const absoluteTimeInMs = Math.round(this._yToSeconds(snappedY) * 1000);
         const offsetMs = Math.round((this.state.song.startOffsetSec || 0) * 1000);
         return absoluteTimeInMs - offsetMs; // 0 미만일 수 있음 — clamp/경고는 호출부에서 처리
     },
@@ -322,8 +325,10 @@ const Editor = {
         this.drawGrid();
     },
 
-    // "타이밍 시작(초)"(=state.song.timingStartSec)을 바꾼다. startOffsetSec과 달리
-    // 노트 시간의 좌표 원점이 아니므로 note.time을 보정할 필요가 없다 — 그리드와
+    // "타이밍 시작(초)"(=state.song.timingStartSec)을 바꾼다. BPM 그리드는 이 값을
+    // 0박째 기준으로 삼아 계산되므로(_yToSeconds/_secondsToY 참고) 그리드 위상이 바뀌지만,
+    // note.time/trigger.time은 startOffsetSec 기준의 별개 좌표계(상대시간)로 저장되어
+    // 있어서 startOffsetSec과 달리 그 값들 자체를 보정할 필요는 없다 — 그리드와
     // "노트 못 찍는 구간" 표시만 다시 그리면 된다.
     setTimingStartSec(newTimingStartSec) {
         const sec = Math.max(0, newTimingStartSec || 0);
@@ -531,7 +536,8 @@ const Editor = {
     _getMeasureFromTime(timeInMs) {
         const beatsPerMeasure = 4;
         const beatsPerSecond = this.state.bpm / 60;
-        const totalBeats = (timeInMs / 1000) * beatsPerSecond;
+        const timingStartSec = this.state.song.timingStartSec || 0;
+        const totalBeats = ((timeInMs / 1000) - timingStartSec) * beatsPerSecond;
         return Math.floor(totalBeats / beatsPerMeasure);
     },
 
@@ -1179,8 +1185,6 @@ const Editor = {
             DOM.editor.notesContainer.querySelectorAll('.editor-trigger').forEach(t => t.remove());
             const container = DOM.editor.container;
             if (container.clientWidth === 0) return;
-            const adjustedBeatHeight = this._getAdjustedBeatHeight();
-            const beatsPerSecond = this.state.bpm / 60;
             const offsetSec = this.state.song.startOffsetSec || 0;
 
             this.state.triggers.forEach(trigger => {
@@ -1195,8 +1199,7 @@ const Editor = {
                 triggerEl.style.zIndex = '5';
                 
                 // trigger.time도 오프셋 기준 상대시간 — 노트와 동일하게 오프셋을 더해 그린다.
-                const beats = ((trigger.time / 1000) + offsetSec) * beatsPerSecond;
-                const yPosition = beats * adjustedBeatHeight;
+                const yPosition = this._secondsToY((trigger.time / 1000) + offsetSec);
                 triggerEl.style.top = `${yPosition}px`;
                 
                 triggerEl.dataset.time = trigger.time;
@@ -1250,8 +1253,7 @@ const Editor = {
                 
                 // note.time은 오프셋(빨간선) 기준 상대시간이므로, 절대 타임라인 좌표로
                 // 그리려면 오프셋을 다시 더해줘야 그리드/빨간선과 정확히 일치한다.
-                const beats = ((note.time / 1000) + offsetSec) * beatsPerSecond;
-                const yPosition = beats * adjustedBeatHeight;
+                const yPosition = this._secondsToY((note.time / 1000) + offsetSec);
                 noteEl.style.top = `${yPosition}px`;
                 
                 if (note.duration) {
@@ -1646,10 +1648,7 @@ const Editor = {
                 DOM.musicPlayer.currentTime = this.state.song.startOffsetSec;
             }
             DOM.editor.playBtn.textContent = "재생";
-            const adjustedBeatHeight = this._getAdjustedBeatHeight();
-            const beatsPerSecond = this.state.bpm / 60;
-            const offsetBeats = this.state.song.startOffsetSec * beatsPerSecond;
-            const playheadPosition = offsetBeats * adjustedBeatHeight;
+            const playheadPosition = this._secondsToY(this.state.song.startOffsetSec || 0);
             this._setPlayheadTop(playheadPosition);
             DOM.editor.container.scrollTop = playheadPosition - DOM.editor.container.clientHeight / 2;
             
@@ -1671,10 +1670,8 @@ const Editor = {
                 const elapsedTimeMs = performance.now() - this.state.playbackStartTime;
                 elapsedSeconds = elapsedTimeMs / 1000;
             }
-            const adjustedBeatHeight = this._getAdjustedBeatHeight();
-            const beatsPerSecond = this.state.bpm / 60;
-            const beats = ((isMusicLoaded ? elapsedSeconds : this.state.song.startOffsetSec + elapsedSeconds)) * beatsPerSecond;
-            const playheadPosition = beats * adjustedBeatHeight;
+            const absoluteSeconds = isMusicLoaded ? elapsedSeconds : (this.state.song.startOffsetSec || 0) + elapsedSeconds;
+            const playheadPosition = this._secondsToY(absoluteSeconds);
             this._setPlayheadTop(playheadPosition);
             DOM.editor.container.scrollTop = playheadPosition - DOM.editor.container.clientHeight / 2;
         } catch (err) {
