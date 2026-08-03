@@ -590,6 +590,11 @@ document.addEventListener('DOMContentLoaded', () => {
         //  클릭을 가로채지 않도록 함 — editor.css 참고)
         DOM.editor.seekGutter.addEventListener('mousedown', (e) => Editor.handleSeekPointerDown(e));
         DOM.editor.seekGutter.addEventListener('touchstart', (e) => Editor.handleSeekPointerDown(e), { passive: false });
+        // 시크 거터를 포함한 편집 화면 전체에서 브라우저 기본 우클릭 메뉴를 막는다.
+        // notesContainer 안에서는 Editor.handleTimelineContextMenu가 노트 삭제까지 처리하며
+        // 거기서도 preventDefault를 하지만, 이 리스너가 먼저(캡처 없이 버블링 중 도달) 걸려도
+        // 중복 호출은 무해하다 — 거터처럼 notesContainer 바깥 영역까지 덮기 위한 용도다.
+        DOM.editor.container.addEventListener('contextmenu', (e) => e.preventDefault());
         DOM.editor.bpmInput.addEventListener('input', (e) => {
             Editor.state.bpm = parseInt(e.target.value) || 120;
             Editor.setDirty(true);

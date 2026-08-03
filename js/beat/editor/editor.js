@@ -785,11 +785,13 @@ const Editor = {
     },
 
     // 우클릭(컨텍스트 메뉴)으로 기존 노트를 삭제한다. 도구(생성/편집)와 무관하게 항상 동작한다.
+    // preventDefault는 조건과 무관하게 항상 먼저 호출한다 — 안 그러면 노트가 아닌 빈 칸을
+    // 우클릭하거나(삭제 대상 없음) 재생 중일 때(isPlaying) 브라우저 기본 컨텍스트 메뉴가 뜬다.
     handleTimelineContextMenu(e) {
         try {
+            e.preventDefault();
             if (this.state.isPlaying) return;
             if (!e.target.classList.contains('editor-note')) return;
-            e.preventDefault();
             this.setDirty(true);
             this._saveStateForUndo();
             const time = parseFloat(e.target.dataset.time);

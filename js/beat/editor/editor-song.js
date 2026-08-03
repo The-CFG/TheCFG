@@ -332,9 +332,10 @@ const EditorSong = {
             // 1) 노래 자체가 아직 클라우드에 없으면 먼저 생성
             const previewStartMs = Math.round((Editor.state.song.previewStartSec || 0) * 1000);
             const startOffsetMs = Math.round((Editor.state.song.startOffsetSec || 0) * 1000);
+            const timingStartMs = Math.round((Editor.state.song.timingStartSec || 0) * 1000);
             if (!Editor.state.song.cloudSongId) {
                 const { data, error } = await CloudCharts.uploadSong(
-                    { title: Editor.state.song.title, artist: Editor.state.song.artist, preview_start_ms: previewStartMs, start_offset_ms: startOffsetMs },
+                    { title: Editor.state.song.title, artist: Editor.state.song.artist, preview_start_ms: previewStartMs, start_offset_ms: startOffsetMs, timing_start_ms: timingStartMs },
                     Editor.state.song.audioFileObject,
                     Editor.state.song.coverFileObject
                 );
@@ -344,12 +345,13 @@ const EditorSong = {
                 }
                 Editor.state.song.cloudSongId = data.id;
             } else {
-                // 이미 클라우드에 있는 노래면 제목/가수/미리듣기 시작 시각/시작(초)/커버 이미지(고른 경우)만 갱신해준다.
+                // 이미 클라우드에 있는 노래면 제목/가수/미리듣기 시작 시각/시작(초)/타이밍 시작(초)/커버 이미지(고른 경우)만 갱신해준다.
                 const { error: metaErr } = await CloudCharts.updateSongMeta(Editor.state.song.cloudSongId, {
                     title: Editor.state.song.title,
                     artist: Editor.state.song.artist,
                     preview_start_ms: previewStartMs,
                     start_offset_ms: startOffsetMs,
+                    timing_start_ms: timingStartMs,
                 }, Editor.state.song.coverFileObject);
                 if (metaErr) {
                     UI.showMessage('editorSong', `노래 정보 갱신 실패: ${metaErr.message}`);

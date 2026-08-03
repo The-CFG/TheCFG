@@ -88,6 +88,7 @@ const EditorHome = {
         Editor.state.song.cloudSongId = data.song.id;
         Editor.state.song.previewStartSec = (data.song.preview_start_ms || 0) / 1000;
         Editor.state.song.startOffsetSec = (data.song.start_offset_ms || 0) / 1000;
+        Editor.state.song.timingStartSec = (data.song.timing_start_ms || 0) / 1000;
         // 오디오는 URL로 자동 로드하지 않고 사용자가 다시 선택하게 한다 (기존 CloudLoadModal과 동일 정책).
         Editor.state.song.audioFileObject = null;
         Editor.state.song.audioFileName = '';

@@ -218,7 +218,7 @@ const CloudCharts = {
     // ════════════════════════════════════════════════════════════════════════
 
     // ── 노래 업로드 (신규 beat_songs 행 + 오디오 [+ 커버 이미지]) ────────────
-    // meta: { title, artist, preview_start_ms, start_offset_ms }, audioFile: File 객체 (필수),
+    // meta: { title, artist, preview_start_ms, start_offset_ms, timing_start_ms }, audioFile: File 객체 (필수),
     // coverFile: File 객체 (선택 — 노래 선택~결과 화면 배경으로 쓰임)
     async uploadSong(meta, audioFile, coverFile) {
         const user = await CloudAuth.getUser();
@@ -256,6 +256,7 @@ const CloudCharts = {
                 artist: meta.artist || null,
                 preview_start_ms: meta.preview_start_ms || 0,
                 start_offset_ms: meta.start_offset_ms || 0,
+                timing_start_ms: meta.timing_start_ms || 0,
                 audio_storage_path: audioPath,
                 audio_mime: audioFile.type || 'audio/mpeg',
                 cover_storage_path: coverPath,
@@ -274,7 +275,7 @@ const CloudCharts = {
     },
 
     // ── 이미 클라우드에 있는 노래의 메타(제목/가수/미리듣기 시각/시작(초)) [+ 커버 이미지] 갱신 ───
-    // meta: { title, artist, preview_start_ms, start_offset_ms } — 오디오/난이도는 건드리지 않는다.
+    // meta: { title, artist, preview_start_ms, start_offset_ms, timing_start_ms } — 오디오/난이도는 건드리지 않는다.
     // coverFile: File 객체 (선택 — 넘기면 새 커버로 교체, 안 넘기면 기존 커버 유지)
     async updateSongMeta(songId, meta, coverFile) {
         const user = await CloudAuth.getUser();
@@ -285,6 +286,7 @@ const CloudCharts = {
             artist: meta.artist || null,
             preview_start_ms: meta.preview_start_ms || 0,
             start_offset_ms: meta.start_offset_ms || 0,
+            timing_start_ms: meta.timing_start_ms || 0,
         };
 
         if (coverFile) {
