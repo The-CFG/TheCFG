@@ -1319,6 +1319,7 @@ const Editor = {
             songName: this.state.audioFileName || '',
             bpm: this.state.bpm,
             startTimeOffset: this.state.song.startOffsetSec,
+            fallSpeed: parseFloat(DOM.editor.noteFallSpeedInput?.value) || CONFIG.EDITOR_DEFAULT_SETTINGS.fallSpeed,
             laneCount: parseInt(DOM.editor.previewLanesSelector?.value) || 4,
             notes: gameNotes.sort((a, b) => a.time - b.time),
             triggers: this.state.triggers || [],
@@ -1348,6 +1349,7 @@ const Editor = {
                 laneCount,
                 bpm: this.state.bpm,
                 startTimeOffset: this.state.song.startOffsetSec,
+                fallSpeed: parseFloat(DOM.editor.noteFallSpeedInput?.value) || CONFIG.EDITOR_DEFAULT_SETTINGS.fallSpeed,
                 notes: gameNotes.sort((a, b) => a.time - b.time),
                 triggers: this.state.triggers || []
             });
@@ -1397,6 +1399,11 @@ const Editor = {
                 this.state.song.startOffsetSec = chartData.startTimeOffset;
             }
             DOM.editor.bpmInput.value = this.state.bpm;
+            if (DOM.editor.noteFallSpeedInput) {
+                DOM.editor.noteFallSpeedInput.value = (typeof chartData.fallSpeed === 'number' && chartData.fallSpeed > 0)
+                    ? chartData.fallSpeed
+                    : CONFIG.EDITOR_DEFAULT_SETTINGS.fallSpeed;
+            }
             this.state.previewSeekSec = this.state.song.startOffsetSec || 0;
             DOM.editor.startTimeInput.value = this.state.previewSeekSec;
             if (DOM.editor.timingStartInput) DOM.editor.timingStartInput.value = this.state.song.timingStartSec || 0;
@@ -1429,6 +1436,7 @@ const Editor = {
             laneCount: 4,
             bpm: CONFIG.EDITOR_DEFAULT_SETTINGS.bpm,
             startTimeOffset: 0,
+            fallSpeed: CONFIG.EDITOR_DEFAULT_SETTINGS.fallSpeed,
             notes: [],
             triggers: [],
             cloudChartId: null,
@@ -1526,6 +1534,11 @@ const Editor = {
             }
 
             DOM.editor.bpmInput.value = this.state.bpm;
+            if (DOM.editor.noteFallSpeedInput) {
+                DOM.editor.noteFallSpeedInput.value = (typeof bm.fallSpeed === 'number' && bm.fallSpeed > 0)
+                    ? bm.fallSpeed
+                    : CONFIG.EDITOR_DEFAULT_SETTINGS.fallSpeed;
+            }
             this.state.previewSeekSec = this.state.song.startOffsetSec || 0;
             DOM.editor.startTimeInput.value = this.state.previewSeekSec;
             if (DOM.editor.timingStartInput) DOM.editor.timingStartInput.value = this.state.song.timingStartSec || 0;
@@ -1565,6 +1578,7 @@ const Editor = {
 
             bm.laneCount = parseInt(DOM.editor.previewLanesSelector?.value) || 4;
             bm.bpm = this.state.bpm;
+            bm.fallSpeed = parseFloat(DOM.editor.noteFallSpeedInput?.value) || CONFIG.EDITOR_DEFAULT_SETTINGS.fallSpeed;
             // startTimeOffset은 더 이상 비트맵별 독립값이 아니라 song.startOffsetSec의 미러다.
             // (저장 포맷/game.js 하위호환을 위해 필드 자체는 유지하되 항상 같은 값으로 채운다.)
             bm.startTimeOffset = this.state.song.startOffsetSec;

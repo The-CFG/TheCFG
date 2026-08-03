@@ -366,6 +366,7 @@ const EditorSong = {
                 const chartData = {
                     bpm: bm.bpm,
                     startTimeOffset: bm.startTimeOffset,
+                    fallSpeed: bm.fallSpeed,
                     laneCount: bm.laneCount,
                     notes: bm.notes || [],
                     triggers: bm.triggers || [],
@@ -399,6 +400,7 @@ const EditorSong = {
                     const chartData = bm._loaded === false ? null : {
                         bpm: bm.bpm,
                         startTimeOffset: bm.startTimeOffset,
+                        fallSpeed: bm.fallSpeed,
                         laneCount: bm.laneCount,
                         notes: bm.notes || [],
                         triggers: bm.triggers || [],

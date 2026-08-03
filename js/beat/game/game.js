@@ -1024,8 +1024,12 @@ const Game = {
             this.state.settings.songStartOffset = 0;
             const chartBPM = chartData.bpm || 120;
             this.state.settings.bpm = chartBPM;
-            const calculatedSpeed = Math.round(chartBPM / 20);
-            this.state.settings.noteSpeed = Math.max(1, Math.min(20, calculatedSpeed));
+            // 차트에 저장된 기본 하강 속도(에디터에서 설정)가 있으면 그것을 쓰고,
+            // 없으면(구버전 차트 등) 기존처럼 BPM에서 계산한 값으로 대체한다.
+            const speedSource = (typeof chartData.fallSpeed === 'number' && chartData.fallSpeed > 0)
+                ? chartData.fallSpeed
+                : Math.round(chartBPM / 20);
+            this.state.settings.noteSpeed = Math.max(1, Math.min(20, speedSource));
 
             // 트리거(구간별 BPM/하강 속도 변경) 로드 — 시간순 정렬 보장
             this.state.triggers = Array.isArray(chartData.triggers)

@@ -36,6 +36,8 @@ const ChartFormat = {
                     laneCount: bm.laneCount || 4,
                     bpm: bm.bpm || 120,
                     startTimeOffset: bm.startTimeOffset || 0,
+                    // 저장된 값이 없는(구 차트) 경우 null → game.js/editor.js에서 BPM 기반 계산값으로 대체.
+                    fallSpeed: typeof bm.fallSpeed === 'number' ? bm.fallSpeed : null,
                     notes: bm.notes || [],
                     triggers: bm.triggers || [],
                 },
@@ -52,6 +54,7 @@ const ChartFormat = {
                 laneCount: raw.laneCount || 4,
                 bpm: raw.bpm || 120,
                 startTimeOffset: raw.startTimeOffset || 0,
+                fallSpeed: typeof raw.fallSpeed === 'number' ? raw.fallSpeed : null,
                 notes: raw.notes || [],
                 triggers: raw.triggers || [],
             },
@@ -60,7 +63,7 @@ const ChartFormat = {
 
     // 에디터에서 지금 편집 중인 비트맵 하나를 v2 포맷으로 감싸서 저장용 객체를 만든다.
     // (여러 난이도를 한 파일에 같이 담아 저장하는 UI는 Phase 3에서 추가 예정 — 지금은 beatmaps 길이 항상 1)
-    wrap({ songName, artist, difficultyLabel, laneCount, bpm, startTimeOffset, notes, triggers }) {
+    wrap({ songName, artist, difficultyLabel, laneCount, bpm, startTimeOffset, fallSpeed, notes, triggers }) {
         return {
             formatVersion: this.CURRENT_VERSION,
             songName: songName || '',
@@ -71,6 +74,7 @@ const ChartFormat = {
                     laneCount: laneCount || 4,
                     bpm,
                     startTimeOffset,
+                    fallSpeed,
                     notes,
                     triggers,
                 },
@@ -102,6 +106,7 @@ const ChartFormat = {
                     laneCount: bm.laneCount || 4,
                     bpm: bm.bpm || 120,
                     startTimeOffset: bm.startTimeOffset || 0,
+                    fallSpeed: typeof bm.fallSpeed === 'number' ? bm.fallSpeed : null,
                     timingStartSec: bm.timingStartSec || 0,
                     notes: bm.notes || [],
                     triggers: bm.triggers || [],
@@ -122,6 +127,7 @@ const ChartFormat = {
                     laneCount: raw.laneCount || 4,
                     bpm: raw.bpm || 120,
                     startTimeOffset: raw.startTimeOffset || 0,
+                    fallSpeed: typeof raw.fallSpeed === 'number' ? raw.fallSpeed : null,
                     timingStartSec: 0,
                     notes: raw.notes || [],
                     triggers: raw.triggers || [],
@@ -148,6 +154,7 @@ const ChartFormat = {
                 laneCount: bm.laneCount || 4,
                 bpm: bm.bpm,
                 startTimeOffset: bm.startTimeOffset,
+                fallSpeed: typeof bm.fallSpeed === 'number' ? bm.fallSpeed : null,
                 timingStartSec: bm.timingStartSec || 0,
                 notes: bm.notes || [],
                 triggers: bm.triggers || [],

@@ -52,7 +52,10 @@ const SongPreview = {
         this._laneCount = laneCount;
         this._laneIdMapping = laneIds;
         this._baseBpm = (chartData && chartData.bpm) || 120;
-        this._baseNoteSpeed = Math.max(1, Math.min(20, Math.round(this._baseBpm / 20)));
+        const speedSource = (chartData && typeof chartData.fallSpeed === 'number' && chartData.fallSpeed > 0)
+            ? chartData.fallSpeed
+            : Math.round(this._baseBpm / 20);
+        this._baseNoteSpeed = Math.max(1, Math.min(20, speedSource));
         this._triggers = Array.isArray(chartData?.triggers)
             ? [...chartData.triggers].sort((a, b) => a.time - b.time)
             : [];
