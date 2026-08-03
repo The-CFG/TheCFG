@@ -25,6 +25,10 @@ const Editor = {
         previewAnimationId: null,
         previewStartTime: 0,
         previewLaneCount: 4,
+        // 오디오 파일이 없을 때(가짜 시계로 재생) previewSeekSec 위치에서 재생을
+        // 시작하기 위한 기준값(ms, startOffsetSec 기준 상대시간). 재생을 새로
+        // 시작할 때만 갱신되고, 일시정지 후 재개할 때는 그대로 유지된다.
+        playbackBaseMs: 0,
         // 비트맵 창 자체의 "미리보기 시작(초)" — 재생헤드 드래그/화살표 이동/이 필드 직접
         // 입력, 이 셋만 이 값을 바꾼다. song.startOffsetSec(=종합 창의 "시작(초)")과는
         // 완전히 별개의 값으로, 서로 절대 덮어쓰지 않는다. 비트맵 창을 새로 열 때
@@ -1596,6 +1600,12 @@ const Editor = {
             }
 
             if (!this.state.isPlaying) {
+                // timeWhenPaused가 0이면 일시정지 후 재개가 아니라 새로 재생을 시작하는
+                // 경우다 — 이때만 가짜 시계의 기준점을 지금 재생헤드(previewSeekSec) 위치로
+                // 다시 잡는다. 그렇지 않으면(재개) 기존 기준점을 그대로 써서 이어서 재생한다.
+                if (!this.state.timeWhenPaused) {
+                    this.state.playbackBaseMs = ((this.state.previewSeekSec || 0) - (this.state.song.startOffsetSec || 0)) * 1000;
+                }
                 this.state.playbackStartTime = performance.now() - (this.state.timeWhenPaused || 0);
                 if (isMusicLoaded) {
                     // 차트/난이도를 방금 불러온 직후처럼 오디오의 currentTime이 아직
@@ -1659,12 +1669,13 @@ const Editor = {
             
             this.state.playbackStartTime = 0;
             this.state.timeWhenPaused = 0;
+            this.state.playbackBaseMs = 0;
             if (DOM.musicPlayer.src) {
                 DOM.musicPlayer.pause();
-                DOM.musicPlayer.currentTime = this.state.song.startOffsetSec;
+                DOM.musicPlayer.currentTime = this.state.previewSeekSec || 0;
             }
             DOM.editor.playBtn.textContent = "재생";
-            const playheadPosition = this._secondsToY(this.state.song.startOffsetSec || 0);
+            const playheadPosition = this._secondsToY(this.state.previewSeekSec || 0);
             this._setPlayheadTop(playheadPosition);
             DOM.editor.container.scrollTop = playheadPosition - DOM.editor.container.clientHeight / 2;
             
@@ -1686,7 +1697,9 @@ const Editor = {
                 const elapsedTimeMs = performance.now() - this.state.playbackStartTime;
                 elapsedSeconds = elapsedTimeMs / 1000;
             }
-            const absoluteSeconds = isMusicLoaded ? elapsedSeconds : (this.state.song.startOffsetSec || 0) + elapsedSeconds;
+            const absoluteSeconds = isMusicLoaded
+                ? elapsedSeconds
+                : (this.state.song.startOffsetSec || 0) + (this.state.playbackBaseMs || 0) / 1000 + elapsedSeconds;
             const playheadPosition = this._secondsToY(absoluteSeconds);
             this._setPlayheadTop(playheadPosition);
             DOM.editor.container.scrollTop = playheadPosition - DOM.editor.container.clientHeight / 2;
@@ -1939,9 +1952,11 @@ const Editor = {
             if (isMusicLoaded && !DOM.musicPlayer.paused) {
                 elapsedTime = Math.max(0, DOM.musicPlayer.currentTime * 1000 - offsetMs);
             } else {
-                // 오디오 없이 재생 중일 때의 가짜 시계는 재생 시작 시점(=오프셋 지점)을
-                // 기준으로 이미 0부터 세고 있으므로 그대로 쓴다.
-                elapsedTime = performance.now() - this.state.playbackStartTime;
+                // 오디오 없이 재생 중일 때의 가짜 시계는 재생 시작 시점이 아니라
+                // 재생을 누른 순간의 재생헤드(previewSeekSec) 위치(=playbackBaseMs)를
+                // 기준으로 흘러가야 한다. 그렇지 않으면 "시작(초)"과 무관하게 항상
+                // 0초부터 시작하는 것처럼 보인다.
+                elapsedTime = (this.state.playbackBaseMs || 0) + (performance.now() - this.state.playbackStartTime);
             }
             
             const canvas = Game.canvas;
