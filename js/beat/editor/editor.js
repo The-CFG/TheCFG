@@ -923,7 +923,15 @@ const Editor = {
 
             const curY = moveEvt.clientY - containerRect.top + DOM.editor.container.scrollTop;
             const newTimeAtCursor = this._yToSnappedRelativeTimeMs(curY);
-            const deltaMs = newTimeAtCursor - clickedTime;
+            let deltaMs = newTimeAtCursor - clickedTime;
+
+            // 그룹 전체가 허용 하한(시작 지점/타이밍 시작)보다 앞으로 밀리지 않도록,
+            // "가장 앞선 노트" 기준으로 delta 자체를 한 번만 제한한다. 노트마다 따로
+            // clamp하면 하한에 걸리는 노트들이 전부 같은 값으로 끌려가 뭉쳐버린다 —
+            // 여기서는 delta를 제한해서 선택된 노트들 사이의 간격(상대 위치)을 그대로 유지한다.
+            const minAllowedMs = this._minAllowedRelativeTimeMs();
+            const earliestOriginalTime = Math.min(...originals.map(o => o.time));
+            deltaMs = Math.max(deltaMs, minAllowedMs - earliestOriginalTime);
 
             let deltaLaneIndex = 0;
             if (isSingle) {
@@ -934,7 +942,7 @@ const Editor = {
             }
 
             originals.forEach(o => {
-                o.ref.time = Math.max(this._minAllowedRelativeTimeMs(), o.time + deltaMs);
+                o.ref.time = o.time + deltaMs;
                 if (deltaLaneIndex !== 0) {
                     const idx = CONFIG.EDITOR_LANE_IDS.indexOf(o.lane);
                     const clampedIdx = Math.min(CONFIG.EDITOR_LANE_IDS.length - 1, Math.max(0, idx + deltaLaneIndex));
