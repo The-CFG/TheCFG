@@ -263,33 +263,71 @@ const EditorSong = {
         }
     },
 
-    loadLocalFile(file) {
-        if (!file) return;
+    // 파일 여러 개를 한 번에 골라도 각 파일의 난이도(비트맵)를 모두 모아 하나의 노래에 합친다.
+    // 파일 하나에 난이도가 여러 개 들어있는 v2 포맷도, 옛 포맷(파일당 난이도 1개)도 섞어서 줄 수 있다.
+    // 노래 메타(제목/가수/미리듣기 시작 등)는 맨 처음 파일 것을 채택한다.
+    loadLocalFiles(fileList) {
+        const files = Array.from(fileList || []);
+        if (files.length === 0) return;
         if (Editor.state.beatmaps.length > 0 &&
             !confirm('현재 작업 중인 노래가 있습니다. 불러오면 저장하지 않은 내용은 사라집니다. 계속할까요?')) {
             return;
         }
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                const raw = JSON.parse(e.target.result);
-                const normalized = ChartFormat.normalizeAll(raw);
-                Editor.resetSongState();
-                Editor.state.song.title = normalized.songName;
-                Editor.state.song.artist = normalized.artist || '';
-                Editor.state.song.previewStartSec = (normalized.previewStartMs || 0) / 1000;
-                Editor.state.song.startOffsetSec = (normalized.startOffsetMs || 0) / 1000;
-                Editor.state.song.timingStartSec = (normalized.timingStartMs || 0) / 1000;
-                Editor.state.beatmaps = normalized.beatmaps.map(bm => ({ ...bm, cloudChartId: null }));
-                Editor.state.activeBeatmapIndex = 0;
-                this.render();
-                UI.showMessage('editorSong', `${normalized.beatmaps.length}개 난이도를 불러왔습니다. 오디오는 따로 선택해주세요.`);
-            } catch (err) {
-                Debugger.logError(err, 'EditorSong.loadLocalFile');
-                UI.showMessage('editorSong', `차트 해석 오류: ${err.message}`);
+
+        const readAsJson = (file) => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    resolve({ file, raw: JSON.parse(e.target.result) });
+                } catch (err) {
+                    reject(new Error(`${file.name}: JSON 해석 실패`));
+                }
+            };
+            reader.onerror = () => reject(new Error(`${file.name}: 파일을 읽을 수 없습니다.`));
+            reader.readAsText(file);
+        });
+
+        // 선택한 순서를 보장하기 위해 allSettled로 다 읽은 뒤 순서대로 처리한다.
+        Promise.allSettled(files.map(readAsJson)).then((results) => {
+            Editor.resetSongState();
+            let songMetaSet = false;
+            let totalBeatmaps = 0;
+            const failed = [];
+
+            results.forEach((result) => {
+                if (result.status !== 'fulfilled') {
+                    failed.push(result.reason?.message || '알 수 없는 오류');
+                    return;
+                }
+                const { file, raw } = result.value;
+                try {
+                    const normalized = ChartFormat.normalizeAll(raw);
+                    if (!songMetaSet) {
+                        Editor.state.song.title = normalized.songName;
+                        Editor.state.song.artist = normalized.artist || '';
+                        Editor.state.song.previewStartSec = (normalized.previewStartMs || 0) / 1000;
+                        Editor.state.song.startOffsetSec = (normalized.startOffsetMs || 0) / 1000;
+                        Editor.state.song.timingStartSec = (normalized.timingStartMs || 0) / 1000;
+                        songMetaSet = true;
+                    }
+                    const newBeatmaps = normalized.beatmaps.map(bm => ({ ...bm, cloudChartId: null }));
+                    Editor.state.beatmaps.push(...newBeatmaps);
+                    totalBeatmaps += newBeatmaps.length;
+                } catch (err) {
+                    failed.push(`${file.name}: ${err.message}`);
+                }
+            });
+
+            Editor.state.activeBeatmapIndex = 0;
+            this.render();
+
+            if (totalBeatmaps === 0) {
+                UI.showMessage('editorSong', `불러오기 실패: ${failed.join(', ') || '유효한 난이도가 없습니다.'}`);
+                return;
             }
-        };
-        reader.readAsText(file);
+            const suffix = failed.length > 0 ? ` (실패 ${failed.length}개: ${failed.join(', ')})` : '';
+            UI.showMessage('editorSong', `파일 ${files.length}개에서 난이도 ${totalBeatmaps}개를 불러왔습니다. 오디오는 따로 선택해주세요.${suffix}`);
+        });
     },
 
     // ── Phase 3d/4d: 클라우드 업로드 ────────────────────────────────────
