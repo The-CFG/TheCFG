@@ -127,6 +127,7 @@ const Editor = {
             this.state.notes = [];
             this.state.triggers = [];
             this.state.bpm = CONFIG.EDITOR_DEFAULT_SETTINGS.bpm;
+            this.state.noteSpeed = CONFIG.EDITOR_DEFAULT_SETTINGS.fallSpeed;
             this.state.snapDivision = CONFIG.EDITOR_DEFAULT_SETTINGS.snapDivision;
             this.state.audioFileName = '';
             this.state.selectedNoteType = 'tap';
@@ -1510,6 +1511,7 @@ const Editor = {
             this.state.activeBeatmapIndex = index;
             this.state.history = [];
             this.state.bpm = bm.bpm || 120;
+            this.state.noteSpeed = bm.noteSpeed || 7;
             // startTimeOffset은 더 이상 비트맵별로 따로 읽지 않는다 — song.startOffsetSec가
             // 유일한 소스이며 resetEditorState()에서도 건드리지 않으므로 여기 그대로 유지된다.
             this.state.triggers = (bm.triggers || []).slice().sort((a, b) => a.time - b.time);
@@ -1536,12 +1538,12 @@ const Editor = {
             }
 
             DOM.editor.bpmInput.value = this.state.bpm;
-            if (DOM.editor.noteFallSpeedInput) {
-                alert(bm.fallSpeed);
-                DOM.editor.noteFallSpeedInput.value = (typeof bm.fallSpeed === 'number' && bm.fallSpeed > 0)
-                    ? bm.fallSpeed
-                    : CONFIG.EDITOR_DEFAULT_SETTINGS.fallSpeed;
-            }
+            // if (DOM.editor.noteFallSpeedInput) {
+            //     alert(bm.fallSpeed);
+            //     DOM.editor.noteFallSpeedInput.value = (typeof bm.fallSpeed === 'number' && bm.fallSpeed > 0)
+            //         ? bm.fallSpeed
+            //         : CONFIG.EDITOR_DEFAULT_SETTINGS.fallSpeed;
+            // }
             this.state.previewSeekSec = this.state.song.startOffsetSec || 0;
             DOM.editor.startTimeInput.value = this.state.previewSeekSec;
             if (DOM.editor.timingStartInput) DOM.editor.timingStartInput.value = this.state.song.timingStartSec || 0;
