@@ -26,12 +26,14 @@ const DOM = {
         editor: document.getElementById('editor-screen'),
         settings: document.getElementById('settings-screen'),
         online: document.getElementById('online-screen'),
+        osuConvert: document.getElementById('osu-convert-screen'),
     },
     messages: {
         menu: document.getElementById('menu-message'),
         editor: document.getElementById('editor-message'),
         editorSong: document.getElementById('editor-song-message'),
         settings: document.getElementById('settings-message'),
+        osuConvert: document.getElementById('osu-convert-message'),
     },
     difficulty: {
         toggleBtn: document.getElementById('toggle-details-btn'),
@@ -124,6 +126,15 @@ const DOM = {
     // ── Phase 3d: 에디터 홈 (내 노래 클라우드 목록) ──────────────────────────
     editorHome: {
         songList: document.getElementById('editor-home-song-list'),
+    },
+    // ── 베타: osu!mania .osu → TheBeat 채보 변환 화면 ──────────────────────
+    osuConvert: {
+        fileInput: document.getElementById('osu-convert-file-input'),
+        fallSpeedSlider: document.getElementById('osu-convert-fall-speed-slider'),
+        fallSpeedValue: document.getElementById('osu-convert-fall-speed-value'),
+        resultList: document.getElementById('osu-convert-result-list'),
+        importBtn: document.getElementById('osu-convert-import-btn'),
+        backBtn: document.getElementById('osu-convert-back-btn'),
     },
     pauseGameBtn: document.getElementById('pause-game-btn'),
     resumeGameBtn: document.getElementById('resume-game-btn'),

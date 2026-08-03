@@ -310,6 +310,25 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('editor-home-new-song-btn').addEventListener('click', () => {
             EditorSong.newSong();
         });
+        // ── 베타: .osu 파일 변환 화면 ──
+        document.getElementById('editor-home-osu-convert-btn').addEventListener('click', () => {
+            EditorOsuConvert.reset();
+            UI.showScreen('osuConvert');
+        });
+        DOM.osuConvert.backBtn.addEventListener('click', () => {
+            UI.showScreen('editorHome');
+            EditorHome.refresh();
+        });
+        DOM.osuConvert.fileInput.addEventListener('change', (e) => {
+            EditorOsuConvert.handleFiles(e.target.files);
+            e.target.value = ''; // 같은 파일을 다시 골라도 change가 또 발생하도록
+        });
+        DOM.osuConvert.fallSpeedSlider.addEventListener('input', (e) => {
+            EditorOsuConvert.onFallSpeedInput(e.target.value);
+        });
+        DOM.osuConvert.importBtn.addEventListener('click', () => {
+            EditorOsuConvert.importAsNewSong();
+        });
         document.getElementById('editor-song-back-btn').addEventListener('click', () => {
             UI.showScreen('editorHome');
             EditorHome.refresh(); // Phase 3d: 방금 업로드했을 수 있으니 목록 새로고침

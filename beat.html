@@ -972,6 +972,36 @@
                         <!-- Phase 3d에서 CloudCharts.listMySongs()로 채움 -->
                         <p class="text-gray-400 text-sm text-center mt-8">로그인 후 클라우드에 저장된 노래가 여기 표시됩니다. (아직 연결 전)</p>
                     </div>
+                    <button id="editor-home-osu-convert-btn" class="w-full py-2 mt-4 bg-purple-700 hover:bg-purple-600 rounded-lg text-sm font-semibold">🧪 베타 - .osu 파일 변환하기</button>
+                </div>
+
+                <!-- Osu Convert Screen (베타: osu!mania .osu → TheBeat 채보 변환) -->
+                <div id="osu-convert-screen" class="hidden flex flex-col h-full text-white overflow-y-auto" style="-webkit-overflow-scrolling: touch;">
+                    <div class="flex items-center justify-between mb-4 gap-2">
+                        <h2 class="text-3xl font-bold">.osu 파일 변환</h2>
+                        <button id="osu-convert-back-btn" class="flex-shrink-0 py-2 px-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm">← 에디터 홈</button>
+                    </div>
+                    <div id="osu-convert-message" class="hidden p-3 mb-4 text-center bg-red-500 rounded-lg"></div>
+                    <div class="p-3 mb-4 bg-yellow-900/40 border border-yellow-700 rounded-lg text-xs text-yellow-200">
+                        ⚠ 베타 기능입니다. 구간별 BPM 변화는 변환되지 않고 전체 평균 BPM 하나로 적용됩니다. 변환 후 노트 싱크를 꼭 확인하세요.
+                    </div>
+                    <div class="p-4 bg-gray-800 rounded-lg mb-4 space-y-3">
+                        <div>
+                            <label for="osu-convert-file-input" class="cursor-pointer inline-block py-2 px-3 bg-teal-600 hover:bg-teal-500 rounded text-sm">📂 .osu 파일 선택</label>
+                            <input type="file" id="osu-convert-file-input" accept=".osu" multiple class="hidden">
+                            <p class="text-[11px] text-gray-500 mt-1">한 곡의 난이도별 .osu 파일 여러 개를 한 번에 선택하는 것을 권장합니다.</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <label for="osu-convert-fall-speed-slider" class="text-sm flex-shrink-0 whitespace-nowrap">하강속도</label>
+                            <input id="osu-convert-fall-speed-slider" type="range" min="1" max="20" value="7" class="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                            <span id="osu-convert-fall-speed-value" class="font-mono text-sm w-6 text-right">7</span>
+                        </div>
+                    </div>
+                    <h3 class="text-sm font-semibold text-gray-300 mb-2">변환 결과</h3>
+                    <div id="osu-convert-result-list" class="space-y-2 flex-1 overflow-y-auto">
+                        <p class="text-gray-400 text-sm text-center mt-8">.osu 파일을 선택하면 여기 결과가 표시됩니다.</p>
+                    </div>
+                    <button id="osu-convert-import-btn" class="w-full py-2 mt-2 bg-teal-600 hover:bg-teal-500 rounded-lg text-sm font-semibold" disabled>📥 새 노래로 가져오기</button>
                 </div>
 
                 <!-- Editor Song Screen (종합 창) -->
@@ -1311,6 +1341,8 @@
         <script defer src="js/beat/editor/editor.js"></script>
         <script defer src="js/beat/editor/editor-song.js"></script>
         <script defer src="js/beat/editor/editor-home.js"></script>
+        <script defer src="js/beat/editor/osu-import.js"></script>
+        <script defer src="js/beat/editor/editor-osu-convert.js"></script>
         <script defer src="js/beat/game/game.js"></script>
         <script defer src="js/beat/game/ui.js"></script>
         <script defer src="js/beat/cloud/auth.js"></script>
