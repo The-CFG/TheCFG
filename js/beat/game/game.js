@@ -19,7 +19,8 @@ const Game = {
             bpm: 120,
             startTimeOffset: 0, // 채보 박자 계산 기준점 (bpm/noteoffset 등 노트 타이밍용)
             songStartOffset: 0, // 실제 오디오 재생을 시작할 지점 (종합 창의 "시작(초)")
-            userKeyMappingsByLanes: null,
+            // 새로고침해도 유지되도록 config.js가 localStorage에서 미리 읽어둔 값으로 초기화한다.
+            userKeyMappingsByLanes: CONFIG.PERSISTED_USER_KEY_MAPPINGS || null,
             requiredSongName: null,
         },
         keyMapping: [],

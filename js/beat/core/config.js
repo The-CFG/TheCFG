@@ -124,3 +124,22 @@ const CONFIG = {
         console.warn('에디터 설정을 불러오지 못했습니다:', err);
     }
 })();
+
+// 환경설정 → 조작 탭에서 저장한 실제 플레이용 키 매핑(레인 수별)을 불러온다.
+// 지금까지는 saveKeyBindings()(main.js)가 Game.state.settings.userKeyMappingsByLanes에만
+// 저장하고 localStorage에는 쓰지 않아서, 새로고침하면 항상 초기화되던 버그가 있었다.
+// game.js의 state 초기값이 이 값을 그대로 읽어가므로, game.js보다 먼저 로드되는
+// 여기(config.js)에서 미리 읽어 CONFIG.PERSISTED_USER_KEY_MAPPINGS에 채워둔다.
+CONFIG.PERSISTED_USER_KEY_MAPPINGS = null;
+(function loadPersistedUserKeyBindings() {
+    try {
+        const raw = localStorage.getItem('theBeat_userKeyBindings');
+        if (!raw) return;
+        const saved = JSON.parse(raw);
+        if (saved && typeof saved === 'object') {
+            CONFIG.PERSISTED_USER_KEY_MAPPINGS = saved;
+        }
+    } catch (err) {
+        console.warn('키 설정을 불러오지 못했습니다:', err);
+    }
+})();

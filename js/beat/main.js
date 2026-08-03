@@ -763,6 +763,13 @@ document.addEventListener('DOMContentLoaded', () => {
             savedMappings[laneCount] = { ...tempKeyMappingsByLanes[laneCount] };
         });
         Game.state.settings.userKeyMappingsByLanes = savedMappings;
+        // 새로고침해도 유지되도록 localStorage에도 저장한다 (기존에는 메모리에만 저장되어
+        // 새로고침 시 초기화되는 버그가 있었다).
+        try {
+            localStorage.setItem('theBeat_userKeyBindings', JSON.stringify(savedMappings));
+        } catch (err) {
+            console.warn('키 설정 저장 실패:', err);
+        }
         UI.showMessage('settings', '키 설정이 저장되었습니다.');
         DOM.settings.controls.statusLabel.textContent = '저장되었습니다!';
         setTimeout(() => {
