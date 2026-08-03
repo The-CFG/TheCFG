@@ -1537,6 +1537,7 @@ const Editor = {
 
             DOM.editor.bpmInput.value = this.state.bpm;
             if (DOM.editor.noteFallSpeedInput) {
+                alert(bm.fallSpeed);
                 DOM.editor.noteFallSpeedInput.value = (typeof bm.fallSpeed === 'number' && bm.fallSpeed > 0)
                     ? bm.fallSpeed
                     : CONFIG.EDITOR_DEFAULT_SETTINGS.fallSpeed;
