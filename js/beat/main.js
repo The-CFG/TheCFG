@@ -131,6 +131,13 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentKeybindLanes = 4; // 환경설정에서 현재 편집 중인 레인 수 그룹
     let tempKeyMappingsByLanes = {}; // { 4: {L2:'D', ...}, 5: {...}, ... } — 저장 전까지의 임시 편집본
 
+    // ── 환경설정 → 에디터 탭 (차트 에디터 전용 단축키/기본값) ──────────────────
+    let isListeningForEditorKey = false;
+    let currentEditorBindingElement = null;
+    let currentEditorBindingKind = null; // 'lane' | 'tool'
+    let tempEditorLaneKeys = {}; // laneId -> code (e.g. 'KeyQ') — 저장 전까지의 임시 편집본
+    let tempEditorToolKeys = {}; // { create: 'z', edit: 'x' } — 저장 전까지의 임시 편집본
+
     // 레인 id -> 라벨 i18n 키 (조작 탭에서 각 키 상자 옆에 표시할 텍스트)
     const KEYBIND_LABEL_I18N = {
         L4: 'left_4', L3: 'left_3', L2: 'left_2', L1: 'left_1',
@@ -200,6 +207,8 @@ document.addEventListener('DOMContentLoaded', () => {
         window.addEventListener('keydown', (e) => {
             if (isListeningForKey) {
                 handleKeyBinding(e);
+            } else if (isListeningForEditorKey) {
+                handleEditorKeyBinding(e);
             } else if (Game.state.gameState === 'editor') {
                 Editor.handleEditorKeyPress(e);
             } else {
@@ -208,7 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         window.addEventListener('keyup', (e) => {
-            if (!isListeningForKey) {
+            if (!isListeningForKey && !isListeningForEditorKey) {
                 Game.handleKeyUp(e);
             }
         });
@@ -216,6 +225,9 @@ document.addEventListener('DOMContentLoaded', () => {
         window.addEventListener('click', (e) => {
             if (isListeningForKey && !e.target.classList.contains('keybind-box')) {
                 cancelKeyBinding();
+            }
+            if (isListeningForEditorKey && !e.target.classList.contains('keybind-box')) {
+                cancelEditorKeyBinding();
             }
         });
 
@@ -226,6 +238,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         DOM.settings.backBtn.addEventListener('click', () => {
             cancelKeyBinding();
+            cancelEditorKeyBinding();
             Game.state.gameState = Game.state.previousScreen;
             UI.showScreen(Game.state.previousScreen);
             if (Game.state.previousScreen === 'playing' && Game.state.isPaused) {
@@ -559,6 +572,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
         DOM.settings.controls.saveBtn.addEventListener('click', () => saveKeyBindings());
 
+        // 환경설정 → 에디터 탭: 키 상자는 동적 생성이므로 이벤트 위임으로 처리
+        DOM.settings.editorTab.keybindRows.addEventListener('click', (e) => {
+            const box = e.target.closest('.keybind-box');
+            if (!box) return;
+            if (isListeningForEditorKey) cancelEditorKeyBinding();
+            startEditorKeyBinding(box, 'lane');
+        });
+        DOM.settings.editorTab.toolKeyRows.addEventListener('click', (e) => {
+            const box = e.target.closest('.keybind-box');
+            if (!box) return;
+            if (isListeningForEditorKey) cancelEditorKeyBinding();
+            startEditorKeyBinding(box, 'tool');
+        });
+        DOM.settings.editorTab.saveBtn.addEventListener('click', () => saveEditorKeybinds());
+        DOM.settings.editorTab.resetBtn.addEventListener('click', () => resetEditorKeybinds());
+        DOM.settings.editorTab.saveDefaultsBtn.addEventListener('click', () => saveEditorDefaults());
+        DOM.settings.editorTab.resetDefaultsBtn.addEventListener('click', () => resetEditorDefaults());
+
         window.addEventListener('resize', () => {
             if (Game.state.gameState === 'editor') {
                 Editor.drawTimeline();
@@ -722,6 +753,205 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 2000);
     }
 
+    // localStorage에 현재 CONFIG의 에디터 설정을 저장한다(계정 없이도 유지됨).
+    function persistEditorSettings() {
+        try {
+            localStorage.setItem('theBeat_editorSettings', JSON.stringify({
+                laneKeyMap: { ...CONFIG.EDITOR_KEY_LANE_MAP },
+                toolKeys: { ...CONFIG.EDITOR_TOOL_KEYS },
+                defaults: { ...CONFIG.EDITOR_DEFAULT_SETTINGS },
+            }));
+        } catch (err) {
+            console.warn('에디터 설정 저장 실패:', err);
+        }
+    }
+
+    function codeToKeyLabel(code) {
+        if (!code) return '';
+        if (code === 'Space') return 'Space';
+        if (code === 'Semicolon') return ';';
+        return code.replace(/^Key/, '').replace(/^Digit/, '');
+    }
+
+    function populateEditorKeybindUI() {
+        tempEditorLaneKeys = {};
+        Object.entries(CONFIG.EDITOR_KEY_LANE_MAP).forEach(([code, laneId]) => {
+            tempEditorLaneKeys[laneId] = code;
+        });
+        tempEditorToolKeys = { ...CONFIG.EDITOR_TOOL_KEYS };
+        renderEditorLaneKeybindRows();
+        renderEditorToolKeybindRows();
+
+        DOM.settings.editorTab.defaultBpmInput.value = CONFIG.EDITOR_DEFAULT_SETTINGS.bpm;
+        DOM.settings.editorTab.defaultSnapSelect.value = CONFIG.EDITOR_DEFAULT_SETTINGS.snapDivision;
+        DOM.settings.editorTab.defaultFallSpeedInput.value = CONFIG.EDITOR_DEFAULT_SETTINGS.fallSpeed;
+    }
+
+    function renderEditorLaneKeybindRows() {
+        const container = DOM.settings.editorTab.keybindRows;
+        container.innerHTML = '';
+        CONFIG.EDITOR_LANE_IDS.forEach(laneId => {
+            const row = document.createElement('div');
+            row.className = 'flex justify-between items-center p-2 rounded-lg hover:bg-gray-700';
+
+            const label = document.createElement('span');
+            label.setAttribute('data-i18n', KEYBIND_LABEL_I18N[laneId]);
+            label.textContent = I18n.t(KEYBIND_LABEL_I18N[laneId]);
+
+            const box = document.createElement('div');
+            box.className = 'keybind-box w-28 text-center';
+            box.dataset.laneId = laneId;
+            box.textContent = codeToKeyLabel(tempEditorLaneKeys[laneId]);
+
+            row.appendChild(label);
+            row.appendChild(box);
+            container.appendChild(row);
+        });
+    }
+
+    function renderEditorToolKeybindRows() {
+        const container = DOM.settings.editorTab.toolKeyRows;
+        container.innerHTML = '';
+        [['create', '생성 도구'], ['edit', '편집 도구']].forEach(([toolId, labelText]) => {
+            const row = document.createElement('div');
+            row.className = 'flex justify-between items-center p-2 rounded-lg hover:bg-gray-700';
+
+            const label = document.createElement('span');
+            label.textContent = labelText;
+
+            const box = document.createElement('div');
+            box.className = 'keybind-box w-28 text-center';
+            box.dataset.toolId = toolId;
+            box.textContent = (tempEditorToolKeys[toolId] || '').toUpperCase();
+
+            row.appendChild(label);
+            row.appendChild(box);
+            container.appendChild(row);
+        });
+    }
+
+    function startEditorKeyBinding(element, kind) {
+        isListeningForEditorKey = true;
+        currentEditorBindingElement = element;
+        currentEditorBindingKind = kind;
+        element.classList.add('listening');
+        element.textContent = '...';
+        DOM.settings.editorTab.statusLabel.textContent = '지정을 원하는 키를 입력하세요.';
+    }
+
+    function handleEditorKeyBinding(e) {
+        e.preventDefault();
+        if (e.key === 'Escape') {
+            cancelEditorKeyBinding();
+            return;
+        }
+
+        if (currentEditorBindingKind === 'lane') {
+            const code = e.code;
+            const laneId = currentEditorBindingElement.dataset.laneId;
+            const conflictLane = Object.entries(tempEditorLaneKeys).find(([id, c]) => id !== laneId && c === code);
+            if (conflictLane) {
+                DOM.settings.editorTab.statusLabel.textContent = `이미 ${KEYBIND_LABEL_I18N[conflictLane[0]] ? I18n.t(KEYBIND_LABEL_I18N[conflictLane[0]]) : conflictLane[0]} 레인에서 쓰는 키입니다.`;
+                return;
+            }
+            tempEditorLaneKeys[laneId] = code;
+            currentEditorBindingElement.textContent = codeToKeyLabel(code);
+        } else if (currentEditorBindingKind === 'tool') {
+            const key = e.key.toLowerCase();
+            const toolId = currentEditorBindingElement.dataset.toolId;
+            const otherToolId = toolId === 'create' ? 'edit' : 'create';
+            if (tempEditorToolKeys[otherToolId] === key) {
+                DOM.settings.editorTab.statusLabel.textContent = '이미 다른 도구에서 쓰는 키입니다.';
+                return;
+            }
+            tempEditorToolKeys[toolId] = key;
+            currentEditorBindingElement.textContent = key.toUpperCase();
+        }
+
+        currentEditorBindingElement.classList.remove('listening');
+        isListeningForEditorKey = false;
+        currentEditorBindingElement = null;
+        currentEditorBindingKind = null;
+        DOM.settings.editorTab.statusLabel.textContent = '';
+    }
+
+    function cancelEditorKeyBinding() {
+        if (!isListeningForEditorKey) return;
+        if (currentEditorBindingKind === 'lane') {
+            const laneId = currentEditorBindingElement.dataset.laneId;
+            currentEditorBindingElement.textContent = codeToKeyLabel(tempEditorLaneKeys[laneId]);
+        } else if (currentEditorBindingKind === 'tool') {
+            const toolId = currentEditorBindingElement.dataset.toolId;
+            currentEditorBindingElement.textContent = (tempEditorToolKeys[toolId] || '').toUpperCase();
+        }
+        currentEditorBindingElement.classList.remove('listening');
+        isListeningForEditorKey = false;
+        currentEditorBindingElement = null;
+        currentEditorBindingKind = null;
+        DOM.settings.editorTab.statusLabel.textContent = '';
+    }
+
+    function saveEditorKeybinds() {
+        Object.keys(CONFIG.EDITOR_KEY_LANE_MAP).forEach(code => delete CONFIG.EDITOR_KEY_LANE_MAP[code]);
+        Object.entries(tempEditorLaneKeys).forEach(([laneId, code]) => {
+            CONFIG.EDITOR_KEY_LANE_MAP[code] = laneId;
+        });
+        CONFIG.EDITOR_TOOL_KEYS.create = tempEditorToolKeys.create;
+        CONFIG.EDITOR_TOOL_KEYS.edit = tempEditorToolKeys.edit;
+        persistEditorSettings();
+        DOM.settings.editorTab.statusLabel.textContent = '저장되었습니다!';
+        setTimeout(() => {
+            if (DOM.settings.editorTab.statusLabel.textContent === '저장되었습니다!') {
+                DOM.settings.editorTab.statusLabel.textContent = '';
+            }
+        }, 2000);
+    }
+
+    function resetEditorKeybinds() {
+        Object.keys(CONFIG.EDITOR_KEY_LANE_MAP).forEach(code => delete CONFIG.EDITOR_KEY_LANE_MAP[code]);
+        Object.assign(CONFIG.EDITOR_KEY_LANE_MAP, CONFIG.EDITOR_DEFAULT_KEY_LANE_MAP);
+        CONFIG.EDITOR_TOOL_KEYS.create = CONFIG.EDITOR_DEFAULT_TOOL_KEYS.create;
+        CONFIG.EDITOR_TOOL_KEYS.edit = CONFIG.EDITOR_DEFAULT_TOOL_KEYS.edit;
+        persistEditorSettings();
+        populateEditorKeybindUI();
+        DOM.settings.editorTab.statusLabel.textContent = '기본값으로 복원되었습니다.';
+        setTimeout(() => {
+            if (DOM.settings.editorTab.statusLabel.textContent === '기본값으로 복원되었습니다.') {
+                DOM.settings.editorTab.statusLabel.textContent = '';
+            }
+        }, 2000);
+    }
+
+    function saveEditorDefaults() {
+        const bpm = parseInt(DOM.settings.editorTab.defaultBpmInput.value, 10) || CONFIG.EDITOR_DEFAULT_SETTINGS.bpm;
+        const snapDivision = parseInt(DOM.settings.editorTab.defaultSnapSelect.value, 10) || CONFIG.EDITOR_DEFAULT_SETTINGS.snapDivision;
+        const fallSpeed = parseFloat(DOM.settings.editorTab.defaultFallSpeedInput.value) || CONFIG.EDITOR_DEFAULT_SETTINGS.fallSpeed;
+        CONFIG.EDITOR_DEFAULT_SETTINGS.bpm = bpm;
+        CONFIG.EDITOR_DEFAULT_SETTINGS.snapDivision = snapDivision;
+        CONFIG.EDITOR_DEFAULT_SETTINGS.fallSpeed = fallSpeed;
+        persistEditorSettings();
+        DOM.settings.editorTab.defaultsStatusLabel.textContent = '저장되었습니다!';
+        setTimeout(() => {
+            if (DOM.settings.editorTab.defaultsStatusLabel.textContent === '저장되었습니다!') {
+                DOM.settings.editorTab.defaultsStatusLabel.textContent = '';
+            }
+        }, 2000);
+    }
+
+    function resetEditorDefaults() {
+        Object.assign(CONFIG.EDITOR_DEFAULT_SETTINGS, CONFIG.EDITOR_FACTORY_DEFAULT_SETTINGS);
+        persistEditorSettings();
+        DOM.settings.editorTab.defaultBpmInput.value = CONFIG.EDITOR_DEFAULT_SETTINGS.bpm;
+        DOM.settings.editorTab.defaultSnapSelect.value = CONFIG.EDITOR_DEFAULT_SETTINGS.snapDivision;
+        DOM.settings.editorTab.defaultFallSpeedInput.value = CONFIG.EDITOR_DEFAULT_SETTINGS.fallSpeed;
+        DOM.settings.editorTab.defaultsStatusLabel.textContent = '기본값으로 복원되었습니다.';
+        setTimeout(() => {
+            if (DOM.settings.editorTab.defaultsStatusLabel.textContent === '기본값으로 복원되었습니다.') {
+                DOM.settings.editorTab.defaultsStatusLabel.textContent = '';
+            }
+        }, 2000);
+    }
+
     function showSettingsScreen() {
         if (Game.state.gameState === 'playing' && !Game.state.isPaused) return;
         // Game.state.gameState는 editorHome/editorSong/editor를 뭉뚱그려 'editor'로만 표시하기 때문에
@@ -732,6 +962,7 @@ document.addEventListener('DOMContentLoaded', () => {
         Game.state.gameState = 'settings';
         UI.showScreen('settings');
         populateKeybindUI();
+        populateEditorKeybindUI();
         DOM.settings.musicVolumeSlider.value = Game.state.settings.musicVolume;
         DOM.settings.musicVolumeValue.textContent = Game.state.settings.musicVolume;
         DOM.settings.sfxVolumeSlider.value = Game.state.settings.sfxVolume;

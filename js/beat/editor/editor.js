@@ -2,8 +2,8 @@ const Editor = {
     state: {
         notes: [],
         triggers: [], // BPM/속도 변경 트리거
-        bpm: 120,
-        snapDivision: 4,
+        bpm: CONFIG.EDITOR_DEFAULT_SETTINGS.bpm,
+        snapDivision: CONFIG.EDITOR_DEFAULT_SETTINGS.snapDivision,
         history: [],
         isDirty: false,
         audioFileName: '',
@@ -122,8 +122,8 @@ const Editor = {
             this.state.history = [];
             this.state.notes = [];
             this.state.triggers = [];
-            this.state.bpm = 120;
-            this.state.snapDivision = 4;
+            this.state.bpm = CONFIG.EDITOR_DEFAULT_SETTINGS.bpm;
+            this.state.snapDivision = CONFIG.EDITOR_DEFAULT_SETTINGS.snapDivision;
             this.state.audioFileName = '';
             this.state.selectedNoteType = 'tap';
             this.state.activeTool = 'create';
@@ -140,6 +140,7 @@ const Editor = {
             DOM.musicPlayer.load();
             DOM.editor.bpmInput.value = this.state.bpm;
             DOM.editor.snapSelector.value = this.state.snapDivision;
+            if (DOM.editor.noteFallSpeedInput) DOM.editor.noteFallSpeedInput.value = CONFIG.EDITOR_DEFAULT_SETTINGS.fallSpeed;
             this.state.previewSeekSec = this.state.song.startOffsetSec || 0;
             DOM.editor.startTimeInput.value = this.state.previewSeekSec;
             if (DOM.editor.timingStartInput) DOM.editor.timingStartInput.value = this.state.song.timingStartSec || 0;
@@ -1155,7 +1156,7 @@ const Editor = {
         DOM.triggerModal.bpmInput.value = existingTrigger ? existingTrigger.bpm : this.state.bpm;
         DOM.triggerModal.fallSpeedInput.value = existingTrigger
             ? existingTrigger.fallSpeed
-            : (parseFloat(DOM.editor.noteFallSpeedInput?.value) || 7);
+            : (parseFloat(DOM.editor.noteFallSpeedInput?.value) || CONFIG.EDITOR_DEFAULT_SETTINGS.fallSpeed);
         DOM.triggerModal.transitionInput.value = existingTrigger
             ? ((existingTrigger.transitionMs ?? 700) / 1000)
             : 0.7;
@@ -1422,7 +1423,7 @@ const Editor = {
         return {
             difficultyLabel: difficultyLabel || '기본',
             laneCount: 4,
-            bpm: 120,
+            bpm: CONFIG.EDITOR_DEFAULT_SETTINGS.bpm,
             startTimeOffset: 0,
             notes: [],
             triggers: [],
@@ -2114,10 +2115,9 @@ const Editor = {
         // 도구 전환 단축키. Q/W/E/R/T/Y/U/I/O는 이미 EDITOR_KEY_LANE_MAP에서
         // 레인 배치 키로 쓰이고 있어서 겹치지 않는 Z/X를 사용한다.
         // 삭제는 별도 도구가 아니라 우클릭(컨텍스트 메뉴)으로 대체되었다.
-        switch (e.key.toLowerCase()) {
-            case 'z': e.preventDefault(); this.setActiveTool('create'); return;
-            case 'x': e.preventDefault(); this.setActiveTool('edit'); return;
-        }
+        const pressedKey = e.key.toLowerCase();
+        if (pressedKey === CONFIG.EDITOR_TOOL_KEYS.create) { e.preventDefault(); this.setActiveTool('create'); return; }
+        if (pressedKey === CONFIG.EDITOR_TOOL_KEYS.edit) { e.preventDefault(); this.setActiveTool('edit'); return; }
 
         const laneId = CONFIG.EDITOR_KEY_LANE_MAP[e.code];
         if (laneId) {

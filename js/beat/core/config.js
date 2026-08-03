@@ -81,13 +81,46 @@ const CONFIG = {
     JUDGEMENT_ANIMATION_MS: 300,
     EDITOR_BEAT_HEIGHT: 20,
     EDITOR_ZOOM_DIVISION: 32, // 에디터 타임라인 줌을 이 분할값(1/32)에 고정
+    // 에디터(비트맵 창) 레인 입력 키 맵. code -> laneId.
+    // 환경설정 → 에디터 탭에서 재배정하면 이 객체 내용 자체가 덮어써진다(참조는 유지).
+    // 기본값은 EDITOR_DEFAULT_KEY_LANE_MAP에 별도로 보관해 '초기화' 버튼에서 되돌릴 수 있게 한다.
     EDITOR_KEY_LANE_MAP: {
         'KeyQ': 'L4', 'KeyW': 'L3', 'KeyE': 'L2', 'KeyR': 'L1',
         'KeyT': 'C1',
         'KeyY': 'R1', 'KeyU': 'R2', 'KeyI': 'R3', 'KeyO': 'R4'
     },
+    EDITOR_DEFAULT_KEY_LANE_MAP: {
+        'KeyQ': 'L4', 'KeyW': 'L3', 'KeyE': 'L2', 'KeyR': 'L1',
+        'KeyT': 'C1',
+        'KeyY': 'R1', 'KeyU': 'R2', 'KeyI': 'R3', 'KeyO': 'R4'
+    },
+    // 에디터 도구 전환 단축키(생성/편집). key(소문자) 값.
+    EDITOR_TOOL_KEYS: { create: 'z', edit: 'x' },
+    EDITOR_DEFAULT_TOOL_KEYS: { create: 'z', edit: 'x' },
+    // 새 비트맵/재설정 시 적용되는 기본값. 환경설정 → 에디터 탭에서 변경 가능.
+    EDITOR_DEFAULT_SETTINGS: { bpm: 120, snapDivision: 4, fallSpeed: 7 },
+    EDITOR_FACTORY_DEFAULT_SETTINGS: { bpm: 120, snapDivision: 4, fallSpeed: 7 },
     EDITOR_UNDO_HISTORY_LIMIT: 50,
     NOTE_SPAWN_TIME_MS: 2000, // 노트가 화면에 나타나는 시간
     GAME_AREA_HEIGHT: 600, // 게임 영역 높이 (픽셀)
     NOTE_FALL_SPEED_FACTOR: 35, // 노트 낙하 속도 배수
 };
+
+// 환경설정 → 에디터 탭에서 저장한 커스텀 값을 불러와 즉시 반영한다.
+// 반드시 여기(config.js 최하단, editor.js가 로드되기 전)에서 처리해야 한다 —
+// editor.js의 state 초기값이 CONFIG.EDITOR_DEFAULT_SETTINGS 등을 그대로 복사해가기 때문.
+(function loadPersistedEditorSettings() {
+    try {
+        const raw = localStorage.getItem('theBeat_editorSettings');
+        if (!raw) return;
+        const saved = JSON.parse(raw);
+        if (saved.laneKeyMap) {
+            Object.keys(CONFIG.EDITOR_KEY_LANE_MAP).forEach(code => delete CONFIG.EDITOR_KEY_LANE_MAP[code]);
+            Object.assign(CONFIG.EDITOR_KEY_LANE_MAP, saved.laneKeyMap);
+        }
+        if (saved.toolKeys) Object.assign(CONFIG.EDITOR_TOOL_KEYS, saved.toolKeys);
+        if (saved.defaults) Object.assign(CONFIG.EDITOR_DEFAULT_SETTINGS, saved.defaults);
+    } catch (err) {
+        console.warn('에디터 설정을 불러오지 못했습니다:', err);
+    }
+})();

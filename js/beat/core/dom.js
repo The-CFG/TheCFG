@@ -149,6 +149,19 @@ const DOM = {
             rowsContainer: document.getElementById('keybind-rows-container'),
             statusLabel: document.getElementById('keybind-status-label'),
             saveBtn: document.getElementById('save-keybinds-btn')
+        },
+        editorTab: {
+            keybindRows: document.getElementById('editor-keybind-rows'),
+            toolKeyRows: document.getElementById('editor-tool-keybind-rows'),
+            statusLabel: document.getElementById('editor-keybind-status-label'),
+            saveBtn: document.getElementById('save-editor-keybinds-btn'),
+            resetBtn: document.getElementById('reset-editor-keybinds-btn'),
+            defaultBpmInput: document.getElementById('editor-default-bpm'),
+            defaultSnapSelect: document.getElementById('editor-default-snap'),
+            defaultFallSpeedInput: document.getElementById('editor-default-fall-speed'),
+            saveDefaultsBtn: document.getElementById('save-editor-defaults-btn'),
+            resetDefaultsBtn: document.getElementById('reset-editor-defaults-btn'),
+            defaultsStatusLabel: document.getElementById('editor-defaults-status-label'),
         }
     },
     triggerModal: {
