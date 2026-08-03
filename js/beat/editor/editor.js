@@ -1399,6 +1399,7 @@ const Editor = {
                 this.state.song.startOffsetSec = chartData.startTimeOffset;
             }
             DOM.editor.bpmInput.value = this.state.bpm;
+            alert('test');
             if (DOM.editor.noteFallSpeedInput) {
                 alert(chartData.fallSpeed);
                 DOM.editor.noteFallSpeedInput.value = (typeof chartData.fallSpeed === 'number' && chartData.fallSpeed > 0)
