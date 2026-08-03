@@ -4,7 +4,7 @@ const Game = {
         settings: {
             mode: 'random',
             difficulty: 'normal',
-            noteSpeed: CONFIG.DIFFICULTY_SPEED.normal, // 노트 하강 속도
+            noteSpeed: 0, // 노트 하강 속도
             noteSpawnSpeed: CONFIG.NOTE_SPAWN_SPEED.normal, // 노트 생성 속도
             dongtaProbability: CONFIG.SIMULTANEOUS_NOTE_PROBABILITY.normal,
             maxSimultaneousNotes: CONFIG.MAX_SIMULTANEOUS_NOTES.normal,

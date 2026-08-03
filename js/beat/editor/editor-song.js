@@ -407,6 +407,7 @@ const EditorSong = {
                     fallSpeed: bm.fallSpeed,
                     laneCount: bm.laneCount,
                     notes: bm.notes || [],
+                    noteSpeed: bm.noteSpeed,
                     triggers: bm.triggers || [],
                 };
                 const meta = {
