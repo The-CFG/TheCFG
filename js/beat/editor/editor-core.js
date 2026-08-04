@@ -585,7 +585,9 @@ const Editor = {
     },
 
     // 분모(1/2, 1/4, 1/8, 1/16, 1/32)에 따른 선 색상. 그 외(3연음 등 32에 안 맞아떨어지는 분할)는 노랑으로 처리.
+    // 환경설정 → 에디터 탭에서 '레거시'를 고르면 분할과 무관하게 예전 그대로의 진한 회색 한 가지로 통일한다.
     _beatLineColorForDenominator(denominator) {
+        if (CONFIG.EDITOR_GRID_LINE_STYLE === 'legacy') return '#4a5568'; // 레거시 — 통일된 진한 회색
         if (denominator <= 2) return '#6b7280';  // 1/2 — 기존 회색 그대로
         if (denominator <= 4) return '#ef4444';  // 1/4 — 빨강
         if (denominator <= 8) return '#3b82f6';  // 1/8 — 파랑

@@ -176,6 +176,8 @@ const DOM = {
             saveDefaultsBtn: document.getElementById('save-editor-defaults-btn'),
             resetDefaultsBtn: document.getElementById('reset-editor-defaults-btn'),
             defaultsStatusLabel: document.getElementById('editor-defaults-status-label'),
+            gridStyleSelector: document.getElementById('editor-grid-style-selector'),
+            gridStylePreview: document.getElementById('editor-grid-style-preview'),
         }
     },
     triggerModal: {

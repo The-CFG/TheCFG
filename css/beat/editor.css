@@ -98,6 +98,12 @@ body:not(.lane-color-mode) .editor-note.false {
     background-color: #4a5568;
 }
 
+/* 환경설정 → 에디터 탭의 그리드 선 스타일(기본/레거시) 선택 버튼 활성 상태 */
+#editor-grid-style-selector button.active {
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.4);
+    background-color: #4a5568;
+}
+
 /* Create 도구가 아닐 때는 노트타입 선택이 의미가 없으므로 비활성/dim 처리 */
 #editor-note-type-selector.tool-disabled button {
     opacity: 0.35;

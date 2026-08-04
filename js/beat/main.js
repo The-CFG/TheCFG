@@ -552,6 +552,18 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById(`tab-content-${tabName}`).classList.remove('hidden');
         });
 
+        if (DOM.settings.editorTab.gridStyleSelector) {
+            DOM.settings.editorTab.gridStyleSelector.addEventListener('click', (e) => {
+                const btn = e.target.closest('button[data-grid-style]');
+                if (!btn) return;
+                CONFIG.EDITOR_GRID_LINE_STYLE = btn.dataset.gridStyle;
+                persistEditorSettings();
+                updateGridStyleButtons();
+                // 지금 비트맵 창이 열려있으면 그리드도 바로 다시 그려서 즉시 반영한다.
+                if (Game.state.gameState === 'editor') Editor.drawGrid();
+            });
+        }
+
         DOM.settings.musicVolumeSlider.addEventListener('input', (e) => {
             const value = parseInt(e.target.value);
             Game.state.settings.musicVolume = value;
@@ -805,9 +817,44 @@ document.addEventListener('DOMContentLoaded', () => {
                 laneKeyMap: { ...CONFIG.EDITOR_KEY_LANE_MAP },
                 toolKeys: { ...CONFIG.EDITOR_TOOL_KEYS },
                 defaults: { ...CONFIG.EDITOR_DEFAULT_SETTINGS },
+                gridLineStyle: CONFIG.EDITOR_GRID_LINE_STYLE,
             }));
         } catch (err) {
             console.warn('에디터 설정 저장 실패:', err);
+        }
+    }
+
+    // 환경설정 → 에디터 탭의 "그리드 선 스타일" 버튼 활성 상태 + 미리보기를 현재 CONFIG 값에 맞춰 그린다.
+    function updateGridStyleButtons() {
+        if (!DOM.settings.editorTab.gridStyleSelector) return;
+        DOM.settings.editorTab.gridStyleSelector.querySelectorAll('button[data-grid-style]').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.gridStyle === CONFIG.EDITOR_GRID_LINE_STYLE);
+        });
+        renderGridStylePreview();
+    }
+
+    // 실제 비트맵 창의 drawGrid()와 같은 색상 규칙(Editor._beatLineColorForDenominator)을 그대로 써서
+    // 미니 미리보기를 그린다 — snapDivision=16 기준 한 마디 분량을 보여준다.
+    function renderGridStylePreview() {
+        const container = DOM.settings.editorTab.gridStylePreview;
+        if (!container) return;
+        container.innerHTML = '';
+        const total = 16;
+        const height = 96; // css의 미리보기 박스 높이(px)와 맞춘 고정값 — 탭이 숨겨진 동안엔 clientHeight가 0이라 고정값을 쓴다.
+        for (let j = 0; j <= total; j++) {
+            const line = document.createElement('div');
+            line.style.position = 'absolute';
+            line.style.left = '0';
+            line.style.width = '100%';
+            line.style.height = '1px';
+            line.style.top = `${Math.min((j / total) * height, height - 1)}px`;
+            if (j === 0 || j === total) {
+                line.style.backgroundColor = '#a0aec0'; // 마디선 — 스타일과 무관하게 항상 밝은 회색
+            } else {
+                const denominator = total / Editor._gcd(j, total);
+                line.style.backgroundColor = Editor._beatLineColorForDenominator(denominator);
+            }
+            container.appendChild(line);
         }
     }
 
@@ -1008,6 +1055,7 @@ document.addEventListener('DOMContentLoaded', () => {
         UI.showScreen('settings');
         populateKeybindUI();
         populateEditorKeybindUI();
+        updateGridStyleButtons();
         DOM.settings.musicVolumeSlider.value = Game.state.settings.musicVolume;
         DOM.settings.musicVolumeValue.textContent = Game.state.settings.musicVolume;
         DOM.settings.sfxVolumeSlider.value = Game.state.settings.sfxVolume;

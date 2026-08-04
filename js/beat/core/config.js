@@ -100,6 +100,9 @@ const CONFIG = {
     // 새 비트맵/재설정 시 적용되는 기본값. 환경설정 → 에디터 탭에서 변경 가능.
     EDITOR_DEFAULT_SETTINGS: { bpm: 120, snapDivision: 4, fallSpeed: 7 },
     EDITOR_FACTORY_DEFAULT_SETTINGS: { bpm: 120, snapDivision: 4, fallSpeed: 7 },
+    // 에디터 타임라인 박자 분할선 색상 스타일. 'default' = 분할별로 다른 색,
+    // 'legacy' = 예전처럼 전부 진한 회색 한 가지. 환경설정 → 에디터 탭에서 변경 가능.
+    EDITOR_GRID_LINE_STYLE: 'default',
     EDITOR_UNDO_HISTORY_LIMIT: 50,
     NOTE_SPAWN_TIME_MS: 2000, // 노트가 화면에 나타나는 시간
     GAME_AREA_HEIGHT: 600, // 게임 영역 높이 (픽셀)
@@ -120,6 +123,9 @@ const CONFIG = {
         }
         if (saved.toolKeys) Object.assign(CONFIG.EDITOR_TOOL_KEYS, saved.toolKeys);
         if (saved.defaults) Object.assign(CONFIG.EDITOR_DEFAULT_SETTINGS, saved.defaults);
+        if (saved.gridLineStyle === 'default' || saved.gridLineStyle === 'legacy') {
+            CONFIG.EDITOR_GRID_LINE_STYLE = saved.gridLineStyle;
+        }
     } catch (err) {
         console.warn('에디터 설정을 불러오지 못했습니다:', err);
     }
