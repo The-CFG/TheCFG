@@ -1400,9 +1400,7 @@ const Editor = {
                 this.state.song.startOffsetSec = chartData.startTimeOffset;
             }
             DOM.editor.bpmInput.value = this.state.bpm;
-            UI.showMessage('editor', `test`);
             if (DOM.editor.noteFallSpeedInput) {
-                alert(chartData.fallSpeed);
                 DOM.editor.noteFallSpeedInput.value = (typeof chartData.fallSpeed === 'number' && chartData.fallSpeed > 0)
                     ? chartData.fallSpeed
                     : CONFIG.EDITOR_DEFAULT_SETTINGS.fallSpeed;
@@ -1485,6 +1483,7 @@ const Editor = {
         bm.startTimeOffset = data.startTimeOffset || 0;
         if (data.bpm) bm.bpm = data.bpm;
         if (data.laneCount) bm.laneCount = data.laneCount;
+        if (typeof data.fallSpeed === 'number' && data.fallSpeed > 0) bm.fallSpeed = data.fallSpeed;
         // 이 난이도를 아직 안 불러온 사이에 종합 창에서 시작 시각(startOffsetSec)이 바뀐 적이
         // 있으면, 그동안 쌓인 델타를 지금 막 받아온 notes/triggers에 한 번에 적용해준다.
         if (bm._pendingOffsetDeltaMs) {
@@ -1511,7 +1510,7 @@ const Editor = {
             this.state.activeBeatmapIndex = index;
             this.state.history = [];
             this.state.bpm = bm.bpm || 120;
-            this.state.noteSpeed = bm.noteSpeed || 7;
+            this.state.noteSpeed = bm.fallSpeed || 7;
             // startTimeOffset은 더 이상 비트맵별로 따로 읽지 않는다 — song.startOffsetSec가
             // 유일한 소스이며 resetEditorState()에서도 건드리지 않으므로 여기 그대로 유지된다.
             this.state.triggers = (bm.triggers || []).slice().sort((a, b) => a.time - b.time);
