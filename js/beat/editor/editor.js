@@ -1538,12 +1538,11 @@ const Editor = {
             }
 
             DOM.editor.bpmInput.value = this.state.bpm;
-            // if (DOM.editor.noteFallSpeedInput) {
-            //     alert(bm.fallSpeed);
-            //     DOM.editor.noteFallSpeedInput.value = (typeof bm.fallSpeed === 'number' && bm.fallSpeed > 0)
-            //         ? bm.fallSpeed
-            //         : CONFIG.EDITOR_DEFAULT_SETTINGS.fallSpeed;
-            // }
+            if (DOM.editor.noteFallSpeedInput) {
+                DOM.editor.noteFallSpeedInput.value = (typeof bm.fallSpeed === 'number' && bm.fallSpeed > 0)
+                    ? bm.fallSpeed
+                    : CONFIG.EDITOR_DEFAULT_SETTINGS.fallSpeed;
+            }
             this.state.previewSeekSec = this.state.song.startOffsetSec || 0;
             DOM.editor.startTimeInput.value = this.state.previewSeekSec;
             if (DOM.editor.timingStartInput) DOM.editor.timingStartInput.value = this.state.song.timingStartSec || 0;
