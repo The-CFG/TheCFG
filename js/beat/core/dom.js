@@ -155,6 +155,8 @@ const DOM = {
         musicVolumeValue: document.getElementById('volume-value-music'),
         sfxVolumeSlider: document.getElementById('volume-slider-sfx'),
         sfxVolumeValue: document.getElementById('volume-value-sfx'),
+        showGameplayImageToggle: document.getElementById('show-gameplay-image-toggle'),
+        showGameplayImageValue: document.getElementById('show-gameplay-image-value'),
         debugModeToggle: document.getElementById('debug-mode-toggle'),
         controls: {
             lanesSelector: document.getElementById('keybind-lanes-selector'),

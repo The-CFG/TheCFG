@@ -16,6 +16,9 @@ const Game = {
             musicFileObject: null,
             musicVolume: 100,
             sfxVolume: 100,
+            // 게임플레이 중 노래 커버 이미지를 배경으로 표시할지 여부. 새로고침해도 유지되도록
+            // localStorage에서 미리 읽어둔다 (계정 볼륨과 달리 계정 연동은 하지 않음).
+            showGameplayImage: localStorage.getItem('theBeat_showGameplayImage') !== 'false',
             bpm: 120,
             startTimeOffset: 0, // 채보 박자 계산 기준점 (bpm/noteoffset 등 노트 타이밍용)
             songStartOffset: 0, // 실제 오디오 재생을 시작할 지점 (종합 창의 "시작(초)")

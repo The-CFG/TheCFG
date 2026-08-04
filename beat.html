@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="css/beat/responsive.css">
     <link rel="stylesheet" href="css/beat/help.css">
     <link rel="stylesheet" href="css/beat/theme.css">
-    <script src="js/beat/appearance/theme.js"></script><!-- FOUC 방지: defer 없이 즉시 실행 -->
+    <script src="js/beat/theme.js"></script><!-- FOUC 방지: defer 없이 즉시 실행 -->
     <style>
         /* 터치 디바이스 레이아웃 - 좁은 화면(1024px 이하)에서만 세로 배치 */
         /* [수정] 기존에는 'body > div'로 잡아서 업로드/로그인/트리거/디버그 모달도
@@ -295,7 +295,7 @@
                         </div>
                         <p id="settings-message" class="hidden text-center text-yellow-400 mb-4 py-2 bg-gray-700 rounded"></p>
                         <div id="settings-tabs" class="flex border-b border-gray-600 mb-4">
-                            <button data-tab="volume" class="tab-btn py-2 px-4 text-gray-300 hover:text-white transition active" data-i18n="volume">음량</button>
+                            <button data-tab="volume" class="tab-btn py-2 px-4 text-gray-300 hover:text-white transition active" data-i18n="play_tab">플레이</button>
                             <button data-tab="appearance" class="tab-btn py-2 px-4 text-gray-300 hover:text-white transition" data-i18n="appearance">모양</button>
                             <button data-tab="controls" class="tab-btn py-2 px-4 text-gray-300 hover:text-white transition" data-i18n="controls">조작</button>
                             <button data-tab="editor" class="tab-btn py-2 px-4 text-gray-300 hover:text-white transition" data-i18n="editor_settings_tab">에디터</button>
@@ -317,6 +317,13 @@
                                         <span id="volume-value-sfx" class="font-mono">100</span>
                                     </div>
                                     <input id="volume-slider-sfx" type="range" min="0" max="100" value="100" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                </div>
+                                <div class="flex items-center justify-between text-gray-300">
+                                    <label for="show-gameplay-image-toggle" data-i18n="show_gameplay_image">게임플레이 시 이미지 표시</label>
+                                    <div class="flex items-center space-x-2">
+                                        <span id="show-gameplay-image-value" class="font-mono text-sm" data-i18n="show">보이기</span>
+                                        <input id="show-gameplay-image-toggle" type="checkbox" checked class="h-5 w-5 bg-gray-700 rounded border-gray-600 text-blue-500 focus:ring-blue-500">
+                                    </div>
                                 </div>
                             </div>
                             <div id="tab-content-appearance" class="tab-content hidden space-y-6">

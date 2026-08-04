@@ -573,6 +573,22 @@ document.addEventListener('DOMContentLoaded', () => {
             CloudAuth.saveVolumeSettings(Game.state.settings.musicVolume, Game.state.settings.sfxVolume);
         });
 
+        if (DOM.settings.showGameplayImageToggle) {
+            DOM.settings.showGameplayImageToggle.addEventListener('change', (e) => {
+                const shown = e.target.checked;
+                Game.state.settings.showGameplayImage = shown;
+                localStorage.setItem('theBeat_showGameplayImage', shown ? 'true' : 'false');
+                if (DOM.settings.showGameplayImageValue) {
+                    DOM.settings.showGameplayImageValue.textContent = I18n.t(shown ? 'show' : 'hide');
+                }
+                if (shown) {
+                    GameBackground.reapply();
+                } else {
+                    GameBackground.clear();
+                }
+            });
+        }
+
         // 키 상자는 레인 수 그룹에 따라 동적으로 생성되므로 이벤트 위임으로 처리
         DOM.settings.controls.rowsContainer.addEventListener('click', (e) => {
             const box = e.target.closest('.keybind-box');
@@ -996,6 +1012,13 @@ document.addEventListener('DOMContentLoaded', () => {
         DOM.settings.musicVolumeValue.textContent = Game.state.settings.musicVolume;
         DOM.settings.sfxVolumeSlider.value = Game.state.settings.sfxVolume;
         DOM.settings.sfxVolumeValue.textContent = Game.state.settings.sfxVolume;
+        if (DOM.settings.showGameplayImageToggle) {
+            const shown = Game.state.settings.showGameplayImage !== false;
+            DOM.settings.showGameplayImageToggle.checked = shown;
+            if (DOM.settings.showGameplayImageValue) {
+                DOM.settings.showGameplayImageValue.textContent = I18n.t(shown ? 'show' : 'hide');
+            }
+        }
     }
 
     function updateDetailedSettingsUI() {

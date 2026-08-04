@@ -6,13 +6,17 @@
 
 const GameBackground = {
     _currentUrl: null,
+    // 마지막으로 요청된 url. "게임플레이 시 이미지 표시" 설정이 꺼져있는 동안에도 기억해뒀다가,
+    // 설정을 다시 켰을 때 화면 전환 없이 곧바로 복원할 수 있도록 한다.
+    _lastRequestedUrl: null,
 
     // url이 없으면 clear()와 동일하게 동작.
     // 같은 url을 다시 set()하면 재적용하지 않는다 (화면 전환마다 깜빡이는 것 방지).
     set(url) {
         const bg = document.getElementById('game-area-bg');
         if (!bg) return;
-        if (!url) {
+        this._lastRequestedUrl = url || null;
+        if (!url || Game.state.settings.showGameplayImage === false) {
             this.clear();
             return;
         }
@@ -45,6 +49,12 @@ const GameBackground = {
         setTimeout(() => {
             if (this._currentUrl === null) bg.style.backgroundImage = '';
         }, 300);
+    },
+
+    // "게임플레이 시 이미지 표시" 설정을 다시 켰을 때 호출 — 화면 전환 없이도
+    // 마지막으로 요청됐던 이미지를 곧바로 복원한다.
+    reapply() {
+        if (this._lastRequestedUrl) this.set(this._lastRequestedUrl);
     },
 };
 

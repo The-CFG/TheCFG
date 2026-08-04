@@ -26,7 +26,7 @@ const I18n = {
             
             // 환경설정
             'settings': '환경설정',
-            'volume': '음량',
+            'play_tab': '플레이',
             'appearance': '모양',
             'controls': '조작',
             'editor_settings_tab': '에디터',
@@ -36,6 +36,9 @@ const I18n = {
             'etc': '기타',
             'music_volume': '음악 볼륨',
             'sfx_volume': '효과음 볼륨',
+            'show_gameplay_image': '게임플레이 시 이미지 표시',
+            'show': '보이기',
+            'hide': '숨기기',
             'back': '돌아가기',
             
             // 언어 설정
@@ -137,7 +140,7 @@ const I18n = {
             
             // Settings
             'settings': 'Settings',
-            'volume': 'Volume',
+            'play_tab': 'Play',
             'appearance': 'Appearance',
             'controls': 'Controls',
             'editor_settings_tab': 'Editor',
@@ -147,6 +150,9 @@ const I18n = {
             'etc': 'Etc',
             'music_volume': 'Music Volume',
             'sfx_volume': 'SFX Volume',
+            'show_gameplay_image': 'Show Image During Gameplay',
+            'show': 'Show',
+            'hide': 'Hide',
             'back': 'Back',
             
             // Language settings
