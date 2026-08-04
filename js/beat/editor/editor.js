@@ -815,6 +815,27 @@ const Editor = {
         }
     },
 
+    // 모바일 등 우클릭(컨텍스트 메뉴)을 쓸 수 없는 환경을 위한 삭제 버튼.
+    // 편집(Edit) 도구로 선택해둔 노트들(state.selectedNotes)을 한 번에 지운다.
+    // 우클릭 삭제(handleTimelineContextMenu)와 동일한 로직이지만 다중 노트를 대상으로 한다.
+    deleteSelectedNotes() {
+        try {
+            if (this.state.isPlaying) return;
+            if (!this.state.selectedNotes.length) {
+                UI.showMessage('editor', '삭제할 노트를 먼저 선택해주세요 (편집 도구로 탭).');
+                return;
+            }
+            this.setDirty(true);
+            this._saveStateForUndo();
+            const selectedKeys = new Set(this.state.selectedNotes.map(n => `${n.time}|${n.lane}`));
+            this.state.notes = this.state.notes.filter(note => !selectedKeys.has(`${note.time}|${note.lane}`));
+            this.state.selectedNotes = [];
+            this.renderNotes();
+        } catch (err) {
+            Debugger.logError(err, 'Editor.deleteSelectedNotes');
+        }
+    },
+
     // ── Edit 도구: 노트 선택(드래그 박스 / 클릭) ─────────────────────────
     // 빈 칸에서 mousedown하면 드래그로 사각 영역을 그려 겹치는 노트를 모두 선택하고,
     // 노트를 직접 mousedown하면 그 노트 하나를 선택한다. Shift를 누른 채로 하면 기존

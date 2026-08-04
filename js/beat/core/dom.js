@@ -89,6 +89,7 @@ const DOM = {
         removeMeasureBtn: document.getElementById('editor-remove-measure-btn'),
         noteTypeSelector: document.getElementById('editor-note-type-selector'),
         toolSelector: document.getElementById('editor-tool-selector'),
+        deleteSelectedBtn: document.getElementById('editor-delete-selected-btn'),
         
         // 관리 버튼
         playBtn: document.getElementById('editor-play-btn'),
