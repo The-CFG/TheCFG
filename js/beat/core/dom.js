@@ -157,6 +157,7 @@ const DOM = {
         sfxVolumeValue: document.getElementById('volume-value-sfx'),
         showGameplayImageToggle: document.getElementById('show-gameplay-image-toggle'),
         showGameplayImageValue: document.getElementById('show-gameplay-image-value'),
+        laneHighlightToggle: document.getElementById('lane-highlight-toggle'),
         debugModeToggle: document.getElementById('debug-mode-toggle'),
         controls: {
             lanesSelector: document.getElementById('keybind-lanes-selector'),

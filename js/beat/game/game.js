@@ -19,6 +19,8 @@ const Game = {
             // 게임플레이 중 노래 커버 이미지를 배경으로 표시할지 여부. 새로고침해도 유지되도록
             // localStorage에서 미리 읽어둔다 (계정 볼륨과 달리 계정 연동은 하지 않음).
             showGameplayImage: localStorage.getItem('theBeat_showGameplayImage') !== 'false',
+            // 입력 시 레인이 하얗게 하이라이트되는 피드백을 표시할지 여부
+            laneHighlightOnInput: localStorage.getItem('theBeat_laneHighlightOnInput') !== 'false',
             bpm: 120,
             startTimeOffset: 0, // 채보 박자 계산 기준점 (bpm/noteoffset 등 노트 타이밍용)
             songStartOffset: 0, // 실제 오디오 재생을 시작할 지점 (종합 창의 "시작(초)")
@@ -128,11 +130,13 @@ const Game = {
                 ctx.stroke();
             }
 
-            // 활성 레인 피드백
-            ctx.fillStyle = 'rgba(255,255,255,0.1)';
-            for (let i = 0; i < laneCount; i++) {
-                if (activeLanes[i]) {
-                    ctx.fillRect(i * laneW + 1, 0, laneW - 2, this.h);
+            // 활성 레인 피드백 (설정에서 끌 수 있음)
+            if (Game.state.settings.laneHighlightOnInput) {
+                ctx.fillStyle = 'rgba(255,255,255,0.1)';
+                for (let i = 0; i < laneCount; i++) {
+                    if (activeLanes[i]) {
+                        ctx.fillRect(i * laneW + 1, 0, laneW - 2, this.h);
+                    }
                 }
             }
 
@@ -748,7 +752,7 @@ const Game = {
 
             this.state.activeLanes[laneIndex] = true;
             const laneEl = DOM.lanesContainer.children[laneIndex];
-            if (laneEl) laneEl.classList.add('active-feedback');
+            if (laneEl && this.state.settings.laneHighlightOnInput) laneEl.classList.add('active-feedback');
 
             let elapsedTime;
             if (this.state.settings.mode === 'music') {

@@ -601,6 +601,14 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
+        if (DOM.settings.laneHighlightToggle) {
+            DOM.settings.laneHighlightToggle.addEventListener('change', (e) => {
+                const enabled = e.target.checked;
+                Game.state.settings.laneHighlightOnInput = enabled;
+                localStorage.setItem('theBeat_laneHighlightOnInput', enabled ? 'true' : 'false');
+            });
+        }
+
         // 키 상자는 레인 수 그룹에 따라 동적으로 생성되므로 이벤트 위임으로 처리
         DOM.settings.controls.rowsContainer.addEventListener('click', (e) => {
             const box = e.target.closest('.keybind-box');
@@ -1066,6 +1074,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (DOM.settings.showGameplayImageValue) {
                 DOM.settings.showGameplayImageValue.textContent = I18n.t(shown ? 'show' : 'hide');
             }
+        }
+        if (DOM.settings.laneHighlightToggle) {
+            DOM.settings.laneHighlightToggle.checked = Game.state.settings.laneHighlightOnInput !== false;
         }
     }
 
