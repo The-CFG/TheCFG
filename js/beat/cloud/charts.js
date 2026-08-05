@@ -398,6 +398,51 @@ const CloudCharts = {
         return { data, error: null };
     },
 
+    // ── 노래 삭제 (Storage + DB) — 그 노래에 딸린 난이도(beatmap)까지 전부 함께 삭제 ──
+    // 오디오 파일은 song 단위로 하나만 존재하므로, 노래를 지우면 거기 딸린 모든
+    // 난이도의 차트 JSON과 오디오/커버 이미지가 한꺼번에 삭제된다.
+    async deleteSong(songId) {
+        const user = await CloudAuth.getUser();
+        if (!user) return { error: new Error('로그인이 필요합니다.') };
+
+        const { data: song, error: songFetchErr } = await _supabase
+            .from('beat_songs')
+            .select('audio_storage_path, cover_storage_path, owner_id')
+            .eq('id', songId)
+            .single();
+        if (songFetchErr) return { error: songFetchErr };
+        if (song.owner_id !== user.id) return { error: new Error('권한이 없습니다.') };
+
+        // 이 노래에 속한 모든 난이도의 차트 JSON 경로 수집
+        const { data: beatmaps, error: bmFetchErr } = await _supabase
+            .from('beat_charts')
+            .select('chart_storage_path')
+            .eq('song_id', songId);
+        if (bmFetchErr) return { error: bmFetchErr };
+
+        // Storage 삭제: 오디오 + 커버 이미지 + 모든 난이도 차트 JSON
+        const pathsToRemove = [song.audio_storage_path, song.cover_storage_path,
+            ...(beatmaps || []).map(b => b.chart_storage_path)].filter(Boolean);
+        if (pathsToRemove.length > 0) {
+            await _supabase.storage.from('beat-files').remove(pathsToRemove);
+        }
+
+        // DB 삭제: 난이도(beat_charts)를 먼저 지운 뒤 노래(beat_songs)를 지운다
+        // (cascade 설정 여부와 무관하게 안전하도록 명시적으로 처리)
+        const { error: chartsDelErr } = await _supabase
+            .from('beat_charts')
+            .delete()
+            .eq('song_id', songId);
+        if (chartsDelErr) return { error: chartsDelErr };
+
+        const { error: songDelErr } = await _supabase
+            .from('beat_songs')
+            .delete()
+            .eq('id', songId);
+
+        return { error: songDelErr };
+    },
+
     // ── 노래 상세 (song 메타 + 그 노래의 난이도 목록, 각 beatmap은 메타만) ─────
     // 실제 notes/triggers는 여기서 안 받아온다 — 편집 진입 시 downloadChartData()로 필요할 때만 받는다.
     async getSongWithBeatmaps(songId) {

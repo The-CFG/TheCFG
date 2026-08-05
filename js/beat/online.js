@@ -422,6 +422,13 @@ const Online = {
         const { data, error } = await CloudCharts.listMyCharts();
         if (error) { this._setContent(`<p class="text-red-400 text-sm">${error.message}</p>`); return; }
 
+        const { data: songs, error: songsError } = await CloudCharts.listMySongs();
+        if (songsError) { this._setContent(`<p class="text-red-400 text-sm">${songsError.message}</p>`); return; }
+
+        const songCards = (songs || []).length === 0
+            ? '<p class="text-gray-400 text-sm text-center mt-4">업로드한 노래가 없습니다.</p>'
+            : (songs || []).map(s => this._mySongCard(s)).join('');
+
         const cards = (data || []).length === 0
             ? '<p class="text-gray-400 text-sm text-center mt-8">업로드한 차트가 없습니다.</p>'
             : (data || []).map(c => this._myChartCard(c)).join('');
@@ -441,6 +448,9 @@ const Online = {
                 <button id="local-play-btn" class="w-full py-2 bg-green-700 hover:bg-green-600 rounded text-sm font-semibold transition disabled:opacity-40" disabled>▶ 플레이</button>
             </div>
         </div>
+        <!-- 내 업로드 노래 목록 (song 단위 — 삭제 시 딸린 난이도/오디오까지 함께 삭제) -->
+        <h3 class="text-sm font-semibold text-gray-300 mb-2">🎵 내 업로드 노래</h3>
+        <div class="space-y-2 mb-4">${songCards}</div>
         <!-- 내 업로드 차트 목록 -->
         <h3 class="text-sm font-semibold text-gray-300 mb-2">☁ 내 업로드 차트</h3>
         <div class="space-y-2">${cards}</div>`);
@@ -507,12 +517,37 @@ const Online = {
                 e.stopPropagation();
                 this._deleteMyChart(btn.dataset.id, btn.dataset.title);
             }));
+        document.querySelectorAll('.my-song-delete-btn').forEach(btn =>
+            btn.addEventListener('click', e => {
+                e.stopPropagation();
+                this._deleteMySong(btn.dataset.id, btn.dataset.title);
+            }));
         // 내 차트에서 직접 리더보드 열기
         document.querySelectorAll('.my-lb-btn').forEach(btn =>
             btn.addEventListener('click', e => {
                 e.stopPropagation();
                 this.show('detail', btn.dataset.id);
             }));
+    },
+
+    _mySongCard(s) {
+        const pub = s.is_public
+            ? '<span class="text-xs text-green-400">공개</span>'
+            : '<span class="text-xs text-gray-500">비공개</span>';
+        return `
+        <div class="p-3 bg-gray-800 rounded-lg">
+            <div class="flex items-center space-x-2">
+                <div class="flex-1 min-w-0">
+                    <p class="font-semibold text-white truncate">${_esc(s.title || '(제목 없음)')}</p>
+                    <p class="text-xs text-gray-400 truncate">${_esc(s.artist || '—')} · 난이도 ${s.beatmapCount}개</p>
+                </div>
+                <div class="flex items-center space-x-1 flex-shrink-0">
+                    ${pub}
+                    <button class="my-song-delete-btn py-1 px-2 bg-red-800 hover:bg-red-700 rounded text-xs"
+                        data-id="${s.id}" data-title="${_esc(s.title || '(제목 없음)')}">삭제</button>
+                </div>
+            </div>
+        </div>`;
     },
 
     _myChartCard(c) {
@@ -547,6 +582,13 @@ const Online = {
     async _deleteMyChart(chartId, title) {
         if (!confirm(`"${title}" 을(를) 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) return;
         const { error } = await CloudCharts.deleteChart(chartId);
+        if (error) { alert('삭제 오류: ' + error.message); return; }
+        await this._loadMyCharts();
+    },
+
+    async _deleteMySong(songId, title) {
+        if (!confirm(`"${title}" 노래를 삭제하시겠습니까?\n이 노래에 속한 모든 난이도와 음악 파일이 함께 삭제되며, 되돌릴 수 없습니다.`)) return;
+        const { error } = await CloudCharts.deleteSong(songId);
         if (error) { alert('삭제 오류: ' + error.message); return; }
         await this._loadMyCharts();
     },
