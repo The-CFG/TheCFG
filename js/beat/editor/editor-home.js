@@ -102,6 +102,7 @@ const EditorHome = {
             triggers: [],
             cloudChartId: bm.id,
             chartStoragePath: bm.chart_storage_path,
+            updatedAt: bm.updated_at || null,
             _loaded: false, // 편집/복제/전체저장 시점에 Editor.ensureBeatmapLoaded()가 채운다
         }));
         Editor.state.activeBeatmapIndex = 0;

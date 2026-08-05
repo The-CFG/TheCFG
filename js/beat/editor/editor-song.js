@@ -81,6 +81,13 @@ const EditorSong = {
             meta.textContent = `${bm.laneCount || 4}레인 · BPM ${bm.bpm || 120} · ${noteCountLabel}`;
             info.append(label, meta);
 
+            if (bm.updatedAt) {
+                const updated = document.createElement('p');
+                updated.className = 'text-xs text-gray-500';
+                updated.textContent = `최근 수정: ${this._formatUpdatedAt(bm.updatedAt)}`;
+                info.append(updated);
+            }
+
             const btns = document.createElement('div');
             btns.className = 'flex gap-1 flex-shrink-0';
             btns.append(
@@ -102,6 +109,16 @@ const EditorSong = {
         btn.className = `py-1 px-2 text-xs rounded whitespace-nowrap ${colorClasses}`;
         btn.addEventListener('click', onClick);
         return btn;
+    },
+
+    // 난이도 카드에 표시할 "최근 수정" 시각을 사람이 읽기 좋은 형태로 변환
+    _formatUpdatedAt(isoString) {
+        const d = new Date(isoString);
+        if (isNaN(d.getTime())) return '';
+        return d.toLocaleString('ko-KR', {
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit',
+        });
     },
 
     // ── 난이도 카드 액션 ──────────────────────────────────────────────
@@ -134,6 +151,7 @@ const EditorSong = {
         }
         const copy = JSON.parse(JSON.stringify(bm));
         copy.cloudChartId = null;
+        copy.updatedAt = null;
         copy._loaded = true;
         copy.difficultyLabel = `${bm.difficultyLabel || '기본'} 사본`;
         Editor.state.beatmaps.splice(index + 1, 0, copy);
@@ -421,6 +439,7 @@ const EditorSong = {
                     break;
                 }
                 bm.cloudChartId = data.id;
+                bm.updatedAt = data.updated_at || new Date().toISOString();
                 addedCount++;
             }
 
@@ -444,12 +463,13 @@ const EditorSong = {
                         notes: bm.notes || [],
                         triggers: bm.triggers || [],
                     };
-                    const { error } = await CloudCharts.updateBeatmap(bm.cloudChartId, meta, chartData);
+                    const { data, error } = await CloudCharts.updateBeatmap(bm.cloudChartId, meta, chartData);
                     if (error) {
                         failure = { label: bm.difficultyLabel, message: error.message };
                         break;
                     }
                     bm._cloudDirty = false;
+                    bm.updatedAt = data?.updated_at || new Date().toISOString();
                     updatedCount++;
                 }
             }
