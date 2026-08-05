@@ -7,13 +7,28 @@
 // 가중치: NPS 35% · 노트속도(fallSpeed) 25% · 동시타 비율 20% · 롱노트 비율 10% · BPM 10%
 //        + 레인 수(4키 기준) 곱연산 보정 (다른 지표와 성격이 달라 가중합에서 분리).
 //
+// NPS 산정 방식 (v2):
+//  - "노트 개수"가 아니라 "시간당 밀도"만 본다는 원칙은 기존과 동일.
+//  - 다만 채보 전체 평균 NPS 하나만 쓰면 두 가지 왜곡이 생긴다.
+//    1) 앞/뒤 여백(인트로·아웃트로 무음 구간)이 길면 분모(길이)만 늘어나
+//       실제 플레이 밀도보다 낮게 나옴 → 첫 노트~마지막 노트 구간으로 트리밍.
+//    2) "4분 내내 고르게 8000개"와 "3분은 텅 비고 마지막 1분에 8000개 몰림"이
+//       평균 NPS로는 동일하게 나옴 → 두 채보의 체감 난이도는 전혀 다름.
+//       → 1초 슬라이딩 윈도우로 구간 밀도의 최댓값(피크 NPS)을 같이 구해서
+//         평균 NPS와 절반씩 섞는다 (avgNps 50% + peakNps 50%).
+//  이 두 보정을 합쳐 "시간 대비 노트 수"를 실제 체감에 가깝게 반영한다.
+//
 // 단위 주의: chartData.notes[].time / triggers[].time은 모두 "밀리초" 값이며,
 // 오프셋(startTimeOffset) 기준 상대시간으로 이미 저장돼 있다
 // (editor-core.js의 _yToSnappedRelativeTimeMs 참고). 여기서 다시 오프셋을
 // 빼거나 초 단위로 착각하면 NPS가 완전히 틀어지므로 주의.
 const Difficulty = {
     WEIGHTS: { nps: 0.35, speed: 0.25, chord: 0.20, long: 0.10, bpm: 0.10 },
-    NPS_CAP: 12,           // 이 이상 초당 노트수는 만점 처리
+    NPS_AVG_RATIO: 0.5,    // combinedNps 중 평균 NPS 비중 (나머지는 피크 NPS)
+    NPS_PEAK_WINDOW_MS: 1000, // 피크 NPS를 잴 슬라이딩 윈도우 길이
+    NPS_CAP: 16,           // combinedNps가 이 이상이면 만점 처리
+                            // (피크값이 섞여 평균보다 커지는 경향을 감안해 기존 12→16으로 상향.
+                            //  실제 채보 데이터로 분포를 뽑아본 뒤 재조정 권장)
     SPEED_MIN: 1, SPEED_MAX: 20,  // note-fall-speed-slider의 min/max와 동일
     BPM_MIN: 60, BPM_MAX: 240,
 
@@ -48,6 +63,24 @@ const Difficulty = {
         return weightedSum / totalDurationMs;
     },
 
+    // noteTimesMs: 노트 시각(ms) 배열. windowMs 길이의 슬라이딩 윈도우 안에
+    // 노트가 가장 많이 몰린 구간을 찾아 그 구간의 초당 노트 수를 반환한다.
+    // (정렬 후 투 포인터로 O(n) — 채보 노트 수가 많아도 가볍게 계산됨)
+    _computePeakNps(noteTimesMs, windowMs) {
+        if (!Array.isArray(noteTimesMs) || noteTimesMs.length === 0 || windowMs <= 0) {
+            return 0;
+        }
+        const sorted = noteTimesMs.slice().sort((a, b) => a - b);
+        let left = 0;
+        let maxCount = 0;
+        for (let right = 0; right < sorted.length; right++) {
+            while (sorted[right] - sorted[left] > windowMs) left++;
+            const count = right - left + 1;
+            if (count > maxCount) maxCount = count;
+        }
+        return maxCount / (windowMs / 1000);
+    },
+
     // chartData: { bpm, laneCount, notes, triggers, fallSpeed(또는 noteSpeed) }
     // 반환값: 0.00 ~ 100.00 (difficulty_score로 그대로 저장)
     calculate(chartData) {
@@ -61,10 +94,20 @@ const Difficulty = {
         const baseFallSpeed = typeof chartData.fallSpeed === 'number' ? chartData.fallSpeed
             : (typeof chartData.noteSpeed === 'number' ? chartData.noteSpeed : 7);
 
-        // 1) NPS (초당 노트 수) — note.time은 ms, 이미 오프셋 기준 상대시간이므로 그대로 씀
-        const lastTimeMs = notes.reduce((max, n) => Math.max(max, n.time || 0), 0);
-        const durationSec = Math.max(lastTimeMs / 1000, 1);
-        const nps = totalNotes / durationSec;
+        // 1) NPS — note.time은 ms, 이미 오프셋 기준 상대시간이므로 그대로 씀.
+        //    (a) 평균 NPS: 첫 노트~마지막 노트 구간(앞뒤 여백 트리밍)으로 계산
+        //    (b) 피크 NPS: 1초 슬라이딩 윈도우 안 최대 밀도
+        //    → 절반씩 섞어서 "평균은 낮아도 폭타 구간이 있는 채보"를 과소평가하지 않게 함
+        const allTimesMs = notes.map(n => n.time || 0);
+        const firstTimeMs = Math.min(...allTimesMs);
+        const lastTimeMs = Math.max(...allTimesMs);
+        const durationSec = Math.max((lastTimeMs - firstTimeMs) / 1000, 1);
+        const avgNps = totalNotes / durationSec;
+
+        const validNoteTimesMs = validNotes.map(n => n.time || 0);
+        const peakNps = this._computePeakNps(validNoteTimesMs, this.NPS_PEAK_WINDOW_MS);
+
+        const nps = avgNps * this.NPS_AVG_RATIO + peakNps * (1 - this.NPS_AVG_RATIO);
 
         // 2) 동시타 비율 — 같은 timestamp(ms)에 2개 이상 노트가 겹치는 비중
         const timeGroups = {};
