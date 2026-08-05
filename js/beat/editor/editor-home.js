@@ -89,9 +89,18 @@ const EditorHome = {
         Editor.state.song.previewStartSec = (data.song.preview_start_ms || 0) / 1000;
         Editor.state.song.startOffsetSec = (data.song.start_offset_ms || 0) / 1000;
         Editor.state.song.timingStartSec = (data.song.timing_start_ms || 0) / 1000;
-        // 오디오는 URL로 자동 로드하지 않고 사용자가 다시 선택하게 한다 (기존 CloudLoadModal과 동일 정책).
+        // 오디오/커버는 서버에 이미 올라가 있으므로 다시 고를 필요 없이 URL로 자동 로드한다.
+        // (실제 디코딩은 비트맵 창 진입 시 Editor.loadAudioFromUrl에서 이뤄진다 — 게임 플레이 화면과 동일한 방식)
         Editor.state.song.audioFileObject = null;
-        Editor.state.song.audioFileName = '';
+        Editor.state.song.audioFileName = (data.song.audio_storage_path || '').split('/').pop() || '';
+        Editor.state.song.audioUrl = data.song.audio_storage_path
+            ? CloudCharts.getAudioUrl(data.song.audio_storage_path)
+            : null;
+        Editor.state.song.coverFileObject = null;
+        Editor.state.song.coverFileName = (data.song.cover_storage_path || '').split('/').pop() || '';
+        Editor.state.song.coverUrl = data.song.cover_storage_path
+            ? CloudCharts.getCoverUrl(data.song.cover_storage_path)
+            : null;
 
         Editor.state.beatmaps = data.beatmaps.map(bm => ({
             difficultyLabel: bm.difficulty_label || '기본',
@@ -110,7 +119,6 @@ const EditorHome = {
         UI.showScreen('editorSong');
         EditorSong.render();
 
-        const audioName = (data.song.audio_storage_path || '').split('/').pop();
-        UI.showMessage('editorSong', `노래를 불러왔습니다. 재생/편집하려면 오디오 파일(${audioName || '원본 음악'})을 다시 선택해주세요.`);
+        UI.showMessage('editorSong', '노래를 불러왔습니다.');
     },
 };

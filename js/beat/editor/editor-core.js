@@ -50,10 +50,12 @@ const Editor = {
         song: {
             title: '',
             artist: '',
-            audioFileObject: null,  // 로컬 File 객체
+            audioFileObject: null,  // 로컬에서 새로 선택한 File 객체 (있으면 이걸 우선 사용)
             audioFileName: '',
-            coverFileObject: null,  // 로컬 File 객체 (선택)
+            audioUrl: null,         // 클라우드 노래를 열었을 때 서버 오디오 URL (자동 로드용)
+            coverFileObject: null,  // 로컬에서 새로 선택한 File 객체 (선택)
             coverFileName: '',
+            coverUrl: null,         // 클라우드 노래를 열었을 때 서버 커버 URL
             cloudSongId: null,      // 클라우드에 이미 존재하는 노래면 beat_songs.id
             previewStartSec: 0,     // 온라인 화면 미리듣기 시작 시각(초). 0이면 처음부터.
             startOffsetSec: 0,      // 실제 플레이 시 노래가 재생되기 시작하는 지점(초). 0이면 처음부터.
@@ -193,7 +195,7 @@ const Editor = {
         }
     },
 
-    // 이미 디코딩된 오디오 Blob을 에디터에 적용한다 (온라인 차트 편집 시 사용).
+    // 이미 디코딩된 오디오 Blob을 에디터에 적용한다 (로컬에서 새로 선택한 파일용).
     // <input type=file> 변경 이벤트 없이도 음악 플레이어/상태를 설정할 수 있도록
     // handleAudioLoad의 핵심 로직만 분리한 헬퍼.
     loadAudioFromBlob(blob, fileName) {
@@ -213,6 +215,29 @@ const Editor = {
             DOM.musicPlayer.onloadedmetadata = () => this.drawGrid();
         } catch (err) {
             Debugger.logError(err, 'Editor.loadAudioFromBlob');
+        }
+    },
+
+    // 클라우드에 이미 올라가 있는 노래를 열었을 때, 서버 오디오 URL을 그대로 재생기에 꽂는다.
+    // AudioEngine(=DOM.musicPlayer)은 src 할당 시점에 자체적으로 fetch→decodeAudioData를
+    // 수행하므로 여기서 별도로 Blob을 받아올 필요가 없다 (게임 플레이 화면과 동일한 방식).
+    loadAudioFromUrl(url, fileName) {
+        try {
+            if (DOM.musicPlayer.src && DOM.musicPlayer.src.startsWith('blob:')) {
+                URL.revokeObjectURL(DOM.musicPlayer.src);
+            }
+            DOM.musicPlayer.pause();
+            this.state.isPlaying = false;
+            cancelAnimationFrame(this.state.animationFrameId);
+
+            DOM.musicPlayer.src = url;
+            DOM.musicPlayer.load();
+
+            this.state.audioFileName = fileName;
+            DOM.editor.audioFileNameEl.textContent = fileName;
+            DOM.musicPlayer.onloadedmetadata = () => this.drawGrid();
+        } catch (err) {
+            Debugger.logError(err, 'Editor.loadAudioFromUrl');
         }
     },
 

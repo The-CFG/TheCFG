@@ -143,8 +143,10 @@ Object.assign(Editor, {
             artist: '',
             audioFileObject: null,
             audioFileName: '',
+            audioUrl: null,
             coverFileObject: null,
             coverFileName: '',
+            coverUrl: null,
             cloudSongId: null,
             previewStartSec: 0,
             startOffsetSec: 0,
@@ -219,10 +221,14 @@ Object.assign(Editor, {
             }
             this.state.totalMeasures = maxMeasure + 5;
 
-            // 오디오는 비트맵이 아니라 노래(song) 단위로 관리된다. 종합 창에서 이미 골라뒀다면
-            // 여기서 다시 로드해준다 (resetEditorState()가 위에서 플레이어를 비웠기 때문).
+            // 오디오는 비트맵이 아니라 노래(song) 단위로 관리된다. 로컬에서 새로 고른 파일이
+            // 있으면 그걸 우선 쓰고, 없으면 클라우드 노래를 열 때 자동으로 채워진 audioUrl로
+            // 로드한다(EditorHome.open 참고). 둘 다 없으면 신규 로컬 노래에서 아직 오디오를
+            // 안 고른 상태.
             if (this.state.song.audioFileObject) {
                 this.loadAudioFromBlob(this.state.song.audioFileObject, this.state.song.audioFileName);
+            } else if (this.state.song.audioUrl) {
+                this.loadAudioFromUrl(this.state.song.audioUrl, this.state.song.audioFileName);
             } else {
                 DOM.editor.audioFileNameEl.textContent = '선택된 파일 없음';
             }

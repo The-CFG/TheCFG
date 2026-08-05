@@ -32,10 +32,14 @@ const EditorSong = {
         if (DOM.editorSong.titleInput) DOM.editorSong.titleInput.value = song.title || '';
         if (DOM.editorSong.artistInput) DOM.editorSong.artistInput.value = song.artist || '';
         if (DOM.editorSong.audioNameEl) {
-            DOM.editorSong.audioNameEl.textContent = song.audioFileName || '선택된 파일 없음';
+            DOM.editorSong.audioNameEl.textContent = song.audioFileObject
+                ? song.audioFileName
+                : (song.audioUrl ? `${song.audioFileName || '원본 음악'} (서버에서 자동 로드됨)` : '선택된 파일 없음');
         }
         if (DOM.editorSong.coverNameEl) {
-            DOM.editorSong.coverNameEl.textContent = song.coverFileName || '선택된 파일 없음 (선택)';
+            DOM.editorSong.coverNameEl.textContent = song.coverFileObject
+                ? song.coverFileName
+                : (song.coverUrl ? `${song.coverFileName || '커버 이미지'} (서버에서 자동 로드됨)` : '선택된 파일 없음 (선택)');
         }
         if (DOM.editorSong.previewStartInput) {
             DOM.editorSong.previewStartInput.value = song.previewStartSec || 0;
@@ -238,6 +242,7 @@ const EditorSong = {
         if (!file) return;
         Editor.state.song.audioFileObject = file;
         Editor.state.song.audioFileName = file.name;
+        Editor.state.song.audioUrl = null; // 새로 고른 로컬 파일이 우선이므로 서버 URL은 더 이상 쓰지 않음
         if (DOM.editorSong.audioNameEl) DOM.editorSong.audioNameEl.textContent = file.name;
         // 실제 AudioEngine 로드는 비트맵 창 진입 시(Editor.loadBeatmapIntoFlatState)로 미룬다.
     },
@@ -247,6 +252,7 @@ const EditorSong = {
         if (!file) return;
         Editor.state.song.coverFileObject = file;
         Editor.state.song.coverFileName = file.name;
+        Editor.state.song.coverUrl = null; // 새로 고른 로컬 파일이 우선
         if (DOM.editorSong.coverNameEl) DOM.editorSong.coverNameEl.textContent = file.name;
     },
 
