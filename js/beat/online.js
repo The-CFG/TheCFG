@@ -124,12 +124,14 @@ const Online = {
         const laneRange = s.laneCountMin == null
             ? '—'
             : (s.laneCountMin === s.laneCountMax ? `${s.laneCountMin}키` : `${s.laneCountMin}~${s.laneCountMax}키`);
+        const dateLine = _formatDateLine(s.created_at, s.updated_at);
         return `
         <button class="browse-card-btn w-full text-left p-3 bg-gray-800 hover:bg-gray-700 rounded-lg transition" data-id="${s.id}">
             <div class="flex justify-between items-start">
                 <div class="flex-1 min-w-0">
                     <p class="font-semibold text-white truncate">${_esc(s.title)}</p>
                     <p class="text-sm text-gray-400 truncate">${_esc(s.artist || '—')}</p>
+                    ${dateLine ? `<p class="text-xs text-gray-500 mt-1">${dateLine}</p>` : ''}
                 </div>
                 <div class="flex flex-col items-end space-y-1 ml-2 flex-shrink-0">
                     <span class="text-xs px-1.5 py-0.5 bg-gray-600 rounded">난이도 ${s.beatmapCount}개</span>
@@ -165,6 +167,7 @@ const Online = {
         <div class="p-4 bg-gray-800 rounded-lg mb-4">
             <h2 class="text-xl font-bold text-white truncate">${_esc(song.title)}</h2>
             <p class="text-gray-400 truncate">${_esc(song.artist || '—')}</p>
+            ${_formatDateLine(song.created_at, song.updated_at) ? `<p class="text-xs text-gray-500 mt-1">${_formatDateLine(song.created_at, song.updated_at)}</p>` : ''}
         </div>
         <h3 class="text-sm font-semibold text-gray-300 mb-2">난이도 선택</h3>
         <div class="space-y-2">${cards}</div>
@@ -192,6 +195,7 @@ const Online = {
         const creatorName = bm.owner_id
             ? (nickMap[bm.owner_id] ? _esc(nickMap[bm.owner_id]) : `${_esc(bm.owner_id.slice(0, 8))}…`)
             : '';
+        const dateLine = _formatDateLine(bm.created_at, bm.updated_at);
         return `
         <button class="beatmap-card-btn w-full text-left p-3 bg-gray-800 hover:bg-gray-700 rounded-lg transition" data-id="${bm.id}">
             <div class="flex justify-between items-center">
@@ -206,6 +210,7 @@ const Online = {
                 </div>
             </div>
             ${creatorName ? `<div class="mt-1 text-xs text-gray-500 truncate">제작자: ${creatorName}</div>` : ''}
+            ${dateLine ? `<div class="mt-0.5 text-xs text-gray-500 truncate">${dateLine}</div>` : ''}
         </button>`;
     },
 
@@ -309,6 +314,7 @@ const Online = {
                 <span>▶ ${c.play_count}회</span>
                 ${creatorName ? `<span>제작자: ${creatorName}</span>` : ''}
             </div>
+            ${_formatDateLine(c.created_at, c.updated_at) ? `<div class="mt-1 text-xs text-gray-500">${_formatDateLine(c.created_at, c.updated_at)}</div>` : ''}
         </div>
         <div id="online-preview-hint" class="mb-4 p-3 bg-gray-800 rounded-lg text-center text-xs text-gray-400">
             불러오는 중…
@@ -600,6 +606,24 @@ function _esc(str) {
     return String(str)
         .replace(/&/g, '&amp;').replace(/</g, '&lt;')
         .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// ── 업로드 날짜 / 최근 수정 날짜 표시 헬퍼 ─────────────────────────────────────
+// created_at과 updated_at이 같은 날이면 업로드 날짜만, 다르면 둘 다 보여준다.
+function _formatShortDate(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())}`;
+}
+function _formatDateLine(createdAt, updatedAt) {
+    const uploaded = _formatShortDate(createdAt);
+    if (!uploaded) return '';
+    const updated = _formatShortDate(updatedAt);
+    return (updated && updated !== uploaded)
+        ? `업로드 ${uploaded} · 수정 ${updated}`
+        : `업로드 ${uploaded}`;
 }
 
 // ── 랭크(S/A/B/C) 등급별 색상 클래스 ──────────────────────────────────────────

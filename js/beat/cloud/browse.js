@@ -25,7 +25,7 @@ const CloudBrowse = {
     async _listPublicSongsByNewest({ keyword, page, pageSize }) {
         let query = _supabase
             .from('beat_songs')
-            .select('id, title, artist, created_at', { count: 'exact' })
+            .select('id, title, artist, created_at, updated_at', { count: 'exact' })
             .eq('is_public', true)
             .order('created_at', { ascending: false })
             .range(page * pageSize, (page + 1) * pageSize - 1);
@@ -50,7 +50,7 @@ const CloudBrowse = {
 
         let songQuery = _supabase
             .from('beat_songs')
-            .select('id, title, artist, created_at')
+            .select('id, title, artist, created_at, updated_at')
             .eq('is_public', true)
             .limit(CANDIDATE_CAP);
         if (keyword) songQuery = songQuery.or(`title.ilike.%${keyword}%,artist.ilike.%${keyword}%`);
@@ -132,7 +132,7 @@ const CloudBrowse = {
 
         const { data: beatmaps, error: bmErr } = await _supabase
             .from('beat_charts')
-            .select('id, difficulty_label, lane_count, bpm, note_count, play_count, created_at, owner_id')
+            .select('id, difficulty_label, lane_count, bpm, note_count, play_count, created_at, updated_at, owner_id')
             .eq('song_id', songId)
             .eq('is_public', true)
             .order('lane_count', { ascending: true })
