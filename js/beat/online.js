@@ -158,9 +158,10 @@ const Online = {
         const { song, beatmaps } = data;
         GameBackground.set(CloudCharts.getCoverUrl(song.cover_storage_path));
         const nickMap = await CloudAuth._fetchNicknameMap(beatmaps.map(bm => bm.owner_id).filter(Boolean));
+        const { data: likeInfo } = await CloudLikes.getLikeInfo(beatmaps.map(bm => bm.id));
         const cards = beatmaps.length === 0
             ? '<p class="text-gray-400 text-sm text-center mt-8">등록된 난이도가 없습니다.</p>'
-            : beatmaps.map(bm => this._beatmapCard(bm, nickMap)).join('');
+            : beatmaps.map(bm => this._beatmapCard(bm, nickMap, likeInfo || {})).join('');
 
         this._setContent(`
         <button id="song-back-btn" class="mb-3 text-sm text-gray-400 hover:text-white transition">← 목록으로</button>
@@ -189,13 +190,14 @@ const Online = {
         }
     },
 
-    _beatmapCard(bm, nickMap = {}) {
+    _beatmapCard(bm, nickMap = {}, likeInfo = {}) {
         const laneBadge = `<span class="text-xs px-1.5 py-0.5 bg-gray-600 rounded flex-shrink-0">${bm.lane_count}키</span>`;
         const label = bm.difficulty_label ? _esc(bm.difficulty_label) : '기본';
         const creatorName = bm.owner_id
             ? (nickMap[bm.owner_id] ? _esc(nickMap[bm.owner_id]) : `${_esc(bm.owner_id.slice(0, 8))}…`)
             : '';
         const dateLine = _formatDateLine(bm.created_at, bm.updated_at);
+        const likeCount = likeInfo[bm.id]?.count || 0;
         return `
         <button class="beatmap-card-btn w-full text-left p-3 bg-gray-800 hover:bg-gray-700 rounded-lg transition" data-id="${bm.id}">
             <div class="flex justify-between items-center">
@@ -207,6 +209,7 @@ const Online = {
                 <div class="flex items-center space-x-2 flex-shrink-0 text-xs text-gray-400">
                     <span>${bm.note_count}노트</span>
                     <span>▶ ${bm.play_count}</span>
+                    <span>♥ ${likeCount}</span>
                 </div>
             </div>
             ${creatorName ? `<div class="mt-1 text-xs text-gray-500 truncate">제작자: ${creatorName}</div>` : ''}
@@ -221,11 +224,12 @@ const Online = {
         this._currentChartId = chartId;
         this._setContent('<p class="text-gray-400 text-sm mt-8 text-center animate-pulse">불러오는 중…</p>');
 
-        const [detailRes, lbRes, myRes, currentUser] = await Promise.all([
+        const [detailRes, lbRes, myRes, currentUser, likeRes] = await Promise.all([
             CloudBrowse.getBeatmapDetail(chartId),
             CloudScores.getLeaderboard(chartId, 10),
             CloudScores.getMyScore(chartId),
             CloudAuth.getUser(),
+            CloudLikes.getLikeInfo([chartId]),
         ]);
 
         if (detailRes.error) {
@@ -236,6 +240,7 @@ const Online = {
         const c = detailRes.data;
         const lb = lbRes.data || [];
         const myScore = myRes.data;
+        const like = (likeRes.data && likeRes.data[chartId]) || { count: 0, likedByMe: false };
         GameBackground.set(CloudCharts.getCoverUrl(c.cover_storage_path));
         const creatorNickMap = c.owner_id ? await CloudAuth._fetchNicknameMap([c.owner_id]) : {};
         const creatorName = c.owner_id
@@ -316,6 +321,11 @@ const Online = {
             </div>
             ${_formatDateLine(c.created_at, c.updated_at) ? `<div class="mt-1 text-xs text-gray-500">${_formatDateLine(c.created_at, c.updated_at)}</div>` : ''}
         </div>
+        <button id="detail-like-btn" data-liked="${like.likedByMe ? '1' : '0'}"
+            class="w-full py-2 mb-4 rounded-lg font-semibold transition text-sm
+            ${like.likedByMe ? 'bg-pink-700 hover:bg-pink-600 text-white' : 'bg-gray-700 hover:bg-gray-600 text-gray-200'}">
+            <span id="detail-like-icon">${like.likedByMe ? '♥' : '♡'}</span> 좋아요 <span id="detail-like-count">${like.count}</span>
+        </button>
         <div id="online-preview-hint" class="mb-4 p-3 bg-gray-800 rounded-lg text-center text-xs text-gray-400">
             불러오는 중…
         </div>
@@ -335,6 +345,7 @@ const Online = {
             else { this._subView = 'browse'; this._renderShell(); this._renderBrowse(); }
         });
         document.getElementById('detail-play-btn').addEventListener('click', () => this._playOnlineChart(c));
+        document.getElementById('detail-like-btn').addEventListener('click', () => this._toggleLike(c.id));
 
         // 플레이 전 미리보기 — 노래(오디오) + 에디터와 동일한 방식의 노트 낙하 미리보기를
         // 실제 플레이 화면 크기로 크게 보여준다. 차트 데이터 다운로드가 실패해도
@@ -597,6 +608,33 @@ const Online = {
         const { error } = await CloudCharts.deleteSong(songId);
         if (error) { alert('삭제 오류: ' + error.message); return; }
         await this._loadMyCharts();
+    },
+
+    // ── 난이도(beatmap) 상세 화면의 좋아요 버튼 토글 ─────────────────────────
+    async _toggleLike(chartId) {
+        const btn = document.getElementById('detail-like-btn');
+        if (!btn) return;
+
+        const user = await CloudAuth.getUser();
+        if (!user) {
+            UI.showMessage('online', '로그인이 필요합니다. 우측 상단 계정 아이콘을 클릭해주세요.');
+            return;
+        }
+
+        const currentlyLiked = btn.dataset.liked === '1';
+        btn.disabled = true;
+        const { error } = await CloudLikes.toggle(chartId, currentlyLiked);
+        btn.disabled = false;
+        if (error) { alert('좋아요 처리 오류: ' + error.message); return; }
+
+        const nowLiked = !currentlyLiked;
+        btn.dataset.liked = nowLiked ? '1' : '0';
+        btn.className = `w-full py-2 mb-4 rounded-lg font-semibold transition text-sm
+            ${nowLiked ? 'bg-pink-700 hover:bg-pink-600 text-white' : 'bg-gray-700 hover:bg-gray-600 text-gray-200'}`;
+        const iconEl = document.getElementById('detail-like-icon');
+        const countEl = document.getElementById('detail-like-count');
+        if (iconEl) iconEl.textContent = nowLiked ? '♥' : '♡';
+        if (countEl) countEl.textContent = String((+countEl.textContent || 0) + (nowLiked ? 1 : -1));
     },
 };
 
