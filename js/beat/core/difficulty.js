@@ -269,3 +269,8 @@ const Difficulty = {
         return Math.round((score / 10) * 100) / 100;
     },
 };
+
+// 브라우저에서는 무시되고, Node.js(백필 스크립트 등)에서만 require로 사용됨.
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = Difficulty;
+}
