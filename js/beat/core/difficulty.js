@@ -247,7 +247,7 @@ const Difficulty = {
 
         // 3) 별점 스케일로 변환 (osu!mania와 동일하게 대략 0~10+ 범위로 나옴)
         const starRating = strainSum * this.STRAIN_MULTIPLIER;
-        let score = this._clamp(starRating * 10, 0, 100); // toRating()과 대칭되도록 *10
+        let score = Math.max(0, starRating * 10); // toRating()과 대칭되도록 *10, 상한은 두지 않음
 
         // 4) fallSpeed 보정 (타이밍 기반 스트레인이 못 잡는 "시각적 여유" 축)
         const lastTimeMs = Math.max(...notes.map(n => n.time || 0), 0);
@@ -258,7 +258,7 @@ const Difficulty = {
         const effectiveFallSpeed = this._timeWeightedAverage(baseFallSpeed, triggers, 'fallSpeed', lastTimeMs);
         const normSpeed = this._clamp01((effectiveFallSpeed - this.SPEED_MIN) / (this.SPEED_MAX - this.SPEED_MIN));
         const fallSpeedModifier = 1 + (normSpeed - 0.5) * this.FALLSPEED_INFLUENCE;
-        score = this._clamp(score * fallSpeedModifier, 0, 100);
+        score = Math.max(0, score * fallSpeedModifier);
 
         return Math.round(score * 100) / 100; // 0.00~100.00
     },
