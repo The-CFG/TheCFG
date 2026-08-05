@@ -55,13 +55,12 @@ const Online = {
 
     // 별점(difficulty_score) → 10점 만점 난이도 수치 배지.
     // 산정 난이도(채보 지표 기반)이며 플레이 통계와 무관함을 시각적으로도 분리해서 보여준다.
-    _starRatingHtml(difficultyScore, sizeCls = 'text-xs', withLabel = false) {
+    _starRatingHtml(difficultyScore, sizeCls = 'text-xs') {
         const rating = Difficulty.toRating(difficultyScore);
         const color = this._ratingColor(rating);
         return `
         <span class="inline-flex items-center gap-1 ${sizeCls} flex-shrink-0" title="산정 난이도 (채보 지표 기반, 플레이 기록과 무관)">
             <span class="font-mono font-bold px-1.5 py-0.5 rounded" style="background:${color}22;color:${color};border:1px solid ${color}66;">★ ${rating.toFixed(2)}</span>
-            ${withLabel ? '<span class="text-gray-500">(산정 난이도, 10점 만점)</span>' : ''}
         </span>`;
     },
 
@@ -337,7 +336,7 @@ const Online = {
             <h2 class="text-xl font-bold text-white truncate">${_esc(c.title)}</h2>
             <p class="text-gray-400 truncate">${_esc(c.artist || '—')}</p>
             <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-gray-400">
-                ${this._starRatingHtml(c.difficulty_score, 'text-sm', true)}
+                ${this._starRatingHtml(c.difficulty_score, 'text-sm')}
                 ${c.bpm             ? `<span>BPM ${c.bpm}</span>` : ''}
                 <span>${c.lane_count}키</span>
                 ${c.difficulty_label ? `<span>${_esc(c.difficulty_label)}</span>` : ''}
