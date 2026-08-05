@@ -333,6 +333,9 @@ const CloudCharts = {
         const noteCount = Array.isArray(chartData.notes)
             ? chartData.notes.filter(n => n.type !== 'long_tail').length
             : 0;
+        // 별점(difficulty_score)은 채보 지표만으로 이 시점에 한 번 계산해서 고정 저장한다.
+        // 이후 플레이 기록이 쌓여도 재계산하지 않는다 (Difficulty 모듈 참고).
+        const difficultyScore = Difficulty.calculate(chartData);
 
         const chartBlob = new Blob([JSON.stringify(chartData)], { type: 'application/json' });
         const { error: chartErr } = await _supabase.storage
@@ -353,6 +356,7 @@ const CloudCharts = {
                 bpm: meta.bpm || null,
                 note_count: noteCount,
                 note_speed: noteSpeed,
+                difficulty_score: difficultyScore,
                 chart_storage_path: chartPath,
                 is_public: true,
             })
@@ -459,7 +463,7 @@ const CloudCharts = {
 
         const { data: beatmaps, error: bmErr } = await _supabase
             .from('beat_charts')
-            .select('id, difficulty_label, lane_count, bpm, note_count, chart_storage_path, created_at, updated_at')
+            .select('id, difficulty_label, lane_count, bpm, note_count, difficulty_score, chart_storage_path, created_at, updated_at')
             .eq('song_id', songId)
             .eq('owner_id', user.id)
             .order('created_at', { ascending: true });
@@ -495,6 +499,9 @@ const CloudCharts = {
             updates.note_count = Array.isArray(chartData.notes)
                 ? chartData.notes.filter(n => n.type !== 'long_tail').length
                 : 0;
+            // 노트/트리거가 실제로 갱신된 경우에만 별점도 재계산한다.
+            // (이름변경만 한 경우는 chartData가 null로 넘어와 이 블록을 안 타므로 기존 별점 유지)
+            updates.difficulty_score = Difficulty.calculate(chartData);
         }
 
         // 구버전 title 컬럼 방어적 동기화 (addBeatmapToSong과 동일 정책 — 난이도명이 바뀌면 같이 맞춰준다).

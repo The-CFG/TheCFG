@@ -53,6 +53,22 @@ const Online = {
 
     _setContent(html) { document.getElementById('online-content').innerHTML = html; },
 
+    // 별점(difficulty_score) → 채움 비율 별 아이콘 + 소수점 2자리 숫자.
+    // 산정 난이도(채보 지표 기반)이며 플레이 통계와 무관함을 시각적으로도 분리해서 보여준다.
+    _starRatingHtml(difficultyScore, sizeCls = 'text-xs', withLabel = false) {
+        const stars = Difficulty.toStars(difficultyScore);
+        const pct = Math.max(0, Math.min(100, (stars / 5) * 100));
+        return `
+        <span class="inline-flex items-center gap-1 ${sizeCls} flex-shrink-0" title="산정 난이도 (채보 지표 기반, 플레이 기록과 무관)">
+            <span class="relative inline-block leading-none" style="letter-spacing:1px;">
+                <span class="text-gray-600">★★★★★</span>
+                <span class="absolute inset-0 overflow-hidden text-yellow-400" style="width:${pct.toFixed(2)}%">★★★★★</span>
+            </span>
+            <span class="font-mono text-gray-400">${stars.toFixed(2)}</span>
+            ${withLabel ? '<span class="text-gray-500">(산정 난이도)</span>' : ''}
+        </span>`;
+    },
+
     // ════════════════════════════════════════════════════════════════════════
     // 공개 라이브러리 탭 — 노래 목록 (Phase 4)
     // ════════════════════════════════════════════════════════════════════════
@@ -208,6 +224,7 @@ const Online = {
                     ${laneBadge}
                     <span class="text-sm text-gray-300 truncate">${label}</span>
                     ${bm.bpm ? `<span class="text-xs text-gray-500 flex-shrink-0">BPM ${bm.bpm}</span>` : ''}
+                    ${this._starRatingHtml(bm.difficulty_score)}
                 </div>
                 <div class="flex items-center space-x-2 flex-shrink-0 text-xs text-gray-400">
                     <span>${bm.note_count}노트</span>
@@ -314,7 +331,8 @@ const Online = {
         <div class="p-4 bg-gray-800 rounded-lg mb-3">
             <h2 class="text-xl font-bold text-white truncate">${_esc(c.title)}</h2>
             <p class="text-gray-400 truncate">${_esc(c.artist || '—')}</p>
-            <div class="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-xs text-gray-400">
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-gray-400">
+                ${this._starRatingHtml(c.difficulty_score, 'text-sm', true)}
                 ${c.bpm             ? `<span>BPM ${c.bpm}</span>` : ''}
                 <span>${c.lane_count}키</span>
                 ${c.difficulty_label ? `<span>${_esc(c.difficulty_label)}</span>` : ''}
