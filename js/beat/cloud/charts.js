@@ -329,7 +329,7 @@ const CloudCharts = {
 
         const chartId = crypto.randomUUID();
         const chartPath = `${user.id}/songs/${songId}/beatmaps/${chartId}/chart.json`;
-        const noteSpeed = Array.isArray(chartData.noteSpeed)
+        const noteSpeed = typeof chartData.noteSpeed === 'number' ? chartData.noteSpeed : null;
         const noteCount = Array.isArray(chartData.notes)
             ? chartData.notes.filter(n => n.type !== 'long_tail').length
             : 0;
