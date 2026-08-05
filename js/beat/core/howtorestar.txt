@@ -1,0 +1,2 @@
+$env:SUPABASE_SERVICE_ROLE_KEY="supabase service_role 키"
+node backfill-all-users.js

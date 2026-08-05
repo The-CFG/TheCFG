@@ -351,3 +351,12 @@ body:not(.lane-color-mode) .editor-note.false {
     background-color: rgba(56, 178, 172, 0.12);
     border-radius: 6px;
 }
+
+/* 종합 창(editor-song) 난이도 목록 순서 조정용 드래그 핸들 */
+.drag-handle {
+    touch-action: none;
+    transition: color 0.15s ease;
+}
+.drag-handle:active {
+    cursor: grabbing;
+}

@@ -13,6 +13,9 @@
  *   그때그때 내려받는다.
  */
 const EditorSong = {
+    // 드래그로 난이도 순서를 바꾸는 동안, 드래그를 시작한 카드의 인덱스를 잠깐 들고 있는다.
+    _dragFromIndex: null,
+
     // "새 노래 만들기" — 에디터 홈의 "+ 새 노래 만들기" 버튼에서 호출.
     newSong() {
         if (Editor.state.beatmaps.length > 0 &&
@@ -71,7 +74,12 @@ const EditorSong = {
 
         Editor.state.beatmaps.forEach((bm, i) => {
             const card = document.createElement('div');
-            card.className = 'p-3 bg-gray-800 rounded-lg flex items-center justify-between gap-2';
+            card.className = 'p-3 bg-gray-800 rounded-lg flex items-center gap-2';
+            card.dataset.index = String(i);
+
+            // 순서 조정용 드래그 핸들(점 6개). 라이브러리의 난이도 선택란에 표시될 순서는
+            // 이 목록의 순서(=Editor.state.beatmaps 배열 순서)를 그대로 따른다.
+            card.appendChild(this._makeDragHandle(i));
 
             const info = document.createElement('div');
             info.className = 'flex-1 min-w-0';
@@ -102,8 +110,81 @@ const EditorSong = {
             );
 
             card.append(info, btns);
+            this._wireDragEvents(card);
             container.appendChild(card);
         });
+    },
+
+    // 드래그 핸들(점 6개 아이콘) — 카드 왼쪽에 붙여서 이 핸들을 잡고 끌 때만 드래그가 시작되게 한다.
+    _makeDragHandle(index) {
+        const handle = document.createElement('div');
+        handle.className = 'drag-handle flex-shrink-0 self-stretch flex items-center px-1 -ml-1 cursor-grab text-gray-500 hover:text-gray-300';
+        handle.draggable = true;
+        handle.setAttribute('aria-label', '난이도 순서 변경 핸들');
+        handle.title = '끌어서 순서 변경';
+        handle.innerHTML = `
+            <svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="2" cy="2" r="1.5"/><circle cx="8" cy="2" r="1.5"/>
+                <circle cx="2" cy="8" r="1.5"/><circle cx="8" cy="8" r="1.5"/>
+                <circle cx="2" cy="14" r="1.5"/><circle cx="8" cy="14" r="1.5"/>
+            </svg>`;
+        handle.addEventListener('dragstart', (e) => {
+            this._dragFromIndex = index;
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', String(index));
+            // 드래그 중인 카드가 반투명해지도록(핸들이 아니라 카드 전체에 표시)
+            requestAnimationFrame(() => handle.closest('[data-index]')?.classList.add('opacity-50'));
+        });
+        handle.addEventListener('dragend', () => {
+            this._dragFromIndex = null;
+            DOM.editorSong.beatmapList?.querySelectorAll('[data-index]').forEach(el => {
+                el.classList.remove('opacity-50', 'ring-2', 'ring-teal-500');
+            });
+        });
+        return handle;
+    },
+
+    // 카드(드롭 대상) 쪽 dragover/drop을 연결한다.
+    _wireDragEvents(card) {
+        card.addEventListener('dragover', (e) => {
+            if (this._dragFromIndex === null || this._dragFromIndex === undefined) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            card.classList.add('ring-2', 'ring-teal-500');
+        });
+        card.addEventListener('dragleave', () => {
+            card.classList.remove('ring-2', 'ring-teal-500');
+        });
+        card.addEventListener('drop', (e) => {
+            e.preventDefault();
+            card.classList.remove('ring-2', 'ring-teal-500');
+            const from = this._dragFromIndex;
+            const to = Number(card.dataset.index);
+            this._dragFromIndex = null;
+            if (from === null || from === undefined || Number.isNaN(to) || from === to) return;
+            this.moveBeatmap(from, to);
+        });
+    },
+
+    // 난이도 카드를 fromIndex에서 toIndex 위치로 옮긴다. 이 배열 순서가 로컬 저장(json)의
+    // 난이도 순서이자, 클라우드 업로드 시 신규 생성 순서(=created_at)로도 이어져 라이브러리의
+    // 난이도 선택란 정렬(동일 레인 수 내에서는 created_at 오름차순)에 반영된다.
+    moveBeatmap(fromIndex, toIndex) {
+        const list = Editor.state.beatmaps;
+        if (fromIndex < 0 || fromIndex >= list.length || toIndex < 0 || toIndex >= list.length) return;
+        const [moved] = list.splice(fromIndex, 1);
+        list.splice(toIndex, 0, moved);
+
+        const active = Editor.state.activeBeatmapIndex;
+        if (active === fromIndex) {
+            Editor.state.activeBeatmapIndex = toIndex;
+        } else if (fromIndex < active && toIndex >= active) {
+            Editor.state.activeBeatmapIndex = active - 1;
+        } else if (fromIndex > active && toIndex <= active) {
+            Editor.state.activeBeatmapIndex = active + 1;
+        }
+
+        this.render();
     },
 
     _makeBtn(label, colorClasses, onClick) {
