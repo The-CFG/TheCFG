@@ -16,7 +16,6 @@ const Difficulty = {
     NPS_CAP: 12,           // 이 이상 초당 노트수는 만점 처리
     SPEED_MIN: 1, SPEED_MAX: 20,  // note-fall-speed-slider의 min/max와 동일
     BPM_MIN: 60, BPM_MAX: 240,
-    LANE_BASE: 4, LANE_STEP: 0.08, // 4키 기준, 1키 늘 때마다 +8%
 
     _clamp01(v) {
         return Math.min(1, Math.max(0, v));
@@ -61,7 +60,6 @@ const Difficulty = {
         const baseBpm = chartData.bpm || 120;
         const baseFallSpeed = typeof chartData.fallSpeed === 'number' ? chartData.fallSpeed
             : (typeof chartData.noteSpeed === 'number' ? chartData.noteSpeed : 7);
-        const laneCount = chartData.laneCount || 4;
 
         // 1) NPS (초당 노트 수) — note.time은 ms, 이미 오프셋 기준 상대시간이므로 그대로 씀
         const lastTimeMs = notes.reduce((max, n) => Math.max(max, n.time || 0), 0);
@@ -98,9 +96,6 @@ const Difficulty = {
             + chordRatio * this.WEIGHTS.chord
             + longRatio * this.WEIGHTS.long
             + normBpm * this.WEIGHTS.bpm;
-
-        // 7) 레인 수 보정 (4키 기준 곱연산 — 가중합과 성격이 다른 구조적 요소라 분리)
-        raw *= (1 + (laneCount - this.LANE_BASE) * this.LANE_STEP);
 
         return Math.round(this._clamp01(raw) * 10000) / 100; // 0.00~100.00
     },
