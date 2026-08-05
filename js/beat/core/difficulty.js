@@ -69,9 +69,9 @@ const Difficulty = {
         return Math.round(this._clamp01(raw) * 10000) / 100; // 0.00~100.00
     },
 
-    // difficulty_score(0~100) → 별점(0.00~5.00), 소수점 2자리
-    toStars(difficultyScore) {
+    // difficulty_score(0~100) → 난이도 수치(0.00~10.00), 소수점 2자리
+    toRating(difficultyScore) {
         const score = typeof difficultyScore === 'number' ? difficultyScore : 0;
-        return Math.round((score / 20) * 100) / 100;
+        return Math.round((score / 10) * 100) / 100;
     },
 };

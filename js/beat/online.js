@@ -53,20 +53,25 @@ const Online = {
 
     _setContent(html) { document.getElementById('online-content').innerHTML = html; },
 
-    // 별점(difficulty_score) → 채움 비율 별 아이콘 + 소수점 2자리 숫자.
+    // 별점(difficulty_score) → 10점 만점 난이도 수치 배지.
     // 산정 난이도(채보 지표 기반)이며 플레이 통계와 무관함을 시각적으로도 분리해서 보여준다.
     _starRatingHtml(difficultyScore, sizeCls = 'text-xs', withLabel = false) {
-        const stars = Difficulty.toStars(difficultyScore);
-        const pct = Math.max(0, Math.min(100, (stars / 5) * 100));
+        const rating = Difficulty.toRating(difficultyScore);
+        const color = this._ratingColor(rating);
         return `
         <span class="inline-flex items-center gap-1 ${sizeCls} flex-shrink-0" title="산정 난이도 (채보 지표 기반, 플레이 기록과 무관)">
-            <span class="relative inline-block leading-none" style="letter-spacing:1px;">
-                <span class="text-gray-600">★★★★★</span>
-                <span class="absolute inset-0 overflow-hidden text-yellow-400" style="width:${pct.toFixed(2)}%">★★★★★</span>
-            </span>
-            <span class="font-mono text-gray-400">${stars.toFixed(2)}</span>
-            ${withLabel ? '<span class="text-gray-500">(산정 난이도)</span>' : ''}
+            <span class="font-mono font-bold px-1.5 py-0.5 rounded" style="background:${color}22;color:${color};border:1px solid ${color}66;">★ ${rating.toFixed(2)}</span>
+            ${withLabel ? '<span class="text-gray-500">(산정 난이도, 10점 만점)</span>' : ''}
         </span>`;
+    },
+
+    // 난이도 수치(0~10)에 따른 색상 — 도움말의 판정 색상 팔레트와 통일.
+    _ratingColor(rating) {
+        if (rating >= 8) return '#fc8181'; // 매우 어려움 (빨강)
+        if (rating >= 6) return '#f6ad55'; // 어려움 (주황)
+        if (rating >= 4) return '#ffd700'; // 보통 (금색)
+        if (rating >= 2) return '#68d391'; // 쉬움 (초록)
+        return '#63b3ed';                  // 매우 쉬움 (파랑)
     },
 
     // ════════════════════════════════════════════════════════════════════════
