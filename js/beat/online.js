@@ -99,6 +99,8 @@ const Online = {
                 ${s.sort === 'newest' ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}">최신순</button>
             <button id="sort-popular" class="flex-1 py-1.5 rounded text-xs font-semibold transition
                 ${s.sort === 'popular' ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}">인기순</button>
+            <button id="sort-likes" class="flex-1 py-1.5 rounded text-xs font-semibold transition
+                ${s.sort === 'likes' ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}">좋아요순</button>
         </div>
         <div id="browse-list" class="space-y-2">${cards}</div>
         ${s.hasMore ? `<button id="browse-more-btn" class="w-full mt-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm">더 보기</button>` : ''}
@@ -113,6 +115,7 @@ const Online = {
         });
         document.getElementById('sort-newest').addEventListener('click', () => { s.sort = 'newest'; this._loadBrowse(true); });
         document.getElementById('sort-popular').addEventListener('click', () => { s.sort = 'popular'; this._loadBrowse(true); });
+        document.getElementById('sort-likes').addEventListener('click', () => { s.sort = 'likes'; this._loadBrowse(true); });
         document.getElementById('browse-more-btn')?.addEventListener('click', () => { s.page++; this._loadBrowse(false); });
         document.querySelectorAll('.browse-card-btn').forEach(btn =>
             btn.addEventListener('click', () => this.show('song', btn.dataset.id)));
@@ -136,7 +139,7 @@ const Online = {
                 <div class="flex flex-col items-end space-y-1 ml-2 flex-shrink-0">
                     <span class="text-xs px-1.5 py-0.5 bg-gray-600 rounded">난이도 ${s.beatmapCount}개</span>
                     <span class="text-xs text-gray-400">${laneRange}</span>
-                    <span class="text-xs text-gray-500">▶ ${s.totalPlayCount}</span>
+                    <span class="text-xs text-gray-500">▶ ${s.totalPlayCount} · ♥ ${s.totalLikeCount || 0}</span>
                 </div>
             </div>
         </button>`;

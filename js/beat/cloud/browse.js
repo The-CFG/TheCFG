@@ -9,14 +9,13 @@
 const CloudBrowse = {
 
     // ── 공개 "노래" 목록 (난이도 개수 / 레인 수 범위 / 총 플레이 수 요약 포함) ──
-    // options: { sort: 'newest'|'popular', search: string, page: number, pageSize: number }
+    // options: { sort: 'newest'|'popular'|'likes', search: string, page: number, pageSize: number }
     async listPublicSongs(options = {}) {
         const { sort = 'newest', search = '', page = 0, pageSize = 20 } = options;
         const keyword = search.trim();
 
-        if (sort === 'popular') {
-            return await this._listPublicSongsByPopularity({ keyword, page, pageSize });
-        }
+        if (sort === 'popular') return await this._listPublicSongsByPopularity({ keyword, page, pageSize });
+        if (sort === 'likes')   return await this._listPublicSongsByLikes({ keyword, page, pageSize });
         return await this._listPublicSongsByNewest({ keyword, page, pageSize });
     },
 
@@ -64,12 +63,13 @@ const CloudBrowse = {
 
         const { data: charts, error: chartsErr } = await _supabase
             .from('beat_charts')
-            .select('song_id, lane_count, play_count')
+            .select('id, song_id, lane_count, play_count')
             .eq('is_public', true)
             .in('song_id', songs.map(s => s.id));
         if (chartsErr) return { data: null, error: chartsErr };
 
-        const summaryBySongId = this._buildSummary(charts || []);
+        const likeCountByChartId = await this._fetchLikeCounts((charts || []).map(c => c.id));
+        const summaryBySongId = this._buildSummary(charts || [], likeCountByChartId);
 
         const ranked = songs
             .map(s => ({ song: s, totalPlayCount: summaryBySongId[s.id]?.totalPlayCount || 0 }))
@@ -80,35 +80,93 @@ const CloudBrowse = {
         const pageSongs = ranked.slice(page * pageSize, (page + 1) * pageSize);
         const data = pageSongs.map(s => ({
             ...s,
-            ...(summaryBySongId[s.id] || { beatmapCount: 0, laneCountMin: null, laneCountMax: null, totalPlayCount: 0 }),
+            ...(summaryBySongId[s.id] || { beatmapCount: 0, laneCountMin: null, laneCountMax: null, totalPlayCount: 0, totalLikeCount: 0 }),
         }));
 
         return { data, error: null, count };
     },
 
-    // songs 목록에 대해 beat_charts를 한 번 더 조회해 난이도 요약을 붙인다.
+    // 좋아요순: 인기순과 동일한 방식이되, beat_chart_likes 개수를 노래별로 합산해 정렬한다.
+    async _listPublicSongsByLikes({ keyword, page, pageSize }) {
+        const CANDIDATE_CAP = 500;
+
+        let songQuery = _supabase
+            .from('beat_songs')
+            .select('id, title, artist, created_at, updated_at')
+            .eq('is_public', true)
+            .limit(CANDIDATE_CAP);
+        if (keyword) songQuery = songQuery.or(`title.ilike.%${keyword}%,artist.ilike.%${keyword}%`);
+
+        const { data: songs, error: songsErr } = await songQuery;
+        if (songsErr) return { data: null, error: songsErr };
+        if (!songs || songs.length === 0) return { data: [], error: null, count: 0 };
+
+        const { data: charts, error: chartsErr } = await _supabase
+            .from('beat_charts')
+            .select('id, song_id, lane_count, play_count')
+            .eq('is_public', true)
+            .in('song_id', songs.map(s => s.id));
+        if (chartsErr) return { data: null, error: chartsErr };
+
+        const likeCountByChartId = await this._fetchLikeCounts((charts || []).map(c => c.id));
+        const summaryBySongId = this._buildSummary(charts || [], likeCountByChartId);
+
+        const ranked = songs
+            .map(s => ({ song: s, totalLikeCount: summaryBySongId[s.id]?.totalLikeCount || 0 }))
+            .sort((a, b) => b.totalLikeCount - a.totalLikeCount)
+            .map(x => x.song);
+
+        const count = ranked.length;
+        const pageSongs = ranked.slice(page * pageSize, (page + 1) * pageSize);
+        const data = pageSongs.map(s => ({
+            ...s,
+            ...(summaryBySongId[s.id] || { beatmapCount: 0, laneCountMin: null, laneCountMax: null, totalPlayCount: 0, totalLikeCount: 0 }),
+        }));
+
+        return { data, error: null, count };
+    },
+
+    // songs 목록에 대해 beat_charts를 한 번 더 조회해 난이도 요약(+좋아요 합계)을 붙인다.
     async _attachBeatmapSummary(songs) {
         const { data: charts, error: chartsErr } = await _supabase
             .from('beat_charts')
-            .select('song_id, lane_count, play_count')
+            .select('id, song_id, lane_count, play_count')
             .eq('is_public', true)
             .in('song_id', songs.map(s => s.id));
-        if (chartsErr) return songs.map(s => ({ ...s, beatmapCount: 0, laneCountMin: null, laneCountMax: null, totalPlayCount: 0 }));
+        if (chartsErr) return songs.map(s => ({ ...s, beatmapCount: 0, laneCountMin: null, laneCountMax: null, totalPlayCount: 0, totalLikeCount: 0 }));
 
-        const summaryBySongId = this._buildSummary(charts || []);
+        const likeCountByChartId = await this._fetchLikeCounts((charts || []).map(c => c.id));
+        const summaryBySongId = this._buildSummary(charts || [], likeCountByChartId);
         return songs.map(s => ({
             ...s,
-            ...(summaryBySongId[s.id] || { beatmapCount: 0, laneCountMin: null, laneCountMax: null, totalPlayCount: 0 }),
+            ...(summaryBySongId[s.id] || { beatmapCount: 0, laneCountMin: null, laneCountMax: null, totalPlayCount: 0, totalLikeCount: 0 }),
         }));
     },
 
-    // beat_charts 행 배열 → song_id별 { beatmapCount, laneCountMin, laneCountMax, totalPlayCount }
-    _buildSummary(charts) {
+    // 차트 id 배열 → chart_id별 좋아요 개수 { [chartId]: count }
+    async _fetchLikeCounts(chartIds) {
+        const ids = (chartIds || []).filter(Boolean);
+        if (ids.length === 0) return {};
+
+        const { data, error } = await _supabase
+            .from('beat_chart_likes')
+            .select('chart_id')
+            .in('chart_id', ids);
+        if (error || !data) return {};
+
+        const counts = {};
+        data.forEach(r => { counts[r.chart_id] = (counts[r.chart_id] || 0) + 1; });
+        return counts;
+    },
+
+    // beat_charts 행 배열(+좋아요 개수 맵) → song_id별 { beatmapCount, laneCountMin, laneCountMax, totalPlayCount, totalLikeCount }
+    _buildSummary(charts, likeCountByChartId = {}) {
         const bySongId = {};
         charts.forEach(c => {
-            const cur = bySongId[c.song_id] || { beatmapCount: 0, laneCountMin: null, laneCountMax: null, totalPlayCount: 0 };
+            const cur = bySongId[c.song_id] || { beatmapCount: 0, laneCountMin: null, laneCountMax: null, totalPlayCount: 0, totalLikeCount: 0 };
             cur.beatmapCount += 1;
             cur.totalPlayCount += c.play_count || 0;
+            cur.totalLikeCount += likeCountByChartId[c.id] || 0;
             if (typeof c.lane_count === 'number') {
                 cur.laneCountMin = cur.laneCountMin === null ? c.lane_count : Math.min(cur.laneCountMin, c.lane_count);
                 cur.laneCountMax = cur.laneCountMax === null ? c.lane_count : Math.max(cur.laneCountMax, c.lane_count);
