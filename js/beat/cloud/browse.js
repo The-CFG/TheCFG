@@ -9,13 +9,14 @@
 const CloudBrowse = {
 
     // ── 공개 "노래" 목록 (난이도 개수 / 레인 수 범위 / 총 플레이 수 요약 포함) ──
-    // options: { sort: 'newest'|'popular'|'likes', search: string, page: number, pageSize: number }
+    // options: { sort: 'newest'|'popular'|'likes'|'difficulty', search: string, page: number, pageSize: number }
     async listPublicSongs(options = {}) {
         const { sort = 'newest', search = '', page = 0, pageSize = 20 } = options;
         const keyword = search.trim();
 
-        if (sort === 'popular') return await this._listPublicSongsByPopularity({ keyword, page, pageSize });
-        if (sort === 'likes')   return await this._listPublicSongsByLikes({ keyword, page, pageSize });
+        if (sort === 'popular')    return await this._listPublicSongsByPopularity({ keyword, page, pageSize });
+        if (sort === 'likes')      return await this._listPublicSongsByLikes({ keyword, page, pageSize });
+        if (sort === 'difficulty') return await this._listPublicSongsByDifficulty({ keyword, page, pageSize });
         return await this._listPublicSongsByNewest({ keyword, page, pageSize });
     },
 
@@ -63,7 +64,7 @@ const CloudBrowse = {
 
         const { data: charts, error: chartsErr } = await _supabase
             .from('beat_charts')
-            .select('id, song_id, lane_count, play_count')
+            .select('id, song_id, lane_count, play_count, difficulty_score')
             .eq('is_public', true)
             .in('song_id', songs.map(s => s.id));
         if (chartsErr) return { data: null, error: chartsErr };
@@ -80,7 +81,7 @@ const CloudBrowse = {
         const pageSongs = ranked.slice(page * pageSize, (page + 1) * pageSize);
         const data = pageSongs.map(s => ({
             ...s,
-            ...(summaryBySongId[s.id] || { beatmapCount: 0, laneCountMin: null, laneCountMax: null, totalPlayCount: 0, totalLikeCount: 0 }),
+            ...(summaryBySongId[s.id] || { beatmapCount: 0, laneCountMin: null, laneCountMax: null, totalPlayCount: 0, totalLikeCount: 0, maxDifficultyScore: null }),
         }));
 
         return { data, error: null, count };
@@ -103,7 +104,7 @@ const CloudBrowse = {
 
         const { data: charts, error: chartsErr } = await _supabase
             .from('beat_charts')
-            .select('id, song_id, lane_count, play_count')
+            .select('id, song_id, lane_count, play_count, difficulty_score')
             .eq('is_public', true)
             .in('song_id', songs.map(s => s.id));
         if (chartsErr) return { data: null, error: chartsErr };
@@ -120,7 +121,49 @@ const CloudBrowse = {
         const pageSongs = ranked.slice(page * pageSize, (page + 1) * pageSize);
         const data = pageSongs.map(s => ({
             ...s,
-            ...(summaryBySongId[s.id] || { beatmapCount: 0, laneCountMin: null, laneCountMax: null, totalPlayCount: 0, totalLikeCount: 0 }),
+            ...(summaryBySongId[s.id] || { beatmapCount: 0, laneCountMin: null, laneCountMax: null, totalPlayCount: 0, totalLikeCount: 0, maxDifficultyScore: null }),
+        }));
+
+        return { data, error: null, count };
+    },
+
+    // 난이도순: 인기순/좋아요순과 동일한 후보 집합 방식이되, 노래가 가진 공개 난이도들
+    // 중 "가장 높은 별점(difficulty_score)"을 기준으로 내림차순 정렬한다.
+    // (노래 하나에 난이도가 여러 개 달릴 수 있어서 song 레벨 값이 아니라 max로 뽑아야 함)
+    async _listPublicSongsByDifficulty({ keyword, page, pageSize }) {
+        const CANDIDATE_CAP = 500;
+
+        let songQuery = _supabase
+            .from('beat_songs')
+            .select('id, title, artist, created_at, updated_at')
+            .eq('is_public', true)
+            .limit(CANDIDATE_CAP);
+        if (keyword) songQuery = songQuery.or(`title.ilike.%${keyword}%,artist.ilike.%${keyword}%`);
+
+        const { data: songs, error: songsErr } = await songQuery;
+        if (songsErr) return { data: null, error: songsErr };
+        if (!songs || songs.length === 0) return { data: [], error: null, count: 0 };
+
+        const { data: charts, error: chartsErr } = await _supabase
+            .from('beat_charts')
+            .select('id, song_id, lane_count, play_count, difficulty_score')
+            .eq('is_public', true)
+            .in('song_id', songs.map(s => s.id));
+        if (chartsErr) return { data: null, error: chartsErr };
+
+        const likeCountByChartId = await this._fetchLikeCounts((charts || []).map(c => c.id));
+        const summaryBySongId = this._buildSummary(charts || [], likeCountByChartId);
+
+        const ranked = songs
+            .map(s => ({ song: s, maxDifficultyScore: summaryBySongId[s.id]?.maxDifficultyScore ?? -1 }))
+            .sort((a, b) => b.maxDifficultyScore - a.maxDifficultyScore)
+            .map(x => x.song);
+
+        const count = ranked.length;
+        const pageSongs = ranked.slice(page * pageSize, (page + 1) * pageSize);
+        const data = pageSongs.map(s => ({
+            ...s,
+            ...(summaryBySongId[s.id] || { beatmapCount: 0, laneCountMin: null, laneCountMax: null, totalPlayCount: 0, totalLikeCount: 0, maxDifficultyScore: null }),
         }));
 
         return { data, error: null, count };
@@ -130,16 +173,16 @@ const CloudBrowse = {
     async _attachBeatmapSummary(songs) {
         const { data: charts, error: chartsErr } = await _supabase
             .from('beat_charts')
-            .select('id, song_id, lane_count, play_count')
+            .select('id, song_id, lane_count, play_count, difficulty_score')
             .eq('is_public', true)
             .in('song_id', songs.map(s => s.id));
-        if (chartsErr) return songs.map(s => ({ ...s, beatmapCount: 0, laneCountMin: null, laneCountMax: null, totalPlayCount: 0, totalLikeCount: 0 }));
+        if (chartsErr) return songs.map(s => ({ ...s, beatmapCount: 0, laneCountMin: null, laneCountMax: null, totalPlayCount: 0, totalLikeCount: 0, maxDifficultyScore: null }));
 
         const likeCountByChartId = await this._fetchLikeCounts((charts || []).map(c => c.id));
         const summaryBySongId = this._buildSummary(charts || [], likeCountByChartId);
         return songs.map(s => ({
             ...s,
-            ...(summaryBySongId[s.id] || { beatmapCount: 0, laneCountMin: null, laneCountMax: null, totalPlayCount: 0, totalLikeCount: 0 }),
+            ...(summaryBySongId[s.id] || { beatmapCount: 0, laneCountMin: null, laneCountMax: null, totalPlayCount: 0, totalLikeCount: 0, maxDifficultyScore: null }),
         }));
     },
 
@@ -163,10 +206,15 @@ const CloudBrowse = {
     _buildSummary(charts, likeCountByChartId = {}) {
         const bySongId = {};
         charts.forEach(c => {
-            const cur = bySongId[c.song_id] || { beatmapCount: 0, laneCountMin: null, laneCountMax: null, totalPlayCount: 0, totalLikeCount: 0 };
+            const cur = bySongId[c.song_id] || { beatmapCount: 0, laneCountMin: null, laneCountMax: null, totalPlayCount: 0, totalLikeCount: 0, maxDifficultyScore: null };
             cur.beatmapCount += 1;
             cur.totalPlayCount += c.play_count || 0;
             cur.totalLikeCount += likeCountByChartId[c.id] || 0;
+            if (typeof c.difficulty_score === 'number') {
+                cur.maxDifficultyScore = cur.maxDifficultyScore === null
+                    ? c.difficulty_score
+                    : Math.max(cur.maxDifficultyScore, c.difficulty_score);
+            }
             if (typeof c.lane_count === 'number') {
                 cur.laneCountMin = cur.laneCountMin === null ? c.lane_count : Math.min(cur.laneCountMin, c.lane_count);
                 cur.laneCountMax = cur.laneCountMax === null ? c.lane_count : Math.max(cur.laneCountMax, c.lane_count);
