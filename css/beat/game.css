@@ -31,6 +31,7 @@ body {
     transform: translateY(-50%);
     width: 28px;
     height: 44px;
+    display: none; /* 기본(모바일/좁은 화면)은 숨김 — 아래 lg 미디어쿼리에서 표시 */
     align-items: center;
     justify-content: center;
     background: #4a5568;
@@ -42,6 +43,14 @@ body {
     padding: 0;
     transition: background-color 0.15s ease;
 }
+/* 데스크톱 좌우 분할 레이아웃(1024px 이상)에서만 핸들 표시.
+   Tailwind의 .hidden 클래스는 base.css에서 !important로 고정돼 있어
+   반응형 표시 전환에 못 쓰므로, 여기서 display를 직접 제어한다. */
+@media (min-width: 1024px) {
+    #panel-toggle-btn {
+        display: flex;
+    }
+}
 #panel-toggle-btn:hover {
     background: #5a6578;
 }
@@ -50,8 +59,11 @@ body {
     pointer-events: none;
 }
 
-/* 패널 접힘 상태: 우측 메뉴 패널을 숨기고 게임 화면을 중앙(전체 폭)으로 확장 */
+/* 패널 접힘 상태: 우측 메뉴 패널을 숨기고 게임 화면을 중앙(전체 폭)으로 확장.
+   #ui-area는 Tailwind의 flex-1(flex-basis:0%)을 쓰고 있어 width만으로는
+   레이아웃이 안 바뀔 수 있으므로 flex 자체를 직접 제어한다. */
 #app-shell.ui-collapsed #ui-area {
+    flex: 0 0 0% !important;
     width: 0 !important;
     min-width: 0 !important;
     padding: 0 !important;
@@ -62,6 +74,7 @@ body {
     border: none !important;
 }
 #app-shell.ui-collapsed #game-area {
+    flex: 1 1 100% !important;
     width: 100% !important;
 }
 #app-shell.ui-collapsed #panel-toggle-icon {
