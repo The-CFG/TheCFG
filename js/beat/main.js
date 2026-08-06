@@ -609,6 +609,18 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
+        if (DOM.settings.autoHideUiToggle) {
+            DOM.settings.autoHideUiToggle.addEventListener('change', (e) => {
+                const enabled = e.target.checked;
+                Game.state.settings.autoHideUiOnPlay = enabled;
+                localStorage.setItem('theBeat_autoHideUiOnPlay', enabled ? 'true' : 'false');
+                // 플레이 중(일시정지 아님)에 설정을 켜고 끄면 즉시 반영
+                if (UI.currentScreen === 'playing' && !Game.state.isPaused) {
+                    UI.setPanelCollapsed(enabled);
+                }
+            });
+        }
+
         // 키 상자는 레인 수 그룹에 따라 동적으로 생성되므로 이벤트 위임으로 처리
         DOM.settings.controls.rowsContainer.addEventListener('click', (e) => {
             const box = e.target.closest('.keybind-box');
@@ -1077,6 +1089,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (DOM.settings.laneHighlightToggle) {
             DOM.settings.laneHighlightToggle.checked = Game.state.settings.laneHighlightOnInput !== false;
+        }
+        if (DOM.settings.autoHideUiToggle) {
+            DOM.settings.autoHideUiToggle.checked = Game.state.settings.autoHideUiOnPlay === true;
         }
     }
 

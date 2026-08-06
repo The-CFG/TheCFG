@@ -21,6 +21,8 @@ const Game = {
             showGameplayImage: localStorage.getItem('theBeat_showGameplayImage') !== 'false',
             // 입력 시 레인이 하얗게 하이라이트되는 피드백을 표시할지 여부
             laneHighlightOnInput: localStorage.getItem('theBeat_laneHighlightOnInput') !== 'false',
+            // 게임플레이 중 우측 메뉴/점수 패널(#ui-area)을 자동으로 접을지 여부. 기본값 false(끔).
+            autoHideUiOnPlay: localStorage.getItem('theBeat_autoHideUiOnPlay') === 'true',
             bpm: 120,
             startTimeOffset: 0, // 채보 박자 계산 기준점 (bpm/noteoffset 등 노트 타이밍용)
             songStartOffset: 0, // 실제 오디오 재생을 시작할 지점 (종합 창의 "시작(초)")

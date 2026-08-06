@@ -159,6 +159,7 @@ const DOM = {
         showGameplayImageToggle: document.getElementById('show-gameplay-image-toggle'),
         showGameplayImageValue: document.getElementById('show-gameplay-image-value'),
         laneHighlightToggle: document.getElementById('lane-highlight-toggle'),
+        autoHideUiToggle: document.getElementById('auto-hide-ui-toggle'),
         debugModeToggle: document.getElementById('debug-mode-toggle'),
         controls: {
             lanesSelector: document.getElementById('keybind-lanes-selector'),

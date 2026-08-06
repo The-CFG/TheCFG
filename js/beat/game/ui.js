@@ -7,6 +7,15 @@ const UI = {
         Object.values(DOM.screens).forEach(screen => screen.classList.add('hidden'));
         DOM.screens[screenName].classList.remove('hidden');
         this.currentScreen = screenName;
+
+        // 접기 핸들은 게임플레이 화면(#playing-screen)에서만 노출.
+        // 플레이 화면을 벗어나면 접힌 패널도 항상 다시 펼쳐 다른 화면이 가려지지 않게 한다.
+        const appShell = document.getElementById('app-shell');
+        if (appShell) {
+            const isPlaying = screenName === 'playing';
+            appShell.classList.toggle('in-play', isPlaying);
+            if (!isPlaying) this.setPanelCollapsed(false);
+        }
     },
     showMessage(type, message) {
         const el = DOM.messages[type];
@@ -58,28 +67,30 @@ const UI = {
         DOM.finalBadEl.textContent = Game.state.judgements.bad;
         DOM.finalMissEl.textContent = Game.state.judgements.miss;
     },
-    // 우측 메뉴 패널(#ui-area) 접기/펼치기 핸들 초기화.
+    // 우측 메뉴 패널(#ui-area) 접기/펼치기.
     // 접으면 #app-shell에 'ui-collapsed' 클래스가 붙어 #ui-area가 사라지고
     // #game-area(레인/노트)가 전체 폭으로 확장되어 중앙에 오도록 CSS가 처리한다.
-    initPanelToggle() {
-        const btn = DOM.panelToggleBtn;
+    // 세션 간 저장하지 않는 일시적 상태 — 게임플레이 화면에 들어갈 때마다
+    // "게임플레이 시 우측 화면 숨기기" 설정값에 따라 다시 결정된다.
+    setPanelCollapsed(collapsed) {
         const appShell = document.getElementById('app-shell');
-        if (!btn || !appShell) return;
-
-        const STORAGE_KEY = 'theBeat_uiPanelCollapsed';
-        const applyState = (collapsed) => {
-            appShell.classList.toggle('ui-collapsed', collapsed);
+        const btn = DOM.panelToggleBtn;
+        if (!appShell) return;
+        appShell.classList.toggle('ui-collapsed', collapsed);
+        if (btn) {
             const label = collapsed ? '패널 펼치기' : '패널 접기';
             btn.setAttribute('aria-label', label);
             btn.title = label;
-        };
-
-        applyState(localStorage.getItem(STORAGE_KEY) === 'true');
-
+        }
+    },
+    // 접기/펼치기 핸들 버튼 초기화. 클릭 시 현재 상태를 그대로 반전만 시킨다.
+    initPanelToggle() {
+        const btn = DOM.panelToggleBtn;
+        if (!btn) return;
         btn.addEventListener('click', () => {
-            const collapsed = !appShell.classList.contains('ui-collapsed');
-            applyState(collapsed);
-            localStorage.setItem(STORAGE_KEY, String(collapsed));
+            const appShell = document.getElementById('app-shell');
+            const collapsed = !(appShell && appShell.classList.contains('ui-collapsed'));
+            this.setPanelCollapsed(collapsed);
         });
     }
 };
