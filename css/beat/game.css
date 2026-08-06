@@ -91,6 +91,7 @@ body {
     /* 레인 배경: 검은색과 회색 사이의 톤을 --lane-bg-opacity(0~1, 기본값은 JS에서 설정)로 덮는다.
        인접 레인끼리 살짝 구분되도록 짝/홀 레인의 명도를 조금 다르게 준다. */
     background-color: rgba(48, 48, 52, var(--lane-bg-opacity, 0));
+    z-index: -3;
 }
 .lane:nth-child(even) {
     background-color: rgba(20, 20, 22, var(--lane-bg-opacity, 0));
