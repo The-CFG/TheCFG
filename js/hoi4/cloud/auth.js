@@ -16,7 +16,7 @@ const CloudAuth = {
         return await _supabase.auth.signUp({
             email,
             password,
-            options: { emailRedirectTo: `${location.origin}/confirmed.html` }
+            options: { emailRedirectTo: `${location.origin}/confirmed` }
         });
     },
 
@@ -1000,7 +1000,7 @@ function _openAccountPopover(user) {
         <p class="account-popover-nickname">현재 계정: ${escapeHtml(nickname)}</p>
         <p class="account-popover-email">${escapeHtml(user.email || '')}</p>
         <hr class="account-popover-divider">
-        <a href="accounts.html" class="account-popover-link">계정 설정</a>
+        <a href="/accounts" class="account-popover-link">계정 설정</a>
         <button type="button" id="account-popover-logout" class="account-popover-btn">로그아웃</button>
     `;
     wrap.appendChild(pop);

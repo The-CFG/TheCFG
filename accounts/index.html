@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <meta name="description" content="TheCFG 계정 설정">
+    <link rel="icon" href="/css/favicon.png" type="image/png">
+    <title>계정 설정 · TheCFG</title>
+    <link rel="stylesheet" href="/css/home/styles.css">
+    <link rel="stylesheet" href="/css/home/accounts.css">
+</head>
+<body>
+
+<a class="skip-link" href="#main">본문으로 바로가기</a>
+
+<header class="site-header">
+    <a href="/" class="brand"><img width="20px" src="/css/favicon.png" alt="(Logo)"> TheCFG</a>
+    <a href="https://www.youtube.com/@TheCFG_" class="connections">YouTube</a>
+    <a href="https://discord.gg/yVrDEVXEnY" class="connections">Discord</a>
+    <a href="https://github.com/The-CFG" class="connections">Github</a>
+    <a href="/accounts" class="connections">계정</a>
+</header>
+
+<main id="main">
+    <section class="accounts-page">
+        <p class="hero-eyebrow">&gt; ~/thecfg/accounts</p>
+        <h1 class="accounts-title">TheCFG 계정 설정</h1>
+        <p class="accounts-subtitle">TheCFG의 모든 서비스에서 공유되는 계정입니다.</p>
+
+        <!-- ── 로그인 / 회원가입 ── -->
+        <div id="auth-section" class="panel">
+            <h2 id="auth-title" class="panel-title">로그인</h2>
+            <div class="field-group">
+                <input type="email" id="auth-email" class="text-input" placeholder="이메일" autocomplete="email">
+                <input type="password" id="auth-password" class="text-input" placeholder="비밀번호" autocomplete="current-password">
+            </div>
+            <p id="auth-status" class="form-status" role="status"></p>
+            <div class="button-row">
+                <button id="btn-auth-execute" class="btn btn-primary">로그인</button>
+                <button id="auth-switch" class="btn btn-link" type="button">계정이 없으신가요? 회원가입</button>
+            </div>
+        </div>
+
+        <!-- ── 계정 설정 (로그인 상태) ── -->
+        <div id="profile-section" class="panel-stack" style="display:none;">
+
+            <div class="panel">
+                <h2 class="panel-title">내 정보</h2>
+                <p class="profile-email">로그인 계정: <strong id="profile-email">-</strong></p>
+                <button id="btn-logout" class="btn btn-secondary">로그아웃</button>
+            </div>
+
+            <div class="panel">
+                <h2 class="panel-title">닉네임</h2>
+                <p class="panel-desc">hoi4 공동 작업, beat 리더보드 등에 표시되는 이름입니다.</p>
+                <form id="nickname-form" class="field-group field-group-row">
+                    <input type="text" id="nickname-input" class="text-input" placeholder="닉네임" maxlength="24" autocomplete="nickname">
+                    <button type="submit" class="btn btn-primary">저장</button>
+                </form>
+                <p id="nickname-status" class="form-status" role="status"></p>
+            </div>
+
+            <div class="panel">
+                <h2 class="panel-title">비밀번호 변경</h2>
+                <form id="password-form" class="field-group">
+                    <input type="password" id="new-password" class="text-input" placeholder="새 비밀번호 (6자 이상)" autocomplete="new-password">
+                    <input type="password" id="new-password-confirm" class="text-input" placeholder="새 비밀번호 확인" autocomplete="new-password">
+                    <div class="button-row">
+                        <button type="submit" class="btn btn-primary">비밀번호 변경</button>
+                    </div>
+                </form>
+                <p id="password-status" class="form-status" role="status"></p>
+            </div>
+
+            <div class="panel panel-danger">
+                <h2 class="panel-title">계정 삭제</h2>
+                <p class="panel-desc">계정과 hoi4/beat에 저장된 모든 데이터가 영구적으로 삭제됩니다. 되돌릴 수 없습니다.</p>
+                <button id="btn-delete-account" class="btn btn-danger">계정 삭제</button>
+                <p id="delete-status" class="form-status" role="status"></p>
+            </div>
+
+        </div>
+    </section>
+</main>
+
+<footer class="site-footer">
+    <p>&copy; 2021–<span id="year">2026</span> TheCFG. All Rights Reserved.</p>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/js/home/auth.js"></script>
+<script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+</body>
+</html>

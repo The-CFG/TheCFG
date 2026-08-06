@@ -1,5 +1,5 @@
 // ════════════════════════════════════════════════
-// TheCFG 계정 설정 (accounts.html 전용)
+// TheCFG 계정 설정 (/accounts 전용)
 // hoi4/beat와 같은 Supabase 프로젝트(URL/KEY)를 사용해 계정을 공유하지만,
 // 이 파일은 홈페이지 전용 독립 사본입니다 (다른 페이지의 auth.js와 공유하지 않음).
 // ════════════════════════════════════════════════
@@ -20,7 +20,7 @@ const CloudAuth = {
         return await _supabase.auth.signUp({
             email,
             password,
-            options: { emailRedirectTo: `${location.origin}/confirmed.html` }
+            options: { emailRedirectTo: `${location.origin}/confirmed` }
         });
     },
 

@@ -1,0 +1,33 @@
+[build]
+  publish = "."
+
+# 구주소(.html) → 새 클린 URL로 영구 리다이렉트 (북마크/외부 링크 호환용)
+[[redirects]]
+  from = "/hoi4.html"
+  to = "/hoi4"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/beat.html"
+  to = "/beat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/accounts.html"
+  to = "/accounts"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/confirmed.html"
+  to = "/confirmed"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/index.html"
+  to = "/"
+  status = 301
+  force = true

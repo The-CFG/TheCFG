@@ -18,7 +18,7 @@ const CloudAuth = {
         return await _supabase.auth.signUp({
             email,
             password,
-            options: { emailRedirectTo: `${location.origin}/confirmed.html` }
+            options: { emailRedirectTo: `${location.origin}/confirmed` }
         });
     },
 
@@ -151,7 +151,7 @@ function _openAccountPopover(user) {
     hr.className = 'border-gray-600 my-2';
 
     const settingsLink = document.createElement('a');
-    settingsLink.href = 'accounts.html';
+    settingsLink.href = '/accounts';
     settingsLink.className = 'block px-2 py-1.5 rounded text-sm text-gray-200 hover:bg-gray-700 transition';
     settingsLink.textContent = '계정 설정';
 
