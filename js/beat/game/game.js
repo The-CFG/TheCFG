@@ -425,9 +425,12 @@ const Game = {
 
         UI.showScreen('playing');
         UI.updateScoreboard();
-        {
+        // HUD 초기값 표시 — 실패해도 게임 시작 흐름에 영향 없도록 격리
+        try {
             const lastNote = this.state.notes.length ? this.state.notes[this.state.notes.length - 1] : null;
             UI.updateHud(lastNote ? lastNote.time : 0, 100);
+        } catch (hudErr) {
+            Debugger.logError(hudErr, 'Game.start:hud');
         }
         this.state.gameState = 'countdown';
         this.state.audioReady = false; // Fix 2: 오디오가 실제로 진행 중일 때만 오디오 클럭 사용
@@ -558,17 +561,6 @@ const Game = {
 
             self.updateNotes(elapsedTime);
 
-            // 인게임 HUD: 남은 시간(마지막 노트 기준) / 현재 정확도(판정 가중 평균)
-            const lastNote = self.state.notes.length ? self.state.notes[self.state.notes.length - 1] : null;
-            const totalMs = lastNote ? lastNote.time : 0;
-            const remainingMs = totalMs - elapsedTime;
-            const j = self.state.judgements;
-            const judgedCount = j.perfect + j.good + j.bad + j.miss;
-            const accuracyPercent = judgedCount === 0
-                ? 100
-                : ((j.perfect * CONFIG.POINTS.perfect + j.good * CONFIG.POINTS.good + j.bad * CONFIG.POINTS.bad) / (judgedCount * CONFIG.POINTS.perfect)) * 100;
-            UI.updateHud(remainingMs, accuracyPercent);
-
             // Canvas 렌더
             self.canvas.render(
                 self.state.notes,
@@ -578,6 +570,23 @@ const Game = {
                 elapsedTime,
                 self.state.settings.noteSpeed
             );
+
+            // 인게임 HUD: 남은 시간(마지막 노트 기준) / 현재 정확도(판정 가중 평균)
+            // 렌더링/다음 프레임 예약보다 뒤에서, 자체 try/catch로 실행 — 여기서 문제가 생겨도
+            // 게임 진행(렌더링, requestAnimationFrame 재예약)에는 영향을 주지 않도록 격리.
+            try {
+                const lastNote = self.state.notes.length ? self.state.notes[self.state.notes.length - 1] : null;
+                const totalMs = lastNote ? lastNote.time : 0;
+                const remainingMs = totalMs - elapsedTime;
+                const j = self.state.judgements;
+                const judgedCount = j.perfect + j.good + j.bad + j.miss;
+                const accuracyPercent = judgedCount === 0
+                    ? 100
+                    : ((j.perfect * CONFIG.POINTS.perfect + j.good * CONFIG.POINTS.good + j.bad * CONFIG.POINTS.bad) / (judgedCount * CONFIG.POINTS.perfect)) * 100;
+                UI.updateHud(remainingMs, accuracyPercent);
+            } catch (hudErr) {
+                Debugger.logError(hudErr, 'Game.loop:hud');
+            }
 
             if (self.state.processedNotes >= self.state.totalNotes && self.state.totalNotes > 0) {
                 setTimeout(() => self.end(), 500);
