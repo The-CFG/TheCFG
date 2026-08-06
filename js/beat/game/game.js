@@ -425,6 +425,10 @@ const Game = {
 
         UI.showScreen('playing');
         UI.updateScoreboard();
+        {
+            const lastNote = this.state.notes.length ? this.state.notes[this.state.notes.length - 1] : null;
+            UI.updateHud(lastNote ? lastNote.time : 0, 100);
+        }
         this.state.gameState = 'countdown';
         this.state.audioReady = false; // Fix 2: 오디오가 실제로 진행 중일 때만 오디오 클럭 사용
 
@@ -553,6 +557,17 @@ const Game = {
             self.applyActiveTrigger(elapsedTime);
 
             self.updateNotes(elapsedTime);
+
+            // 인게임 HUD: 남은 시간(마지막 노트 기준) / 현재 정확도(판정 가중 평균)
+            const lastNote = self.state.notes.length ? self.state.notes[self.state.notes.length - 1] : null;
+            const totalMs = lastNote ? lastNote.time : 0;
+            const remainingMs = totalMs - elapsedTime;
+            const j = self.state.judgements;
+            const judgedCount = j.perfect + j.good + j.bad + j.miss;
+            const accuracyPercent = judgedCount === 0
+                ? 100
+                : ((j.perfect * CONFIG.POINTS.perfect + j.good * CONFIG.POINTS.good + j.bad * CONFIG.POINTS.bad) / (judgedCount * CONFIG.POINTS.perfect)) * 100;
+            UI.updateHud(remainingMs, accuracyPercent);
 
             // Canvas 렌더
             self.canvas.render(

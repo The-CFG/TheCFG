@@ -72,6 +72,17 @@
             <div id="combo-text" class="combo-text"></div>
             <div id="countdown-text" class="countdown-text"></div>
         </div>
+        <!-- 인게임 HUD: 남은 시간 / 현재 정확도. 우측 패널이 접혀 있어도 항상 보이도록 game-area에 오버레이. -->
+        <div id="game-hud">
+            <div class="game-hud-item">
+                <span class="game-hud-label" data-i18n="time_remaining">남은 시간</span>
+                <span id="game-hud-time" class="game-hud-value">0:00</span>
+            </div>
+            <div class="game-hud-item">
+                <span class="game-hud-label" data-i18n="accuracy">정확도</span>
+                <span id="game-hud-accuracy" class="game-hud-value">100.00%</span>
+            </div>
+        </div>
     </div>
             <!-- UI Area -->
             <div id="ui-area" class="w-full lg:w-2/5 flex-1 lg:h-full p-2 lg:p-4 xl:p-8 flex flex-col justify-start bg-[#2d3748] overflow-y-auto overflow-x-hidden touch-auto" style="-webkit-overflow-scrolling: touch; overscroll-behavior: contain;">

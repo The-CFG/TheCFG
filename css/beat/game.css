@@ -142,6 +142,47 @@ body {
     transform: translate(-50%, -50%) scale(1.1);
     transition: none;
 }
+/* 인게임 HUD (남은 시간 / 정확도): 플레이 화면일 때만, 게임 화면 좌우 상단에 표시.
+   우측 패널(#ui-area)이 자동 숨김되어도 항상 보이도록 #game-area 쪽에 오버레이한다. */
+#game-hud {
+    display: none;
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    right: 8px;
+    z-index: 5;
+    justify-content: space-between;
+    pointer-events: none;
+}
+#app-shell.in-play #game-hud {
+    display: flex;
+}
+.game-hud-item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    background: rgba(0, 0, 0, 0.45);
+    border-radius: 8px;
+    padding: 4px 10px;
+    line-height: 1.2;
+}
+#game-hud .game-hud-item:last-child {
+    align-items: flex-end;
+}
+.game-hud-label {
+    font-size: 0.7rem;
+    color: #cbd5e0;
+}
+.game-hud-value {
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: white;
+    font-variant-numeric: tabular-nums;
+}
+#game-hud-time.game-hud-warning {
+    color: #fc8181;
+}
+
 .countdown-text {
     position: absolute;
     top: 40%;
