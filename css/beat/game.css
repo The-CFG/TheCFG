@@ -166,6 +166,9 @@ body {
     padding: 4px 10px;
     line-height: 1.2;
 }
+#game-hud .game-hud-item:nth-child(2) {
+    align-items: center;
+}
 #game-hud .game-hud-item:last-child {
     align-items: flex-end;
 }
@@ -181,6 +184,18 @@ body {
 }
 #game-hud-time.game-hud-warning {
     color: #fc8181;
+}
+#game-hud-rank.rank-S {
+    color: #fbbf24;
+}
+#game-hud-rank.rank-A {
+    color: #68d391;
+}
+#game-hud-rank.rank-B {
+    color: #63b3ed;
+}
+#game-hud-rank.rank-C {
+    color: #cbd5e0;
 }
 
 .countdown-text {

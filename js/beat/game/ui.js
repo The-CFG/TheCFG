@@ -56,15 +56,19 @@ const UI = {
             setTimeout(() => DOM.comboTextEl.classList.remove('show'), CONFIG.JUDGEMENT_ANIMATION_MS);
         }
     },
+    // 정확도(%) → 랭크(S/A/B/C) 계산. calculateRank와 HUD 예상 등급에서 공용으로 쓴다.
+    rankFromPercentage(percentage) {
+        if (percentage === 100) return 'S';
+        if (percentage >= 90) return 'A';
+        if (percentage >= 70) return 'B';
+        return 'C';
+    },
     // 점수/총 노트 수 → 랭크(S/A/B/C) 계산. 결과 화면과 온라인 리더보드에서 공용으로 쓴다.
     calculateRank(score, totalNotes) {
         if (!totalNotes || totalNotes <= 0) return 'C';
         const maxScore = totalNotes * CONFIG.POINTS.perfect;
         const percentage = (score / maxScore) * 100;
-        if (percentage === 100) return 'S';
-        if (percentage >= 90) return 'A';
-        if (percentage >= 70) return 'B';
-        return 'C';
+        return this.rankFromPercentage(percentage);
     },
     updateResultScreen() {
         DOM.finalScoreEl.textContent = Game.state.score;
@@ -87,6 +91,13 @@ const UI = {
         }
         if (DOM.hudAccuracyEl) {
             DOM.hudAccuracyEl.textContent = `${accuracyPercent.toFixed(2)}%`;
+        }
+        if (DOM.hudRankEl) {
+            // 현재까지의 정확도(판정 가중 평균)를 그대로 유지한다고 가정했을 때의 예상 등급.
+            const expectedRank = this.rankFromPercentage(accuracyPercent);
+            DOM.hudRankEl.textContent = expectedRank;
+            DOM.hudRankEl.classList.remove('rank-S', 'rank-A', 'rank-B', 'rank-C');
+            DOM.hudRankEl.classList.add(`rank-${expectedRank}`);
         }
     },
     // 우측 메뉴 패널(#ui-area) 접기/펼치기.
