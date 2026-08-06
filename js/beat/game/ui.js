@@ -74,6 +74,21 @@ const UI = {
         DOM.finalBadEl.textContent = Game.state.judgements.bad;
         DOM.finalMissEl.textContent = Game.state.judgements.miss;
     },
+    // 인게임 HUD: 남은 시간(마지막 노트 기준) / 현재 정확도(판정 가중 평균) 갱신.
+    // remainingMs: 남은 시간(ms, 음수 가능 → 0으로 클램프). accuracyPercent: 0~100.
+    updateHud(remainingMs, accuracyPercent) {
+        if (DOM.hudTimeEl) {
+            const clampedMs = Math.max(0, remainingMs);
+            const totalSec = Math.floor(clampedMs / 1000);
+            const min = Math.floor(totalSec / 60);
+            const sec = totalSec % 60;
+            DOM.hudTimeEl.textContent = `${min}:${String(sec).padStart(2, '0')}`;
+            DOM.hudTimeEl.classList.toggle('game-hud-warning', clampedMs <= 5000);
+        }
+        if (DOM.hudAccuracyEl) {
+            DOM.hudAccuracyEl.textContent = `${accuracyPercent.toFixed(2)}%`;
+        }
+    },
     // 우측 메뉴 패널(#ui-area) 접기/펼치기.
     // 접으면 #app-shell에 'ui-collapsed' 클래스가 붙어 #ui-area가 사라지고
     // #game-area(레인/노트)가 전체 폭으로 확장되어 중앙에 오도록 CSS가 처리한다.

@@ -6,6 +6,8 @@ const DOM = {
     lanesContainer: document.getElementById('lanes-container'),
     scoreEl: document.getElementById('score'),
     comboEl: document.getElementById('combo'),
+    hudTimeEl: document.getElementById('game-hud-time'),
+    hudAccuracyEl: document.getElementById('game-hud-accuracy'),
     judgementTextEl: document.getElementById('judgement-text'),
     comboTextEl: document.getElementById('combo-text'),
     musicPlayer: AudioEngine, // Web Audio API 기반 AudioEngine (지연 최소화를 위해 <audio> 엘리먼트 대체)
