@@ -57,6 +57,30 @@ const UI = {
         DOM.finalGoodEl.textContent = Game.state.judgements.good;
         DOM.finalBadEl.textContent = Game.state.judgements.bad;
         DOM.finalMissEl.textContent = Game.state.judgements.miss;
+    },
+    // 우측 메뉴 패널(#ui-area) 접기/펼치기 핸들 초기화.
+    // 접으면 #app-shell에 'ui-collapsed' 클래스가 붙어 #ui-area가 사라지고
+    // #game-area(레인/노트)가 전체 폭으로 확장되어 중앙에 오도록 CSS가 처리한다.
+    initPanelToggle() {
+        const btn = DOM.panelToggleBtn;
+        const appShell = document.getElementById('app-shell');
+        if (!btn || !appShell) return;
+
+        const STORAGE_KEY = 'theBeat_uiPanelCollapsed';
+        const applyState = (collapsed) => {
+            appShell.classList.toggle('ui-collapsed', collapsed);
+            const label = collapsed ? '패널 펼치기' : '패널 접기';
+            btn.setAttribute('aria-label', label);
+            btn.title = label;
+        };
+
+        applyState(localStorage.getItem(STORAGE_KEY) === 'true');
+
+        btn.addEventListener('click', () => {
+            const collapsed = !appShell.classList.contains('ui-collapsed');
+            applyState(collapsed);
+            localStorage.setItem(STORAGE_KEY, String(collapsed));
+        });
     }
 };
 

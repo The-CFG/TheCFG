@@ -1152,6 +1152,7 @@ document.addEventListener('DOMContentLoaded', () => {
         Debugger.init();
         I18n.init();
         Appearance.init();
+        UI.initPanelToggle();
         if (typeof setupAuthUI === 'function') setupAuthUI();
 
         // 최초 세션 복원 / 로그인 / 로그아웃 시 볼륨 동기화
