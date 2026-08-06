@@ -166,11 +166,21 @@ body {
     padding: 4px 10px;
     line-height: 1.2;
 }
-#game-hud .game-hud-item:nth-child(2) {
-    align-items: center;
-}
 #game-hud .game-hud-item:last-child {
     align-items: flex-end;
+}
+/* 오른쪽 그룹(정확도+예상 등급): 레이블 없이 값 두 개를 가로로 붙여서 표시 */
+.game-hud-stats {
+    flex-direction: row !important;
+    align-items: baseline !important;
+    gap: 8px;
+}
+.game-hud-accuracy {
+    color: #cbd5e0;
+    font-size: 0.95rem;
+}
+.game-hud-rank {
+    font-size: 1.3rem;
 }
 .game-hud-label {
     font-size: 0.7rem;

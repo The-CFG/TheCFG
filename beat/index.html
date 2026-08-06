@@ -72,19 +72,15 @@
             <div id="combo-text" class="combo-text"></div>
             <div id="countdown-text" class="countdown-text"></div>
         </div>
-        <!-- 인게임 HUD: 남은 시간 / 현재 정확도. 우측 패널이 접혀 있어도 항상 보이도록 game-area에 오버레이. -->
+        <!-- 인게임 HUD: 남은 시간 / 정확도 / 예상 등급. 우측 패널이 접혀 있어도 항상 보이도록 game-area에 오버레이. -->
         <div id="game-hud">
             <div class="game-hud-item">
                 <span class="game-hud-label" data-i18n="time_remaining">남은 시간</span>
                 <span id="game-hud-time" class="game-hud-value">0:00</span>
             </div>
-            <div class="game-hud-item">
-                <span class="game-hud-label" data-i18n="accuracy">정확도</span>
-                <span id="game-hud-accuracy" class="game-hud-value">100.00%</span>
-            </div>
-            <div class="game-hud-item">
-                <span class="game-hud-label" data-i18n="expected_rank">예상 등급</span>
-                <span id="game-hud-rank" class="game-hud-value">S</span>
+            <div class="game-hud-item game-hud-stats">
+                <span id="game-hud-accuracy" class="game-hud-value game-hud-accuracy">100.00%</span>
+                <span id="game-hud-rank" class="game-hud-value game-hud-rank">S</span>
             </div>
         </div>
     </div>
