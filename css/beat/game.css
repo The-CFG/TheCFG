@@ -142,16 +142,15 @@ body {
     transform: translate(-50%, -50%) scale(1.1);
     transition: none;
 }
-/* 인게임 HUD (남은 시간 / 정확도): 플레이 화면일 때만, 게임 화면 좌우 상단에 표시.
+/* 인게임 HUD (남은 시간 / 정확도 / 예상 등급): 플레이 화면일 때만, 게임 화면 우측 상단에 모아서 표시.
    우측 패널(#ui-area)이 자동 숨김되어도 항상 보이도록 #game-area 쪽에 오버레이한다. */
 #game-hud {
     display: none;
     position: absolute;
     top: 8px;
-    left: 8px;
     right: 8px;
     z-index: 5;
-    justify-content: space-between;
+    justify-content: flex-end;
     pointer-events: none;
 }
 #app-shell.in-play #game-hud {
@@ -160,19 +159,17 @@ body {
 .game-hud-item {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
+    align-items: flex-end;
     background: rgba(0, 0, 0, 0.45);
     border-radius: 8px;
     padding: 4px 10px;
     line-height: 1.2;
 }
-#game-hud .game-hud-item:last-child {
-    align-items: flex-end;
-}
-/* 오른쪽 그룹(정확도+예상 등급): 레이블 없이 값 두 개를 가로로 붙여서 표시 */
+/* 정확도+예상 등급: 레이블 없이 값 두 개를 가로로 붙여서 시간 아래에 표시 */
 .game-hud-stats {
-    flex-direction: row !important;
-    align-items: baseline !important;
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
     gap: 8px;
 }
 .game-hud-accuracy {
