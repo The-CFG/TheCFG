@@ -6,9 +6,15 @@
 
 const GameBackground = {
     _currentUrl: null,
-    // 마지막으로 요청된 url. "게임플레이 시 이미지 표시" 설정이 꺼져있는 동안에도 기억해뒀다가,
-    // 설정을 다시 켰을 때 화면 전환 없이 곧바로 복원할 수 있도록 한다.
+    // 마지막으로 요청된 url. 불투명도가 0이어도 기억해뒀다가, 슬라이더를 다시 올렸을 때
+    // 화면 전환 없이 곧바로 복원할 수 있도록 한다.
     _lastRequestedUrl: null,
+
+    _targetOpacity() {
+        const value = Game.state.settings.gameplayImageOpacity;
+        const pct = (value === undefined || value === null) ? 100 : value;
+        return Math.max(0, Math.min(100, pct)) / 100;
+    },
 
     // url이 없으면 clear()와 동일하게 동작.
     // 같은 url을 다시 set()하면 재적용하지 않는다 (화면 전환마다 깜빡이는 것 방지).
@@ -16,7 +22,7 @@ const GameBackground = {
         const bg = document.getElementById('game-area-bg');
         if (!bg) return;
         this._lastRequestedUrl = url || null;
-        if (!url || Game.state.settings.showGameplayImage === false) {
+        if (!url) {
             this.clear();
             return;
         }
@@ -31,7 +37,7 @@ const GameBackground = {
             bg.style.opacity = '0';
             requestAnimationFrame(() => {
                 bg.style.backgroundImage = `url("${url}")`;
-                requestAnimationFrame(() => { bg.style.opacity = '1'; });
+                requestAnimationFrame(() => { bg.style.opacity = String(this._targetOpacity()); });
             });
         };
         img.onerror = () => {
@@ -51,8 +57,16 @@ const GameBackground = {
         }, 300);
     },
 
-    // "게임플레이 시 이미지 표시" 설정을 다시 켰을 때 호출 — 화면 전환 없이도
-    // 마지막으로 요청됐던 이미지를 곧바로 복원한다.
+    // 설정 화면에서 "게임플레이 시 이미지 표시" 슬라이더를 조작할 때 호출 — 화면 전환 없이
+    // 현재 표시 중인 배경 이미지의 불투명도만 즉시 갱신한다.
+    applyOpacity() {
+        const bg = document.getElementById('game-area-bg');
+        if (bg && this._currentUrl) {
+            bg.style.opacity = String(this._targetOpacity());
+        }
+    },
+
+    // 마지막으로 요청됐던 이미지를 곧바로 복원한다 (예: 화면을 벗어났다가 돌아왔을 때).
     reapply() {
         if (this._lastRequestedUrl) this.set(this._lastRequestedUrl);
     },

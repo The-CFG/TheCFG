@@ -585,19 +585,32 @@ document.addEventListener('DOMContentLoaded', () => {
             CloudAuth.saveVolumeSettings(Game.state.settings.musicVolume, Game.state.settings.sfxVolume);
         });
 
-        if (DOM.settings.showGameplayImageToggle) {
-            DOM.settings.showGameplayImageToggle.addEventListener('change', (e) => {
-                const shown = e.target.checked;
-                Game.state.settings.showGameplayImage = shown;
-                localStorage.setItem('theBeat_showGameplayImage', shown ? 'true' : 'false');
-                if (DOM.settings.showGameplayImageValue) {
-                    DOM.settings.showGameplayImageValue.textContent = I18n.t(shown ? 'show' : 'hide');
+        if (DOM.settings.gameplayImageOpacitySlider) {
+            DOM.settings.gameplayImageOpacitySlider.addEventListener('input', (e) => {
+                const value = parseInt(e.target.value);
+                Game.state.settings.gameplayImageOpacity = value;
+                if (DOM.settings.gameplayImageOpacityValue) {
+                    DOM.settings.gameplayImageOpacityValue.textContent = value;
                 }
-                if (shown) {
-                    GameBackground.reapply();
-                } else {
-                    GameBackground.clear();
+                GameBackground.applyOpacity();
+            });
+            // 드래그가 끝났을 때(change)만 저장 — input마다 저장하면 요청이 너무 잦음
+            DOM.settings.gameplayImageOpacitySlider.addEventListener('change', () => {
+                localStorage.setItem('theBeat_gameplayImageOpacity', Game.state.settings.gameplayImageOpacity);
+            });
+        }
+
+        if (DOM.settings.laneBackgroundOpacitySlider) {
+            DOM.settings.laneBackgroundOpacitySlider.addEventListener('input', (e) => {
+                const value = parseInt(e.target.value);
+                Game.state.settings.laneBackgroundOpacity = value;
+                if (DOM.settings.laneBackgroundOpacityValue) {
+                    DOM.settings.laneBackgroundOpacityValue.textContent = value;
                 }
+                document.documentElement.style.setProperty('--lane-bg-opacity', value / 100);
+            });
+            DOM.settings.laneBackgroundOpacitySlider.addEventListener('change', () => {
+                localStorage.setItem('theBeat_laneBackgroundOpacity', Game.state.settings.laneBackgroundOpacity);
             });
         }
 
@@ -1080,11 +1093,18 @@ document.addEventListener('DOMContentLoaded', () => {
         DOM.settings.musicVolumeValue.textContent = Game.state.settings.musicVolume;
         DOM.settings.sfxVolumeSlider.value = Game.state.settings.sfxVolume;
         DOM.settings.sfxVolumeValue.textContent = Game.state.settings.sfxVolume;
-        if (DOM.settings.showGameplayImageToggle) {
-            const shown = Game.state.settings.showGameplayImage !== false;
-            DOM.settings.showGameplayImageToggle.checked = shown;
-            if (DOM.settings.showGameplayImageValue) {
-                DOM.settings.showGameplayImageValue.textContent = I18n.t(shown ? 'show' : 'hide');
+        if (DOM.settings.gameplayImageOpacitySlider) {
+            const opacityValue = Game.state.settings.gameplayImageOpacity;
+            DOM.settings.gameplayImageOpacitySlider.value = opacityValue;
+            if (DOM.settings.gameplayImageOpacityValue) {
+                DOM.settings.gameplayImageOpacityValue.textContent = opacityValue;
+            }
+        }
+        if (DOM.settings.laneBackgroundOpacitySlider) {
+            const laneBgValue = Game.state.settings.laneBackgroundOpacity;
+            DOM.settings.laneBackgroundOpacitySlider.value = laneBgValue;
+            if (DOM.settings.laneBackgroundOpacityValue) {
+                DOM.settings.laneBackgroundOpacityValue.textContent = laneBgValue;
             }
         }
         if (DOM.settings.laneHighlightToggle) {
@@ -1164,6 +1184,9 @@ document.addEventListener('DOMContentLoaded', () => {
         setupEventListeners();
         document.querySelector('#difficulty-selector button[data-difficulty="normal"]').classList.add('active');
         updateDetailedSettingsUI();
+        // 저장된 레인 배경 불투명도를 CSS 변수로 반영 (레인 div는 setupLanes()에서 매번
+        // 새로 만들어지지만, CSS 변수는 documentElement에 있으므로 새 레인에도 그대로 적용된다).
+        document.documentElement.style.setProperty('--lane-bg-opacity', Game.state.settings.laneBackgroundOpacity / 100);
         Debugger.init();
         I18n.init();
         Appearance.init();

@@ -16,9 +16,24 @@ const Game = {
             musicFileObject: null,
             musicVolume: 100,
             sfxVolume: 100,
-            // 게임플레이 중 노래 커버 이미지를 배경으로 표시할지 여부. 새로고침해도 유지되도록
-            // localStorage에서 미리 읽어둔다 (계정 볼륨과 달리 계정 연동은 하지 않음).
-            showGameplayImage: localStorage.getItem('theBeat_showGameplayImage') !== 'false',
+            // 게임플레이 중 노래 커버 이미지를 배경으로 표시할 불투명도 (0~100). 새로고침해도
+            // 유지되도록 localStorage에서 미리 읽어둔다 (계정 볼륨과 달리 계정 연동은 하지 않음).
+            // 예전 버전(체크박스)의 저장값이 남아있으면 꺼짐→0, 켜짐→100으로 이어받는다.
+            gameplayImageOpacity: (() => {
+                const stored = localStorage.getItem('theBeat_gameplayImageOpacity');
+                if (stored !== null) {
+                    const parsed = parseInt(stored, 10);
+                    return Number.isNaN(parsed) ? 100 : Math.max(0, Math.min(100, parsed));
+                }
+                return localStorage.getItem('theBeat_showGameplayImage') === 'false' ? 0 : 100;
+            })(),
+            // 레인 영역에 검은색~회색 톤의 배경을 얼마나 진하게 표시할지 (0~100).
+            laneBackgroundOpacity: (() => {
+                const stored = localStorage.getItem('theBeat_laneBackgroundOpacity');
+                if (stored === null) return 30;
+                const parsed = parseInt(stored, 10);
+                return Number.isNaN(parsed) ? 30 : Math.max(0, Math.min(100, parsed));
+            })(),
             // 입력 시 레인이 하얗게 하이라이트되는 피드백을 표시할지 여부
             laneHighlightOnInput: localStorage.getItem('theBeat_laneHighlightOnInput') !== 'false',
             // 게임플레이 중 우측 메뉴/점수 패널(#ui-area)을 자동으로 접을지 여부. 기본값 false(끔).
