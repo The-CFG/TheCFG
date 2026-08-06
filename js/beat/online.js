@@ -109,20 +109,16 @@ const Online = {
             : items.map(c => this._chartCard(c)).join('');
 
         this._setContent(`
-        <div class="flex space-x-2 mb-3">
+        <div class="flex space-x-2 mb-4">
             <input id="online-search" type="text" placeholder="제목 / 아티스트 검색…" value="${_esc(s.search)}"
                 class="flex-1 p-2 bg-gray-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-teal-500">
+            <select id="online-sort" class="px-2 py-2 bg-gray-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-teal-500">
+                <option value="newest" ${s.sort === 'newest' ? 'selected' : ''}>최신순</option>
+                <option value="popular" ${s.sort === 'popular' ? 'selected' : ''}>인기순</option>
+                <option value="likes" ${s.sort === 'likes' ? 'selected' : ''}>좋아요순</option>
+                <option value="difficulty" ${s.sort === 'difficulty' ? 'selected' : ''}>난이도순</option>
+            </select>
             <button id="online-search-btn" class="px-3 py-2 bg-teal-600 hover:bg-teal-500 rounded-lg text-sm">검색</button>
-        </div>
-        <div class="flex space-x-2 mb-4">
-            <button id="sort-newest" class="flex-1 py-1.5 rounded text-xs font-semibold transition
-                ${s.sort === 'newest' ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}">최신순</button>
-            <button id="sort-popular" class="flex-1 py-1.5 rounded text-xs font-semibold transition
-                ${s.sort === 'popular' ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}">인기순</button>
-            <button id="sort-likes" class="flex-1 py-1.5 rounded text-xs font-semibold transition
-                ${s.sort === 'likes' ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}">좋아요순</button>
-            <button id="sort-difficulty" class="flex-1 py-1.5 rounded text-xs font-semibold transition
-                ${s.sort === 'difficulty' ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}">난이도순</button>
         </div>
         <div id="browse-list" class="space-y-2">${cards}</div>
         ${s.hasMore ? `<button id="browse-more-btn" class="w-full mt-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm">더 보기</button>` : ''}
@@ -135,10 +131,10 @@ const Online = {
         document.getElementById('online-search').addEventListener('keydown', e => {
             if (e.key === 'Enter') { s.search = e.target.value; this._loadBrowse(true); }
         });
-        document.getElementById('sort-newest').addEventListener('click', () => { s.sort = 'newest'; this._loadBrowse(true); });
-        document.getElementById('sort-popular').addEventListener('click', () => { s.sort = 'popular'; this._loadBrowse(true); });
-        document.getElementById('sort-likes').addEventListener('click', () => { s.sort = 'likes'; this._loadBrowse(true); });
-        document.getElementById('sort-difficulty').addEventListener('click', () => { s.sort = 'difficulty'; this._loadBrowse(true); });
+        document.getElementById('online-sort').addEventListener('change', e => {
+            s.sort = e.target.value;
+            this._loadBrowse(true);
+        });
         document.getElementById('browse-more-btn')?.addEventListener('click', () => { s.page++; this._loadBrowse(false); });
         document.querySelectorAll('.browse-card-btn').forEach(btn =>
             btn.addEventListener('click', () => this.show('song', btn.dataset.id)));
