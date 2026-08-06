@@ -852,6 +852,8 @@ const Game = {
             DOM.resumeGameBtn.classList.remove('hidden');
             DOM.playingStatusLabel.textContent = '일시 정지 중';
             DOM.settings.iconPlaying.classList.remove('hidden');
+            // 자동 숨김 설정과 무관하게, 일시정지 중에는 우측 패널을 잠깐 다시 보여준다.
+            UI.setPanelCollapsed(false);
         } else {
             DOM.pauseGameBtn.classList.remove('hidden');
             DOM.resumeGameBtn.classList.add('hidden');
@@ -861,6 +863,8 @@ const Game = {
                 this.state.totalPausedTime += performance.now() - this.state.pauseStartTime;
                 if (this.state.settings.mode === 'music') DOM.musicPlayer.play();
                 this.state.gameState = 'playing';
+                // 재개되면 "게임플레이 시 우측 화면 숨기기" 설정에 맞춰 다시 접는다.
+                UI.setPanelCollapsed(this.state.settings.autoHideUiOnPlay === true);
                 this.loop(performance.now());
             });
         }

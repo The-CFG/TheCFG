@@ -14,7 +14,14 @@ const UI = {
         if (appShell) {
             const isPlaying = screenName === 'playing';
             appShell.classList.toggle('in-play', isPlaying);
-            if (!isPlaying) this.setPanelCollapsed(false);
+            // 플레이 화면에 들어갈 때는 "게임플레이 시 우측 화면 숨기기" 설정값을 그대로 적용.
+            // (기존에는 여기서 아무 것도 안 해서 이전 화면의 접힘 상태가 그대로 남아있었음)
+            // 단, 일시정지 중(예: 설정 화면 갔다 되돌아온 경우)에는 패널을 계속 펼쳐둔다.
+            if (isPlaying) {
+                this.setPanelCollapsed(!Game.state.isPaused && Game.state.settings.autoHideUiOnPlay === true);
+            } else {
+                this.setPanelCollapsed(false);
+            }
         }
     },
     showMessage(type, message) {
