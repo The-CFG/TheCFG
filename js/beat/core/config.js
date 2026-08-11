@@ -71,7 +71,7 @@ const CONFIG = {
     KEY_CODES: {
         A: 65, S: 83, D: 68, F: 70, J: 74, K: 75, L: 76, Space: 32, Semicolon: 186
     },
-    POINTS: { perfect: 10, good: 5, bad: 2, miss: 0 },
+    POINTS: { perfect: 300, good: 150, bad: 50, miss: 0 },
     NOTE_COUNT_MIN: 10,
     NOTE_COUNT_MAX: 500,
     DEFAULT_NOTE_COUNT: 100,
