@@ -6,7 +6,7 @@ const CloudScores = {
 
     // ── 점수 제출 (로그인 필요) ───────────────────────────────────────────────
     // 기존 최고 기록보다 낮으면 서버에서 자동으로 무시됨 (is_new_best: false 반환)
-    async submitScore({ chartId, score, accuracy, maxCombo, judgePerfect, judgeGood, judgeMiss }) {
+    async submitScore({ chartId, score, accuracy, maxCombo, judgePerfect, judgeGood, judgeBad, judgeMiss }) {
         const user = await CloudAuth.getUser();
         if (!user) return { error: new Error('로그인이 필요합니다.') };
 
@@ -17,6 +17,7 @@ const CloudScores = {
             p_max_combo:     maxCombo,
             p_judge_perfect: judgePerfect ?? null,
             p_judge_good:    judgeGood    ?? null,
+            p_judge_bad:     judgeBad     ?? null,
             p_judge_miss:    judgeMiss    ?? null,
         });
 
@@ -27,7 +28,7 @@ const CloudScores = {
     async getLeaderboard(chartId, limit = 10) {
         const { data, error } = await _supabase
             .from('beat_scores')
-            .select('user_id, score, accuracy, max_combo, judge_perfect, judge_good, judge_miss, achieved_at')
+            .select('user_id, score, accuracy, max_combo, judge_perfect, judge_good, judge_bad, judge_miss, achieved_at')
             .eq('chart_id', chartId)
             .order('score', { ascending: false })
             .limit(limit);
@@ -48,7 +49,7 @@ const CloudScores = {
 
         const { data, error } = await _supabase
             .from('beat_scores')
-            .select('score, accuracy, max_combo, judge_perfect, judge_good, judge_miss, achieved_at')
+            .select('score, accuracy, max_combo, judge_perfect, judge_good, judge_bad, judge_miss, achieved_at')
             .eq('chart_id', chartId)
             .eq('user_id', user.id)
             .single();

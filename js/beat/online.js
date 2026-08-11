@@ -285,7 +285,7 @@ const Online = {
                 const isMe = !!(currentUser && s.user_id === currentUser.id);
                 const displayName = s.nickname ? _esc(s.nickname) : `${_esc(s.user_id.slice(0, 8))}…`;
                 const acc = (+(s.accuracy) || 0).toFixed(1);
-                const rank = UI.calculateRank(s.score, c.note_count);
+                const rank = UI.rankFromJudgements(s.judge_perfect, s.judge_good, s.judge_bad, s.judge_miss);
                 const rankBadge = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`;
                 const rowCls = isMe
                     ? 'bg-teal-900 border border-teal-600 rounded'
@@ -307,9 +307,10 @@ const Online = {
             myPanel = `<p class="mt-3 text-xs text-gray-500 text-center">로그인 후 플레이하면 기록이 등록됩니다.</p>`;
         } else if (myScore) {
             const rankTxt = myRank ? `${myRank}위` : `TOP ${lb.length} 밖`;
-            const myGrade = UI.calculateRank(myScore.score, c.note_count);
+            const myGrade = UI.rankFromJudgements(myScore.judge_perfect, myScore.judge_good, myScore.judge_bad, myScore.judge_miss);
             const p = myScore.judge_perfect || 0;
             const g = myScore.judge_good    || 0;
+            const b = myScore.judge_bad     || 0;
             const m = myScore.judge_miss    || 0;
             myPanel = `
             <div class="mt-3 p-3 bg-teal-950 border border-teal-700 rounded-lg">
@@ -323,7 +324,7 @@ const Online = {
                 <div class="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 text-xs text-teal-400">
                     <span>정확도 ${(+(myScore.accuracy) || 0).toFixed(1)}%</span>
                     <span>최대 콤보 ${myScore.max_combo}</span>
-                    <span>P ${p} / G ${g} / M ${m}</span>
+                    <span>P ${p} / G ${g} / B ${b} / M ${m}</span>
                 </div>
             </div>`;
         } else {
@@ -720,6 +721,7 @@ async function submitOnlineScore() {
         maxCombo:     Game.state.maxCombo || 0,
         judgePerfect: perfect,
         judgeGood:    good,
+        judgeBad:     bad,
         judgeMiss:    miss,
     });
 

@@ -63,11 +63,21 @@ const UI = {
         if (percentage >= 70) return 'B';
         return 'C';
     },
-    // 점수/총 노트 수 → 랭크(S/A/B/C) 계산. 결과 화면과 온라인 리더보드에서 공용으로 쓴다.
+    // 점수/총 노트 수 → 랭크(S/A/B/C) 계산. 결과 화면(로컬 플레이 직후)에서 쓴다.
     calculateRank(score, totalNotes) {
         if (!totalNotes || totalNotes <= 0) return 'C';
         const maxScore = totalNotes * CONFIG.POINTS.perfect;
         const percentage = (score / maxScore) * 100;
+        return this.rankFromPercentage(percentage);
+    },
+    // PERFECT/GOOD/BAD/MISS 개수 → 랭크(S/A/B/C) 계산. 서버에 저장된 판정 개수로부터
+    // 직접 계산하므로, 온라인 리더보드처럼 note_count 등 별도 값 없이도 정확한 등급을 매길 수 있다.
+    rankFromJudgements(perfect, good, bad, miss) {
+        perfect = perfect || 0; good = good || 0; bad = bad || 0; miss = miss || 0;
+        const judgedCount = perfect + good + bad + miss;
+        if (judgedCount === 0) return 'C';
+        const percentage = ((perfect * CONFIG.POINTS.perfect + good * CONFIG.POINTS.good + bad * CONFIG.POINTS.bad)
+            / (judgedCount * CONFIG.POINTS.perfect)) * 100;
         return this.rankFromPercentage(percentage);
     },
     updateResultScreen() {
