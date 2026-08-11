@@ -1357,6 +1357,33 @@
 
 
         
+        <!-- TEMP DEBUG: 세로 화면 진입 시 #auth-modal이 저절로 뜨는 문제 진단용.
+             _openAuthModal() 경유 여부와 무관하게 style 속성 변경 자체를 감시한다.
+             원인 파악되면 이 스크립트 블록은 삭제할 것. -->
+        <script>
+            (function () {
+                const target = document.getElementById('auth-modal');
+                if (!target) return;
+                const observer = new MutationObserver((mutations) => {
+                    mutations.forEach((m) => {
+                        if (m.attributeName === 'style') {
+                            console.trace(
+                                '[DEBUG] #auth-modal style 변경 감지 → display:',
+                                target.style.display,
+                                '| 시각:', new Date().toISOString()
+                            );
+                        }
+                    });
+                });
+                observer.observe(target, { attributes: true, attributeFilter: ['style'] });
+                console.log(
+                    '[DEBUG] #auth-modal 감시 시작. 초기 display:',
+                    target.style.display,
+                    '| readyState:', document.readyState
+                );
+            })();
+        </script>
+
         <!-- Fix mobile viewport height and browser navigation bar -->
         <script>
             // 모바일 브라우저의 실제 뷰포트 높이 계산

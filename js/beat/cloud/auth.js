@@ -173,6 +173,9 @@ function _openAccountPopover(user) {
 
 // ── 모달 열기 / 닫기 헬퍼 ──────────────────────────────────
 function _openAuthModal() {
+    // TEMP DEBUG: 세로 화면에서 페이지 진입 시 모달이 저절로 뜨는 문제 진단용.
+    // 원인 파악되면 이 줄은 지울 것.
+    console.trace('[DEBUG] _openAuthModal() 호출됨');
     const modal = document.getElementById('auth-modal');
     if (modal) modal.style.display = 'flex';
 }
