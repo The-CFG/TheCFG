@@ -323,15 +323,20 @@
     }
 }
 
-/* 모달 내부 카드: 세로 화면에서 화면 높이를 넘지 않도록.
-   스크롤 컨테이너는 이 카드 하나뿐이어야 함(오버레이는 위에서 overflow:hidden 처리) */
+/* 모달 카드 "껍데기"(.modal-card): 절대 스크롤되지 않는 바깥 프레임.
+   ✕ 닫기 버튼은 이 껍데기의 직계 자식으로 두어, 안쪽 콘텐츠가 아무리
+   길어져서 스크롤이 생기더라도 버튼은 절대 그 스크롤 영향을 받지 않음.
+   (이전엔 ✕ 버튼이 스크롤되는 카드 안에 들어있어서, 좁은 화면에서 텍스트가
+   줄바꿈되어 카드 내용이 길어지고 카드 자체가 스크롤 가능해지는 순간
+   다시 탭-vs-스크롤 오인식으로 버튼이 눌리지 않는 문제가 있었음) */
 #auth-modal > div,
 #trigger-modal > div {
     /* 최대 높이 = 뷰포트 - 상하 여백 24px */
     max-height: calc(var(--vh, 1vh) * 100 - 24px);
-    /* 카드 내부 스크롤 */
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
+    /* 껍데기 자체는 스크롤하지 않고 내부 스크롤 영역만 클리핑 */
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
     /* 카드가 오버레이 가운데서 위아래 여백을 갖도록 */
     margin: auto;
     /* 너무 좁은 화면에서도 양 옆 여백 유지 */
@@ -343,6 +348,16 @@
     #trigger-modal > div {
         max-height: calc(100dvh - 24px);
     }
+}
+
+/* 모달 콘텐츠(.modal-scrollarea): 실제 스크롤이 일어나는 유일한 안쪽 영역.
+   ✕ 버튼과는 완전히 분리되어 있어 이 영역이 스크롤되어도 버튼엔 영향 없음 */
+.modal-scrollarea {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    box-sizing: border-box;
 }
 
 /* 우측 상단 ✕ 닫기 버튼 — 스크롤/오버플로우 계산과 무관하게 항상 같은 자리에서 탭 가능.
@@ -371,8 +386,8 @@
 
 /* 매우 작은 화면(세로 360px 미만)에서 내부 padding 축소 */
 @media (max-height: 500px) {
-    #auth-modal > div,
-    #trigger-modal > div {
+    #auth-modal .modal-scrollarea,
+    #trigger-modal .modal-scrollarea {
         padding: 14px !important;
     }
 
