@@ -226,6 +226,7 @@ function setupAuthUI() {
     });
 
     closeBtn?.addEventListener('click', _closeAuthModal);
+    document.getElementById('btn-auth-close-x')?.addEventListener('click', _closeAuthModal);
     modal.addEventListener('click', e => { if (e.target === modal) _closeAuthModal(); });
 
     // 로그인 ↔ 회원가입 전환

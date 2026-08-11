@@ -345,22 +345,14 @@
     }
 }
 
-/* 닫기/취소 버튼은 카드 하단에 고정 — 내용이 넘쳐도 스크롤 없이 항상 탭 가능 */
-#btn-auth-close {
-    position: sticky;
-    bottom: 0;
-    z-index: 1;
-    background-color: #3d4548;
-    padding-top: 8px;
+/* 우측 상단 ✕ 닫기 버튼 — 스크롤/오버플로우 계산과 무관하게 항상 같은 자리에서 탭 가능 */
+#btn-auth-close-x,
+#trigger-close-x {
+    z-index: 2;
 }
-
-#trigger-modal-actions {
-    position: sticky;
-    bottom: 0;
-    z-index: 1;
-    background-color: #1f2937; /* Tailwind bg-gray-800 */
-    padding-top: 8px;
-    padding-bottom: 2px;
+#btn-auth-close-x:hover,
+#trigger-close-x:hover {
+    color: #fff;
 }
 
 /* 세로 화면(portrait)에서 카드 너비를 더 넓게 */

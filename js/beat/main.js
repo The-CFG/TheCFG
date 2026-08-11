@@ -378,6 +378,10 @@ document.addEventListener('DOMContentLoaded', () => {
             Editor.hideTriggerModal();
         });
 
+        document.getElementById('trigger-close-x')?.addEventListener('click', () => {
+            Editor.hideTriggerModal();
+        });
+
         DOM.triggerModal.container.addEventListener('click', (e) => {
             if (e.target === DOM.triggerModal.container) {
                 Editor.hideTriggerModal();
