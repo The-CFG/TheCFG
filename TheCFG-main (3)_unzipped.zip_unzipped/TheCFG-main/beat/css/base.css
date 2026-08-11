@@ -1,0 +1,16 @@
+/* hidden 클래스가 flex 등 display 클래스에 덮어씌워지지 않도록 강제 */
+.hidden {
+    display: none !important;
+}
+
+/* 노트 색상 CSS 변수 */
+:root {
+    --note-tap-color: #63b3ed;
+    --note-long-color: #a78bfa;
+    --note-long-gradient-start: #818cf8;
+    --note-false-color: #fca5a5;
+    /* 모바일 브라우저 하단 여백 - JavaScript에서 동적으로 설정됨 */
+    --vh: 1vh;
+    --safe-bottom: 80px;
+    --mobile-bottom-padding: var(--safe-bottom);
+}

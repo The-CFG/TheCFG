@@ -1,0 +1,333 @@
+/* ════════════════════════════════════════════════════
+   collab.css — 공동 작업 모달 스타일
+   ════════════════════════════════════════════════════ */
+
+/* ── 오버레이 ─────────────────────────────────────────── */
+.collab-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.72);
+    z-index: 9500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+/* ── 다이얼로그 ───────────────────────────────────────── */
+.collab-dialog {
+    background: var(--bg-panel, #3d4548);
+    border: 1px solid var(--border, #555);
+    border-radius: 12px;
+    width: min(500px, 100%);
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+}
+
+/* ── 헤더 ─────────────────────────────────────────────── */
+.collab-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--border, #555);
+    flex-shrink: 0;
+}
+
+.collab-title {
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.collab-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 18px;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    line-height: 1;
+    flex-shrink: 0;
+}
+.collab-close:hover { color: var(--text); background: var(--bg-input, #2c3235); }
+
+/* ── 본문 ─────────────────────────────────────────────── */
+.collab-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.collab-section {}
+
+.collab-section-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    margin: 0 0 10px;
+}
+
+/* ── 멤버 목록 ────────────────────────────────────────── */
+.collab-member-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.collab-member-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 12px;
+    background: var(--bg-input, #2c3235);
+    border-radius: 8px;
+    border: 1px solid var(--border, #555);
+}
+
+.collab-member-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+}
+
+.collab-member-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.collab-self-badge {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 400;
+}
+
+.collab-member-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+/* ── 역할 뱃지 ────────────────────────────────────────── */
+.collab-role-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.role-owner  { background: rgba(255, 215, 0, 0.15); color: #f1c40f; border: 1px solid rgba(241,196,15,.35); }
+.role-editor { background: rgba(74, 158, 255, 0.15); color: #4a9eff; border: 1px solid rgba(74,158,255,.35); }
+.role-viewer { background: rgba(136, 136, 136, 0.15); color: #aaa; border: 1px solid rgba(136,136,136,.3); }
+
+/* ── 초대 폼 ──────────────────────────────────────────── */
+.collab-invite-form {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.collab-input {
+    flex: 1;
+    min-width: 160px;
+    background: var(--bg-input, #2c3235);
+    border: 1px solid var(--border, #555);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 13px;
+    padding: 6px 10px;
+    outline: none;
+    transition: border-color .15s;
+}
+.collab-input:focus { border-color: var(--accent, #4a9eff); }
+
+.collab-select {
+    background: var(--bg-input, #2c3235);
+    border: 1px solid var(--border, #555);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 13px;
+    padding: 6px 8px;
+    cursor: pointer;
+    outline: none;
+}
+
+.collab-select-sm {
+    font-size: 12px;
+    padding: 4px 6px;
+}
+
+/* ── 보낸 초대 목록 ───────────────────────────────────── */
+.collab-invite-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    background: var(--bg-input, #2c3235);
+    border-radius: 6px;
+    border: 1px solid var(--border, #555);
+    margin-bottom: 5px;
+}
+
+.collab-invite-email {
+    flex: 1;
+    font-size: 12px;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+/* ── 공통 버튼 ────────────────────────────────────────── */
+.collab-btn-primary {
+    background: var(--accent, #4a9eff);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity .15s;
+}
+.collab-btn-primary:hover:not(:disabled) { opacity: .85; }
+.collab-btn-primary:disabled { opacity: .5; cursor: default; }
+
+.collab-btn-secondary {
+    background: var(--bg-input, #2c3235);
+    color: var(--text);
+    border: 1px solid var(--border, #555);
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.collab-btn-secondary:hover { background: var(--bg-hover, #3a4145); }
+
+.collab-btn-danger {
+    background: rgba(224, 112, 112, 0.15);
+    color: #e07070;
+    border: 1px solid rgba(224, 112, 112, 0.35);
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.collab-btn-danger:hover:not(:disabled) { background: rgba(224,112,112,.3); }
+.collab-btn-danger:disabled { opacity: .5; cursor: default; }
+
+.collab-btn-sm {
+    padding: 4px 9px;
+    font-size: 11px;
+}
+
+/* ── 빈 상태 / 로딩 ───────────────────────────────────── */
+.collab-loading,
+.collab-empty {
+    font-size: 13px;
+    color: var(--text-muted);
+    text-align: center;
+    padding: 16px 8px;
+}
+
+/* ── 푸터 ─────────────────────────────────────────────── */
+.collab-footer {
+    display: none;
+}
+/* ── 라이트 테마 오버라이드 ───────────────────────────── */
+[data-theme="light"] .collab-dialog {
+    background: var(--bg-panel);
+    border-color: var(--border-mid);
+    box-shadow: 0 8px 32px rgba(0,0,0,.18);
+}
+[data-theme="light"] .collab-header {
+    border-bottom-color: var(--border);
+}
+[data-theme="light"] .collab-title {
+    color: var(--text);
+}
+[data-theme="light"] .collab-close {
+    color: var(--text-muted);
+}
+[data-theme="light"] .collab-close:hover {
+    background: var(--bg-hover);
+    color: var(--text);
+}
+[data-theme="light"] .collab-section-title {
+    color: var(--text-muted);
+}
+[data-theme="light"] .collab-member-card {
+    background: var(--bg-surface);
+    border-color: var(--border);
+}
+[data-theme="light"] .collab-member-name {
+    color: var(--text);
+}
+[data-theme="light"] .collab-self-badge {
+    color: var(--text-muted);
+}
+[data-theme="light"] .collab-input {
+    background: var(--bg-panel);
+    border-color: var(--border-mid);
+    color: var(--text);
+}
+[data-theme="light"] .collab-select {
+    background: var(--bg-panel);
+    border-color: var(--border-mid);
+    color: var(--text);
+}
+[data-theme="light"] .collab-invite-row {
+    background: var(--bg-surface);
+    border-color: var(--border);
+}
+[data-theme="light"] .collab-invite-email {
+    color: var(--text);
+}
+[data-theme="light"] .collab-btn-secondary {
+    background: #e5e7eb;
+    color: var(--text);
+    border-color: var(--border-mid);
+}
+[data-theme="light"] .collab-btn-secondary:hover {
+    background: #d1d5db;
+}
+[data-theme="light"] .collab-loading,
+[data-theme="light"] .collab-empty {
+    color: var(--text-muted);
+}
+[data-theme="light"] .collab-body {
+    background: var(--bg-panel);
+}
+[data-theme="light"] .collab-footer {
+    border-top-color: var(--border);
+    background: var(--bg-surface);
+}

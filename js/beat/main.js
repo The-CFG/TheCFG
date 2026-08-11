@@ -289,12 +289,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Phase 3e: 비트맵 창의 개별 서버 업로드/불러오기 버튼은 제거됨.
         // 클라우드 업로드는 종합 창(EditorSong.uploadToCloud), 불러오기는 에디터 홈(EditorHome.open)에서 한다.
-        // (upload-modal/cloud-load-modal 자체는 아직 DOM에 남아있지만 트리거 버튼이 없어 열리지 않는다.)
-        document.getElementById('cloud-load-cancel-btn').addEventListener('click', () => CloudLoadModal.close());
-
-        // 업로드 모달 버튼
-        document.getElementById('upload-submit-btn').addEventListener('click', () => UploadModal.submit());
-        document.getElementById('upload-cancel-btn').addEventListener('click', () => UploadModal.close());
 
         document.getElementById('editor-btn').addEventListener('click', () => {
             // Phase 3a: '에디터' 버튼은 이제 비트맵 창으로 바로 안 들어가고 에디터 홈으로 감

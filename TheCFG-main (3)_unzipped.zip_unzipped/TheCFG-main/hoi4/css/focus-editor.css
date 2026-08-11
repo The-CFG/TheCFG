@@ -1,0 +1,521 @@
+/* ════════════════════════════════════════════════
+   중점 노드 / SVG
+════════════════════════════════════════════════ */
+.focus-node {
+    position: absolute; width: 120px; height: 80px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-mid);
+    border-radius: var(--radius-sm);
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    text-align: center; padding: 5px;
+    user-select: none; font-size: .8em; cursor: pointer;
+    transition: border-color .13s, box-shadow .13s;
+}
+.focus-node:hover  { border-color: var(--border-mid); box-shadow: 0 2px 8px rgba(0,0,0,.4); }
+.focus-node.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-dim); }
+.focus-node-id   { font-weight: 700; font-size: .88em; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; color: #d0d8e0; }
+.focus-node-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; color: var(--text-muted); }
+.focus-node-label { font-size: .82em; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; text-align: center; }
+.drag-handle {
+    position: absolute; bottom: 2px; right: 2px; width: 16px; height: 16px;
+    background: rgba(255,255,255,.07); border: 1px solid var(--border-mid); border-radius: 3px;
+    cursor: move; opacity: 0; transition: opacity .13s;
+    background-image:
+        linear-gradient(var(--text-muted) 45%, transparent 45%, transparent 55%, var(--text-muted) 55%),
+        linear-gradient(90deg, var(--text-muted) 45%, transparent 45%, transparent 55%, var(--text-muted) 55%);
+    background-size: 6px 6px; background-position: center; background-repeat: space;
+}
+.focus-node:hover .drag-handle { opacity: 1; }
+.prereq-line           { stroke: var(--border-mid); stroke-width: 1.5; fill: none; }
+.prereq-line.or        { stroke-dasharray: 4 4; }
+.mutual-exclusive-line { stroke: var(--danger); stroke-width: 1.5; fill: none; }
+.mutual-exclusive-icon { fill: var(--danger); font-size: 14px; font-weight: 900; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+
+
+/* ════════════════════════════════════════════════
+   중점 검색바
+════════════════════════════════════════════════ */
+/* ── 우상단 오버레이: 필터 아이콘 + 검색창 ── */
+.focus-overlay-bar {
+    position: absolute;
+    top: 12px;
+    /* ⚙ collapsed-icon 너비(44px) + 여유 */
+    right: 58px;
+    z-index: 25;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    pointer-events: none; /* 자식만 클릭 허용 */
+}
+.focus-overlay-bar > * { pointer-events: auto; }
+
+/* 필터 아이콘 버튼 그룹 */
+.focus-filter-group {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 3px 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.28);
+}
+.focus-filter-btn {
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border-radius: 5px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    min-width: unset;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .12s, color .12s, border-color .12s, box-shadow .12s;
+}
+.focus-filter-btn:hover {
+    background: var(--bg-active);
+    color: var(--text-primary);
+    border-color: var(--border);
+}
+.focus-filter-btn.active {
+    background: rgba(74,158,255,.2);
+    color: #74c0fc;
+    border-color: #4a9eff88;
+    box-shadow: inset 0 0 0 1px #4a9eff44;
+}
+
+/* 검색창 */
+.focus-search-bar {
+    position: relative;
+    width: 220px;
+    z-index: 30;
+}
+
+.focus-search-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0 8px;
+    height: 34px;
+    box-shadow: 0 2px 10px rgba(0,0,0,.3);
+    transition: border-color .15s;
+}
+.focus-search-input-wrap:focus-within {
+    border-color: #4a9eff;
+}
+
+.focus-search-icon {
+    font-size: 13px;
+    flex-shrink: 0;
+    opacity: .7;
+}
+
+.focus-search-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text-primary);
+    font-size: .82rem;
+    padding: 0;
+    min-width: 0;
+}
+.focus-search-input::placeholder { color: var(--text-muted); }
+
+.focus-search-clear {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 12px;
+    padding: 0;
+    line-height: 1;
+    min-width: unset;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    flex-shrink: 0;
+    transition: background .12s, color .12s;
+    margin: 0;
+}
+.focus-search-clear:hover {
+    background: var(--bg-active);
+    color: var(--text-primary);
+}
+
+/* 드롭다운 */
+.focus-search-dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 6px 24px rgba(0,0,0,.45);
+    max-height: 360px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.fsd-empty {
+    padding: 14px 12px;
+    font-size: .8rem;
+    color: var(--text-muted);
+    text-align: center;
+}
+
+.fsd-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-bottom: 1px solid rgba(255,255,255,.05);
+    transition: background .1s;
+}
+.fsd-item:last-child { border-bottom: none; }
+.fsd-item:hover { background: var(--bg-active); }
+
+/* 아이콘 */
+.fsd-icon {
+    flex-shrink: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    background: var(--bg-dark);
+    overflow: hidden;
+}
+.fsd-icon img {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+}
+.fsd-icon-placeholder {
+    font-size: 16px;
+    opacity: .6;
+}
+
+/* 텍스트 */
+.fsd-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+.fsd-id {
+    font-size: .78rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.fsd-loc {
+    font-size: .72rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+mark.fsd-hl {
+    background: rgba(74,158,255,.35);
+    color: inherit;
+    border-radius: 2px;
+    padding: 0 1px;
+}
+
+/* 액션 버튼들 */
+.fsd-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+.fsd-btn {
+    font-size: .7rem;
+    padding: 3px 7px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: var(--bg-dark);
+    color: var(--text-secondary);
+    cursor: pointer;
+    line-height: 1.4;
+    min-width: unset;
+    transition: background .1s, color .1s, border-color .1s;
+    margin: 0;
+}
+.fsd-btn:hover { background: var(--bg-active); color: var(--text-primary); }
+.fsd-btn.fsd-btn-goto  { border-color: #4a9eff44; }
+.fsd-btn.fsd-btn-goto:hover  { background: #4a9eff22; color: #74c0fc; border-color: #4a9eff; }
+.fsd-btn.fsd-btn-edit  { border-color: #2ecc7144; }
+.fsd-btn.fsd-btn-edit:hover  { background: #2ecc7122; color: #58d68d; border-color: #2ecc71; }
+.fsd-btn.fsd-btn-del   { border-color: #e74c3c44; }
+.fsd-btn.fsd-btn-del:hover   { background: #e74c3c22; color: #f1948a; border-color: #e74c3c; }
+
+/* 검색 이동 강조 애니메이션 */
+@keyframes fsd-pulse {
+    0%   { box-shadow: 0 0 0 0   rgba(74,158,255,.8), 0 0 0 0   rgba(74,158,255,.4); }
+    50%  { box-shadow: 0 0 0 6px rgba(74,158,255,.4), 0 0 0 12px rgba(74,158,255,.1); }
+    100% { box-shadow: 0 0 0 0   rgba(74,158,255,0),  0 0 0 0   rgba(74,158,255,0); }
+}
+.focus-node.fsd-highlight-pulse {
+    animation: fsd-pulse .6s ease-out 2;
+    border-color: #4a9eff !important;
+}
+
+
+/* ════════════════════════════════════════════════
+   중점 필터 하이라이트 / 딤
+════════════════════════════════════════════════ */
+/* 필터 비매칭: 흐리게 */
+.focus-node.filter-dim {
+    opacity: .22;
+    filter: grayscale(.7);
+    transition: opacity .2s, filter .2s;
+}
+/* 필터 매칭: 발광 효과 */
+.focus-node.filter-lit {
+    opacity: 1;
+    filter: none;
+    box-shadow: 0 0 0 2px #4a9effaa, 0 0 14px 2px #4a9eff44;
+    transition: opacity .2s, filter .2s, box-shadow .2s;
+}
+
+/* 라이트 모드 */
+[data-theme="light"] .focus-node.filter-dim {
+    opacity: .2;
+    filter: grayscale(.6) brightness(1.1);
+}
+[data-theme="light"] .focus-node.filter-lit {
+    box-shadow: 0 0 0 2px #1971c2cc, 0 0 12px 2px #1971c266;
+}
+
+/* 라이트 모드 필터 버튼 */
+[data-theme="light"] .focus-filter-btn {
+    background: transparent;
+    color: #495057;
+}
+[data-theme="light"] .focus-filter-btn:hover {
+    background: #e9ecef;
+    color: #212529;
+}
+[data-theme="light"] .focus-filter-btn.active {
+    background: #d0ebff;
+    color: #1864ab;
+    border-color: #74c0fc88;
+}
+
+/* 라이트 모드 오버레이 그룹 배경 */
+[data-theme="light"] .focus-filter-group {
+    background: #ffffff;
+    border-color: #ced4da;
+}
+
+
+
+/* ════════════════════════════════════════════════
+   무브패드
+════════════════════════════════════════════════ */
+
+/* 무브패드 토글 + 사이드바 접기 버튼 행 */
+.movepad-toggle-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin-top: 4px;
+}
+.btn-movepad-toggle {
+    flex: 1;
+    font-size: .78rem;
+    padding: 5px 8px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    cursor: pointer;
+    text-align: left;
+    margin: 0;
+    transition: background .12s, color .12s;
+}
+.btn-movepad-toggle:hover,
+.btn-movepad-toggle.open {
+    background: var(--bg-active);
+    color: var(--text-primary);
+}
+.btn-sidebar-toggle-menu {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    min-width: unset;
+    border-radius: 50%;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0,0,0,.3);
+    transition: background .15s, color .15s, transform .25s cubic-bezier(.4,0,.2,1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+}
+.btn-sidebar-toggle-menu:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+/* 접힌 상태에서 화살표 방향 반전 — JS로 클래스 추가 */
+.left-panel.collapsed .btn-sidebar-toggle-menu { transform: rotate(180deg); }
+
+/* 무브패드 패널 */
+.movepad-panel {
+    margin-top: 10px;
+    padding: 10px;
+    background: var(--bg-dark);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+.movepad-selected-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    font-size: .74rem;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+}
+.movepad-label-text {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.movepad-label-text span {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+.movepad-clear-btn {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    min-width: unset;
+    margin: 0;
+    font-size: 10px;
+    line-height: 1;
+    border-radius: 50%;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .1s, color .1s;
+}
+.movepad-clear-btn:hover {
+    background: rgba(220,60,60,.2);
+    color: #e05555;
+    border-color: rgba(220,60,60,.4);
+}
+
+/* D-패드 레이아웃 */
+.movepad-dpad {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+.dpad-middle-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.dpad-center-btn {
+    width: 44px;
+    height: 44px;
+    font-size: .62rem;
+    line-height: 1.2;
+    color: var(--text-muted);
+    cursor: default !important;
+    pointer-events: none;
+    white-space: pre-line;
+    text-align: center;
+    padding: 2px;
+}
+.dpad-btn {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    min-width: unset;
+    margin: 0;
+    font-size: 18px;
+    line-height: 1;
+    border-radius: 6px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .1s, color .1s, transform .08s;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+}
+.dpad-btn:hover  { background: var(--bg-active); color: var(--text-primary); }
+.dpad-btn:active { background: var(--accent); color: #fff; transform: scale(.92); }
+
+/* 라이트 모드 */
+[data-theme="light"] .movepad-panel   { background: #f1f3f5; border-color: #ced4da; }
+[data-theme="light"] .dpad-btn        { background: #ffffff; border-color: #ced4da; color: #495057; }
+[data-theme="light"] .dpad-btn:hover  { background: #e9ecef; }
+[data-theme="light"] .dpad-btn:active { background: #374151; color: #fff; }
+[data-theme="light"] .dpad-center     { background: #e9ecef; border-color: #ced4da; }
+
+/* 무브패드 상대위치 행 */
+.movepad-relpos-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-bottom: 8px;
+}
+.movepad-relpos-label {
+    font-size: .68rem;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+.movepad-relpos-input {
+    flex: 1;
+    font-size: .72rem;
+    padding: 3px 6px;
+    height: 24px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-primary);
+    min-width: 0;
+}
+.movepad-relpos-input::placeholder { color: var(--text-muted); font-style: italic; }
+.movepad-relpos-input:focus { outline: none; border-color: #4a9eff88; }
+[data-theme="light"] .movepad-relpos-input {
+    background: #fff;
+    border-color: #ced4da;
+    color: #1f2937;
+}
