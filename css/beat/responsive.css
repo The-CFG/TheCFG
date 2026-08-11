@@ -296,13 +296,11 @@
 /* ═══════════════════════════════════════════════════
    모달 공통 안전 처리
    세로 화면(핸드폰 등)에서 모달 내용이 화면을 넘쳐
-   닫기 버튼이 잘리는 문제 방지
+   닫기 버튼이 잘리거나 탭 불가능해지는 문제 방지
 ═══════════════════════════════════════════════════ */
 
-/* 모달 오버레이: 항상 스크롤 가능하게 */
+/* 모달 오버레이: 항상 스크롤 가능하게 + 실제로 "보이는" 화면 높이만큼만 차지 */
 #auth-modal,
-#upload-modal,
-#cloud-load-modal,
 #trigger-modal {
     /* 세로로 넘칠 때 오버레이 자체를 스크롤 */
     overflow-y: auto !important;
@@ -314,15 +312,23 @@
              env(safe-area-inset-bottom, 12px)
              env(safe-area-inset-left, 12px);
     box-sizing: border-box;
+    /* 주소창 등 브라우저 UI를 제외한 실제 화면 높이 (JS가 계산해 넣는 값) */
+    height: calc(var(--vh, 1vh) * 100) !important;
+}
+
+@supports (height: 100dvh) {
+    #auth-modal,
+    #trigger-modal {
+        /* dvh를 지원하면 이 값이 더 정확함(브라우저 UI 표시/숨김에 실시간 대응) */
+        height: 100dvh !important;
+    }
 }
 
 /* 모달 내부 카드: 세로 화면에서 화면 높이를 넘지 않도록 */
 #auth-modal > div,
-#upload-modal > div,
-#cloud-load-modal > div,
 #trigger-modal > div {
     /* 최대 높이 = 뷰포트 - 상하 여백 24px */
-    max-height: calc(100dvh - 24px);
+    max-height: calc(var(--vh, 1vh) * 100 - 24px);
     /* 카드 내부 스크롤 */
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
@@ -332,21 +338,34 @@
     box-sizing: border-box;
 }
 
-/* dvh 미지원 브라우저 폴백 */
-@supports not (height: 100dvh) {
+@supports (height: 100dvh) {
     #auth-modal > div,
-    #upload-modal > div,
-    #cloud-load-modal > div,
     #trigger-modal > div {
-        max-height: calc(var(--vh, 1vh) * 100 - 24px);
+        max-height: calc(100dvh - 24px);
     }
+}
+
+/* 닫기/취소 버튼은 카드 하단에 고정 — 내용이 넘쳐도 스크롤 없이 항상 탭 가능 */
+#btn-auth-close {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    background-color: #3d4548;
+    padding-top: 8px;
+}
+
+#trigger-modal-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    background-color: #1f2937; /* Tailwind bg-gray-800 */
+    padding-top: 8px;
+    padding-bottom: 2px;
 }
 
 /* 세로 화면(portrait)에서 카드 너비를 더 넓게 */
 @media (orientation: portrait) and (max-width: 768px) {
     #auth-modal > div,
-    #upload-modal > div,
-    #cloud-load-modal > div,
     #trigger-modal > div {
         width: min(92vw, 400px) !important;
     }
@@ -355,15 +374,11 @@
 /* 매우 작은 화면(세로 360px 미만)에서 내부 padding 축소 */
 @media (max-height: 500px) {
     #auth-modal > div,
-    #upload-modal > div,
-    #cloud-load-modal > div,
     #trigger-modal > div {
         padding: 14px !important;
     }
 
     #auth-modal h2,
-    #upload-modal h2,
-    #cloud-load-modal h2,
     #trigger-modal h3 {
         font-size: 1rem !important;
         margin-bottom: 8px !important;
