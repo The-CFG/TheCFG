@@ -185,15 +185,17 @@ const MultiplayerLobby = {
 
         const user = await CloudAuth.getUser();
         if (!user) {
-            this._showMsg('로그인이 필요합니다.');
+            // _renderMenu()가 내부에서 _showMsg('')를 호출해 메시지를 지우므로,
+            // 반드시 _renderMenu() 이후에 _showMsg()를 불러야 에러가 화면에 남는다.
             this._renderMenu();
+            this._showMsg('로그인이 필요합니다.');
             return false;
         }
 
         const { data: room, error } = await MultiplayerRooms.createRoom(chart.id);
         if (error) {
-            this._showMsg('방 생성에 실패했습니다: ' + error.message);
             this._renderMenu();
+            this._showMsg('방 생성에 실패했습니다: ' + error.message);
             return false;
         }
 
