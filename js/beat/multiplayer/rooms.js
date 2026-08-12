@@ -53,6 +53,21 @@ const MultiplayerRooms = {
         return { error };
     },
 
+    // 호스트 이탈 시 남은 사람 중 가장 먼저 join한 사람에게 호스트를 넘긴다.
+    // 남은 사람이 없으면 { data: null }을 반환 — 호출 측(lobby.js)이 방을 abandoned로 정리한다.
+    async transferHost(roomId) {
+        const { data: players, error: listErr } = await this.listPlayers(roomId);
+        if (listErr) return { error: listErr };
+        const next = players?.[0]; // joined_at 오름차순이므로 가장 오래된 멤버
+        if (!next) return { data: null };
+
+        const { error } = await _supabase.rpc('transfer_host', {
+            _room_id: roomId,
+            _new_host_id: next.user_id,
+        });
+        return { error, data: next };
+    },
+
     // 오디오/채보 로드 완료 시 ready 플래그 갱신.
     async setReady(roomId, ready) {
         const user = await CloudAuth.getUser();
@@ -103,18 +118,20 @@ const MultiplayerRooms = {
     async getRoom(roomId) {
         const { data, error } = await _supabase
             .from('beat_rooms')
-            .select('id, chart_id, host_id, status, started_at, created_at')
+            .select('id, chart_id, host_id, status, started_at, created_at, max_players')
             .eq('id', roomId)
             .single();
         return { data, error };
     },
 
     async listWaitingRooms(chartId) {
+        const cutoff = new Date(Date.now() - 30 * 60 * 1000).toISOString();
         const { data, error } = await _supabase
             .from('beat_rooms')
             .select('id, chart_id, host_id, status, created_at')
             .eq('chart_id', chartId)
             .eq('status', 'waiting')
+            .gte('created_at', cutoff)
             .order('created_at', { ascending: false })
             .limit(20);
         return { data, error };

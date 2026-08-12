@@ -153,7 +153,10 @@ const MultiplayerLobby = {
         // 이미 참가한 방에 재입장하는 경우는 중복 insert 에러를 무시하고 진행한다.
         const { error: joinErr } = await MultiplayerRooms.joinRoom(room.id);
         if (joinErr && !/duplicate|already/i.test(joinErr.message || '')) {
-            this._showMsg('참가에 실패했습니다: ' + joinErr.message);
+            const msg = /row-level security|policy/i.test(joinErr.message || '')
+                ? '방이 가득 찼습니다.'
+                : '참가에 실패했습니다: ' + joinErr.message;
+            this._showMsg(msg);
             if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '참가하기'; }
             return;
         }
@@ -264,6 +267,7 @@ const MultiplayerLobby = {
 
         MultiplayerRealtime.onPresenceChange(state => this._onPresenceSync(state));
         MultiplayerRealtime.on('start', payload => this._onStartBroadcast(payload));
+        MultiplayerRealtime.on('host_transferred', payload => this._onHostTransferred(payload));
 
         // 호스트 기준 시간 오프셋 추정 — "시작" 버튼을 누르기 한참 전부터 미리 해둬야
         // 실제 시작 시점엔 이미 값이 준비돼 있다(참가자는 ping 왕복에 ~1초 걸림).
@@ -296,6 +300,14 @@ const MultiplayerLobby = {
             .map(m => ({ user_id: m.user_id, nickname: m.nickname, ready: !!m.ready }));
         list.sort((a, b) => (a.user_id === hostId ? -1 : b.user_id === hostId ? 1 : 0));
         this._players = list;
+        this._renderWaiting();
+    },
+
+    // 나간 호스트를 대신해 새 호스트가 정해졌을 때 — 로컬 상태와 화면을 즉시 갱신한다.
+    _onHostTransferred(payload) {
+        if (!this._room || this._view !== 'waiting') return;
+        this._room.host_id = payload.newHostId;
+        this._isHost = (this._userId === payload.newHostId);
         this._renderWaiting();
     },
 
@@ -344,7 +356,7 @@ const MultiplayerLobby = {
                 <button id="mp-copy-code-btn" class="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs flex-shrink-0 transition">복사</button>
             </div>
         </div>
-        <h3 class="text-sm font-semibold text-gray-300 mb-2">플레이어 (${this._players.length}명)</h3>
+        <h3 class="text-sm font-semibold text-gray-300 mb-2">플레이어 (${this._players.length}/${room.max_players || 6}명)</h3>
         <div class="space-y-1.5 mb-4">${rows || '<p class="text-gray-500 text-xs text-center py-4">불러오는 중…</p>'}</div>
         <button id="mp-ready-btn" class="w-full py-3 mb-3 rounded-lg font-bold transition ${selfReady ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-teal-600 hover:bg-teal-500 text-white'}">
             ${selfReady ? '준비 취소' : '✓ 준비 완료'}
@@ -463,7 +475,21 @@ const MultiplayerLobby = {
     async _leaveRoom() {
         this._teardownRealtime();
         const roomId = this._room?.id;
-        if (roomId) await MultiplayerRooms.leaveRoom(roomId);
+        const wasHost = this._isHost;
+
+        if (roomId) {
+            await MultiplayerRooms.leaveRoom(roomId);
+            if (wasHost) {
+                const { data: newHost } = await MultiplayerRooms.transferHost(roomId);
+                if (!newHost) {
+                    // 남은 사람이 없음 — 방을 abandoned로 정리(크론이 나중에 완전히 삭제)
+                    await MultiplayerRooms.updateRoomStatus(roomId, 'abandoned');
+                } else {
+                    await MultiplayerRealtime.send('host_transferred', { newHostId: newHost.user_id }).catch(() => {});
+                }
+            }
+        }
+
         this._room = null;
         this._chart = null;
         this._players = [];
