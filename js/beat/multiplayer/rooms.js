@@ -115,6 +115,21 @@ const MultiplayerRooms = {
         return { error };
     },
 
+    // 호스트 전용: 같은 멤버로 재도전 — 방을 waiting으로 되돌리고 전원의 ready/최종 결과를 초기화한다.
+    async resetForRematch(roomId) {
+        const { error: statusErr } = await _supabase
+            .from('beat_rooms')
+            .update({ status: 'waiting', started_at: null })
+            .eq('id', roomId);
+        if (statusErr) return { error: statusErr };
+
+        const { error: playersErr } = await _supabase
+            .from('beat_room_players')
+            .update({ ready: false, final_score: null, final_combo: null })
+            .eq('room_id', roomId);
+        return { error: playersErr };
+    },
+
     async listPlayers(roomId) {
         const { data, error } = await _supabase
             .from('beat_room_players')
@@ -128,8 +143,17 @@ const MultiplayerRooms = {
     async getRoom(roomId) {
         const { data, error } = await _supabase
             .from('beat_rooms')
-            .select('id, chart_id, host_id, status, started_at, created_at, max_players')
+            .select('id, chart_id, host_id, status, started_at, created_at, invite_code, max_players')
             .eq('id', roomId)
+            .single();
+        return { data, error };
+    },
+    // 초대 코드로 방 조회(참가 화면 전용). 대소문자 구분 없이 입력받아 대문자로 정규화한다.
+    async getRoomByInviteCode(code) {
+        const { data, error } = await _supabase
+            .from('beat_rooms')
+            .select('id, chart_id, host_id, status, started_at, created_at, invite_code, max_players')
+            .eq('invite_code', (code || '').toUpperCase())
             .single();
         return { data, error };
     },

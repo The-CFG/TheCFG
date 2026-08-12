@@ -165,7 +165,7 @@ const UI = {
     // 클라이언트끼리만 비교해 표시한다(서버 검증 없음). 호출될 때마다 전체를 다시 그린다 —
     // 참가자 수가 적어(관전형 스코프) 매번 새로 렌더링해도 비용이 크지 않다.
     // opponents: [{ user_id, nickname }] — 나를 제외한 참가자. results: { [user_id]: { finalScore, finalCombo, judgements } }.
-    renderMultiplayerResultCompare(opponents, results, selfUserId) {
+    renderMultiplayerResultCompare(opponents, results, selfUserId, canRematch) {
         const container = document.getElementById('mp-result-compare');
         const list = document.getElementById('mp-result-compare-list');
         if (!container || !list || !selfUserId) return;
@@ -211,12 +211,22 @@ const UI = {
             </div>`).join('');
 
         container.classList.remove('hidden');
+
+        const rematchBtn = document.getElementById('mp-rematch-btn');
+        if (rematchBtn) rematchBtn.classList.toggle('hidden', !canRematch);
     },
+    
     hideMultiplayerResultCompare() {
         const container = document.getElementById('mp-result-compare');
         const list = document.getElementById('mp-result-compare-list');
+        const rematchBtn = document.getElementById('mp-rematch-btn');
         if (container) container.classList.add('hidden');
         if (list) list.innerHTML = '';
+        if (rematchBtn) {
+            rematchBtn.classList.add('hidden');
+            rematchBtn.disabled = false;
+            rematchBtn.textContent = '🔁 재도전 (같은 멤버로 다시 시작)';
+        }
     },
     // 우측 메뉴 패널(#ui-area) 접기/펼치기.
     // 접으면 #app-shell에 'ui-collapsed' 클래스가 붙어 #ui-area가 사라지고

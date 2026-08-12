@@ -115,14 +115,15 @@ const MultiplayerLobby = {
         this._showMsg('');
         this._setContent(`
         <p class="text-sm text-gray-400 mb-4">호스트에게 받은 초대 코드를 입력하세요.</p>
-        <input id="mp-join-code" type="text" placeholder="초대 코드" autocomplete="off" spellcheck="false"
-            class="w-full p-3 mb-4 bg-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-500">
+        <input id="mp-join-code" type="text" placeholder="초대 코드 (6자리)" autocomplete="off" spellcheck="false" maxlength="6"
+            class="w-full p-3 mb-4 bg-gray-700 rounded-lg text-white text-sm text-center tracking-widest uppercase focus:outline-none focus:ring-2 focus:ring-teal-500">
         <button id="mp-join-submit-btn" class="w-full py-3 bg-teal-600 hover:bg-teal-500 rounded-lg font-bold transition">
             참가하기
         </button>`);
 
         const input = document.getElementById('mp-join-code');
         const submitBtn = document.getElementById('mp-join-submit-btn');
+        input.addEventListener('input', () => { input.value = input.value.toUpperCase(); });
         const submit = () => this._joinRoom(input.value.trim(), submitBtn);
         submitBtn.addEventListener('click', submit);
         input.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
@@ -271,6 +272,7 @@ const MultiplayerLobby = {
         MultiplayerRealtime.on('host_transferred', payload => this._onHostTransferred(payload));
         MultiplayerRealtime.on('preload_failed', payload => this._onPeerPreloadFailed(payload));
         MultiplayerRealtime.on('kicked', payload => this._onKicked(payload));
+        MultiplayerRealtime.on('rematch', () => this._onRematchBroadcast());
 
         // 호스트 기준 시간 오프셋 추정 — "시작" 버튼을 누르기 한참 전부터 미리 해둬야
         // 실제 시작 시점엔 이미 값이 준비돼 있다(참가자는 ping 왕복에 ~1초 걸림).
@@ -396,7 +398,7 @@ const MultiplayerLobby = {
             ` : ''}
             <div class="flex items-center gap-2 mt-2">
                 <span class="text-xs text-gray-400 flex-shrink-0">초대 코드</span>
-                <code id="mp-room-code" class="flex-1 min-w-0 px-2 py-1 bg-gray-900 rounded text-teal-300 text-xs truncate">${room.id}</code>
+                <code id="mp-room-code" class="flex-1 min-w-0 px-2 py-1 bg-gray-900 rounded text-teal-300 text-sm tracking-widest text-center truncate">${_esc(room.invite_code || room.id)}</code>
                 <button id="mp-copy-code-btn" class="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs flex-shrink-0 transition">복사</button>
             </div>
         </div>
@@ -416,7 +418,7 @@ const MultiplayerLobby = {
 
         document.getElementById('mp-copy-code-btn').addEventListener('click', () => {
             const btn = document.getElementById('mp-copy-code-btn');
-            navigator.clipboard?.writeText(room.id).then(() => {
+            navigator.clipboard?.writeText(room.invite_code || room.id).then(() => {
                 if (!btn) return;
                 btn.textContent = '복사됨';
                 setTimeout(() => { if (btn) btn.textContent = '복사'; }, 1200);
@@ -530,6 +532,48 @@ const MultiplayerLobby = {
                 .filter(p => p.user_id !== this._userId)
                 .map(p => ({ user_id: p.user_id, nickname: p.nickname })),
         });
+    },
+
+    // 결과 화면에서 호스트가 "재도전"을 눌렀을 때. DB를 초기화하고 다른 클라이언트에게 알린 뒤
+    // 자신도 대기실로 복귀한다.
+    async rematch() {
+        if (!this._room || !this._isHost) return;
+        const btn = document.getElementById('mp-rematch-btn');
+        if (btn) { btn.disabled = true; btn.textContent = '준비하는 중…'; }
+
+        const { error } = await MultiplayerRooms.resetForRematch(this._room.id);
+        if (error) {
+            if (btn) {
+                btn.textContent = '재도전 실패: ' + error.message;
+                setTimeout(() => {
+                    if (btn) { btn.disabled = false; btn.textContent = '🔁 재도전 (같은 멤버로 다시 시작)'; }
+                }, 2500);
+            }
+            return;
+        }
+
+        await MultiplayerRealtime.send('rematch', {}).catch(() => {});
+        await this._afterRematchReset();
+    },
+
+    // 호스트가 아닌 클라이언트가 'rematch' broadcast를 받았을 때(broadcast self:false라
+    // 호스트 자신은 이 핸들러를 타지 않음 — 호스트는 rematch()에서 직접 처리).
+    _onRematchBroadcast() {
+        if (this._isHost || !this._room) return;
+        this._afterRematchReset();
+    },
+
+    // 재도전 진입 공통 처리 — 결과 화면 정리 + 게임 시작 전 대기실 상태로 복귀.
+    async _afterRematchReset() {
+        Game._teardownMultiplayerFinish(); // 내부에서 UI.hideMultiplayerResultCompare()까지 정리됨
+        this._room.status = 'waiting';
+        this._room.started_at = null;
+        this._starting = false;
+        this._preload = null;
+        this._preloadPromise = null;
+
+        UI.showScreen('multiplayer');
+        await this._enterWaitingRoom();
     },
 
     async _leaveRoom() {

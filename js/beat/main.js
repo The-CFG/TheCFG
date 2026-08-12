@@ -289,6 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 UI.showScreen('menu');
             }
         });
+        document.getElementById('mp-rematch-btn')?.addEventListener('click', () => MultiplayerLobby.rematch());
 
         // 온라인 라이브러리 버튼
         document.getElementById('online-btn').addEventListener('click', () => {
