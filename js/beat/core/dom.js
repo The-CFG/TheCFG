@@ -30,6 +30,7 @@ const DOM = {
         editor: document.getElementById('editor-screen'),
         settings: document.getElementById('settings-screen'),
         online: document.getElementById('online-screen'),
+        multiplayer: document.getElementById('multiplayer-screen'),
         osuConvert: document.getElementById('osu-convert-screen'),
     },
     messages: {

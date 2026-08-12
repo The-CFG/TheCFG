@@ -6,11 +6,15 @@ const Online = {
     _currentSongId: null,
     _browseState: { sort: 'newest', search: '', page: 0, hasMore: true },
     _browseCache: [],
+    // 멀티플레이 방 생성용 채보 선택 모드 — true면 상세 화면의 "플레이" 버튼이
+    // "이 채보로 방 만들기"로 바뀌고, 뒤로가기가 메뉴 대신 멀티플레이 화면으로 간다.
+    _pickMode: false,
 
     // ── 진입점 ────────────────────────────────────────────────────────────────
     // Phase 4: 홈(browse, 노래 목록) → song(노래 상세=난이도 리스트) → detail(난이도 상세=플레이 전 화면) → 플레이
-    async show(subView = 'browse', id = null) {
+    async show(subView = 'browse', id = null, opts = {}) {
         SongPreview.stop(); // 화면 전환 시 이전 미리듣기(오디오/노트 미리보기)는 항상 정리
+        if (opts.pickMode !== undefined) this._pickMode = opts.pickMode;
         this._subView = subView;
         UI.showScreen('online');
         this._renderShell();
@@ -23,31 +27,41 @@ const Online = {
     // ── 공통 레이아웃 쉘 ─────────────────────────────────────────────────────
     _renderShell() {
         const el = document.getElementById('online-screen');
+        // 방 생성용 채보 선택 모드에서는 비공개일 수 있는 "내 차트" 탭은 숨긴다
+        // (같이 플레이하는 상대도 같은 채보를 받아야 하므로 공개 라이브러리만 허용).
+        const myTabHtml = this._pickMode ? '' : `
+                <button id="online-tab-my" class="flex-1 py-2 rounded-lg text-sm font-semibold transition
+                    ${this._subView === 'my' ? 'bg-teal-600' : 'bg-gray-700 hover:bg-gray-600'}">
+                    📁 내 차트
+                </button>`;
         el.innerHTML = `
         <div class="flex flex-col h-full text-white">
+            ${this._pickMode ? `<p class="mb-3 text-xs text-teal-400 flex-shrink-0">🎮 멀티플레이 방을 만들 채보를 골라주세요.</p>` : ''}
             <div class="flex items-center space-x-2 mb-4 flex-shrink-0">
                 <button id="online-tab-browse" class="flex-1 py-2 rounded-lg text-sm font-semibold transition
                     ${this._subView !== 'my' ? 'bg-teal-600' : 'bg-gray-700 hover:bg-gray-600'}">
                     🌐 공개 라이브러리
                 </button>
-                <button id="online-tab-my" class="flex-1 py-2 rounded-lg text-sm font-semibold transition
-                    ${this._subView === 'my' ? 'bg-teal-600' : 'bg-gray-700 hover:bg-gray-600'}">
-                    📁 내 차트
-                </button>
+                ${myTabHtml}
                 <button id="online-back-btn" class="py-2 px-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm flex-shrink-0">
-                    ← 메뉴
+                    ${this._pickMode ? '← 멀티플레이' : '← 메뉴'}
                 </button>
             </div>
             <div id="online-content" class="flex-1 min-h-0 overflow-y-auto"></div>
         </div>`;
 
         document.getElementById('online-tab-browse').addEventListener('click', () => this.show('browse'));
-        document.getElementById('online-tab-my').addEventListener('click', () => this.show('my'));
+        document.getElementById('online-tab-my')?.addEventListener('click', () => this.show('my'));
         document.getElementById('online-back-btn').addEventListener('click', () => {
             SongPreview.stop();
             GameBackground.clear();
-            Game.state.gameState = 'menu';
-            UI.showScreen('menu');
+            if (this._pickMode) {
+                this._pickMode = false;
+                MultiplayerLobby.show();
+            } else {
+                Game.state.gameState = 'menu';
+                UI.showScreen('menu');
+            }
         });
     },
 
@@ -355,8 +369,9 @@ const Online = {
         <div id="online-preview-hint" class="mb-4 p-3 bg-gray-800 rounded-lg text-center text-xs text-gray-400">
             불러오는 중…
         </div>
-        <button id="detail-play-btn" class="w-full py-3 mb-4 bg-blue-600 hover:bg-blue-500 rounded-lg font-bold transition text-lg">
-            ▶ 플레이
+        <button id="detail-play-btn" class="w-full py-3 mb-4 rounded-lg font-bold transition text-lg
+            ${this._pickMode ? 'bg-purple-600 hover:bg-purple-500' : 'bg-blue-600 hover:bg-blue-500'}">
+            ${this._pickMode ? '🎮 이 채보로 방 만들기' : '▶ 플레이'}
         </button>
         <div class="bg-gray-800 rounded-lg p-3">
             <h3 class="text-sm font-semibold text-gray-300 mb-2">🏆 리더보드 TOP 10</h3>
@@ -370,7 +385,10 @@ const Online = {
             if (this._currentSongId) this.show('song', this._currentSongId);
             else { this._subView = 'browse'; this._renderShell(); this._renderBrowse(); }
         });
-        document.getElementById('detail-play-btn').addEventListener('click', () => this._playOnlineChart(c));
+        document.getElementById('detail-play-btn').addEventListener('click', () => {
+            if (this._pickMode) this._hostRoomFromDetail(c);
+            else this._playOnlineChart(c);
+        });
         document.getElementById('detail-like-btn').addEventListener('click', () => this._toggleLike(c.id));
 
         // 플레이 전 미리보기 — 노래(오디오) + 에디터와 동일한 방식의 노트 낙하 미리보기를
@@ -402,6 +420,19 @@ const Online = {
             SongPreview.playAudio(CloudCharts.getAudioUrl(c.audio_storage_path), c.preview_start_ms || 0);
             if (hintEl) hintEl.textContent = '🎵 노래 미리듣기만 재생 중입니다.';
         }
+    },
+
+    // ── 멀티플레이 방 생성(채보 선택 모드에서 "이 채보로 방 만들기") ─────────────
+    async _hostRoomFromDetail(c) {
+        SongPreview.stop();
+        const btn = document.getElementById('detail-play-btn');
+        btn.disabled = true;
+        btn.textContent = '방 만드는 중…';
+        this._pickMode = false;
+        GameBackground.clear();
+        await MultiplayerLobby.hostRoom(c);
+        // 성공/실패 여부와 관계없이 화면 전환은 MultiplayerLobby가 담당한다
+        // (성공 시 대기실로, 실패 시 멀티플레이 메뉴로).
     },
 
     // ── 온라인 차트 플레이 ────────────────────────────────────────────────────

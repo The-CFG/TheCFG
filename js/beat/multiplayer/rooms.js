@@ -99,6 +99,16 @@ const MultiplayerRooms = {
         return { data, error };
     },
 
+    // 초대 코드(=room id)로 방 하나 조회. 참가 화면에서 코드 유효성 확인 + 대기실 표시에 사용.
+    async getRoom(roomId) {
+        const { data, error } = await _supabase
+            .from('beat_rooms')
+            .select('id, chart_id, host_id, status, started_at, created_at')
+            .eq('id', roomId)
+            .single();
+        return { data, error };
+    },
+
     async listWaitingRooms(chartId) {
         const { data, error } = await _supabase
             .from('beat_rooms')

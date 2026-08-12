@@ -284,7 +284,13 @@ document.addEventListener('DOMContentLoaded', () => {
         // 온라인 라이브러리 버튼
         document.getElementById('online-btn').addEventListener('click', () => {
             Game.state.gameState = 'online';
-            Online.show('browse');
+            Online.show('browse', null, { pickMode: false });
+        });
+
+        // 멀티플레이 버튼
+        document.getElementById('multiplayer-btn').addEventListener('click', () => {
+            Game.state.gameState = 'multiplayer';
+            MultiplayerLobby.show();
         });
 
         // Phase 3e: 비트맵 창의 개별 서버 업로드/불러오기 버튼은 제거됨.
