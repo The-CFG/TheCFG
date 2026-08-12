@@ -405,15 +405,57 @@ const Game = {
         this.state.countdownIntervalId = setInterval(tick, 1000);
     },
 
+    // targetPerfTime(이 클라이언트의 performance.now() 기준 목표 시작 시각)에 맞춰
+    // 3-2-1-START! 를 표시한다. runCountdown과 달리 고정 1초 간격이 아니라
+    // "목표 시각까지 남은 시간"을 기준으로 각 틱의 발동 시점을 미리 계산해 예약한다 —
+    // 그래야 브로드캐스트 수신 지연이 제각각이어도 화면 카운트다운이 실제 오디오 시작(syncTarget)과
+    // 항상 정확히 맞아떨어진다.
+    runSyncedCountdown(targetPerfTime, onComplete) {
+        this.cancelCountdown();
+        const countdownEl = DOM.countdownTextEl;
+
+        const showTick = (num) => {
+            countdownEl.classList.remove('show');
+            void countdownEl.offsetWidth;
+            if (num > 0) {
+                countdownEl.textContent = num;
+                Audio.playCountdownTick();
+            } else {
+                countdownEl.textContent = 'START!';
+                Audio.playCountdownStart();
+            }
+            countdownEl.classList.add('show');
+        };
+
+        const now = performance.now();
+        const remainingMs = targetPerfTime - now;
+        const timers = [3, 2, 1, 0].map(num =>
+            setTimeout(() => showTick(num), Math.max(0, remainingMs - num * 1000))
+        );
+        timers.push(setTimeout(() => {
+            this.cancelCountdown();
+            onComplete();
+        }, Math.max(0, remainingMs)));
+
+        this._syncCountdownTimers = timers;
+    },
+
     cancelCountdown() {
         if (this.state.countdownIntervalId) {
             clearInterval(this.state.countdownIntervalId);
             this.state.countdownIntervalId = null;
         }
+        if (this._syncCountdownTimers) {
+            this._syncCountdownTimers.forEach(id => clearTimeout(id));
+            this._syncCountdownTimers = null;
+        }
         DOM.countdownTextEl.classList.remove('show');
     },
 
-    async start() {
+    // opts.syncStartPerfTime: 멀티플레이 동시 시작 시, 이 클라이언트의 performance.now() 기준
+    // 목표 시작 시각. 주어지면 고정 4초 카운트다운 대신 이 시각에 맞춰 오디오를 예약하고
+    // 화면 카운트다운도 여기 맞춘다(runSyncedCountdown). 생략하면 기존 동작(로컬 4초 카운트다운) 그대로.
+    async start(opts = {}) {
         await Audio.start();
         this.resetState();
         resetPlayingScreenUI();
@@ -465,19 +507,36 @@ const Game = {
         }
 
         const COUNTDOWN_DURATION_MS = 4000;
-        this.state.gameStartTime = performance.now() + COUNTDOWN_DURATION_MS;
+        const syncTarget = opts.syncStartPerfTime != null ? opts.syncStartPerfTime : null;
+        this.state.gameStartTime = syncTarget != null ? syncTarget : (performance.now() + COUNTDOWN_DURATION_MS);
 
         this.loop(performance.now());
 
-        this.runCountdown(() => {
-            this.state.gameState = 'playing';
+        if (syncTarget != null) {
+            // 멀티플레이 동시 시작: 화면 카운트다운의 타이머 지터와 무관하게, 지금 이 순간
+            // AudioContext의 샘플 단위 클럭으로 목표 시각(syncTarget)에 맞춰 재생을 예약해버린다.
+            // (audioReady는 예약 직후 true가 되지만, currentTime이 실제 시작 전까지는 음수라
+            //  elapsedTime 계산에서 0으로 클램프되므로 노트가 일찍 떨어지지는 않는다.)
             if (this.state.settings.mode === 'music' && DOM.musicPlayer.src) {
-                DOM.musicPlayer.currentTime = this.state.settings.songStartOffset || 0;
-                DOM.musicPlayer.play().then(() => {
+                const whenSec = Math.max(0, (syncTarget - performance.now()) / 1000);
+                DOM.musicPlayer.play(whenSec).then(() => {
                     this.state.audioReady = true;
                 }).catch(() => {});
             }
-        });
+            this.runSyncedCountdown(syncTarget, () => {
+                this.state.gameState = 'playing';
+            });
+        } else {
+            this.runCountdown(() => {
+                this.state.gameState = 'playing';
+                if (this.state.settings.mode === 'music' && DOM.musicPlayer.src) {
+                    DOM.musicPlayer.currentTime = this.state.settings.songStartOffset || 0;
+                    DOM.musicPlayer.play().then(() => {
+                        this.state.audioReady = true;
+                    }).catch(() => {});
+                }
+            });
+        }
     },
 
     end() {
@@ -1067,6 +1126,28 @@ const Game = {
         }
         this.state.totalNotes = generatedNotesCount;
         this.state.notes.sort((a, b) => a.time - b.time);
+    },
+
+    // ── 멀티플레이: 클록 동기화된 목표 시각(targetPerfTime)에 맞춰 동시 시작 ──────
+    // online.js의 _playOnlineChart와 준비 과정은 동일하되, 고정 4초 카운트다운 대신
+    // start()에 syncStartPerfTime을 넘겨 오디오/카운트다운을 목표 시각에 맞춘다.
+    async startMultiplayer({ chartData, audioUrl, startOffsetMs = 0, targetPerfTime, onlineChartId = null }) {
+        chartData.startTimeOffset = (startOffsetMs || 0) / 1000;
+        if (!this.loadChartNotes(chartData)) return;
+
+        this.state._onlineChartId = onlineChartId;
+        this.state.settings.mode = 'music';
+        this.state.settings.musicSrc = audioUrl;
+        this.state.settings.songStartOffset = (startOffsetMs || 0) / 1000;
+        DOM.musicPlayer.src = audioUrl;
+
+        UI.showScreen('menu');
+        await this.start({ syncStartPerfTime: targetPerfTime });
+        UI.showScreen('playing');
+        // online.js _playOnlineChart와 동일한 관례: 카운트다운 중에도 입력 게이팅이
+        // 'playing'을 기준으로 하므로 즉시 playing으로 둔다(실제 판정은 elapsedTime이
+        // 0으로 클램프돼 있어 카운트다운 중 입력은 어차피 아무 노트에도 히트하지 않는다).
+        this.state.gameState = 'playing';
     },
 
     loadChartNotes(chartData) {

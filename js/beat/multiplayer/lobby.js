@@ -1,8 +1,8 @@
 // ── MultiplayerLobby: 방 생성/참가/대기실 화면 ────────────────────────────────
-// Phase 3: 대기실 인원/준비 상태를 Realtime Presence로 실시간 갱신한다(폴링 제거).
-// 초기 목록은 DB(listPlayers)로 한 번 seed하고, 그 이후는 presence sync 콜백이 갱신을 담당.
-// 접속 끊김은 Presence가 자동 감지해 목록에서 제거해준다. 실제 동시 시작(클록 동기화 →
-// AudioEngine.play)과 진행 중 관전 HUD는 이후 단계.
+// Phase 4: 클록 동기화 결과를 실제 동시 시작에 연결한다.
+// 대기실 진입 시 채보/오디오를 미리 프리로드하고 호스트 기준 클록 오프셋을 추정해둔다.
+// 호스트가 "시작"을 누르면 목표 시각(hostStartTime)을 broadcast('start')로 전파하고,
+// 각 클라이언트는 자신의 오프셋으로 로컬 시각으로 변환해 Game.startMultiplayer()로 동시 시작한다.
 
 const MultiplayerLobby = {
     _view: 'menu',   // 'menu' | 'join' | 'waiting'
@@ -11,6 +11,9 @@ const MultiplayerLobby = {
     _players: [],
     _isHost: false,
     _userId: null,
+    _preload: null,          // { chartData, audioUrl } — 대기실 진입 시 미리 받아둠
+    _preloadPromise: null,
+    _starting: false,        // 동시 시작 진행 중 중복 트리거 방지
 
     // ── 진입점 ────────────────────────────────────────────────────────────────
     show() {
@@ -19,6 +22,9 @@ const MultiplayerLobby = {
         this._chart = null;
         this._players = [];
         this._isHost = false;
+        this._preload = null;
+        this._preloadPromise = null;
+        this._starting = false;
         UI.showScreen('multiplayer');
         this._renderShell();
         this._renderMenu();
@@ -55,6 +61,7 @@ const MultiplayerLobby = {
     },
 
     _handleBack() {
+        if (this._starting) return; // 동시 시작 진행 중에는 뒤로가기 무시
         if (this._view === 'waiting') {
             this._leaveRoom();
         } else if (this._view === 'join') {
@@ -205,13 +212,40 @@ const MultiplayerLobby = {
         await this._refreshPlayers();
         this._renderWaiting();
 
+        // 채보/오디오는 미리 받아둔다 — "시작" 버튼을 눌렀을 때 다운로드/디코딩 대기 없이
+        // 바로 예약 재생(AudioEngine.play(when))할 수 있어야 동시 시작 정확도가 올라간다.
+        this._preloadChart();
+
         const ok = await this._connectRealtime();
         if (!ok) {
             this._showMsg('실시간 연결에 실패했습니다. 목록이 자동으로 갱신되지 않을 수 있어요.');
         }
     },
 
-    // Realtime 채널 연결 + 내 상태 Presence로 track.
+    // 채보 데이터 다운로드 + 오디오 디코딩을 미리 시작해둔다. 여러 번 불려도 한 번만 실행됨.
+    _preloadChart() {
+        if (this._preload || this._preloadPromise) return this._preloadPromise || Promise.resolve(true);
+        this._preloadPromise = (async () => {
+            try {
+                const { data: chartData, error } = await CloudCharts.downloadChartData(this._chart.chart_storage_path);
+                if (error) throw error;
+                const audioUrl = CloudCharts.getAudioUrl(this._chart.audio_storage_path);
+                // 오디오 fetch+decode를 지금 미리 시작해둔다(실제 재생은 나중에 when으로 예약).
+                DOM.musicPlayer.src = audioUrl;
+                this._preload = { chartData, audioUrl };
+                return true;
+            } catch (err) {
+                Debugger?.logError?.(err, 'MultiplayerLobby:preload');
+                this._preload = null;
+                return false;
+            } finally {
+                this._preloadPromise = null;
+            }
+        })();
+        return this._preloadPromise;
+    },
+
+    // Realtime 채널 연결 + 내 상태 Presence로 track + 호스트 기준 클록 동기화 시작.
     // 전제: 이 시점엔 이미 beat_room_players에 내 row가 있어야 한다(RLS) —
     // createRoom/joinRoom이 항상 connect보다 먼저 끝나 있으므로 순서는 보장됨.
     async _connectRealtime() {
@@ -223,6 +257,11 @@ const MultiplayerLobby = {
         }
 
         MultiplayerRealtime.onPresenceChange(state => this._onPresenceSync(state));
+        MultiplayerRealtime.on('start', payload => this._onStartBroadcast(payload));
+
+        // 호스트 기준 시간 오프셋 추정 — "시작" 버튼을 누르기 한참 전부터 미리 해둬야
+        // 실제 시작 시점엔 이미 값이 준비돼 있다(참가자는 ping 왕복에 ~1초 걸림).
+        MultiplayerRealtime.syncClockWithHost({ isHost: this._isHost }).catch(() => {});
 
         const self = this._players.find(p => p.user_id === this._userId);
         await MultiplayerRealtime.trackPresence({
@@ -310,7 +349,7 @@ const MultiplayerLobby = {
             ▶ 시작${this._players.length < 2 ? ' (2명 이상 필요)' : (allReady ? '' : ' (전원 준비 대기 중)')}
         </button>` : `
         <p class="text-center text-xs text-gray-500 py-2">호스트가 시작하기를 기다리는 중…</p>`}
-        <p class="mt-4 text-xs text-gray-600 text-center">실시간 동시 시작(카운트다운)과 관전 HUD는 다음 단계에서 연결됩니다.</p>
+        <p class="mt-4 text-xs text-gray-600 text-center">진행 중 상대 점수/콤보 관전 HUD는 다음 단계에서 연결됩니다.</p>
         `);
 
         document.getElementById('mp-copy-code-btn').addEventListener('click', () => {
@@ -330,6 +369,10 @@ const MultiplayerLobby = {
         const { error } = await MultiplayerRooms.setReady(this._room.id, ready);
         if (error) { this._showMsg('상태 변경에 실패했습니다: ' + error.message); return; }
 
+        // 준비 완료는 실제 사용자 제스처이므로, 여기서 AudioContext를 미리 리쥼해둔다 —
+        // 나중에 실제 동시 시작 시점에 resume 대기 시간 없이 바로 정확하게 예약 재생할 수 있다.
+        if (ready) AudioEngine.resumeContext().catch(() => {});
+
         // 낙관적 갱신 — presence sync 왕복을 기다리지 않고 내 상태를 바로 반영
         const self = this._players.find(p => p.user_id === this._userId);
         if (self) self.ready = ready;
@@ -344,13 +387,64 @@ const MultiplayerLobby = {
         }
     },
 
-    // 호스트 전용. 지금은 상태만 countdown으로 넘겨두는 스텁 —
-    // 실제 클록 동기화·동시 시작은 4단계에서 AudioEngine.play(when)에 연결한다.
+    // 호스트 전용. 목표 시작 시각(내 performance.now() 기준)을 정해 broadcast('start')로
+    // 전파한 뒤, 호스트 자신도(자기 브로드캐스트는 못 받으므로) 곧바로 동시 시작을 진행한다.
     async _startRoom() {
-        if (!this._room || !this._isHost) return;
-        const { error } = await MultiplayerRooms.updateRoomStatus(this._room.id, 'countdown');
-        if (error) { this._showMsg('시작에 실패했습니다: ' + error.message); return; }
-        this._showMsg('방이 시작 대기 상태로 전환되었습니다. 실제 동시 시작은 다음 단계에서 구현됩니다.');
+        if (!this._room || !this._isHost || this._starting) return;
+        const startBtn = document.getElementById('mp-start-btn');
+        if (startBtn) { startBtn.disabled = true; startBtn.textContent = '시작하는 중…'; }
+        this._showMsg('');
+
+        await AudioEngine.resumeContext().catch(() => {});
+
+        const ok = await this._preloadChart();
+        if (!ok) {
+            this._showMsg('채보를 불러오지 못해 시작할 수 없습니다.');
+            if (startBtn) { startBtn.disabled = false; startBtn.textContent = '▶ 시작'; }
+            return;
+        }
+
+        // 브로드캐스트 전파 + 참가자 쪽 프리로드 여유를 감안한 리드 타임.
+        const LEAD_MS = 4500;
+        const hostStartTime = performance.now() + LEAD_MS;
+
+        await MultiplayerRooms.updateRoomStatus(this._room.id, 'countdown');
+        await MultiplayerRealtime.send('start', { hostStartTime });
+
+        this._beginSyncedStart(hostStartTime);
+    },
+
+    // broadcast('self:false')라 호스트는 자기 자신의 'start' 이벤트를 받지 못한다 —
+    // 참가자 쪽에서만 이 핸들러로 들어온다.
+    _onStartBroadcast(payload) {
+        if (this._isHost || this._view !== 'waiting' || this._starting) return;
+        const targetLocalTime = MultiplayerRealtime.toLocalTime(payload.hostStartTime);
+        this._beginSyncedStart(targetLocalTime);
+    },
+
+    // targetPerfTime: 이 클라이언트의 performance.now() 기준 목표 시작 시각.
+    async _beginSyncedStart(targetPerfTime) {
+        if (this._starting) return;
+        this._starting = true;
+        this._view = 'starting';
+
+        const ok = await this._preloadChart();
+        if (!ok) {
+            this._showMsg('채보를 불러오지 못해 시작할 수 없습니다.');
+            this._starting = false;
+            this._view = 'waiting';
+            return;
+        }
+        await AudioEngine.resumeContext().catch(() => {});
+
+        // 대기실 Realtime 연결은 유지한다 — 진행 중 관전 HUD(다음 단계)가 이 채널을 그대로 쓴다.
+        await Game.startMultiplayer({
+            chartData: this._preload.chartData,
+            audioUrl: this._preload.audioUrl,
+            startOffsetMs: this._chart.start_offset_ms || 0,
+            targetPerfTime,
+            onlineChartId: this._chart.id,
+        });
     },
 
     async _leaveRoom() {
@@ -361,6 +455,9 @@ const MultiplayerLobby = {
         this._chart = null;
         this._players = [];
         this._isHost = false;
+        this._preload = null;
+        this._preloadPromise = null;
+        this._starting = false;
         this._renderMenu();
     },
 };
