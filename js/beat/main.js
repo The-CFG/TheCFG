@@ -270,8 +270,17 @@ document.addEventListener('DOMContentLoaded', () => {
             resetPlayingScreenUI();
             const wasOnline  = !!Game.state._onlineChartId;
             const wasRandom  = Game.state.settings.mode === 'random';
+            const wasMultiplayer = !!Game.state._multiplayerRoomId;
             Game.state._onlineChartId = null;
             Game.state.gameState = 'menu';
+            if (wasMultiplayer) {
+                // finish 리스너/결과 비교 상태 정리 후, 방 realtime 채널을 끊고 멀티플레이
+                // 메뉴(방 만들기/코드로 참가)로 돌아간다. beat_room_players의 final_score 등은
+                // 그대로 남겨둔다 — MultiplayerLobby.show()는 행을 지우지 않고 채널만 끊는다.
+                Game._teardownMultiplayerFinish();
+                MultiplayerLobby.show();
+                return;
+            }
             if (wasOnline) {
                 Online.show('browse');
             } else if (wasRandom) {

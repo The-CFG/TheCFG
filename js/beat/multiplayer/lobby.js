@@ -5,6 +5,8 @@
 // 각 클라이언트는 자신의 오프셋으로 로컬 시각으로 변환해 Game.startMultiplayer()로 동시 시작한다.
 // Phase 5: 시작 시점의 _players 스냅샷(나를 제외한 상대 목록)을 Game.startMultiplayer에 넘겨,
 // 진행 중 상대 점수/콤보 관전 HUD(Game.loop의 progress broadcast/구독)가 이 채널 위에서 동작한다.
+// Phase 6: room.id도 함께 넘긴다 — 결과 화면에서 전원이 finish를 broadcast하면
+// Game이 beat_rooms.status를 finished로 정리한다(방 row 자체는 지우지 않음).
 
 const MultiplayerLobby = {
     _view: 'menu',   // 'menu' | 'join' | 'waiting'
@@ -449,6 +451,7 @@ const MultiplayerLobby = {
             targetPerfTime,
             onlineChartId: this._chart.id,
             userId: this._userId,
+            roomId: this._room.id,
             opponents: this._players
                 .filter(p => p.user_id !== this._userId)
                 .map(p => ({ user_id: p.user_id, nickname: p.nickname })),

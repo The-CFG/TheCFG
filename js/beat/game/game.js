@@ -69,11 +69,17 @@ const Game = {
 
         // ── 멀티플레이 관전(Phase 5): 진행 중 상대 점수/콤보 broadcast + 미니 HUD ──────
         _multiplayerActive: false,   // 현재 판이 멀티플레이인지
-        _multiplayerUserId: null,    // 내 user_id (progress broadcast의 발신자 식별용)
+        _multiplayerUserId: null,    // 내 user_id (progress/finish broadcast의 발신자 식별용)
         _multiplayerOpponents: [],   // [{ user_id, nickname }] — 나를 제외한 같은 방 참가자
         _multiplayerProgress: {},    // { [user_id]: { score, accuracy, combo } } — 상대들의 마지막 수신값
         _multiplayerLastBroadcastAt: 0,
         _multiplayerProgressHandler: null,
+
+        // ── 멀티플레이 결과 비교(Phase 6): 종료 시 finish broadcast + 결과 화면 비교 ────
+        _multiplayerRoomId: null,        // beat_rooms.id — 결과 화면에서 room 상태 정리에 사용
+        _multiplayerResults: {},         // { [user_id]: { finalScore, finalCombo, judgements, self? } }
+        _multiplayerFinishHandler: null,
+        _multiplayerSelfFinished: false,
     },
 
     // ─── Canvas 렌더러 ───────────────────────────────────────────────────────
@@ -558,8 +564,7 @@ const Game = {
             this.state.animationFrameId = null;
 
             // 멀티플레이 관전 HUD/progress broadcast 중지. 방 Realtime 채널 자체는
-            // MultiplayerLobby가 소유하므로 여기서는 우리가 등록한 리스너만 뗀다
-            // (finish broadcast + 결과 비교는 다음 단계에서 이 지점에 이어붙일 예정).
+            // MultiplayerLobby가 소유하므로 여기서는 우리가 등록한 리스너만 뗀다.
             this._teardownMultiplayerSpectate();
 
             if (this.state.settings.mode === 'music' && DOM.musicPlayer.src) {
@@ -589,6 +594,14 @@ const Game = {
                     resultEl.classList.remove('hidden');
                 }
                 submitOnlineScore().catch(() => {});
+            }
+
+            // 멀티플레이: 내 결과를 broadcast('finish')로 방에 알리고, 서버 검증 없이
+            // 클라이언트가 받은 finish 값들끼리 비교해서 결과 화면에만 표시한다.
+            // finish 리스너 자체는 여기서 떼지 않는다 — 결과 화면에서 상대가 늦게 끝내도
+            // 계속 갱신되어야 하므로, 결과 화면을 벗어날 때(back-to-menu)에 정리한다.
+            if (this.state._multiplayerRoomId) {
+                this._finishMultiplayer().catch(err => Debugger.logError(err, 'Game.end:multiplayerFinish'));
             }
         } catch (err) {
             Debugger.logError(err, 'Game.end');
@@ -1159,9 +1172,10 @@ const Game = {
     // ── 멀티플레이: 클록 동기화된 목표 시각(targetPerfTime)에 맞춰 동시 시작 ──────
     // online.js의 _playOnlineChart와 준비 과정은 동일하되, 고정 4초 카운트다운 대신
     // start()에 syncStartPerfTime을 넘겨 오디오/카운트다운을 목표 시각에 맞춘다.
-    // userId: 나 자신의 user_id (progress broadcast 발신자 식별용).
-    // opponents: [{ user_id, nickname }] — 나를 제외한 같은 방 참가자 목록(관전 HUD 골격용).
-    async startMultiplayer({ chartData, audioUrl, startOffsetMs = 0, targetPerfTime, onlineChartId = null, userId = null, opponents = [] }) {
+    // userId: 나 자신의 user_id (progress/finish broadcast 발신자 식별용).
+    // opponents: [{ user_id, nickname }] — 나를 제외한 같은 방 참가자 목록(관전 HUD/결과 비교 골격용).
+    // roomId: beat_rooms.id — 결과 화면에서 전원 완료 시 status를 finished로 정리하는 데 쓴다.
+    async startMultiplayer({ chartData, audioUrl, startOffsetMs = 0, targetPerfTime, onlineChartId = null, userId = null, opponents = [], roomId = null }) {
         chartData.startTimeOffset = (startOffsetMs || 0) / 1000;
         if (!this.loadChartNotes(chartData)) return;
 
@@ -1171,7 +1185,7 @@ const Game = {
         this.state.settings.songStartOffset = (startOffsetMs || 0) / 1000;
         DOM.musicPlayer.src = audioUrl;
 
-        this._setupMultiplayerSpectate(userId, opponents);
+        this._setupMultiplayerSpectate(userId, opponents, roomId);
 
         UI.showScreen('menu');
         await this.start({ syncStartPerfTime: targetPerfTime });
@@ -1182,29 +1196,49 @@ const Game = {
         this.state.gameState = 'playing';
     },
 
-    // 진행 중 상대 관전(Phase 5) 준비: 상대 목록으로 HUD 골격을 그리고, 방 채널의
-    // 'progress' broadcast를 구독해 들어오는 값으로 HUD 숫자만 갱신한다.
-    // 실제 broadcast 송신은 loop()에서, 채널 연결/해제는 MultiplayerLobby가 담당한다.
-    _setupMultiplayerSpectate(userId, opponents) {
+    // 진행 중 상대 관전(Phase 5) + 결과 비교(Phase 6) 준비: 상대 목록으로 HUD 골격을 그리고,
+    // 방 채널의 'progress'/'finish' broadcast를 구독한다. 실제 progress 송신은 loop()에서,
+    // finish 송신은 end()→_finishMultiplayer()에서, 채널 연결/해제는 MultiplayerLobby가 담당한다.
+    _setupMultiplayerSpectate(userId, opponents, roomId) {
         this._teardownMultiplayerSpectate();
+        this._teardownMultiplayerFinish();
         this.state._multiplayerActive = true;
         this.state._multiplayerUserId = userId;
         this.state._multiplayerOpponents = opponents || [];
+        this.state._multiplayerRoomId = roomId || null;
         this.state._multiplayerProgress = {};
+        this.state._multiplayerResults = {};
+        this.state._multiplayerSelfFinished = false;
         this.state._multiplayerLastBroadcastAt = 0;
 
         UI.showSpectateHud(this.state._multiplayerOpponents);
 
         if (typeof MultiplayerRealtime === 'undefined') return;
-        const handler = (payload) => {
+
+        const progressHandler = (payload) => {
             if (!payload || !payload.user_id || payload.user_id === this.state._multiplayerUserId) return;
             this.state._multiplayerProgress[payload.user_id] = payload;
             UI.updateSpectateHud(this.state._multiplayerProgress);
         };
-        this.state._multiplayerProgressHandler = handler;
-        MultiplayerRealtime.on('progress', handler);
+        this.state._multiplayerProgressHandler = progressHandler;
+        MultiplayerRealtime.on('progress', progressHandler);
+
+        const finishHandler = (payload) => {
+            if (!payload || !payload.user_id || payload.user_id === this.state._multiplayerUserId) return;
+            this.state._multiplayerResults[payload.user_id] = {
+                finalScore: payload.finalScore || 0,
+                finalCombo: payload.finalCombo || 0,
+                judgements: payload.judgements || null,
+            };
+            UI.renderMultiplayerResultCompare(this.state._multiplayerOpponents, this.state._multiplayerResults, this.state._multiplayerUserId);
+            this._maybeFinalizeMultiplayerRoom();
+        };
+        this.state._multiplayerFinishHandler = finishHandler;
+        MultiplayerRealtime.on('finish', finishHandler);
     },
 
+    // progress broadcast/미니 HUD만 중지(게임 종료 시 호출). finish 리스너와 결과 비교 화면은
+    // 결과 화면에서도 계속 쓰이므로 별도로 _teardownMultiplayerFinish()가 담당한다.
     _teardownMultiplayerSpectate() {
         if (this.state._multiplayerProgressHandler && typeof MultiplayerRealtime !== 'undefined') {
             MultiplayerRealtime.off('progress', this.state._multiplayerProgressHandler);
@@ -1212,6 +1246,59 @@ const Game = {
         this.state._multiplayerProgressHandler = null;
         this.state._multiplayerActive = false;
         UI.hideSpectateHud();
+    },
+
+    // finish 리스너/결과 비교 상태를 완전히 정리한다. 결과 화면을 벗어날 때(back-to-menu)
+    // main.js에서 호출한다 — 게임 종료(end()) 시점에는 아직 호출하지 않는다.
+    _teardownMultiplayerFinish() {
+        if (this.state._multiplayerFinishHandler && typeof MultiplayerRealtime !== 'undefined') {
+            MultiplayerRealtime.off('finish', this.state._multiplayerFinishHandler);
+        }
+        this.state._multiplayerFinishHandler = null;
+        this.state._multiplayerResults = {};
+        this.state._multiplayerRoomId = null;
+        this.state._multiplayerOpponents = [];
+        this.state._multiplayerUserId = null;
+        this.state._multiplayerSelfFinished = false;
+        UI.hideMultiplayerResultCompare();
+    },
+
+    // 내 결과를 broadcast('finish')로 방에 알리고, CloudScores.submitScore와 별개로
+    // beat_room_players.final_score/final_combo도 기록한다(관전용 표시 전용, 리더보드 아님).
+    async _finishMultiplayer() {
+        const { perfect, good, bad, miss } = this.state.judgements;
+        const finalScore = this.state.score;
+        const finalCombo = this.state.maxCombo || 0;
+        const judgements = { perfect, good, bad, miss };
+
+        this.state._multiplayerResults[this.state._multiplayerUserId] = { finalScore, finalCombo, judgements, self: true };
+        this.state._multiplayerSelfFinished = true;
+        UI.renderMultiplayerResultCompare(this.state._multiplayerOpponents, this.state._multiplayerResults, this.state._multiplayerUserId);
+
+        if (typeof MultiplayerRealtime !== 'undefined' && MultiplayerRealtime.isConnected) {
+            await MultiplayerRealtime.send('finish', {
+                user_id: this.state._multiplayerUserId,
+                finalScore,
+                finalCombo,
+                judgements,
+            }).catch(() => {});
+        }
+        if (typeof MultiplayerRooms !== 'undefined' && this.state._multiplayerRoomId) {
+            MultiplayerRooms.setFinalResult(this.state._multiplayerRoomId, finalScore, finalCombo).catch(() => {});
+        }
+        this._maybeFinalizeMultiplayerRoom();
+    },
+
+    // 내가 관측한 참가자 전원(나 + opponents)이 전부 finish를 broadcast했으면
+    // beat_rooms.status를 finished로 정리한다. 여러 클라이언트가 동시에 이 조건을 만족해
+    // 중복 호출될 수 있지만 단순 상태 갱신이라 멱등하다.
+    _maybeFinalizeMultiplayerRoom() {
+        if (!this.state._multiplayerRoomId || typeof MultiplayerRooms === 'undefined') return;
+        const total = (this.state._multiplayerOpponents?.length || 0) + 1;
+        const finishedCount = Object.keys(this.state._multiplayerResults).length;
+        if (finishedCount >= total) {
+            MultiplayerRooms.updateRoomStatus(this.state._multiplayerRoomId, 'finished').catch(() => {});
+        }
     },
 
     loadChartNotes(chartData) {

@@ -146,6 +146,63 @@ const UI = {
         DOM.spectateHudEl.classList.add('hidden');
         DOM.spectateHudEl.innerHTML = '';
     },
+    // ── 멀티플레이 결과 비교(Phase 6): 결과 화면에서 각자 broadcast('finish')한 값을
+    // 클라이언트끼리만 비교해 표시한다(서버 검증 없음). 호출될 때마다 전체를 다시 그린다 —
+    // 참가자 수가 적어(관전형 스코프) 매번 새로 렌더링해도 비용이 크지 않다.
+    // opponents: [{ user_id, nickname }] — 나를 제외한 참가자. results: { [user_id]: { finalScore, finalCombo, judgements } }.
+    renderMultiplayerResultCompare(opponents, results, selfUserId) {
+        const container = document.getElementById('mp-result-compare');
+        const list = document.getElementById('mp-result-compare-list');
+        if (!container || !list || !selfUserId) return;
+
+        const entries = [
+            { user_id: selfUserId, isSelf: true },
+            ...(opponents || []),
+        ].map(p => {
+            const r = results ? results[p.user_id] : null;
+            return {
+                user_id: p.user_id,
+                nickname: p.isSelf ? '나' : (p.nickname ? p.nickname : `${String(p.user_id).slice(0, 8)}…`),
+                isSelf: !!p.isSelf,
+                finished: !!r,
+                finalScore: r ? r.finalScore : null,
+                finalCombo: r ? r.finalCombo : null,
+                rank: (r && r.judgements)
+                    ? this.rankFromJudgements(r.judgements.perfect, r.judgements.good, r.judgements.bad, r.judgements.miss)
+                    : null,
+            };
+        });
+
+        // 완료한 참가자는 점수 내림차순으로, 아직 플레이 중인 참가자는 뒤에 원래 순서대로.
+        entries.sort((a, b) => {
+            if (a.finished && b.finished) return b.finalScore - a.finalScore;
+            if (a.finished !== b.finished) return a.finished ? -1 : 1;
+            return 0;
+        });
+
+        list.innerHTML = entries.map((e, i) => `
+            <div class="flex items-center justify-between py-2 px-3 rounded-lg text-sm ${e.isSelf ? 'bg-teal-900 border border-teal-600' : 'bg-gray-700'}">
+                <span class="flex items-center gap-2 text-gray-200 truncate min-w-0">
+                    ${e.finished ? `<span class="text-xs text-gray-400 flex-shrink-0">${i + 1}위</span>` : ''}
+                    <span class="truncate">${_esc(e.nickname)}</span>
+                    ${e.isSelf ? '<span class="text-xs text-teal-400 flex-shrink-0">(나)</span>' : ''}
+                </span>
+                ${e.finished ? `
+                <span class="flex items-center gap-2 flex-shrink-0">
+                    ${e.rank ? `<span class="text-xs text-gray-400">${e.rank}</span>` : ''}
+                    <span class="font-bold text-white">${Math.round(e.finalScore).toLocaleString()}</span>
+                </span>` : `
+                <span class="text-xs text-gray-500 flex-shrink-0">플레이 중…</span>`}
+            </div>`).join('');
+
+        container.classList.remove('hidden');
+    },
+    hideMultiplayerResultCompare() {
+        const container = document.getElementById('mp-result-compare');
+        const list = document.getElementById('mp-result-compare-list');
+        if (container) container.classList.add('hidden');
+        if (list) list.innerHTML = '';
+    },
     // 우측 메뉴 패널(#ui-area) 접기/펼치기.
     // 접으면 #app-shell에 'ui-collapsed' 클래스가 붙어 #ui-area가 사라지고
     // #game-area(레인/노트)가 전체 폭으로 확장되어 중앙에 오도록 CSS가 처리한다.

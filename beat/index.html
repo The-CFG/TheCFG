@@ -1064,6 +1064,12 @@
                         <!-- 온라인 점수 제출 결과 -->
                         <p id="online-score-result" class="hidden text-sm mt-2"></p>
                     </div>
+                    <!-- 멀티플레이 결과 비교(관전형): 각자 broadcast('finish')한 값을 클라이언트끼리만
+                         비교해 표시(서버 검증 없음). 싱글/온라인 플레이에서는 계속 숨김. -->
+                    <div id="mp-result-compare" class="hidden w-full mt-4 bg-gray-800 rounded-lg p-4 text-left">
+                        <h3 class="text-sm font-semibold text-gray-300 mb-2 text-center">대전 결과 비교</h3>
+                        <div id="mp-result-compare-list" class="space-y-1.5"></div>
+                    </div>
                     <button id="result-leaderboard-btn" class="hidden mt-4 w-full max-w-sm py-3 font-semibold bg-teal-700 hover:bg-teal-600 rounded-lg transition">
                         🏆 리더보드 보기
                     </button>
