@@ -105,6 +105,16 @@ const MultiplayerRooms = {
         return { error };
     },
 
+    // 호스트 전용: 특정 유저를 방에서 강제로 내보낸다(RLS가 host_id 검증).
+    async kickPlayer(roomId, targetUserId) {
+        const { error } = await _supabase
+            .from('beat_room_players')
+            .delete()
+            .eq('room_id', roomId)
+            .eq('user_id', targetUserId);
+        return { error };
+    },
+
     async listPlayers(roomId) {
         const { data, error } = await _supabase
             .from('beat_room_players')

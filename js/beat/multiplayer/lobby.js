@@ -228,6 +228,7 @@ const MultiplayerLobby = {
         const ok = await this._connectRealtime();
         if (!ok) {
             this._showMsg('실시간 연결에 실패했습니다. 목록이 자동으로 갱신되지 않을 수 있어요.');
+            this._renderReconnectButton();
         }
     },
 
@@ -268,6 +269,8 @@ const MultiplayerLobby = {
         MultiplayerRealtime.onPresenceChange(state => this._onPresenceSync(state));
         MultiplayerRealtime.on('start', payload => this._onStartBroadcast(payload));
         MultiplayerRealtime.on('host_transferred', payload => this._onHostTransferred(payload));
+        MultiplayerRealtime.on('preload_failed', payload => this._onPeerPreloadFailed(payload));
+        MultiplayerRealtime.on('kicked', payload => this._onKicked(payload));
 
         // 호스트 기준 시간 오프셋 추정 — "시작" 버튼을 누르기 한참 전부터 미리 해둬야
         // 실제 시작 시점엔 이미 값이 준비돼 있다(참가자는 ping 왕복에 ~1초 걸림).
@@ -287,6 +290,29 @@ const MultiplayerLobby = {
             MultiplayerRealtime.untrackPresence();
             MultiplayerRealtime.disconnect();
         }
+    },
+
+    // 연결 실패 시 대기실 하단에 "다시 연결" 버튼을 붙인다.
+    _renderReconnectButton() {
+        const el = document.getElementById('mp-content');
+        if (!el || document.getElementById('mp-reconnect-btn')) return;
+        const btn = document.createElement('button');
+        btn.id = 'mp-reconnect-btn';
+        btn.textContent = '다시 연결';
+        btn.className = 'w-full py-2 mt-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm text-white transition';
+        btn.addEventListener('click', async () => {
+            btn.disabled = true;
+            btn.textContent = '연결하는 중…';
+            const ok = await this._connectRealtime();
+            if (ok) {
+                this._showMsg('');
+                btn.remove();
+            } else {
+                btn.disabled = false;
+                btn.textContent = '다시 연결';
+            }
+        });
+        el.appendChild(btn);
     },
 
     // Presence sync 스냅샷 → 플레이어 목록. presence가 실시간 소스이므로
@@ -317,6 +343,21 @@ const MultiplayerLobby = {
         this._players = data || [];
     },
 
+    // 같은 방의 누군가가 이번 판 프리로드에 실패했을 때 — 대기실/관전 중인 화면에 알려준다.
+    // (게임에 이미 진입한 경우엔 UI가 다른 화면이라 이 메시지는 대기실에 남아있는 사람에게만 보인다.)
+    _onPeerPreloadFailed(payload) {
+        if (this._view !== 'waiting') return;
+        const name = this._players.find(p => p.user_id === payload.userId)?.nickname || '누군가';
+        this._showMsg(`${name}님이 로딩에 실패해 이번 판에 참가하지 못했습니다.`);
+    },
+
+    // 내가 강퇴당했을 때 — 방을 즉시 떠난다.
+    _onKicked(payload) {
+        if (payload.userId !== this._userId) return;
+        this._showMsg('호스트에 의해 방에서 나가졌습니다.');
+        this._leaveRoom();
+    },
+
     _renderWaiting() {
         const room = this._room;
         const chart = this._chart;
@@ -338,8 +379,11 @@ const MultiplayerLobby = {
                     <span class="truncate">${name}</span>
                     ${isSelf ? '<span class="text-xs text-teal-400 flex-shrink-0">(나)</span>' : ''}
                 </span>
-                <span class="text-xs font-semibold flex-shrink-0 ${p.ready ? 'text-green-400' : 'text-gray-500'}">
-                    ${p.ready ? '준비 완료' : '대기 중'}
+                <span class="flex items-center gap-2 flex-shrink-0">
+                    <span class="text-xs font-semibold ${p.ready ? 'text-green-400' : 'text-gray-500'}">
+                        ${p.ready ? '준비 완료' : '대기 중'}
+                    </span>
+                    ${this._isHost && !isSelf ? `<button class="mp-kick-btn text-xs text-red-400 hover:text-red-300" data-user-id="${_esc(p.user_id)}">내보내기</button>` : ''}
                 </span>
             </div>`;
         }).join('');
@@ -380,6 +424,15 @@ const MultiplayerLobby = {
         });
         document.getElementById('mp-ready-btn').addEventListener('click', () => this._toggleReady(!selfReady));
         document.getElementById('mp-start-btn')?.addEventListener('click', () => this._startRoom());
+        document.querySelectorAll('.mp-kick-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const targetId = btn.dataset.userId;
+                btn.disabled = true;
+                const { error } = await MultiplayerRooms.kickPlayer(this._room.id, targetId);
+                if (error) { this._showMsg('내보내기에 실패했습니다: ' + error.message); btn.disabled = false; return; }
+                await MultiplayerRealtime.send('kicked', { userId: targetId }).catch(() => {});
+            });
+        });
     },
 
     async _toggleReady(ready) {
@@ -446,11 +499,18 @@ const MultiplayerLobby = {
         this._starting = true;
         this._view = 'starting';
 
-        const ok = await this._preloadChart();
+        let ok = await this._preloadChart();
         if (!ok) {
-            this._showMsg('채보를 불러오지 못해 시작할 수 없습니다.');
+            // 첫 실패는 조용히 한 번 더 시도 — 일시적 네트워크 지연일 수 있음.
+            this._preload = null;
+            ok = await this._preloadChart();
+        }
+        if (!ok) {
+            await MultiplayerRealtime.send('preload_failed', { userId: this._userId }).catch(() => {});
+            this._showMsg('채보를 불러오지 못해 이번 판에 참가할 수 없습니다. 다음 판을 기다려주세요.');
             this._starting = false;
             this._view = 'waiting';
+            this._renderWaiting();
             return;
         }
         await AudioEngine.resumeContext().catch(() => {});

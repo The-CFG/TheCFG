@@ -138,7 +138,22 @@ const UI = {
             const scoreEl = row.querySelector('.mp-spectate-score');
             const comboEl = row.querySelector('.mp-spectate-combo');
             if (scoreEl) scoreEl.textContent = Math.round(p.score || 0);
-            if (comboEl) comboEl.textContent = `${p.combo || 0} combo`;
+            if (comboEl) {
+                comboEl.dataset.combo = p.combo || 0;
+                comboEl.textContent = `${p.combo || 0} combo`;
+            }
+        });
+    },
+    // onlineIds: presence sync 스냅샷의 키(user_id) 집합. 여기 없는 상대는 연결이 끊긴 것으로 표시.
+    updateSpectateConnectionStatus(opponents, onlineIds) {
+        if (!DOM.spectateHudEl || !onlineIds) return;
+        (opponents || []).forEach(o => {
+            const row = DOM.spectateHudEl.querySelector(`[data-user-id="${CSS.escape(o.user_id)}"]`);
+            if (!row) return;
+            const offline = !onlineIds.has(o.user_id);
+            row.classList.toggle('mp-spectate-offline', offline);
+            const comboEl = row.querySelector('.mp-spectate-combo');
+            if (comboEl) comboEl.textContent = offline ? '연결 끊김' : `${comboEl.dataset.combo || 0} combo`;
         });
     },
     hideSpectateHud() {

@@ -79,6 +79,7 @@ const Game = {
         _multiplayerRoomId: null,        // beat_rooms.id — 결과 화면에서 room 상태 정리에 사용
         _multiplayerResults: {},         // { [user_id]: { finalScore, finalCombo, judgements, self? } }
         _multiplayerFinishHandler: null,
+        _multiplayerPresenceHandler: null,
         _multiplayerSelfFinished: false,
     },
 
@@ -1235,6 +1236,14 @@ const Game = {
         };
         this.state._multiplayerFinishHandler = finishHandler;
         MultiplayerRealtime.on('finish', finishHandler);
+
+        // 게임 중에도 presence를 구독해 상대 연결 끊김을 감지한다(대기실 리스너와 별개).
+        const presenceHandler = (state) => {
+            const onlineIds = new Set(Object.keys(state));
+            UI.updateSpectateConnectionStatus(this.state._multiplayerOpponents, onlineIds);
+        };
+        this.state._multiplayerPresenceHandler = presenceHandler;
+        MultiplayerRealtime.onPresenceChange(presenceHandler);
     },
 
     // progress broadcast/미니 HUD만 중지(게임 종료 시 호출). finish 리스너와 결과 비교 화면은
@@ -1243,7 +1252,11 @@ const Game = {
         if (this.state._multiplayerProgressHandler && typeof MultiplayerRealtime !== 'undefined') {
             MultiplayerRealtime.off('progress', this.state._multiplayerProgressHandler);
         }
+        if (this.state._multiplayerPresenceHandler && typeof MultiplayerRealtime !== 'undefined') {
+            MultiplayerRealtime.offPresenceChange(this.state._multiplayerPresenceHandler);
+        }
         this.state._multiplayerProgressHandler = null;
+        this.state._multiplayerPresenceHandler = null;
         this.state._multiplayerActive = false;
         UI.hideSpectateHud();
     },

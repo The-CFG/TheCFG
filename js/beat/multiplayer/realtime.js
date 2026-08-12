@@ -83,6 +83,12 @@ const MultiplayerRealtime = {
         this._presenceListeners = [];
     },
 
+    // 기존 채널을 정리하고 같은 방에 새로 연결한다. 재연결 버튼에서 사용.
+    async reconnect(roomId, opts) {
+        this.disconnect();
+        return this.connect(roomId, opts);
+    },
+
     // ── Presence ──────────────────────────────────────────────────────────
     async trackPresence(meta) {
         if (!this._channel) return;
@@ -96,6 +102,11 @@ const MultiplayerRealtime = {
 
     onPresenceChange(cb) {
         this._presenceListeners.push(cb);
+    },
+
+    offPresenceChange(cb) {
+        const idx = this._presenceListeners.indexOf(cb);
+        if (idx !== -1) this._presenceListeners.splice(idx, 1);
     },
 
     // ── Broadcast ─────────────────────────────────────────────────────────

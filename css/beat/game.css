@@ -257,6 +257,14 @@ body {
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
 }
+.mp-spectate-row.mp-spectate-offline {
+    opacity: 0.45;
+}
+.mp-spectate-row.mp-spectate-offline .mp-spectate-name::after {
+    content: ' (끊김)';
+    font-size: 0.7em;
+    color: #f87171;
+}
 
 .countdown-text {
     position: absolute;
