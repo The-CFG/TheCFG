@@ -211,6 +211,53 @@ body {
     color: #cbd5e0;
 }
 
+/* 멀티플레이 관전 HUD: 상대 닉네임 + 점수/콤보. #game-hud(우측 상단)와 대칭으로 좌측 상단에 표시.
+   #game-hud와 마찬가지로 in-play일 때만 노출 대상이며, 상대가 없으면(.hidden) 완전히 감춘다. */
+#mp-spectate-hud {
+    display: none;
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 5;
+    flex-direction: column;
+    gap: 4px;
+    max-width: 55%;
+    pointer-events: none;
+}
+#app-shell.in-play #mp-spectate-hud:not(.hidden) {
+    display: flex;
+}
+.mp-spectate-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.45);
+    border-radius: 8px;
+    padding: 4px 10px;
+    line-height: 1.2;
+}
+.mp-spectate-name {
+    font-size: 0.75rem;
+    color: #cbd5e0;
+    max-width: 90px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex-shrink: 1;
+}
+.mp-spectate-score {
+    font-size: 1rem;
+    font-weight: bold;
+    color: white;
+    font-variant-numeric: tabular-nums;
+}
+.mp-spectate-combo {
+    font-size: 0.8rem;
+    color: #90cdf4;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
 .countdown-text {
     position: absolute;
     top: 40%;

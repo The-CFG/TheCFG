@@ -3,6 +3,8 @@
 // 대기실 진입 시 채보/오디오를 미리 프리로드하고 호스트 기준 클록 오프셋을 추정해둔다.
 // 호스트가 "시작"을 누르면 목표 시각(hostStartTime)을 broadcast('start')로 전파하고,
 // 각 클라이언트는 자신의 오프셋으로 로컬 시각으로 변환해 Game.startMultiplayer()로 동시 시작한다.
+// Phase 5: 시작 시점의 _players 스냅샷(나를 제외한 상대 목록)을 Game.startMultiplayer에 넘겨,
+// 진행 중 상대 점수/콤보 관전 HUD(Game.loop의 progress broadcast/구독)가 이 채널 위에서 동작한다.
 
 const MultiplayerLobby = {
     _view: 'menu',   // 'menu' | 'join' | 'waiting'
@@ -349,7 +351,7 @@ const MultiplayerLobby = {
             ▶ 시작${this._players.length < 2 ? ' (2명 이상 필요)' : (allReady ? '' : ' (전원 준비 대기 중)')}
         </button>` : `
         <p class="text-center text-xs text-gray-500 py-2">호스트가 시작하기를 기다리는 중…</p>`}
-        <p class="mt-4 text-xs text-gray-600 text-center">진행 중 상대 점수/콤보 관전 HUD는 다음 단계에서 연결됩니다.</p>
+        <p class="mt-4 text-xs text-gray-600 text-center">시작하면 화면 좌측 상단에서 상대 점수/콤보를 실시간으로 볼 수 있어요.</p>
         `);
 
         document.getElementById('mp-copy-code-btn').addEventListener('click', () => {
@@ -437,13 +439,19 @@ const MultiplayerLobby = {
         }
         await AudioEngine.resumeContext().catch(() => {});
 
-        // 대기실 Realtime 연결은 유지한다 — 진행 중 관전 HUD(다음 단계)가 이 채널을 그대로 쓴다.
+        // 대기실 Realtime 연결은 유지한다 — 진행 중 관전 HUD가 이 채널을 그대로 쓴다.
+        // 상대 목록(나를 제외)은 대기실에서 이미 갖고 있던 _players 스냅샷으로 넘긴다 —
+        // 게임 중에는 presence sync를 다시 안 쓰므로 시작 시점 스냅샷이면 충분하다.
         await Game.startMultiplayer({
             chartData: this._preload.chartData,
             audioUrl: this._preload.audioUrl,
             startOffsetMs: this._chart.start_offset_ms || 0,
             targetPerfTime,
             onlineChartId: this._chart.id,
+            userId: this._userId,
+            opponents: this._players
+                .filter(p => p.user_id !== this._userId)
+                .map(p => ({ user_id: p.user_id, nickname: p.nickname })),
         });
     },
 

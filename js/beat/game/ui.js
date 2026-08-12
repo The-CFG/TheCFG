@@ -110,6 +110,42 @@ const UI = {
             DOM.hudRankEl.classList.add(`rank-${expectedRank}`);
         }
     },
+    // ── 멀티플레이 관전 HUD: 상대 닉네임 + 점수/콤보 표시 전용 ──────────────────────
+    // opponents: [{ user_id, nickname }] — 자기 자신은 제외된 목록.
+    // 게임 시작 시 한 번 골격(닉네임 행)을 그려두고, 이후 'progress' 브로드캐스트가
+    // 올 때마다 updateSpectateHud로 숫자만 갱신한다(매번 다시 그리지 않음).
+    showSpectateHud(opponents) {
+        if (!DOM.spectateHudEl) return;
+        if (!opponents || opponents.length === 0) {
+            this.hideSpectateHud();
+            return;
+        }
+        DOM.spectateHudEl.innerHTML = opponents.map(o => `
+            <div class="mp-spectate-row" data-user-id="${_esc(o.user_id)}">
+                <span class="mp-spectate-name">${_esc(o.nickname || o.user_id.slice(0, 8))}</span>
+                <span class="mp-spectate-score">0</span>
+                <span class="mp-spectate-combo">0 combo</span>
+            </div>`).join('');
+        DOM.spectateHudEl.classList.remove('hidden');
+    },
+    // progressByUserId: { [user_id]: { score, accuracy, combo } } — 상대들의 마지막 broadcast 값.
+    updateSpectateHud(progressByUserId) {
+        if (!DOM.spectateHudEl || !progressByUserId) return;
+        Object.keys(progressByUserId).forEach(userId => {
+            const row = DOM.spectateHudEl.querySelector(`[data-user-id="${CSS.escape(userId)}"]`);
+            if (!row) return;
+            const p = progressByUserId[userId];
+            const scoreEl = row.querySelector('.mp-spectate-score');
+            const comboEl = row.querySelector('.mp-spectate-combo');
+            if (scoreEl) scoreEl.textContent = Math.round(p.score || 0);
+            if (comboEl) comboEl.textContent = `${p.combo || 0} combo`;
+        });
+    },
+    hideSpectateHud() {
+        if (!DOM.spectateHudEl) return;
+        DOM.spectateHudEl.classList.add('hidden');
+        DOM.spectateHudEl.innerHTML = '';
+    },
     // 우측 메뉴 패널(#ui-area) 접기/펼치기.
     // 접으면 #app-shell에 'ui-collapsed' 클래스가 붙어 #ui-area가 사라지고
     // #game-area(레인/노트)가 전체 폭으로 확장되어 중앙에 오도록 CSS가 처리한다.

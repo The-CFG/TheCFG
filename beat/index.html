@@ -83,6 +83,10 @@
                 </span>
             </div>
         </div>
+        <!-- 멀티플레이 관전 HUD: 상대 닉네임 + 점수/콤보 표시 전용(판정/게임 상태에는 영향 없음).
+             MultiplayerLobby가 시작 시 넘겨준 상대 목록으로 Game.js가 채우고, MultiplayerRealtime의
+             'progress' 브로드캐스트를 받을 때마다 갱신한다. 상대가 없는(싱글) 플레이에서는 숨김. -->
+        <div id="mp-spectate-hud" class="hidden"></div>
     </div>
             <!-- UI Area -->
             <div id="ui-area" class="w-full lg:w-2/5 flex-1 lg:h-full p-2 lg:p-4 xl:p-8 flex flex-col justify-start bg-[#2d3748] overflow-y-auto overflow-x-hidden touch-auto" style="-webkit-overflow-scrolling: touch; overscroll-behavior: contain;">

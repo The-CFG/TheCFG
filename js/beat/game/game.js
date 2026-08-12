@@ -66,6 +66,14 @@ const Game = {
         triggers: [],       // 구간별 BPM/하강 속도 변경 트리거
         baseBpm: 120,
         baseNoteSpeed: 6,
+
+        // ── 멀티플레이 관전(Phase 5): 진행 중 상대 점수/콤보 broadcast + 미니 HUD ──────
+        _multiplayerActive: false,   // 현재 판이 멀티플레이인지
+        _multiplayerUserId: null,    // 내 user_id (progress broadcast의 발신자 식별용)
+        _multiplayerOpponents: [],   // [{ user_id, nickname }] — 나를 제외한 같은 방 참가자
+        _multiplayerProgress: {},    // { [user_id]: { score, accuracy, combo } } — 상대들의 마지막 수신값
+        _multiplayerLastBroadcastAt: 0,
+        _multiplayerProgressHandler: null,
     },
 
     // ─── Canvas 렌더러 ───────────────────────────────────────────────────────
@@ -549,6 +557,11 @@ const Game = {
             cancelAnimationFrame(this.state.animationFrameId);
             this.state.animationFrameId = null;
 
+            // 멀티플레이 관전 HUD/progress broadcast 중지. 방 Realtime 채널 자체는
+            // MultiplayerLobby가 소유하므로 여기서는 우리가 등록한 리스너만 뗀다
+            // (finish broadcast + 결과 비교는 다음 단계에서 이 지점에 이어붙일 예정).
+            this._teardownMultiplayerSpectate();
+
             if (this.state.settings.mode === 'music' && DOM.musicPlayer.src) {
                 DOM.musicPlayer.pause();
                 DOM.musicPlayer.load();
@@ -658,6 +671,21 @@ const Game = {
                     ? 100
                     : ((j.perfect * CONFIG.POINTS.perfect + j.good * CONFIG.POINTS.good + j.bad * CONFIG.POINTS.bad) / (judgedCount * CONFIG.POINTS.perfect)) * 100;
                 UI.updateHud(remainingMs, accuracyPercent);
+
+                // 멀티플레이 관전: 500ms~1s 간격으로 내 진행 상황(점수/정확도/콤보)을 방 채널에
+                // broadcast한다. HUD와 마찬가지로 이미 계산된 값을 재사용하며, 실패해도
+                // 게임 진행에는 영향을 주지 않도록 이 try/catch 안에서만 처리한다.
+                if (self.state._multiplayerActive && typeof MultiplayerRealtime !== 'undefined' && MultiplayerRealtime.isConnected) {
+                    if (timestamp - self.state._multiplayerLastBroadcastAt >= 750) {
+                        self.state._multiplayerLastBroadcastAt = timestamp;
+                        MultiplayerRealtime.send('progress', {
+                            user_id: self.state._multiplayerUserId,
+                            score: self.state.score,
+                            accuracy: accuracyPercent,
+                            combo: self.state.combo,
+                        }).catch(() => {});
+                    }
+                }
             } catch (hudErr) {
                 Debugger.logError(hudErr, 'Game.loop:hud');
             }
@@ -1131,7 +1159,9 @@ const Game = {
     // ── 멀티플레이: 클록 동기화된 목표 시각(targetPerfTime)에 맞춰 동시 시작 ──────
     // online.js의 _playOnlineChart와 준비 과정은 동일하되, 고정 4초 카운트다운 대신
     // start()에 syncStartPerfTime을 넘겨 오디오/카운트다운을 목표 시각에 맞춘다.
-    async startMultiplayer({ chartData, audioUrl, startOffsetMs = 0, targetPerfTime, onlineChartId = null }) {
+    // userId: 나 자신의 user_id (progress broadcast 발신자 식별용).
+    // opponents: [{ user_id, nickname }] — 나를 제외한 같은 방 참가자 목록(관전 HUD 골격용).
+    async startMultiplayer({ chartData, audioUrl, startOffsetMs = 0, targetPerfTime, onlineChartId = null, userId = null, opponents = [] }) {
         chartData.startTimeOffset = (startOffsetMs || 0) / 1000;
         if (!this.loadChartNotes(chartData)) return;
 
@@ -1141,6 +1171,8 @@ const Game = {
         this.state.settings.songStartOffset = (startOffsetMs || 0) / 1000;
         DOM.musicPlayer.src = audioUrl;
 
+        this._setupMultiplayerSpectate(userId, opponents);
+
         UI.showScreen('menu');
         await this.start({ syncStartPerfTime: targetPerfTime });
         UI.showScreen('playing');
@@ -1148,6 +1180,38 @@ const Game = {
         // 'playing'을 기준으로 하므로 즉시 playing으로 둔다(실제 판정은 elapsedTime이
         // 0으로 클램프돼 있어 카운트다운 중 입력은 어차피 아무 노트에도 히트하지 않는다).
         this.state.gameState = 'playing';
+    },
+
+    // 진행 중 상대 관전(Phase 5) 준비: 상대 목록으로 HUD 골격을 그리고, 방 채널의
+    // 'progress' broadcast를 구독해 들어오는 값으로 HUD 숫자만 갱신한다.
+    // 실제 broadcast 송신은 loop()에서, 채널 연결/해제는 MultiplayerLobby가 담당한다.
+    _setupMultiplayerSpectate(userId, opponents) {
+        this._teardownMultiplayerSpectate();
+        this.state._multiplayerActive = true;
+        this.state._multiplayerUserId = userId;
+        this.state._multiplayerOpponents = opponents || [];
+        this.state._multiplayerProgress = {};
+        this.state._multiplayerLastBroadcastAt = 0;
+
+        UI.showSpectateHud(this.state._multiplayerOpponents);
+
+        if (typeof MultiplayerRealtime === 'undefined') return;
+        const handler = (payload) => {
+            if (!payload || !payload.user_id || payload.user_id === this.state._multiplayerUserId) return;
+            this.state._multiplayerProgress[payload.user_id] = payload;
+            UI.updateSpectateHud(this.state._multiplayerProgress);
+        };
+        this.state._multiplayerProgressHandler = handler;
+        MultiplayerRealtime.on('progress', handler);
+    },
+
+    _teardownMultiplayerSpectate() {
+        if (this.state._multiplayerProgressHandler && typeof MultiplayerRealtime !== 'undefined') {
+            MultiplayerRealtime.off('progress', this.state._multiplayerProgressHandler);
+        }
+        this.state._multiplayerProgressHandler = null;
+        this.state._multiplayerActive = false;
+        UI.hideSpectateHud();
     },
 
     loadChartNotes(chartData) {

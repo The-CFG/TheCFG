@@ -9,6 +9,7 @@ const DOM = {
     hudTimeEl: document.getElementById('game-hud-time'),
     hudAccuracyEl: document.getElementById('game-hud-accuracy'),
     hudRankEl: document.getElementById('game-hud-rank'),
+    spectateHudEl: document.getElementById('mp-spectate-hud'),
     judgementTextEl: document.getElementById('judgement-text'),
     comboTextEl: document.getElementById('combo-text'),
     musicPlayer: AudioEngine, // Web Audio API 기반 AudioEngine (지연 최소화를 위해 <audio> 엘리먼트 대체)
