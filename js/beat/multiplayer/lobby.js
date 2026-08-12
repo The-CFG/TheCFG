@@ -1,6 +1,8 @@
 // ── MultiplayerLobby: 방 생성/참가/대기실 화면 ────────────────────────────────
-// Phase 2: 로비 UI만 담당. Presence 실시간화(3단계) 전까지는 플레이어 목록을
-// 폴링(3초 간격)으로 갱신한다. 실제 동시 시작·클록 동기화·관전 HUD는 이후 단계.
+// Phase 3: 대기실 인원/준비 상태를 Realtime Presence로 실시간 갱신한다(폴링 제거).
+// 초기 목록은 DB(listPlayers)로 한 번 seed하고, 그 이후는 presence sync 콜백이 갱신을 담당.
+// 접속 끊김은 Presence가 자동 감지해 목록에서 제거해준다. 실제 동시 시작(클록 동기화 →
+// AudioEngine.play)과 진행 중 관전 HUD는 이후 단계.
 
 const MultiplayerLobby = {
     _view: 'menu',   // 'menu' | 'join' | 'waiting'
@@ -9,11 +11,10 @@ const MultiplayerLobby = {
     _players: [],
     _isHost: false,
     _userId: null,
-    _pollTimer: null,
 
     // ── 진입점 ────────────────────────────────────────────────────────────────
     show() {
-        this._stopPolling();
+        this._teardownRealtime();
         this._room = null;
         this._chart = null;
         this._players = [];
@@ -59,7 +60,7 @@ const MultiplayerLobby = {
         } else if (this._view === 'join') {
             this._renderMenu();
         } else {
-            this._stopPolling();
+            this._teardownRealtime();
             Game.state.gameState = 'menu';
             UI.showScreen('menu');
         }
@@ -165,7 +166,7 @@ const MultiplayerLobby = {
     // ════════════════════════════════════════════════════════════════════════
     // 성공 시 true, 실패 시 false를 반환. 화면 전환은 이 안에서 모두 처리한다.
     async hostRoom(chart) {
-        this._stopPolling();
+        this._teardownRealtime();
         UI.showScreen('multiplayer');
         this._renderShell();
         this._view = 'waiting';
@@ -199,22 +200,58 @@ const MultiplayerLobby = {
     async _enterWaitingRoom() {
         this._view = 'waiting';
         this._showMsg('');
+        // DB에서 한 번 초기 스냅샷을 가져와 닉네임/준비 상태를 seed한다 —
+        // 이후 실시간 갱신은 Presence sync가 담당한다.
         await this._refreshPlayers();
         this._renderWaiting();
-        this._startPolling();
+
+        const ok = await this._connectRealtime();
+        if (!ok) {
+            this._showMsg('실시간 연결에 실패했습니다. 목록이 자동으로 갱신되지 않을 수 있어요.');
+        }
     },
 
-    _startPolling() {
-        this._stopPolling();
-        // Presence 연결(3단계) 전까지는 폴링으로 대기실 인원을 갱신한다.
-        this._pollTimer = setInterval(async () => {
-            await this._refreshPlayers();
-            if (this._view === 'waiting') this._renderWaiting();
-        }, 3000);
+    // Realtime 채널 연결 + 내 상태 Presence로 track.
+    // 전제: 이 시점엔 이미 beat_room_players에 내 row가 있어야 한다(RLS) —
+    // createRoom/joinRoom이 항상 connect보다 먼저 끝나 있으므로 순서는 보장됨.
+    async _connectRealtime() {
+        try {
+            await MultiplayerRealtime.connect(this._room.id, { presenceKey: this._userId });
+        } catch (err) {
+            Debugger?.logError?.(err, 'MultiplayerLobby:connect');
+            return false;
+        }
+
+        MultiplayerRealtime.onPresenceChange(state => this._onPresenceSync(state));
+
+        const self = this._players.find(p => p.user_id === this._userId);
+        await MultiplayerRealtime.trackPresence({
+            user_id: this._userId,
+            nickname: self?.nickname || null,
+            ready: !!self?.ready,
+        });
+        return true;
     },
 
-    _stopPolling() {
-        if (this._pollTimer) { clearInterval(this._pollTimer); this._pollTimer = null; }
+    _teardownRealtime() {
+        if (MultiplayerRealtime.isConnected) {
+            MultiplayerRealtime.untrackPresence();
+            MultiplayerRealtime.disconnect();
+        }
+    },
+
+    // Presence sync 스냅샷 → 플레이어 목록. presence가 실시간 소스이므로
+    // 이 시점부터는 DB 폴링 없이 이 콜백만으로 대기실 목록이 갱신된다.
+    _onPresenceSync(state) {
+        if (this._view !== 'waiting' || !this._room) return;
+        const hostId = this._room.host_id;
+        const list = Object.values(state)
+            .map(metas => metas[metas.length - 1])
+            .filter(Boolean)
+            .map(m => ({ user_id: m.user_id, nickname: m.nickname, ready: !!m.ready }));
+        list.sort((a, b) => (a.user_id === hostId ? -1 : b.user_id === hostId ? 1 : 0));
+        this._players = list;
+        this._renderWaiting();
     },
 
     async _refreshPlayers() {
@@ -273,7 +310,7 @@ const MultiplayerLobby = {
             ▶ 시작${this._players.length < 2 ? ' (2명 이상 필요)' : (allReady ? '' : ' (전원 준비 대기 중)')}
         </button>` : `
         <p class="text-center text-xs text-gray-500 py-2">호스트가 시작하기를 기다리는 중…</p>`}
-        <p class="mt-4 text-xs text-gray-600 text-center">실시간 동시 시작·관전 기능은 다음 단계에서 연결됩니다.</p>
+        <p class="mt-4 text-xs text-gray-600 text-center">실시간 동시 시작(카운트다운)과 관전 HUD는 다음 단계에서 연결됩니다.</p>
         `);
 
         document.getElementById('mp-copy-code-btn').addEventListener('click', () => {
@@ -292,8 +329,19 @@ const MultiplayerLobby = {
         if (!this._room) return;
         const { error } = await MultiplayerRooms.setReady(this._room.id, ready);
         if (error) { this._showMsg('상태 변경에 실패했습니다: ' + error.message); return; }
-        await this._refreshPlayers();
-        if (this._view === 'waiting') this._renderWaiting();
+
+        // 낙관적 갱신 — presence sync 왕복을 기다리지 않고 내 상태를 바로 반영
+        const self = this._players.find(p => p.user_id === this._userId);
+        if (self) self.ready = ready;
+        this._renderWaiting();
+
+        if (MultiplayerRealtime.isConnected) {
+            await MultiplayerRealtime.trackPresence({
+                user_id: this._userId,
+                nickname: self?.nickname || null,
+                ready,
+            });
+        }
     },
 
     // 호스트 전용. 지금은 상태만 countdown으로 넘겨두는 스텁 —
@@ -306,12 +354,9 @@ const MultiplayerLobby = {
     },
 
     async _leaveRoom() {
-        this._stopPolling();
+        this._teardownRealtime();
         const roomId = this._room?.id;
         if (roomId) await MultiplayerRooms.leaveRoom(roomId);
-        if (typeof MultiplayerRealtime !== 'undefined' && MultiplayerRealtime.isConnected) {
-            MultiplayerRealtime.disconnect();
-        }
         this._room = null;
         this._chart = null;
         this._players = [];
