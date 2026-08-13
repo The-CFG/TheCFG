@@ -42,6 +42,36 @@ a {
     text-decoration: inherit;
 }
 
+/* [추가] h1~h6, p 등은 브라우저 기본으로 위아래 margin(보통 1em)을
+   자체적으로 갖고 있다. 곡 카드처럼 <p> 여러 줄(제목/아티스트/날짜)이
+   쌓인 곳은 이 여백이 6번(줄마다 위+아래) 겹쳐져서 카드 하나가
+   실제 디자인보다 훨씬 커 보였다 — line-height 문제가 아니라 이 margin
+   리셋 누락이 원인. */
+h1, h2, h3, h4, h5, h6,
+p, blockquote, dl, dd, figure, pre {
+    margin: 0;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-size: inherit;
+    font-weight: inherit;
+}
+
+ol, ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+fieldset {
+    margin: 0;
+    padding: 0;
+}
+
+legend {
+    padding: 0;
+}
+
 button,
 input,
 optgroup,
