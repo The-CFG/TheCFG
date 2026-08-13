@@ -1,3 +1,70 @@
+/* ════════════════════════════════════════════════
+   Tailwind Preflight 최소 이식
+   Tailwind CDN을 걷어내면서 함께 사라진 브라우저 기본
+   스타일 리셋을 복원한다. Tailwind가 원래 하던 일이라
+   이 블록이 없으면:
+     - <a>가 다시 브라우저 기본 파란 밑줄 링크로 보임
+       (h1.text-white 안의 <a>가 흰색 대신 하이퍼링크색으로 보이는 원인)
+     - <button>/<input>이 OS 기본 3D 베벨 테두리로 렌더됨
+       (색/여백 클래스는 있지만 border-width가 0으로 리셋되지 않아
+        네이티브 outset 테두리가 그대로 남아있던 것이 원인)
+   실사용 클래스(border, rounded 등)가 명시적으로 border-width를
+   다시 지정하므로, 아래 리셋과 충돌하지 않는다.
+   ════════════════════════════════════════════════ */
+*, ::before, ::after {
+    box-sizing: border-box;
+    border-width: 0;
+    border-style: solid;
+    border-color: currentColor;
+}
+
+a {
+    color: inherit;
+    text-decoration: inherit;
+}
+
+button,
+input,
+optgroup,
+select,
+textarea {
+    font-family: inherit;
+    font-size: 100%;
+    font-weight: inherit;
+    line-height: inherit;
+    color: inherit;
+    margin: 0;
+    padding: 0;
+}
+
+button,
+select {
+    text-transform: none;
+}
+
+button,
+[type='button'],
+[type='reset'],
+[type='submit'] {
+    -webkit-appearance: button;
+    background-color: transparent;
+    background-image: none;
+}
+
+:-moz-focusring {
+    outline: auto;
+}
+
+img, svg, video, canvas, audio, iframe, embed, object {
+    display: block;
+    vertical-align: middle;
+}
+
+img, video {
+    max-width: 100%;
+    height: auto;
+}
+
 /* hidden 클래스가 flex 등 display 클래스에 덮어씌워지지 않도록 강제 */
 .hidden {
     display: none !important;
