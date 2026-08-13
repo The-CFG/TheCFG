@@ -113,7 +113,13 @@ const AudioEngine = {
 
     get currentTime() {
         if (this._isPlaying && this._ctx) {
-            return this._startOffset + (this._ctx.currentTime - this._startContextTime);
+            // play(when)으로 미래 시점 재생을 예약해둔 뒤, 그 시점이 오기 전에
+            // currentTime을 읽으면(pause() 등) ctx.currentTime이 아직
+            // _startContextTime에 못 미쳐 음수가 나온다. 아직 재생 시작 전이므로
+            // 의미상 0이 맞다 — 클램프 안 하면 이 음수가 _pausedAt에 저장되고,
+            // 다음 play() 때 AudioBufferSourceNode.start()의 offset으로 그대로
+            // 들어가 RangeError를 던진다.
+            return Math.max(0, this._startOffset + (this._ctx.currentTime - this._startContextTime));
         }
         return this._pausedAt;
     },
@@ -164,7 +170,10 @@ const AudioEngine = {
         source.buffer = this._buffer;
         source.connect(this._gainNode);
         const startAt = this._ctx.currentTime + Math.max(0, when);
-        const offset = Math.min(this._pausedAt, this._buffer.duration);
+        // 하한 0 클램프: _pausedAt이 어떤 경로로든 음수가 되어 있으면
+        // AudioBufferSourceNode.start(startAt, offset)의 offset이 음수가 되어
+        // "offset ... is less than the minimum bound (0)" RangeError가 난다.
+        const offset = Math.min(Math.max(0, this._pausedAt), this._buffer.duration);
         source.start(startAt, offset);
         source.onended = () => {
             if (this._source === source) {
