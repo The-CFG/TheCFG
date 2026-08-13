@@ -140,7 +140,10 @@ const MultiplayerLobby = {
 
         if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = '참가하는 중…'; }
 
-        const { data: room, error: roomErr } = await MultiplayerRooms.getRoom(roomId);
+        // 입력값은 6자리 "초대 코드"이지 방의 UUID(id)가 아니다.
+        // getRoom()에 그대로 넘기면 UUID 형식이 아니라서 Postgres가 400을 던진다 —
+        // 반드시 초대 코드 전용 조회 함수를 써야 한다.
+        const { data: room, error: roomErr } = await MultiplayerRooms.getRoomByInviteCode(roomId);
         if (roomErr || !room) {
             this._showMsg('방을 찾을 수 없습니다. 코드를 확인해주세요.');
             if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '참가하기'; }
