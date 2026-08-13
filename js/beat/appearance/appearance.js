@@ -2,6 +2,7 @@ const Appearance = {
     settings: {
         scrollDirection: 'down', // 'down' or 'up'
         noteShape: 'bar', // 'bar' or 'circle'
+        judgementPosition: 'default', // 'default' or 'low'
         colorMode: 'note-type', // 'note-type' or 'lane'
         colors: {
             tap: '#63b3ed',
@@ -46,6 +47,7 @@ const Appearance = {
             this.applySettings();
             this.updateColorModeUI();
             this.updateScrollDirectionUI();
+            this.updateJudgementPositionUI();
             this.updatePresetSlotsUI();
             
             // 미리보기 요소가 있을 때만 업데이트
@@ -70,6 +72,17 @@ const Appearance = {
                         const direction = e.target.dataset.direction;
                         this.settings.scrollDirection = direction;
                         this.updateScrollDirectionUI();
+                    }
+                });
+            }
+
+            // 노트 판정 위치 선택
+            const judgementPositionSelector = document.getElementById('judgement-position-selector');
+            if (judgementPositionSelector) {
+                judgementPositionSelector.addEventListener('click', (e) => {
+                    if (e.target.tagName === 'BUTTON') {
+                        this.settings.judgementPosition = e.target.dataset.position;
+                        this.updateJudgementPositionUI();
                     }
                 });
             }
@@ -314,6 +327,7 @@ const Appearance = {
             this.updateColorInputs();
             this.updateColorModeUI();
             this.updateScrollDirectionUI();
+            this.updateJudgementPositionUI();
         } catch (err) {
             this._logError(err, 'Appearance.applySettings');
         }
@@ -327,6 +341,17 @@ const Appearance = {
             });
         } catch (err) {
             this._logError(err, 'Appearance.updateScrollDirectionUI');
+        }
+    },
+
+    updateJudgementPositionUI() {
+        try {
+            const buttons = document.querySelectorAll('#judgement-position-selector button');
+            buttons.forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.position === this.settings.judgementPosition);
+            });
+        } catch (err) {
+            this._logError(err, 'Appearance.updateJudgementPositionUI');
         }
     },
 
@@ -377,6 +402,7 @@ const Appearance = {
             this.settings = {
                 scrollDirection: 'down',
                 noteShape: 'bar',
+                judgementPosition: 'default',
                 colorMode: 'note-type',
                 colors: {
                     tap: '#63b3ed',
@@ -399,6 +425,7 @@ const Appearance = {
             this.updateShapeUI();
             this.updateColorModeUI();
             this.updateScrollDirectionUI();
+            this.updateJudgementPositionUI();
             this.applySettings();
         } catch (err) {
             this._logError(err, 'Appearance.resetSettings');

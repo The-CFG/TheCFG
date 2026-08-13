@@ -92,7 +92,8 @@ const Game = {
         h: 0,       // 현재 캔버스 높이
 
         LANE_BORDER_COLOR: '#4a5568',
-        JUDGEMENT_LINE_Y_FROM_BOTTOM: 100, // 판정선 하단 여백(px)
+        JUDGEMENT_LINE_Y_FROM_BOTTOM: 100,      // 판정선 하단 여백(px) — '기본' 위치
+        JUDGEMENT_LINE_Y_FROM_BOTTOM_LOW: 20,   // 판정선 하단 여백(px) — '아래' 위치
         JUDGEMENT_LINE_H: 4,
         NOTE_BAR_H: 25,
         NOTE_CIRCLE_D: 90,  // 원형 노트 지름
@@ -127,9 +128,12 @@ const Game = {
             }
         },
 
-        // 판정선 Y 좌표 (상단 기준)
+        // 판정선 Y 좌표 (상단 기준). Appearance 설정의 노트 판정 위치(기본/아래)를 반영한다.
         judgementLineY() {
-            return this.h - this.JUDGEMENT_LINE_Y_FROM_BOTTOM;
+            const margin = Appearance.settings.judgementPosition === 'low'
+                ? this.JUDGEMENT_LINE_Y_FROM_BOTTOM_LOW
+                : this.JUDGEMENT_LINE_Y_FROM_BOTTOM;
+            return this.h - margin;
         },
 
         // 노트 색상 결정 (Appearance 설정 반영)
