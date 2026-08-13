@@ -13,4 +13,82 @@
     --vh: 1vh;
     --safe-bottom: 80px;
     --mobile-bottom-padding: var(--safe-bottom);
+
+    /* ════════════════════════════════════════════════
+       Tailwind 걷어내기 Phase 1 — 색상 토큰
+       실사용 클래스(bg, text, border, hover:*) 전수 스캔 결과 기준.
+       값은 Tailwind v3 기본 팔레트와 동일 hex를 그대로 이식(시각적 회귀 방지).
+       ════════════════════════════════════════════════ */
+
+    /* ── Gray (surface / text / border 전반) ── */
+    --tb-gray-200: #e5e7eb;
+    --tb-gray-300: #d1d5db;
+    --tb-gray-400: #9ca3af;
+    --tb-gray-500: #6b7280;
+    --tb-gray-600: #4b5563;
+    --tb-gray-700: #374151;
+    --tb-gray-800: #1f2937;
+    --tb-gray-900: #111827;
+
+    /* ── Blue (기본 액션 버튼) ── */
+    --tb-blue-400: #60a5fa;
+    --tb-blue-500: #3b82f6;
+    --tb-blue-600: #2563eb;
+    --tb-blue-700: #1d4ed8;
+
+    /* ── Green (성공/확인 버튼) ── */
+    --tb-green-400: #4ade80;
+    --tb-green-500: #22c55e;
+    --tb-green-600: #16a34a;
+    --tb-green-700: #15803d;
+
+    /* ── Red (위험/삭제/false 노트) ── */
+    --tb-red-300: #fca5a5;
+    --tb-red-400: #f87171;
+    --tb-red-500: #ef4444;
+    --tb-red-600: #dc2626;
+    --tb-red-700: #b91c1c;
+    --tb-red-800: #991b1b;
+
+    /* ── Yellow (경고/등급 S 강조) ── */
+    --tb-yellow-200: #fef08a;
+    --tb-yellow-300: #fde047;
+    --tb-yellow-400: #facc15;
+    --tb-yellow-500: #eab308;
+    --tb-yellow-600: #ca8a04;
+    --tb-yellow-700: #a16207;
+    --tb-yellow-900: #713f12;
+
+    /* ── Purple (롱노트/멀티플레이 강조) ── */
+    --tb-purple-400: #c084fc;
+    --tb-purple-500: #a855f7;
+    --tb-purple-600: #9333ea;
+    --tb-purple-700: #7e22ce;
+
+    /* ── Pink ── */
+    --tb-pink-600: #db2777;
+    --tb-pink-700: #be185d;
+
+    /* ── Teal (온라인 라이브러리/트리거 강조) ── */
+    --tb-teal-200: #99f6e4;
+    --tb-teal-300: #5eead4;
+    --tb-teal-400: #2dd4bf;
+    --tb-teal-500: #14b8a6;
+    --tb-teal-600: #0d9488;
+    --tb-teal-700: #0f766e;
+    --tb-teal-900: #134e4a;
+    --tb-teal-950: #042f2e;
+
+    /* ── Indigo (테마 카드 등 단발 사용) ── */
+    --tb-indigo-600: #4f46e5;
+
+    /* ── 반경 (실사용값 2종) ── */
+    --tb-radius: 0.25rem;      /* rounded */
+    --tb-radius-lg: 0.5rem;    /* rounded-lg */
+
+    /* ── 간격 스케일 (px-2~4, py-2, gap-1~4, mb-2~4 커버) ── */
+    --tb-space-1: 0.25rem;
+    --tb-space-2: 0.5rem;
+    --tb-space-3: 0.75rem;
+    --tb-space-4: 1rem;
 }
