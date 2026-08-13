@@ -4,8 +4,8 @@ const Online = {
     _subView: 'browse',
     _currentChartId: null,
     _currentSongId: null,
-    _browseState: { sort: 'newest', search: '', page: 0, hasMore: true },
-    _browseCache: [],
+    _browseState: { sort: 'newest', search: '', page: 0, pageSize: 20, totalCount: 0 },
+    _browseCache: [], // 현재 페이지에 보여줄 아이템만 담는다 (예전처럼 누적하지 않음)
     // 멀티플레이 방 생성용 채보 선택 모드 — true면 상세 화면의 "플레이" 버튼이
     // "이 채보로 방 만들기"로 바뀌고, 뒤로가기가 메뉴 대신 멀티플레이 화면으로 간다.
     _pickMode: false,
@@ -93,19 +93,16 @@ const Online = {
     async _loadBrowse(reset = false) {
         GameBackground.clear();
         const s = this._browseState;
-        if (reset) {
-            s.page = 0; s.hasMore = true; this._browseCache = [];
-            this._setContent(this._skeleton());
-        }
+        if (reset) s.page = 0;
+        this._setContent(this._skeleton());
 
-        const { data, error } = await CloudBrowse.listPublicSongs({
-            sort: s.sort, search: s.search, page: s.page, pageSize: 20,
+        const { data, error, count } = await CloudBrowse.listPublicSongs({
+            sort: s.sort, search: s.search, page: s.page, pageSize: s.pageSize,
         });
 
         if (error) { this._setContent(`<p class="text-red-400 text-sm mt-4">${error.message}</p>`); return; }
-        if (reset) this._browseCache = data || [];
-        else this._browseCache = [...this._browseCache, ...(data || [])];
-        s.hasMore = (data?.length === 20);
+        this._browseCache = data || [];
+        s.totalCount = count || 0;
         this._renderBrowse();
     },
 
@@ -135,8 +132,10 @@ const Online = {
             <button id="online-search-btn" class="px-3 py-2 bg-teal-600 hover:bg-teal-500 rounded-lg text-sm">검색</button>
         </div>
         <div id="browse-list" class="space-y-2">${cards}</div>
-        ${s.hasMore ? `<button id="browse-more-btn" class="w-full mt-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm" style="margin-bottom: var(--safe-bottom, 80px);">더 보기</button>` : ''}
+        ${this._paginationHtml()}
         `);
+
+        document.getElementById('online-content').scrollTop = 0;
 
         document.getElementById('online-search-btn').addEventListener('click', () => {
             s.search = document.getElementById('online-search').value;
@@ -149,9 +148,58 @@ const Online = {
             s.sort = e.target.value;
             this._loadBrowse(true);
         });
-        document.getElementById('browse-more-btn')?.addEventListener('click', () => { s.page++; this._loadBrowse(false); });
+        document.getElementById('page-prev-btn')?.addEventListener('click', () => {
+            if (s.page > 0) { s.page--; this._loadBrowse(false); }
+        });
+        document.getElementById('page-next-btn')?.addEventListener('click', () => {
+            const totalPages = Math.max(1, Math.ceil(s.totalCount / s.pageSize));
+            if (s.page < totalPages - 1) { s.page++; this._loadBrowse(false); }
+        });
+        document.querySelectorAll('.page-btn').forEach(btn =>
+            btn.addEventListener('click', () => {
+                const p = parseInt(btn.dataset.page, 10) - 1;
+                if (p !== s.page) { s.page = p; this._loadBrowse(false); }
+            }));
         document.querySelectorAll('.browse-card-btn').forEach(btn =>
             btn.addEventListener('click', () => this.show('song', btn.dataset.id)));
+    },
+
+    // "< [1] 2 3 4 5 ... >" 형태의 페이지네이션 바. 전체 1페이지 이하면 아예 숨긴다.
+    _paginationHtml() {
+        const s = this._browseState;
+        const totalPages = Math.max(1, Math.ceil(s.totalCount / s.pageSize));
+        if (totalPages <= 1) return '';
+        const current = s.page + 1; // 표시는 1부터
+
+        const pageBtns = this._pageNumbers(current, totalPages).map(p => (
+            p === '...'
+                ? `<span class="px-1 text-gray-500">…</span>`
+                : `<button class="page-btn px-3 py-1.5 rounded-lg text-sm ${p === current ? 'bg-teal-600 font-semibold' : 'bg-gray-700 hover:bg-gray-600'}" data-page="${p}">${p}</button>`
+        )).join('');
+
+        return `
+        <div class="flex items-center justify-center flex-wrap gap-1 mt-4" style="margin-bottom: var(--safe-bottom, 80px);">
+            <button id="page-prev-btn" class="px-2 py-1.5 rounded-lg text-sm bg-gray-700 hover:bg-gray-600 disabled:opacity-40" ${current === 1 ? 'disabled' : ''}>&lt;</button>
+            ${pageBtns}
+            <button id="page-next-btn" class="px-2 py-1.5 rounded-lg text-sm bg-gray-700 hover:bg-gray-600 disabled:opacity-40" ${current === totalPages ? 'disabled' : ''}>&gt;</button>
+        </div>`;
+    },
+
+    // 현재 페이지 기준 양 끝(1, 마지막) + 현재 주변 2개만 숫자로 보여주고 나머지는 '...'로 생략.
+    _pageNumbers(current, total) {
+        const delta = 2;
+        const keep = [];
+        for (let i = 1; i <= total; i++) {
+            if (i === 1 || i === total || (i >= current - delta && i <= current + delta)) keep.push(i);
+        }
+        const result = [];
+        let prev = 0;
+        for (const i of keep) {
+            if (prev && i - prev > 1) result.push('...');
+            result.push(i);
+            prev = i;
+        }
+        return result;
     },
 
     // 노래 카드: 난이도 개수 / 레인 수 범위 / 총 플레이 수 요약만 보여준다.
