@@ -535,16 +535,22 @@ const Game = {
         if (syncTarget != null) {
             // 멀티플레이 동시 시작: 화면 카운트다운의 타이머 지터와 무관하게, 지금 이 순간
             // AudioContext의 샘플 단위 클럭으로 목표 시각(syncTarget)에 맞춰 재생을 예약해버린다.
-            // (audioReady는 예약 직후 true가 되지만, currentTime이 실제 시작 전까지는 음수라
-            //  elapsedTime 계산에서 0으로 클램프되므로 노트가 일찍 떨어지지는 않는다.)
+            // 단, audioReady는 예약이 끝난 직후가 아니라 카운트다운이 실제로 끝나는 시점(아래
+            // runSyncedCountdown 콜백)에 켠다 — AudioEngine.currentTime은 재생이 실제로 시작되기
+            // 전까지 한 값에 고정돼 있어서(0으로 클램프), 예약 직후 바로 켜버리면 그 사이 loop()가
+            // 이 고정된 시간을 기준으로 elapsedTime을 계산해 노트가 멈춰 보이다가 시작 순간 튀는
+            // 문제가 있었다. 싱글플레이(runCountdown)도 같은 이유로 카운트다운 종료 시점에만
+            // audioReady를 켠다 — 그 전까지는 performance.now() 기반 elapsedTime으로 노트가
+            // 자연스럽게 미끄러져 내려온다.
             if (this.state.settings.mode === 'music' && DOM.musicPlayer.src) {
                 const whenSec = Math.max(0, (syncTarget - performance.now()) / 1000);
-                DOM.musicPlayer.play(whenSec).then(() => {
-                    this.state.audioReady = true;
-                }).catch(() => {});
+                DOM.musicPlayer.play(whenSec).catch(() => {});
             }
             this.runSyncedCountdown(syncTarget, () => {
                 this.state.gameState = 'playing';
+                if (this.state.settings.mode === 'music' && DOM.musicPlayer.src) {
+                    this.state.audioReady = true;
+                }
             });
         } else {
             this.runCountdown(() => {
