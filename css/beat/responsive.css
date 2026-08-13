@@ -115,7 +115,12 @@
     /* Better spacing for tablet/mobile UI */
     #ui-area {
         font-size: 0.9rem;
-        padding: 0.5rem !important;
+        padding-top: 0.5rem !important;
+        padding-right: 0.5rem !important;
+        padding-left: 0.5rem !important;
+        /* padding-bottom은 여기서 건드리지 않는다 — 파일 맨 끝의 통합 세이프 영역 규칙이 담당.
+           예전엔 이 shorthand가 그 규칙을 캐스케이드 순서상 덮어써서, 화면마다 개별로
+           padding-bottom을 다시 넣어줘야 했던 원인이었다. */
     }
     
     /* Make sliders easier to use on touch devices */
@@ -396,4 +401,16 @@
         font-size: 1rem !important;
         margin-bottom: 8px !important;
     }
+}
+
+/* ═══════════════════════════════════════════════════
+   하단 안전 영역(모바일 제스처 바/홈 인디케이터) 통합 처리
+   화면마다 각 버튼에 개별로 padding/margin을 넣는 대신, 스크롤 컨테이너
+   (#ui-area) 하나에 한 번만 적용한다. #menu-screen/#playing-screen/
+   #result-screen/#multiplayer-screen 등 어떤 화면이 떠 있든 이 패딩이
+   스크롤 가능한 여백으로 붙어서 마지막 버튼까지 제스처 바 위로 스크롤된다.
+   이 파일에서 위쪽의 다른 #ui-area 규칙들보다 더 나중에 선언되므로
+   같은 우선순위(!important)에서는 항상 이 규칙이 이긴다. */
+#ui-area {
+    padding-bottom: calc(0.5rem + var(--safe-bottom, 80px)) !important;
 }
