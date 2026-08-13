@@ -592,6 +592,16 @@ const Game = {
             UI.updateResultScreen();
             UI.showScreen('result');
 
+            // 결과 화면 하단 버튼: 멀티플레이는 전용 버튼(재시작/방으로 돌아가기)을,
+            // 싱글/온라인은 기존 버튼(리더보드 보기/메인으로 돌아가기)을 보여준다.
+            const isMultiplayer = !!this.state._multiplayerRoomId;
+            document.getElementById('mp-result-buttons')?.classList.toggle('hidden', !isMultiplayer);
+            document.getElementById('back-to-menu-btn')?.classList.toggle('hidden', isMultiplayer);
+            document.getElementById('result-leaderboard-btn')?.classList.toggle('hidden', isMultiplayer);
+            if (isMultiplayer && typeof MultiplayerLobby !== 'undefined') {
+                MultiplayerLobby.resetResultButtons();
+            }
+
             if (this.state._onlineChartId) {
                 const resultEl = document.getElementById('online-score-result');
                 if (resultEl) {
@@ -1237,8 +1247,7 @@ const Game = {
             UI.renderMultiplayerResultCompare(
                 this.state._multiplayerOpponents,
                 this.state._multiplayerResults,
-                this.state._multiplayerUserId,
-                this._isMultiplayerHost() && this._allMultiplayerResultsIn()
+                this.state._multiplayerUserId
             );
             this._maybeFinalizeMultiplayerRoom();
         };
@@ -1298,8 +1307,7 @@ const Game = {
         UI.renderMultiplayerResultCompare(
             this.state._multiplayerOpponents,
             this.state._multiplayerResults,
-            this.state._multiplayerUserId,
-            this._isMultiplayerHost() && this._allMultiplayerResultsIn()
+            this.state._multiplayerUserId
         );
 
         if (typeof MultiplayerRealtime !== 'undefined' && MultiplayerRealtime.isConnected) {

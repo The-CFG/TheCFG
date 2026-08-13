@@ -19,6 +19,12 @@ const MultiplayerLobby = {
     _preloadPromise: null,
     _starting: false,        // 동시 시작 진행 중 중복 트리거 방지
 
+    // ── 결과 화면 "재시작" 투표(관전형 — 서버 검증 없음, 클라이언트끼리 broadcast로만 집계) ──
+    _restartVotes: new Set(),  // 재시작에 동의한 user_id 집합
+    _restartRequested: false,  // 내가 재시작 버튼을 눌렀는지
+    _restarting: false,        // 전원 동의 후 실제 재시작 진행 중(중복 트리거 방지)
+    _resultTotal: 0,           // 이번 판 결과 화면 기준 총 참가자 수(나 포함)
+
     // ── 진입점 ────────────────────────────────────────────────────────────────
     show() {
         this._teardownRealtime();
@@ -29,6 +35,10 @@ const MultiplayerLobby = {
         this._preload = null;
         this._preloadPromise = null;
         this._starting = false;
+        this._restartVotes = new Set();
+        this._restartRequested = false;
+        this._restarting = false;
+        this._resultTotal = 0;
         GameBackground.clear();
         UI.showScreen('multiplayer');
         this._renderShell();
@@ -277,7 +287,8 @@ const MultiplayerLobby = {
         MultiplayerRealtime.on('host_transferred', payload => this._onHostTransferred(payload));
         MultiplayerRealtime.on('preload_failed', payload => this._onPeerPreloadFailed(payload));
         MultiplayerRealtime.on('kicked', payload => this._onKicked(payload));
-        MultiplayerRealtime.on('rematch', () => this._onRematchBroadcast());
+        MultiplayerRealtime.on('restart_vote', payload => this._onRestartVote(payload));
+        MultiplayerRealtime.on('restart_start', payload => this._onRestartStartBroadcast(payload));
         MultiplayerRealtime.on('max_players_updated', payload => this._onMaxPlayersUpdated(payload));
 
         // 호스트 기준 시간 오프셋 추정 — "시작" 버튼을 누르기 한참 전부터 미리 해둬야
@@ -572,48 +583,108 @@ const MultiplayerLobby = {
         });
     },
 
-    // 결과 화면에서 "메뉴로"(뒤로가기)를 눌렀을 때 쓰는 진입점.
+    // 결과 화면에서 "방으로 돌아가기"를 눌렀을 때 쓰는 진입점.
     // show()와 달리 방을 나가는 게 아니라 대기실로 되돌아간다 — 방 row는 게임이 끝나도
     // 지워지지 않으므로(status만 finished), 굳이 나갈 필요가 없다.
-    // 호스트의 rematch()와 달리 DB는 건드리지 않는다: 다른 사람의 ready 상태를 내가
-    // 임의로 초기화하면 안 되므로, 그건 여전히 호스트의 "재도전" 버튼 몫이다.
+    // 내 준비 상태만 해제한다(다른 사람 상태는 그대로 둔다) — 대기실에서 다시
+    // "준비 완료"를 눌러야 이후 시작이 가능해진다.
     async returnToWaitingRoom() {
         if (!this._room) { this.show(); return; }
-        await this._afterRematchReset();
+        await MultiplayerRooms.setReady(this._room.id, false).catch(() => {});
+        await this._afterReturnToRoom();
     },
 
-    // 결과 화면에서 호스트가 "재도전"을 눌렀을 때. DB를 초기화하고 다른 클라이언트에게 알린 뒤
-    // 자신도 대기실로 복귀한다.
-    async rematch() {
-        if (!this._room || !this._isHost) return;
-        const btn = document.getElementById('mp-rematch-btn');
-        if (btn) { btn.disabled = true; btn.textContent = '준비하는 중…'; }
+    // 결과 화면 진입 시(게임 종료) game.js에서 호출한다 — 재시작 투표 상태를 초기화하고
+    // "재시작" 버튼 표시를 리셋한다.
+    resetResultButtons() {
+        this._restartVotes = new Set();
+        this._restartRequested = false;
+        this._restarting = false;
+        this._resultTotal = (Game.state._multiplayerOpponents?.length || 0) + 1;
+        this._updateRestartButton();
+    },
 
-        const { error } = await MultiplayerRooms.resetForRematch(this._room.id);
-        if (error) {
-            if (btn) {
-                btn.textContent = '재도전 실패: ' + error.message;
-                setTimeout(() => {
-                    if (btn) { btn.disabled = false; btn.textContent = '🔁 재도전 (같은 멤버로 다시 시작)'; }
-                }, 2500);
-            }
+    // 결과 화면 "재시작" 버튼. 누르면 내 투표를 등록하고 broadcast로 알린다.
+    // 전원(나 + opponents)이 동의하면 방(대기실) 화면을 거치지 않고 바로 다시 시작한다.
+    requestRestart() {
+        if (!this._room || !this._userId || this._restartRequested) return;
+        this._restartRequested = true;
+        this._restartVotes.add(this._userId);
+        MultiplayerRealtime.send('restart_vote', { userId: this._userId }).catch(() => {});
+        this._updateRestartButton();
+        this._maybeStartRestart();
+    },
+
+    // 상대가 "재시작"을 눌러 'restart_vote'를 broadcast했을 때.
+    _onRestartVote(payload) {
+        if (!this._room || !payload?.userId) return;
+        this._restartVotes.add(payload.userId);
+        this._updateRestartButton();
+        this._maybeStartRestart();
+    },
+
+    _updateRestartButton() {
+        const btn = document.getElementById('mp-restart-btn');
+        if (!btn) return;
+        const total = this._resultTotal || ((Game.state._multiplayerOpponents?.length || 0) + 1);
+        if (this._restartVotes.size === 0) {
+            btn.disabled = false;
+            btn.textContent = '🔁 재시작';
+        } else {
+            btn.disabled = true;
+            btn.textContent = `재시작 요청됨 (${this._restartVotes.size}/${total})`;
+        }
+    },
+
+    // 전원이 재시작에 동의하면 호스트가 새 목표 시각을 broadcast('restart_start')로 전파하고
+    // 대기실 화면을 거치지 않은 채 바로 동시 시작을 진행한다(_startRoom()과 원리는 동일).
+    async _maybeStartRestart() {
+        const total = this._resultTotal || ((Game.state._multiplayerOpponents?.length || 0) + 1);
+        if (this._restartVotes.size < total) return;
+        if (!this._isHost || !this._room || this._restarting) return;
+        this._restarting = true;
+
+        const ok = await this._preloadChart(); // 이미 캐시돼 있으면 즉시 true로 resolve됨
+        if (!ok) {
+            this._restarting = false;
+            this._restartVotes.delete(this._userId);
+            this._restartRequested = false;
+            this._updateRestartButton();
+            this._showMsg('채보를 다시 불러오지 못해 재시작할 수 없습니다.');
             return;
         }
 
-        await MultiplayerRealtime.send('rematch', {}).catch(() => {});
-        await this._afterRematchReset();
+        const LEAD_MS = 4500;
+        const hostStartTime = performance.now() + LEAD_MS;
+        await MultiplayerRooms.updateRoomStatus(this._room.id, 'countdown');
+        await MultiplayerRealtime.send('restart_start', { hostStartTime }).catch(() => {});
+        this._beginInstantRestart(hostStartTime);
     },
 
-    // 호스트가 아닌 클라이언트가 'rematch' broadcast를 받았을 때(broadcast self:false라
-    // 호스트 자신은 이 핸들러를 타지 않음 — 호스트는 rematch()에서 직접 처리).
-    _onRematchBroadcast() {
-        if (this._isHost || !this._room) return;
-        this._afterRematchReset();
+    // broadcast('self:false')라 호스트는 자기 자신의 'restart_start' 이벤트를 받지 못한다 —
+    // 참가자 쪽에서만 이 핸들러로 들어온다.
+    _onRestartStartBroadcast(payload) {
+        if (this._isHost || !this._room || this._restarting) return;
+        this._restarting = true;
+        const targetLocalTime = MultiplayerRealtime.toLocalTime(payload.hostStartTime);
+        this._beginInstantRestart(targetLocalTime);
     },
 
-    // 재도전 진입 공통 처리 — 결과 화면 정리 + 게임 시작 전 대기실 상태로 복귀.
-    async _afterRematchReset() {
+    // 결과 화면에서 바로 재시작 — 대기실을 거치지 않는다는 점만 빼면 _beginSyncedStart와 동일하다.
+    // 이전 판이 끝난 뒤에도 _starting이 true로 남아있으므로 여기서 직접 풀어준다.
+    _beginInstantRestart(targetPerfTime) {
+        this._starting = false;
+        this._restartVotes = new Set();
+        this._restartRequested = false;
+        this._beginSyncedStart(targetPerfTime);
+    },
+
+    // 방으로 돌아가기 진입 공통 처리 — 결과 화면 정리 + 게임 시작 전 대기실 상태로 복귀.
+    async _afterReturnToRoom() {
         Game._teardownMultiplayerFinish(); // 내부에서 UI.hideMultiplayerResultCompare()까지 정리됨
+        this._restartVotes = new Set();
+        this._restartRequested = false;
+        this._restarting = false;
         this._room.status = 'waiting';
         this._room.started_at = null;
         this._starting = false;
@@ -650,6 +721,10 @@ const MultiplayerLobby = {
         this._preload = null;
         this._preloadPromise = null;
         this._starting = false;
+        this._restartVotes = new Set();
+        this._restartRequested = false;
+        this._restarting = false;
+        this._resultTotal = 0;
         this._renderMenu();
     },
 };

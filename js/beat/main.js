@@ -266,21 +266,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('give-up-btn').addEventListener('click', () => Game.end());
         document.getElementById('back-to-menu-btn').addEventListener('click', () => {
+            // 싱글/온라인 플레이 전용 — 멀티플레이 결과 화면은 이 버튼 자체가 숨겨지고
+            // 대신 mp-restart-btn/mp-return-room-btn을 쓴다.
             DOM.lanesContainer.innerHTML = '';
             resetPlayingScreenUI();
             const wasOnline  = !!Game.state._onlineChartId;
             const wasRandom  = Game.state.settings.mode === 'random';
-            const wasMultiplayer = !!Game.state._multiplayerRoomId;
             Game.state._onlineChartId = null;
             Game.state.gameState = 'menu';
-            if (wasMultiplayer) {
-                // finish 리스너/결과 비교 상태 정리 후 대기실로 돌아간다.
-                // (예전엔 MultiplayerLobby.show()를 불러 방 자체를 나가버렸는데, 방 row는
-                //  게임이 끝나도 안 지워지므로 그럴 필요가 없다 — 코드/대기실 화면 유지)
-                Game._teardownMultiplayerFinish();
-                MultiplayerLobby.returnToWaitingRoom();
-                return;
-            }
             if (wasOnline) {
                 Online.show('browse');
             } else if (wasRandom) {
@@ -289,7 +282,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 UI.showScreen('menu');
             }
         });
-        document.getElementById('mp-rematch-btn')?.addEventListener('click', () => MultiplayerLobby.rematch());
+
+        // 멀티플레이 전용 결과 화면 버튼 — 재시작(전원 동의 시 방을 거치지 않고 즉시 재시작) /
+        // 방으로 돌아가기(대기실로 복귀, 내 준비 상태 해제).
+        document.getElementById('mp-restart-btn')?.addEventListener('click', () => MultiplayerLobby.requestRestart());
+        document.getElementById('mp-return-room-btn')?.addEventListener('click', () => {
+            DOM.lanesContainer.innerHTML = '';
+            resetPlayingScreenUI();
+            Game.state._onlineChartId = null;
+            Game.state.gameState = 'menu';
+            MultiplayerLobby.returnToWaitingRoom();
+        });
 
         // 온라인 라이브러리 버튼
         document.getElementById('online-btn').addEventListener('click', () => {

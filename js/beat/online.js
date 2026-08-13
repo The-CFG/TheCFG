@@ -822,9 +822,10 @@ async function submitOnlineScore() {
         resultEl.className = 'text-sm text-gray-400 mt-2';
     }
 
-    // "리더보드 보기" 버튼 표시
+    // "리더보드 보기" 버튼 표시 — 멀티플레이 결과 화면에서는 전용 버튼(재시작/방으로 돌아가기)을
+    // 대신 쓰므로 표시하지 않는다.
     const lbBtn = document.getElementById('result-leaderboard-btn');
-    if (lbBtn) {
+    if (lbBtn && !Game.state._multiplayerRoomId) {
         lbBtn.classList.remove('hidden');
         // 중복 리스너 방지 — 새 노드로 교체
         const fresh = lbBtn.cloneNode(true);
