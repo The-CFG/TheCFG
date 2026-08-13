@@ -18,6 +18,25 @@
     border-color: currentColor;
 }
 
+/* [추가] 지난 커밋에서 빠졌던 부분.
+   - html에 line-height:1.5를 고정하지 않으면 한글 폴백 폰트의
+     브라우저 기본 line-height(보통 1.5보다 큼)가 그대로 적용돼
+     버튼/리스트 한 줄 한 줄이 다 같이 늘어져 보인다.
+   - body의 기본 margin(8px)을 지우지 않으면 w-screen/h-screen +
+     items-center/justify-center 조합에서 그 여백만큼 #app-shell이
+     화면보다 작게 떠서, game-area가 화면에 꽉 안 차고 사방에
+     레터박스가 생긴다. */
+html {
+    line-height: 1.5;
+    -webkit-text-size-adjust: 100%;
+    tab-size: 4;
+}
+
+body {
+    margin: 0;
+    line-height: inherit;
+}
+
 a {
     color: inherit;
     text-decoration: inherit;
