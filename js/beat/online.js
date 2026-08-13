@@ -135,7 +135,7 @@ const Online = {
             <button id="online-search-btn" class="px-3 py-2 bg-teal-600 hover:bg-teal-500 rounded-lg text-sm">검색</button>
         </div>
         <div id="browse-list" class="space-y-2">${cards}</div>
-        ${s.hasMore ? `<button id="browse-more-btn" class="w-full mt-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm">더 보기</button>` : ''}
+        ${s.hasMore ? `<button id="browse-more-btn" class="w-full mt-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm" style="margin-bottom: var(--safe-bottom, 80px);">더 보기</button>` : ''}
         `);
 
         document.getElementById('online-search-btn').addEventListener('click', () => {
