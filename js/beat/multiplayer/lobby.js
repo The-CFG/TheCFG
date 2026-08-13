@@ -275,6 +275,7 @@ const MultiplayerLobby = {
         MultiplayerRealtime.on('preload_failed', payload => this._onPeerPreloadFailed(payload));
         MultiplayerRealtime.on('kicked', payload => this._onKicked(payload));
         MultiplayerRealtime.on('rematch', () => this._onRematchBroadcast());
+        MultiplayerRealtime.on('max_players_updated', payload => this._onMaxPlayersUpdated(payload));
 
         // 호스트 기준 시간 오프셋 추정 — "시작" 버튼을 누르기 한참 전부터 미리 해둬야
         // 실제 시작 시점엔 이미 값이 준비돼 있다(참가자는 ping 왕복에 ~1초 걸림).
@@ -362,6 +363,13 @@ const MultiplayerLobby = {
         this._leaveRoom();
     },
 
+    // 호스트가 정원을 바꿨을 때(broadcast self:false라 호스트 자신은 안 받음).
+    _onMaxPlayersUpdated(payload) {
+        if (this._isHost || !this._room) return;
+        this._room.max_players = payload.maxPlayers;
+        this._renderWaiting();
+    },
+
     _renderWaiting() {
         const room = this._room;
         const chart = this._chart;
@@ -404,7 +412,13 @@ const MultiplayerLobby = {
                 <button id="mp-copy-code-btn" class="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs flex-shrink-0 transition">복사</button>
             </div>
         </div>
-        <h3 class="text-sm font-semibold text-gray-300 mb-2">플레이어 (${this._players.length}/${room.max_players || 6}명)</h3>
+        <div class="flex items-center justify-between mb-2">
+            <h3 class="text-sm font-semibold text-gray-300">플레이어 (${this._players.length}/${room.max_players || 6}명)</h3>
+            ${this._isHost ? `
+            <select id="mp-max-players-select" class="bg-gray-700 text-white text-xs rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-teal-500">
+                ${[2, 3, 4, 5, 6, 7, 8].map(n => `<option value="${n}" ${n === (room.max_players || 6) ? 'selected' : ''}>정원 ${n}명</option>`).join('')}
+            </select>` : ''}
+        </div>
         <div class="space-y-1.5 mb-4">${rows || '<p class="text-gray-500 text-xs text-center py-4">불러오는 중…</p>'}</div>
         <button id="mp-ready-btn" class="w-full py-3 mb-3 rounded-lg font-bold transition ${selfReady ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-teal-600 hover:bg-teal-500 text-white'}">
             ${selfReady ? '준비 취소' : '✓ 준비 완료'}
@@ -425,6 +439,25 @@ const MultiplayerLobby = {
                 btn.textContent = '복사됨';
                 setTimeout(() => { if (btn) btn.textContent = '복사'; }, 1200);
             }).catch(() => {});
+        });
+        document.getElementById('mp-max-players-select')?.addEventListener('change', async (e) => {
+            const next = parseInt(e.target.value, 10);
+            if (next < this._players.length) {
+                this._showMsg(`현재 인원(${this._players.length}명)보다 작게 설정할 수 없습니다.`);
+                e.target.value = String(room.max_players || 6);
+                return;
+            }
+            e.target.disabled = true;
+            const { error } = await MultiplayerRooms.setMaxPlayers(this._room.id, next);
+            if (error) {
+                this._showMsg('정원 변경에 실패했습니다: ' + error.message);
+                e.target.value = String(room.max_players || 6);
+                e.target.disabled = false;
+                return;
+            }
+            this._room.max_players = next;
+            await MultiplayerRealtime.send('max_players_updated', { maxPlayers: next }).catch(() => {});
+            this._renderWaiting();
         });
         document.getElementById('mp-ready-btn').addEventListener('click', () => this._toggleReady(!selfReady));
         document.getElementById('mp-start-btn')?.addEventListener('click', () => this._startRoom());

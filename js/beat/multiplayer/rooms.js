@@ -115,6 +115,15 @@ const MultiplayerRooms = {
         return { error };
     },
 
+    // 호스트 전용: 방 정원 변경.
+    async setMaxPlayers(roomId, maxPlayers) {
+        const { error } = await _supabase
+            .from('beat_rooms')
+            .update({ max_players: maxPlayers })
+            .eq('id', roomId);
+        return { error };
+    },
+
     // 호스트 전용: 같은 멤버로 재도전 — 방을 waiting으로 되돌리고 전원의 ready/최종 결과를 초기화한다.
     async resetForRematch(roomId) {
         const { error: statusErr } = await _supabase
