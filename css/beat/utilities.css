@@ -13,6 +13,7 @@
 
 
 /* ══════════════ 1. Display / Flex / Grid ══════════════ */
+.block        { display: block; }
 .flex         { display: flex; }
 .inline-flex  { display: inline-flex; }
 .inline-block { display: inline-block; }
@@ -28,6 +29,8 @@
 .items-start  { align-items: flex-start; }
 .items-end    { align-items: flex-end; }
 .self-center  { align-self: center; }
+.self-start   { align-self: flex-start; }
+.self-stretch { align-self: stretch; }
 
 .justify-center  { justify-content: center; }
 .justify-between { justify-content: space-between; }
@@ -44,6 +47,7 @@
 .absolute { position: absolute; }
 .fixed    { position: fixed; }
 .inset-0  { top: 0; right: 0; bottom: 0; left: 0; }
+.right-0  { right: 0; }
 .z-50     { z-index: 50; }
 
 
@@ -60,6 +64,8 @@
 .w-16 { width: 4rem; }
 .w-20 { width: 5rem; }
 .w-24 { width: 6rem; }
+.w-28 { width: 7rem; }
+.w-56 { width: 14rem; }
 
 .h-2  { height: 0.5rem; }
 .h-5  { height: 1.25rem; }
@@ -117,9 +123,11 @@
 
 .ml-1 { margin-left: 0.25rem; }
 .ml-2 { margin-left: 0.5rem; }
+.-ml-1 { margin-left: -0.25rem; }
 .-ml-2 { margin-left: -0.5rem; }
 .mr-2 { margin-right: 0.5rem; }
 .mr-3 { margin-right: 0.75rem; }
+.my-2 { margin-top: 0.5rem; margin-bottom: 0.5rem; }
 
 .mt-0\.5 { margin-top: 0.125rem; }
 .mt-1  { margin-top: 0.25rem; }
@@ -213,11 +221,19 @@
 }
 .animate-pulse { animation: tb-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
 
+.opacity-50 { opacity: 0.5; }
+.shadow-xl { box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1); }
+
+/* 정적 ring (드래그 하이라이트 등, :focus 상태와 무관하게 classList로 직접 토글) */
+.ring-2 { box-shadow: 0 0 0 2px var(--tb-ring-color, var(--tb-blue-500)); }
+.ring-teal-500 { --tb-ring-color: var(--tb-teal-500); }
+
 
 /* ══════════════ 9. Interactivity / 상태 ══════════════ */
 .cursor-pointer     { cursor: pointer; }
 .cursor-default     { cursor: default; }
 .cursor-not-allowed { cursor: not-allowed; }
+.cursor-grab        { cursor: grab; }
 
 .pointer-events-none { pointer-events: none; }
 .touch-none { touch-action: none; }
@@ -237,6 +253,7 @@
 .focus\:ring-teal-500:focus { --tb-ring-color: var(--tb-teal-500); }
 
 .hover\:text-white:hover    { color: #ffffff; }
+.hover\:text-gray-300:hover { color: var(--tb-gray-300); }
 .hover\:text-red-300:hover  { color: var(--tb-red-300); }
 
 
@@ -266,7 +283,10 @@
 .bg-yellow-900\/40 { background-color: rgb(113 63 18 / 40%); }
 
 .bg-purple-500 { background-color: var(--tb-purple-500); }
+.bg-purple-600 { background-color: var(--tb-purple-600); }
 .bg-purple-700 { background-color: var(--tb-purple-700); }
+
+.bg-pink-700 { background-color: var(--tb-pink-700); }
 
 .bg-teal-600 { background-color: var(--tb-teal-600); }
 .bg-teal-700 { background-color: var(--tb-teal-700); }
@@ -296,7 +316,10 @@
 .hover\:bg-yellow-500:hover { background-color: var(--tb-yellow-500); }
 
 .hover\:bg-purple-400:hover { background-color: var(--tb-purple-400); }
+.hover\:bg-purple-500:hover { background-color: var(--tb-purple-500); }
 .hover\:bg-purple-600:hover { background-color: var(--tb-purple-600); }
+
+.hover\:bg-pink-600:hover { background-color: var(--tb-pink-600); }
 
 .hover\:bg-teal-500:hover { background-color: var(--tb-teal-500); }
 .hover\:bg-teal-600:hover { background-color: var(--tb-teal-600); }
@@ -310,11 +333,13 @@
 .text-gray-500 { color: var(--tb-gray-500); }
 .text-gray-600 { color: var(--tb-gray-600); }
 
+.text-blue-400  { color: var(--tb-blue-400); }
 .text-blue-500  { color: var(--tb-blue-500); }
 .text-green-400 { color: var(--tb-green-400); }
 .text-red-400   { color: var(--tb-red-400); }
 
 .text-yellow-200 { color: var(--tb-yellow-200); }
+.text-yellow-300 { color: var(--tb-yellow-300); }
 .text-yellow-400 { color: var(--tb-yellow-400); }
 
 .text-teal-200 { color: var(--tb-teal-200); }
@@ -325,6 +350,8 @@
 /* ══════════════ 13. 색상 — 테두리 (border-*) ══════════════ */
 .border-gray-600 { border-color: var(--tb-gray-600); }
 .border-gray-700 { border-color: var(--tb-gray-700); }
+.border-blue-500 { border-color: var(--tb-blue-500); }
+.border-red-700  { border-color: var(--tb-red-700); }
 .border-teal-600 { border-color: var(--tb-teal-600); }
 .border-teal-700 { border-color: var(--tb-teal-700); }
 .border-yellow-700 { border-color: var(--tb-yellow-700); }
