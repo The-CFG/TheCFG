@@ -18,6 +18,8 @@ const MultiplayerLobby = {
     _preload: null,          // { chartData, audioUrl } — 대기실 진입 시 미리 받아둠
     _preloadPromise: null,
     _starting: false,        // 동시 시작 진행 중 중복 트리거 방지
+    _queueDetails: [],       // room.chart_queue(id 배열) 각각의 표시용 요약(난이도 라벨/키수/산정 난이도)
+    _chartAdvancePromise: null, // 참가자 쪽에서 'chart_advanced' 수신 후 다음 채보 상세를 받아오는 중인 promise
 
     // ── 결과 화면 "재시작" 투표(관전형 — 서버 검증 없음, 클라이언트끼리 broadcast로만 집계) ──
     _restartVotes: new Set(),  // 재시작에 동의한 user_id 집합
@@ -39,6 +41,8 @@ const MultiplayerLobby = {
         this._restartRequested = false;
         this._restarting = false;
         this._resultTotal = 0;
+        this._queueDetails = [];
+        this._chartAdvancePromise = null;
         GameBackground.clear();
         UI.showScreen('multiplayer');
         this._renderShell();
@@ -77,7 +81,10 @@ const MultiplayerLobby = {
 
     _handleBack() {
         if (this._starting) return; // 동시 시작 진행 중에는 뒤로가기 무시
-        if (this._view === 'waiting') {
+        if (this._view === 'add-difficulty') {
+            this._view = 'waiting';
+            this._renderWaiting();
+        } else if (this._view === 'waiting') {
             this._leaveRoom();
         } else if (this._view === 'join') {
             this._renderMenu();
@@ -235,6 +242,7 @@ const MultiplayerLobby = {
         // DB에서 한 번 초기 스냅샷을 가져와 닉네임/준비 상태를 seed한다 —
         // 이후 실시간 갱신은 Presence sync가 담당한다.
         await this._refreshPlayers();
+        await this._refreshQueueDetails();
         this._renderWaiting();
 
         // 채보/오디오는 미리 받아둔다 — "시작" 버튼을 눌렀을 때 다운로드/디코딩 대기 없이
@@ -360,6 +368,17 @@ const MultiplayerLobby = {
         if (!this._room) return;
         const { data } = await MultiplayerRooms.listPlayers(this._room.id);
         this._players = data || [];
+    },
+
+    // room.chart_queue(id 배열)에 대응하는 표시용 요약(난이도 라벨/키수/산정 난이도)을 받아온다.
+    // 큐 순서를 그대로 유지하기 위해 반환된 결과를 id 순서대로 다시 정렬한다.
+    async _refreshQueueDetails() {
+        const ids = Array.isArray(this._room?.chart_queue) ? this._room.chart_queue : [];
+        if (ids.length === 0) { this._queueDetails = []; return; }
+        const { data } = await CloudBrowse.getChartsByIds(ids);
+        const byId = {};
+        (data || []).forEach(c => { byId[c.id] = c; });
+        this._queueDetails = ids.map(id => byId[id]).filter(Boolean);
     },
 
     // 같은 방의 누군가가 이번 판 프리로드에 실패했을 때 — 대기실/관전 중인 화면에 알려준다.

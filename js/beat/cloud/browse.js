@@ -283,4 +283,15 @@ const CloudBrowse = {
             error: null,
         };
     },
+
+    // 난이도 id 목록 → 표시용 요약 정보(라벨/키수/산정 난이도). 멀티플레이 방의
+    // "다음에 플레이할 난이도" 목록(chart_queue)을 그릴 때처럼 id만 갖고 있을 때 쓴다.
+    async getChartsByIds(chartIds) {
+        if (!chartIds || chartIds.length === 0) return { data: [], error: null };
+        const { data, error } = await _supabase
+            .from('beat_charts')
+            .select('id, song_id, difficulty_label, lane_count, difficulty_score')
+            .in('id', chartIds);
+        return { data: data || [], error };
+    },
 };

@@ -152,7 +152,7 @@ const MultiplayerRooms = {
     async getRoom(roomId) {
         const { data, error } = await _supabase
             .from('beat_rooms')
-            .select('id, chart_id, host_id, status, started_at, created_at, invite_code, max_players')
+            .select('id, chart_id, chart_queue, host_id, status, started_at, created_at, invite_code, max_players')
             .eq('id', roomId)
             .single();
         return { data, error };
@@ -161,8 +161,51 @@ const MultiplayerRooms = {
     async getRoomByInviteCode(code) {
         const { data, error } = await _supabase
             .from('beat_rooms')
-            .select('id, chart_id, host_id, status, started_at, created_at, invite_code, max_players')
+            .select('id, chart_id, chart_queue, host_id, status, started_at, created_at, invite_code, max_players')
             .eq('invite_code', (code || '').toUpperCase())
+            .single();
+        return { data, error };
+    },
+
+    // 호스트 전용: 같은 노래의 다른 난이도를 방의 "다음에 플레이할 목록"(chart_queue)에 추가.
+    // 이미 현재 채보이거나 큐에 있으면 조용히 무시(중복 추가 방지). RLS는 beat_rooms의
+    // 기존 host-only UPDATE 정책을 그대로 타므로 host가 아니면 이 호출 자체가 실패한다.
+    async addChartToQueue(roomId, chartId) {
+        const { data: room, error: roomErr } = await this.getRoom(roomId);
+        if (roomErr) return { error: roomErr };
+
+        const currentQueue = Array.isArray(room.chart_queue) ? room.chart_queue : [];
+        if (room.chart_id === chartId || currentQueue.includes(chartId)) {
+            return { data: room, error: null }; // 이미 목록에 있음
+        }
+
+        const nextQueue = [...currentQueue, chartId];
+        const { data, error } = await _supabase
+            .from('beat_rooms')
+            .update({ chart_queue: nextQueue })
+            .eq('id', roomId)
+            .select('id, chart_id, chart_queue')
+            .single();
+        return { data, error };
+    },
+
+    // 호스트 전용: 방금 플레이가 끝난(현재) 채보를 목록에서 완전히 지우고, 큐의 맨 앞
+    // 난이도를 다음 "현재 채보"로 승격한다. 큐가 비어있으면(=남은 유일한 난이도였다는 뜻)
+    // 아무 것도 바꾸지 않고 { data: null }을 반환한다 — 호출 측(lobby.js)이 기존 재시작
+    // 흐름(같은 채보로 다시 시작)으로 처리한다.
+    async advanceChartQueue(roomId) {
+        const { data: room, error: roomErr } = await this.getRoom(roomId);
+        if (roomErr) return { error: roomErr };
+
+        const queue = Array.isArray(room.chart_queue) ? room.chart_queue : [];
+        if (queue.length === 0) return { data: null, error: null };
+
+        const [nextChartId, ...rest] = queue;
+        const { data, error } = await _supabase
+            .from('beat_rooms')
+            .update({ chart_id: nextChartId, chart_queue: rest })
+            .eq('id', roomId)
+            .select('id, chart_id, chart_queue')
             .single();
         return { data, error };
     },
