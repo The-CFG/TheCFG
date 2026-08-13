@@ -274,11 +274,11 @@ document.addEventListener('DOMContentLoaded', () => {
             Game.state._onlineChartId = null;
             Game.state.gameState = 'menu';
             if (wasMultiplayer) {
-                // finish 리스너/결과 비교 상태 정리 후, 방 realtime 채널을 끊고 멀티플레이
-                // 메뉴(방 만들기/코드로 참가)로 돌아간다. beat_room_players의 final_score 등은
-                // 그대로 남겨둔다 — MultiplayerLobby.show()는 행을 지우지 않고 채널만 끊는다.
+                // finish 리스너/결과 비교 상태 정리 후 대기실로 돌아간다.
+                // (예전엔 MultiplayerLobby.show()를 불러 방 자체를 나가버렸는데, 방 row는
+                //  게임이 끝나도 안 지워지므로 그럴 필요가 없다 — 코드/대기실 화면 유지)
                 Game._teardownMultiplayerFinish();
-                MultiplayerLobby.show();
+                MultiplayerLobby.returnToWaitingRoom();
                 return;
             }
             if (wasOnline) {

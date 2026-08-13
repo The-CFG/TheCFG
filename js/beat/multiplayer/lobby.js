@@ -572,6 +572,16 @@ const MultiplayerLobby = {
         });
     },
 
+    // 결과 화면에서 "메뉴로"(뒤로가기)를 눌렀을 때 쓰는 진입점.
+    // show()와 달리 방을 나가는 게 아니라 대기실로 되돌아간다 — 방 row는 게임이 끝나도
+    // 지워지지 않으므로(status만 finished), 굳이 나갈 필요가 없다.
+    // 호스트의 rematch()와 달리 DB는 건드리지 않는다: 다른 사람의 ready 상태를 내가
+    // 임의로 초기화하면 안 되므로, 그건 여전히 호스트의 "재도전" 버튼 몫이다.
+    async returnToWaitingRoom() {
+        if (!this._room) { this.show(); return; }
+        await this._afterRematchReset();
+    },
+
     // 결과 화면에서 호스트가 "재도전"을 눌렀을 때. DB를 초기화하고 다른 클라이언트에게 알린 뒤
     // 자신도 대기실로 복귀한다.
     async rematch() {
