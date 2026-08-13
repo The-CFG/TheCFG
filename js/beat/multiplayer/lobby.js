@@ -29,6 +29,7 @@ const MultiplayerLobby = {
         this._preload = null;
         this._preloadPromise = null;
         this._starting = false;
+        GameBackground.clear();
         UI.showScreen('multiplayer');
         this._renderShell();
         this._renderMenu();
@@ -217,6 +218,7 @@ const MultiplayerLobby = {
     async _enterWaitingRoom() {
         this._view = 'waiting';
         this._showMsg('');
+        GameBackground.set(CloudCharts.getCoverUrl(this._chart.cover_storage_path));
         // DB에서 한 번 초기 스냅샷을 가져와 닉네임/준비 상태를 seed한다 —
         // 이후 실시간 갱신은 Presence sync가 담당한다.
         await this._refreshPlayers();
@@ -578,6 +580,7 @@ const MultiplayerLobby = {
 
     async _leaveRoom() {
         this._teardownRealtime();
+        GameBackground.clear();
         const roomId = this._room?.id;
         const wasHost = this._isHost;
 
