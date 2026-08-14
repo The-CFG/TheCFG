@@ -17,6 +17,7 @@ const MultiplayerLobby = {
     _userId: null,
     _preload: null,          // { chartData, audioUrl } — 대기실 진입 시 미리 받아둠
     _preloadPromise: null,
+    _preloading: false,      // 채보/오디오 다운로드 중 여부 — true면 준비/시작 버튼을 막는다
     _starting: false,        // 동시 시작 진행 중 중복 트리거 방지
     _queueDetails: [],       // room.chart_queue(id 배열) 각각의 표시용 요약(난이도 라벨/키수/산정 난이도)
     _chartAdvancePromise: null, // 참가자 쪽에서 'chart_advanced' 수신 후 다음 채보 상세를 받아오는 중인 promise
@@ -36,6 +37,7 @@ const MultiplayerLobby = {
         this._isHost = false;
         this._preload = null;
         this._preloadPromise = null;
+        this._preloading = false;
         this._starting = false;
         this._restartVotes = new Set();
         this._restartRequested = false;
@@ -257,8 +259,11 @@ const MultiplayerLobby = {
     },
 
     // 채보 데이터 다운로드 + 오디오 디코딩을 미리 시작해둔다. 여러 번 불려도 한 번만 실행됨.
+    // 진행 중에는 _preloading을 켜서 대기실 화면이 준비/시작 버튼을 막고 로딩 표시를 보여주게 한다.
     _preloadChart() {
         if (this._preload || this._preloadPromise) return this._preloadPromise || Promise.resolve(true);
+        this._preloading = true;
+        if (this._view === 'waiting') this._renderWaiting();
         this._preloadPromise = (async () => {
             try {
                 const { data: chartData, error } = await CloudCharts.downloadChartData(this._chart.chart_storage_path);
@@ -274,6 +279,8 @@ const MultiplayerLobby = {
                 return false;
             } finally {
                 this._preloadPromise = null;
+                this._preloading = false;
+                if (this._view === 'waiting') this._renderWaiting();
             }
         })();
         return this._preloadPromise;
@@ -411,7 +418,8 @@ const MultiplayerLobby = {
         const self = this._players.find(p => p.user_id === this._userId);
         const selfReady = !!(self && self.ready);
         const allReady = this._players.length > 0 && this._players.every(p => p.ready);
-        const canStart = this._isHost && this._players.length >= 2 && allReady;
+        const canStart = this._isHost && this._players.length >= 2 && allReady && !this._preloading;
+        const loading = this._preloading;
 
         const rows = this._players.map(p => {
             const isSelf = p.user_id === this._userId;
@@ -439,6 +447,11 @@ const MultiplayerLobby = {
             <p class="font-semibold text-white truncate">${_esc(chart.title)}</p>
             <p class="text-sm text-gray-400 truncate">${_esc(chart.artist || '—')}</p>
             ` : ''}
+            ${loading ? `
+            <div class="flex items-center gap-2 mt-2 text-xs text-teal-300">
+                <span class="inline-block w-4 h-4 border-2 border-teal-400 border-t-transparent rounded-full animate-spin flex-shrink-0"></span>
+                음악과 채보를 불러오는 중…
+            </div>` : ''}
             <div class="flex items-center gap-2 mt-2">
                 <span class="text-xs text-gray-400 flex-shrink-0">초대 코드</span>
                 <code id="mp-room-code" class="flex-1 min-w-0 px-2 py-1 bg-gray-900 rounded text-teal-300 text-sm tracking-widest text-center truncate">${_esc(room.invite_code || room.id)}</code>
@@ -453,13 +466,14 @@ const MultiplayerLobby = {
             </select>` : ''}
         </div>
         <div class="space-y-1.5 mb-4">${rows || '<p class="text-gray-500 text-xs text-center py-4">불러오는 중…</p>'}</div>
-        <button id="mp-ready-btn" class="w-full py-3 mb-3 rounded-lg font-bold transition ${selfReady ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-teal-600 hover:bg-teal-500 text-white'}">
-            ${selfReady ? '준비 취소' : '✓ 준비 완료'}
+        <button id="mp-ready-btn" ${loading ? 'disabled' : ''}
+            class="w-full py-3 mb-3 rounded-lg font-bold transition ${loading ? 'bg-gray-700 text-gray-500 cursor-not-allowed' : (selfReady ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-teal-600 hover:bg-teal-500 text-white')}">
+            ${loading ? '불러오는 중…' : (selfReady ? '준비 취소' : '✓ 준비 완료')}
         </button>
         ${this._isHost ? `
         <button id="mp-start-btn" ${canStart ? '' : 'disabled'}
             class="w-full py-3 rounded-lg font-bold transition ${canStart ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-gray-700 text-gray-500 cursor-not-allowed'}">
-            ▶ 시작${this._players.length < 2 ? ' (2명 이상 필요)' : (allReady ? '' : ' (전원 준비 대기 중)')}
+            ${loading ? '불러오는 중…' : `▶ 시작${this._players.length < 2 ? ' (2명 이상 필요)' : (allReady ? '' : ' (전원 준비 대기 중)')}`}
         </button>` : `
         <p class="text-center text-xs text-gray-500 py-2">호스트가 시작하기를 기다리는 중…</p>`}
         <p class="mt-4 text-xs text-gray-600 text-center">시작하면 화면 좌측 상단에서 상대 점수/콤보를 실시간으로 볼 수 있어요.</p>
@@ -709,6 +723,7 @@ const MultiplayerLobby = {
         this._starting = false;
         this._preload = null;
         this._preloadPromise = null;
+        this._preloading = false;
 
         UI.showScreen('multiplayer');
         await this._enterWaitingRoom();
@@ -739,6 +754,7 @@ const MultiplayerLobby = {
         this._isHost = false;
         this._preload = null;
         this._preloadPromise = null;
+        this._preloading = false;
         this._starting = false;
         this._restartVotes = new Set();
         this._restartRequested = false;
