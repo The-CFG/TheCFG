@@ -26,7 +26,7 @@ function _readErrorFromUrl() {
     return description ? decodeURIComponent(description.replace(/\+/g, ' ')) : '링크가 만료되었거나 이미 사용되었을 수 있어요.';
 }
 
-function _init() {
+async function _init() {
     const errorDetail = _readErrorFromUrl();
     if (errorDetail) {
         const detailEl = document.getElementById('confirm-fail-detail');
@@ -34,8 +34,25 @@ function _init() {
         _showState('confirm-fail');
         return;
     }
-    // 에러 파라미터가 없으면 Supabase 서버 단계의 검증은 이미 통과한 것 — 성공으로 표시.
-    _showState('confirm-ok');
+
+    // 에러 파라미터가 없다면 Supabase 서버 단계의 검증 자체는 통과한 것이지만,
+    // 클라이언트가 URL의 토큰/code를 세션으로 실제 교환(detectSessionInUrl)하는 데는
+    // 약간의 시간이 걸릴 수 있다 — 그 동안 로딩 서클을 보여주고, 세션 확보 여부로 최종 상태를 정한다.
+    _showState('confirm-loading');
+    try {
+        const { data, error } = await _supabase.auth.getSession();
+        if (error || !data?.session) {
+            const detailEl = document.getElementById('confirm-fail-detail');
+            if (detailEl) detailEl.textContent = (error && error.message) || '세션을 확인할 수 없습니다. 다시 시도해주세요.';
+            _showState('confirm-fail');
+            return;
+        }
+        _showState('confirm-ok');
+    } catch (err) {
+        const detailEl = document.getElementById('confirm-fail-detail');
+        if (detailEl) detailEl.textContent = '세션을 확인하는 중 오류가 발생했습니다.';
+        _showState('confirm-fail');
+    }
 }
 
 _init();
