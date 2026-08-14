@@ -358,6 +358,7 @@ const CloudCharts = {
                 note_count: noteCount,
                 note_speed: noteSpeed,
                 difficulty_score: difficultyScore,
+                use_custom_fall_speed: meta.use_custom_fall_speed === true,
                 sort_order: typeof meta.sort_order === 'number' ? meta.sort_order : null,
                 chart_storage_path: chartPath,
                 is_public: true,

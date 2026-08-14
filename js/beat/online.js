@@ -458,6 +458,7 @@ const Online = {
                 ${creatorName ? `<span>제작자: ${creatorName}</span>` : ''}
             </div>
             ${_formatDateLine(c.created_at, c.updated_at) ? `<div class="mt-1 text-xs text-gray-500">${_formatDateLine(c.created_at, c.updated_at)}</div>` : ''}
+            ${c.use_custom_fall_speed ? `<div class="mt-2 px-2 py-1 bg-blue-950 border border-blue-700 rounded text-xs text-blue-300 inline-block">⚡ 이 비트맵은 전용 하강 속도를 사용합니다.</div>` : ''}
         </div>
         <button id="detail-like-btn" data-liked="${like.likedByMe ? '1' : '0'}"
             class="w-full py-2 mb-4 rounded-lg font-semibold transition text-sm

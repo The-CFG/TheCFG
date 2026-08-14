@@ -152,6 +152,7 @@ const Editor = {
             DOM.editor.bpmInput.value = this.state.bpm;
             DOM.editor.snapSelector.value = this.state.snapDivision;
             if (DOM.editor.noteFallSpeedInput) DOM.editor.noteFallSpeedInput.value = this.state.noteSpeed;
+            if (DOM.editor.useCustomFallSpeedToggle) DOM.editor.useCustomFallSpeedToggle.checked = false;
             this.state.previewSeekSec = this.state.song.startOffsetSec || 0;
             DOM.editor.startTimeInput.value = this.state.previewSeekSec;
             if (DOM.editor.timingStartInput) DOM.editor.timingStartInput.value = this.state.song.timingStartSec || 0;

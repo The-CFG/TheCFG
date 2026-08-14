@@ -38,6 +38,15 @@ const Game = {
             laneHighlightOnInput: localStorage.getItem('theBeat_laneHighlightOnInput') !== 'false',
             // 게임플레이 중 우측 메뉴/점수 패널(#ui-area)을 자동으로 접을지 여부. 기본값 false(끔).
             autoHideUiOnPlay: localStorage.getItem('theBeat_autoHideUiOnPlay') === 'true',
+            // 플레이어가 지정한 "기본 하강 속도"를 쓸지 여부. 켜져 있으면 비트맵 자체의 하강 속도
+            // 대신 이 값을 쓴다 — 단, 비트맵이 "이 맵 전용 하강 속도 사용"으로 저장된 경우는 예외
+            // (그 비트맵은 항상 자신의 하강 속도를 유지한다). Game.loadChartNotes()에서 적용.
+            useDefaultFallSpeed: localStorage.getItem('theBeat_useDefaultFallSpeed') === 'true',
+            defaultFallSpeedValue: (() => {
+                const stored = localStorage.getItem('theBeat_defaultFallSpeedValue');
+                const parsed = parseInt(stored, 10);
+                return Number.isNaN(parsed) ? 7 : Math.max(1, Math.min(20, parsed));
+            })(),
             bpm: 120,
             startTimeOffset: 0, // 채보 박자 계산 기준점 (bpm/noteoffset 등 노트 타이밍용)
             songStartOffset: 0, // 실제 오디오 재생을 시작할 지점 (종합 창의 "시작(초)")
@@ -1370,12 +1379,24 @@ const Game = {
             this.state.settings.songStartOffset = 0;
             const chartBPM = chartData.bpm || 120;
             this.state.settings.bpm = chartBPM;
-            // 차트에 저장된 기본 하강 속도(에디터에서 설정)가 있으면 그것을 쓰고,
-            // 없으면(구버전 차트 등) 기존처럼 BPM에서 계산한 값으로 대체한다.
-            const speedSource = (typeof chartData.fallSpeed === 'number' && chartData.fallSpeed > 0)
-                ? chartData.fallSpeed
-                : Math.round(chartBPM / 20);
+            // 하강 속도 결정 우선순위:
+            // 1) 비트맵이 "이 맵 전용 하강 속도 사용"으로 저장되어 있으면 항상 그 값을 쓴다.
+            // 2) 아니고, 플레이어가 "플레이어 기본 하강 속도 지정"을 켜뒀으면 그 값으로 덮어쓴다.
+            // 3) 둘 다 아니면(구버전 차트 등) 기존처럼 차트의 fallSpeed → 없으면 BPM 기반 계산값.
+            const mapHasCustomFallSpeed = !!chartData.useCustomFallSpeed
+                && typeof chartData.fallSpeed === 'number' && chartData.fallSpeed > 0;
+            let speedSource;
+            if (mapHasCustomFallSpeed) {
+                speedSource = chartData.fallSpeed;
+            } else if (this.state.settings.useDefaultFallSpeed) {
+                speedSource = this.state.settings.defaultFallSpeedValue;
+            } else if (typeof chartData.fallSpeed === 'number' && chartData.fallSpeed > 0) {
+                speedSource = chartData.fallSpeed;
+            } else {
+                speedSource = Math.round(chartBPM / 20);
+            }
             this.state.settings.noteSpeed = Math.max(1, Math.min(20, speedSource));
+            this.state.settings.usingMapCustomFallSpeed = mapHasCustomFallSpeed;
 
             // 트리거(구간별 BPM/하강 속도 변경) 로드 — 시간순 정렬 보장
             this.state.triggers = Array.isArray(chartData.triggers)

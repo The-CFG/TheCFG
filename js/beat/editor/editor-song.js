@@ -518,6 +518,7 @@ const EditorSong = {
                     bpm: bm.bpm,
                     startTimeOffset: bm.startTimeOffset,
                     fallSpeed: bm.fallSpeed,
+                    useCustomFallSpeed: bm.useCustomFallSpeed === true,
                     laneCount: bm.laneCount,
                     notes: bm.notes || [],
                     noteSpeed: bm.fallSpeed,
@@ -527,6 +528,7 @@ const EditorSong = {
                     difficulty_label: bm.difficultyLabel,
                     lane_count: bm.laneCount,
                     bpm: bm.bpm,
+                    use_custom_fall_speed: bm.useCustomFallSpeed === true,
                     sort_order: Editor.state.beatmaps.indexOf(bm),
                 };
                 const { data, error } = await CloudCharts.addBeatmapToSong(Editor.state.song.cloudSongId, meta, chartData);
@@ -548,6 +550,7 @@ const EditorSong = {
                         difficulty_label: bm.difficultyLabel,
                         lane_count: bm.laneCount,
                         bpm: bm.bpm,
+                        use_custom_fall_speed: bm.useCustomFallSpeed === true,
                         sort_order: Editor.state.beatmaps.indexOf(bm),
                     };
                     // 편집 화면을 열어 notes/triggers를 갖고 있는 상태(_loaded !== false)일 때만
@@ -556,6 +559,7 @@ const EditorSong = {
                         bpm: bm.bpm,
                         startTimeOffset: bm.startTimeOffset,
                         fallSpeed: bm.fallSpeed,
+                        useCustomFallSpeed: bm.useCustomFallSpeed === true,
                         laneCount: bm.laneCount,
                         notes: bm.notes || [],
                         triggers: bm.triggers || [],

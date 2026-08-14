@@ -12,6 +12,7 @@ Object.assign(Editor, {
             bpm: this.state.bpm,
             startTimeOffset: this.state.song.startOffsetSec,
             fallSpeed: parseFloat(DOM.editor.noteFallSpeedInput?.value) || CONFIG.EDITOR_DEFAULT_SETTINGS.fallSpeed,
+            useCustomFallSpeed: !!DOM.editor.useCustomFallSpeedToggle?.checked,
             laneCount: parseInt(DOM.editor.previewLanesSelector?.value) || 4,
             notes: gameNotes.sort((a, b) => a.time - b.time),
             triggers: this.state.triggers || [],
@@ -42,6 +43,7 @@ Object.assign(Editor, {
                 bpm: this.state.bpm,
                 startTimeOffset: this.state.song.startOffsetSec,
                 fallSpeed: parseFloat(DOM.editor.noteFallSpeedInput?.value) || CONFIG.EDITOR_DEFAULT_SETTINGS.fallSpeed,
+                useCustomFallSpeed: !!DOM.editor.useCustomFallSpeedToggle?.checked,
                 notes: gameNotes.sort((a, b) => a.time - b.time),
                 triggers: this.state.triggers || []
             });
@@ -96,6 +98,9 @@ Object.assign(Editor, {
                     ? chartData.fallSpeed
                     : CONFIG.EDITOR_DEFAULT_SETTINGS.fallSpeed;
             }
+            if (DOM.editor.useCustomFallSpeedToggle) {
+                DOM.editor.useCustomFallSpeedToggle.checked = chartData.useCustomFallSpeed === true;
+            }
             this.state.previewSeekSec = this.state.song.startOffsetSec || 0;
             DOM.editor.startTimeInput.value = this.state.previewSeekSec;
             if (DOM.editor.timingStartInput) DOM.editor.timingStartInput.value = this.state.song.timingStartSec || 0;
@@ -129,6 +134,7 @@ Object.assign(Editor, {
             bpm: CONFIG.EDITOR_DEFAULT_SETTINGS.bpm,
             startTimeOffset: 0,
             fallSpeed: CONFIG.EDITOR_DEFAULT_SETTINGS.fallSpeed,
+            useCustomFallSpeed: false,
             notes: [],
             triggers: [],
             cloudChartId: null,
@@ -177,6 +183,7 @@ Object.assign(Editor, {
         if (data.bpm) bm.bpm = data.bpm;
         if (data.laneCount) bm.laneCount = data.laneCount;
         if (typeof data.fallSpeed === 'number' && data.fallSpeed > 0) bm.fallSpeed = data.fallSpeed;
+        bm.useCustomFallSpeed = data.useCustomFallSpeed === true;
         // 이 난이도를 아직 안 불러온 사이에 종합 창에서 시작 시각(startOffsetSec)이 바뀐 적이
         // 있으면, 그동안 쌓인 델타를 지금 막 받아온 notes/triggers에 한 번에 적용해준다.
         if (bm._pendingOffsetDeltaMs) {
@@ -239,6 +246,9 @@ Object.assign(Editor, {
                     ? bm.fallSpeed
                     : CONFIG.EDITOR_DEFAULT_SETTINGS.fallSpeed;
             }
+            if (DOM.editor.useCustomFallSpeedToggle) {
+                DOM.editor.useCustomFallSpeedToggle.checked = bm.useCustomFallSpeed === true;
+            }
             this.state.previewSeekSec = this.state.song.startOffsetSec || 0;
             DOM.editor.startTimeInput.value = this.state.previewSeekSec;
             if (DOM.editor.timingStartInput) DOM.editor.timingStartInput.value = this.state.song.timingStartSec || 0;
@@ -279,6 +289,7 @@ Object.assign(Editor, {
             bm.laneCount = parseInt(DOM.editor.previewLanesSelector?.value) || 4;
             bm.bpm = this.state.bpm;
             bm.fallSpeed = parseFloat(DOM.editor.noteFallSpeedInput?.value) || CONFIG.EDITOR_DEFAULT_SETTINGS.fallSpeed;
+            bm.useCustomFallSpeed = !!DOM.editor.useCustomFallSpeedToggle?.checked;
             // startTimeOffset은 더 이상 비트맵별 독립값이 아니라 song.startOffsetSec의 미러다.
             // (저장 포맷/game.js 하위호환을 위해 필드 자체는 유지하되 항상 같은 값으로 채운다.)
             bm.startTimeOffset = this.state.song.startOffsetSec;

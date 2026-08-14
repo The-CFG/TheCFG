@@ -367,6 +367,18 @@
                                         <label for="auto-hide-ui-toggle" data-i18n="auto_hide_ui_on_play">게임플레이 시 우측 화면 숨기기</label>
                                         <input id="auto-hide-ui-toggle" type="checkbox" class="h-5 w-5 bg-gray-700 rounded border-gray-600 text-blue-500 focus:ring-blue-500">
                                     </div>
+                                    <div class="flex items-center justify-between text-gray-300">
+                                        <label for="player-default-fallspeed-toggle" data-i18n="use_default_fall_speed">플레이어 기본 하강 속도 지정</label>
+                                        <input id="player-default-fallspeed-toggle" type="checkbox" class="h-5 w-5 bg-gray-700 rounded border-gray-600 text-blue-500 focus:ring-blue-500">
+                                    </div>
+                                    <div id="player-default-fallspeed-container" class="hidden">
+                                        <div class="flex justify-between items-center text-gray-300 mb-2">
+                                            <label for="player-default-fallspeed-slider" data-i18n="default_fall_speed_value">기본 하강 속도</label>
+                                            <span id="player-default-fallspeed-value" class="font-mono">7</span>
+                                        </div>
+                                        <input id="player-default-fallspeed-slider" type="range" min="1" max="20" value="7" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                        <p class="text-xs text-gray-500 mt-1">비트맵에 "이 맵 전용 하강 속도"가 지정되어 있지 않은 경우에만 적용됩니다.</p>
+                                    </div>
                                 </div>
                             </div>
                             <div id="tab-content-appearance" class="tab-content hidden space-y-6">
@@ -1261,6 +1273,10 @@
                                 <div class="flex items-center space-x-2">
                                     <label for="editor-note-fall-speed" class="text-sm">하강속도:</label>
                                     <input type="number" id="editor-note-fall-speed" value="7" min="1" max="20" class="w-20 p-1 bg-gray-700 rounded text-sm">
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <label for="editor-use-custom-fallspeed-toggle" class="text-sm" title="켜면 플레이어의 '플레이어 기본 하강 속도' 설정과 상관없이 이 맵은 항상 위에서 지정한 하강속도로 플레이됩니다.">이 맵 전용 하강 속도 사용</label>
+                                    <input type="checkbox" id="editor-use-custom-fallspeed-toggle" class="h-4 w-4 bg-gray-700 rounded border-gray-600 text-blue-500 focus:ring-blue-500">
                                 </div>
                                 <div class="flex items-center space-x-2">
                                     <label for="editor-snap-selector" class="text-sm">분할:</label>

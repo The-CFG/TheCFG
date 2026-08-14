@@ -651,6 +651,30 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
+        if (DOM.settings.defaultFallSpeedToggle) {
+            DOM.settings.defaultFallSpeedToggle.addEventListener('change', (e) => {
+                const enabled = e.target.checked;
+                Game.state.settings.useDefaultFallSpeed = enabled;
+                localStorage.setItem('theBeat_useDefaultFallSpeed', enabled ? 'true' : 'false');
+                if (DOM.settings.defaultFallSpeedContainer) {
+                    DOM.settings.defaultFallSpeedContainer.classList.toggle('hidden', !enabled);
+                }
+            });
+        }
+
+        if (DOM.settings.defaultFallSpeedSlider) {
+            DOM.settings.defaultFallSpeedSlider.addEventListener('input', (e) => {
+                const value = parseInt(e.target.value);
+                Game.state.settings.defaultFallSpeedValue = value;
+                if (DOM.settings.defaultFallSpeedValue) {
+                    DOM.settings.defaultFallSpeedValue.textContent = value;
+                }
+            });
+            DOM.settings.defaultFallSpeedSlider.addEventListener('change', () => {
+                localStorage.setItem('theBeat_defaultFallSpeedValue', Game.state.settings.defaultFallSpeedValue);
+            });
+        }
+
         // 키 상자는 레인 수 그룹에 따라 동적으로 생성되므로 이벤트 위임으로 처리
         DOM.settings.controls.rowsContainer.addEventListener('click', (e) => {
             const box = e.target.closest('.keybind-box');
@@ -1129,6 +1153,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (DOM.settings.autoHideUiToggle) {
             DOM.settings.autoHideUiToggle.checked = Game.state.settings.autoHideUiOnPlay === true;
+        }
+        if (DOM.settings.defaultFallSpeedToggle) {
+            const enabled = Game.state.settings.useDefaultFallSpeed === true;
+            DOM.settings.defaultFallSpeedToggle.checked = enabled;
+            if (DOM.settings.defaultFallSpeedContainer) {
+                DOM.settings.defaultFallSpeedContainer.classList.toggle('hidden', !enabled);
+            }
+        }
+        if (DOM.settings.defaultFallSpeedSlider) {
+            const speed = Game.state.settings.defaultFallSpeedValue;
+            DOM.settings.defaultFallSpeedSlider.value = speed;
+            if (DOM.settings.defaultFallSpeedValue) {
+                DOM.settings.defaultFallSpeedValue.textContent = speed;
+            }
         }
     }
 

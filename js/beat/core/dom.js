@@ -90,6 +90,7 @@ const DOM = {
         previewLanesSelector: document.getElementById('editor-preview-lanes'),
         bpmInput: document.getElementById('bpm-input'),
         noteFallSpeedInput: document.getElementById('editor-note-fall-speed'),
+        useCustomFallSpeedToggle: document.getElementById('editor-use-custom-fallspeed-toggle'),
         snapSelector: document.getElementById('editor-snap-selector'),
         addMeasureBtn: document.getElementById('editor-add-measure-btn'),
         removeMeasureBtn: document.getElementById('editor-remove-measure-btn'),
@@ -167,6 +168,10 @@ const DOM = {
         laneBackgroundOpacityValue: document.getElementById('lane-background-opacity-value'),
         laneHighlightToggle: document.getElementById('lane-highlight-toggle'),
         autoHideUiToggle: document.getElementById('auto-hide-ui-toggle'),
+        defaultFallSpeedToggle: document.getElementById('player-default-fallspeed-toggle'),
+        defaultFallSpeedContainer: document.getElementById('player-default-fallspeed-container'),
+        defaultFallSpeedSlider: document.getElementById('player-default-fallspeed-slider'),
+        defaultFallSpeedValue: document.getElementById('player-default-fallspeed-value'),
         debugModeToggle: document.getElementById('debug-mode-toggle'),
         controls: {
             lanesSelector: document.getElementById('keybind-lanes-selector'),

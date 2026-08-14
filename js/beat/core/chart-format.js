@@ -38,6 +38,9 @@ const ChartFormat = {
                     startTimeOffset: bm.startTimeOffset || 0,
                     // 저장된 값이 없는(구 차트) 경우 null → game.js/editor.js에서 BPM 기반 계산값으로 대체.
                     fallSpeed: typeof bm.fallSpeed === 'number' ? bm.fallSpeed : null,
+                    // 이 비트맵이 "전용 하강 속도"를 쓰도록 저장되었는지 여부. true면 플레이어의
+                    // "플레이어 기본 하강 속도" 설정과 무관하게 항상 위 fallSpeed를 그대로 쓴다.
+                    useCustomFallSpeed: bm.useCustomFallSpeed === true,
                     notes: bm.notes || [],
                     triggers: bm.triggers || [],
                 },
@@ -55,6 +58,7 @@ const ChartFormat = {
                 bpm: raw.bpm || 120,
                 startTimeOffset: raw.startTimeOffset || 0,
                 fallSpeed: typeof raw.fallSpeed === 'number' ? raw.fallSpeed : null,
+                useCustomFallSpeed: raw.useCustomFallSpeed === true,
                 notes: raw.notes || [],
                 triggers: raw.triggers || [],
             },
@@ -63,7 +67,7 @@ const ChartFormat = {
 
     // 에디터에서 지금 편집 중인 비트맵 하나를 v2 포맷으로 감싸서 저장용 객체를 만든다.
     // (여러 난이도를 한 파일에 같이 담아 저장하는 UI는 Phase 3에서 추가 예정 — 지금은 beatmaps 길이 항상 1)
-    wrap({ songName, artist, difficultyLabel, laneCount, bpm, startTimeOffset, fallSpeed, notes, triggers }) {
+    wrap({ songName, artist, difficultyLabel, laneCount, bpm, startTimeOffset, fallSpeed, useCustomFallSpeed, notes, triggers }) {
         return {
             formatVersion: this.CURRENT_VERSION,
             songName: songName || '',
@@ -75,6 +79,7 @@ const ChartFormat = {
                     bpm,
                     startTimeOffset,
                     fallSpeed,
+                    useCustomFallSpeed: useCustomFallSpeed === true,
                     notes,
                     triggers,
                 },
@@ -107,6 +112,7 @@ const ChartFormat = {
                     bpm: bm.bpm || 120,
                     startTimeOffset: bm.startTimeOffset || 0,
                     fallSpeed: typeof bm.fallSpeed === 'number' ? bm.fallSpeed : null,
+                    useCustomFallSpeed: bm.useCustomFallSpeed === true,
                     timingStartSec: bm.timingStartSec || 0,
                     notes: bm.notes || [],
                     triggers: bm.triggers || [],
@@ -128,6 +134,7 @@ const ChartFormat = {
                     bpm: raw.bpm || 120,
                     startTimeOffset: raw.startTimeOffset || 0,
                     fallSpeed: typeof raw.fallSpeed === 'number' ? raw.fallSpeed : null,
+                    useCustomFallSpeed: raw.useCustomFallSpeed === true,
                     timingStartSec: 0,
                     notes: raw.notes || [],
                     triggers: raw.triggers || [],
@@ -155,6 +162,7 @@ const ChartFormat = {
                 bpm: bm.bpm,
                 startTimeOffset: bm.startTimeOffset,
                 fallSpeed: typeof bm.fallSpeed === 'number' ? bm.fallSpeed : null,
+                useCustomFallSpeed: bm.useCustomFallSpeed === true,
                 timingStartSec: bm.timingStartSec || 0,
                 notes: bm.notes || [],
                 triggers: bm.triggers || [],
