@@ -300,6 +300,10 @@
 .hover\:bg-gray-600:hover  { background-color: var(--tb-gray-600); }
 .hover\:bg-gray-700:hover  { background-color: var(--tb-gray-700); }
 
+/* ══════════════ 11b. disabled 상태 (disabled:*) — mp-restart-btn(재시작 요청됨) 등 ══════════════ */
+.disabled\:bg-gray-700:disabled  { background-color: var(--tb-gray-700); }
+.disabled\:text-gray-400:disabled { color: var(--tb-gray-400); }
+
 .hover\:bg-blue-400:hover  { background-color: var(--tb-blue-400); }
 .hover\:bg-blue-500:hover  { background-color: var(--tb-blue-500); }
 .hover\:bg-blue-600:hover  { background-color: var(--tb-blue-600); }

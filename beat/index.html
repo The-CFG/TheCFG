@@ -1057,7 +1057,13 @@
                     </div>
                 </div>
                 <!-- Result Screen -->
-                <div id="result-screen" class="hidden h-full flex flex-col justify-center items-center text-center overflow-y-auto" style="-webkit-overflow-scrolling: touch;">
+                <!-- justify-center 대신 justify-start + 위아래 padding 사용: justify-center와
+                     overflow-y-auto를 같이 쓰면 콘텐츠가 컨테이너보다 커졌을 때 넘친 뒷부분까지
+                     스크롤로 도달 가능한지가 브라우저마다 다르다(Safari/WebKit은 대체로 끝까지
+                     못 닿고 잘라버림) — 멀티플레이 결과 화면처럼 세로로 긴 콘텐츠에서 맨 아래
+                     버튼(방으로 돌아가기 등)이 스크롤해도 안 보이던 원인. justify-start는 콘텐츠가
+                     짧을 때도 길 때도 항상 위에서부터 쌓이므로 모든 브라우저에서 끝까지 스크롤된다. -->
+                <div id="result-screen" class="hidden h-full flex flex-col justify-start items-center text-center overflow-y-auto pt-4" style="-webkit-overflow-scrolling: touch;">
                     <h2 class="text-4xl sm:text-5xl font-bold mb-4 text-white" data-i18n="game_result">게임 결과</h2>
                     <div class="w-full bg-gray-700 p-6 rounded-lg">
                         <p class="text-2xl text-gray-400 mb-2" data-i18n="final_score">최종 점수</p>

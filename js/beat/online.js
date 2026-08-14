@@ -32,7 +32,7 @@ const Online = {
         // 방 생성용 채보 선택 모드에서는 비공개일 수 있는 "내 차트" 탭은 숨긴다
         // (같이 플레이하는 상대도 같은 채보를 받아야 하므로 공개 라이브러리만 허용).
         const myTabHtml = this._pickMode ? '' : `
-                <button id="online-tab-my" class="flex-1 py-2 rounded-lg text-sm font-semibold transition
+                <button id="online-tab-my" class="flex-1 min-w-0 py-2 rounded-lg text-sm font-semibold transition truncate
                     ${this._subView === 'my' ? 'bg-teal-600' : 'bg-gray-700 hover:bg-gray-600'}">
                     📁 내 차트
                 </button>`;
@@ -40,7 +40,7 @@ const Online = {
         <div class="flex flex-col h-full text-white">
             ${this._pickMode ? `<p class="mb-3 text-xs text-teal-400 flex-shrink-0">🎮 ${this._pickMode === 'queue' ? '대기열에 추가할 채보를 골라주세요.' : '멀티플레이 방을 만들 채보를 골라주세요.'}</p>` : ''}
             <div class="flex items-center space-x-2 mb-4 flex-shrink-0">
-                <button id="online-tab-browse" class="flex-1 py-2 rounded-lg text-sm font-semibold transition
+                <button id="online-tab-browse" class="flex-1 min-w-0 py-2 rounded-lg text-sm font-semibold transition truncate
                     ${this._subView !== 'my' ? 'bg-teal-600' : 'bg-gray-700 hover:bg-gray-600'}">
                     🌐 공개 라이브러리
                 </button>
