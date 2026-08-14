@@ -210,6 +210,17 @@ const MultiplayerRooms = {
         return { data, error };
     },
 
+    // 호스트 전용: 대기열 전체를 교체 — 주로 항목 제거/재정렬에 쓰인다.
+    async setChartQueue(roomId, chartQueue) {
+        const { data, error } = await _supabase
+            .from('beat_rooms')
+            .update({ chart_queue: chartQueue })
+            .eq('id', roomId)
+            .select('id, chart_id, chart_queue')
+            .single();
+        return { data, error };
+    },
+
     async listWaitingRooms(chartId) {
         const cutoff = new Date(Date.now() - 30 * 60 * 1000).toISOString();
         const { data, error } = await _supabase

@@ -6,8 +6,10 @@ const Online = {
     _currentSongId: null,
     _browseState: { sort: 'newest', search: '', page: 0, pageSize: 20, totalCount: 0 },
     _browseCache: [], // 현재 페이지에 보여줄 아이템만 담는다 (예전처럼 누적하지 않음)
-    // 멀티플레이 방 생성용 채보 선택 모드 — true면 상세 화면의 "플레이" 버튼이
+    // 멀티플레이 방 생성용 채보 선택 모드 — pickMode가 true면 상세 화면의 "플레이" 버튼이
     // "이 채보로 방 만들기"로 바뀌고, 뒤로가기가 메뉴 대신 멀티플레이 화면으로 간다.
+    // pickMode가 'queue'면 이미 있는 방의 대기열에 채보를 추가하는 모드로 동작하고,
+    // 뒤로가기는 대기실로 돌아간다(방을 나가지 않음).
     _pickMode: false,
 
     // ── 진입점 ────────────────────────────────────────────────────────────────
@@ -36,7 +38,7 @@ const Online = {
                 </button>`;
         el.innerHTML = `
         <div class="flex flex-col h-full text-white">
-            ${this._pickMode ? `<p class="mb-3 text-xs text-teal-400 flex-shrink-0">🎮 멀티플레이 방을 만들 채보를 골라주세요.</p>` : ''}
+            ${this._pickMode ? `<p class="mb-3 text-xs text-teal-400 flex-shrink-0">🎮 ${this._pickMode === 'queue' ? '대기열에 추가할 채보를 골라주세요.' : '멀티플레이 방을 만들 채보를 골라주세요.'}</p>` : ''}
             <div class="flex items-center space-x-2 mb-4 flex-shrink-0">
                 <button id="online-tab-browse" class="flex-1 py-2 rounded-lg text-sm font-semibold transition
                     ${this._subView !== 'my' ? 'bg-teal-600' : 'bg-gray-700 hover:bg-gray-600'}">
@@ -44,7 +46,7 @@ const Online = {
                 </button>
                 ${myTabHtml}
                 <button id="online-back-btn" class="py-2 px-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm flex-shrink-0">
-                    ${this._pickMode ? '← 멀티플레이' : '← 메뉴'}
+                    ${this._pickMode === 'queue' ? '← 대기실' : (this._pickMode ? '← 멀티플레이' : '← 메뉴')}
                 </button>
             </div>
             <div id="online-content" class="flex-1 min-h-0 overflow-y-auto"></div>
@@ -55,7 +57,10 @@ const Online = {
         document.getElementById('online-back-btn').addEventListener('click', () => {
             SongPreview.stop();
             GameBackground.clear();
-            if (this._pickMode) {
+            if (this._pickMode === 'queue') {
+                this._pickMode = false;
+                MultiplayerLobby.cancelQueuePick();
+            } else if (this._pickMode) {
                 this._pickMode = false;
                 MultiplayerLobby.show();
             } else {
@@ -418,8 +423,8 @@ const Online = {
             불러오는 중…
         </div>
         <button id="detail-play-btn" class="w-full py-3 mb-4 rounded-lg font-bold transition text-lg
-            ${this._pickMode ? 'bg-purple-600 hover:bg-purple-500' : 'bg-blue-600 hover:bg-blue-500'}">
-            ${this._pickMode ? '🎮 이 채보로 방 만들기' : '▶ 플레이'}
+            ${this._pickMode === 'queue' ? 'bg-teal-600 hover:bg-teal-500' : (this._pickMode ? 'bg-purple-600 hover:bg-purple-500' : 'bg-blue-600 hover:bg-blue-500')}">
+            ${this._pickMode === 'queue' ? '➕ 대기열에 추가' : (this._pickMode ? '🎮 이 채보로 방 만들기' : '▶ 플레이')}
         </button>
         <div class="bg-gray-800 rounded-lg p-3">
             <h3 class="text-sm font-semibold text-gray-300 mb-2">🏆 리더보드 TOP 10</h3>
@@ -434,7 +439,8 @@ const Online = {
             else { this._subView = 'browse'; this._renderShell(); this._renderBrowse(); }
         });
         document.getElementById('detail-play-btn').addEventListener('click', () => {
-            if (this._pickMode) this._hostRoomFromDetail(c);
+            if (this._pickMode === 'queue') this._addToQueueFromDetail(c);
+            else if (this._pickMode) this._hostRoomFromDetail(c);
             else this._playOnlineChart(c);
         });
         document.getElementById('detail-like-btn').addEventListener('click', () => this._toggleLike(c.id));
@@ -481,6 +487,18 @@ const Online = {
         await MultiplayerLobby.hostRoom(c);
         // 성공/실패 여부와 관계없이 화면 전환은 MultiplayerLobby가 담당한다
         // (성공 시 대기실로, 실패 시 멀티플레이 메뉴로).
+    },
+
+    // ── 대기열에 채보 추가(대기실에서 "+ 채보 추가"로 진입한 pickMode:'queue') ────
+    async _addToQueueFromDetail(c) {
+        SongPreview.stop();
+        const btn = document.getElementById('detail-play-btn');
+        btn.disabled = true;
+        btn.textContent = '추가하는 중…';
+        this._pickMode = false;
+        GameBackground.clear();
+        await MultiplayerLobby.addToQueue(c.id);
+        // 화면 전환(대기실로 복귀)은 MultiplayerLobby.addToQueue가 담당한다.
     },
 
     // ── 온라인 차트 플레이 ────────────────────────────────────────────────────

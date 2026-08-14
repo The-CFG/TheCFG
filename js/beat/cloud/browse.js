@@ -284,14 +284,34 @@ const CloudBrowse = {
         };
     },
 
-    // 난이도 id 목록 → 표시용 요약 정보(라벨/키수/산정 난이도). 멀티플레이 방의
-    // "다음에 플레이할 난이도" 목록(chart_queue)을 그릴 때처럼 id만 갖고 있을 때 쓴다.
+    // 난이도 id 목록 → 표시용 요약 정보(제목/아티스트/라벨/키수/산정 난이도). 멀티플레이 방의
+    // "다음에 플레이할 채보" 목록(chart_queue)을 그릴 때처럼 id만 갖고 있을 때 쓴다.
+    // beat_charts에는 제목/아티스트가 없어(beat_songs 소속) song_id로 한 번 더 조회해 합쳐준다.
     async getChartsByIds(chartIds) {
         if (!chartIds || chartIds.length === 0) return { data: [], error: null };
-        const { data, error } = await _supabase
+        const { data: charts, error: chartErr } = await _supabase
             .from('beat_charts')
             .select('id, song_id, difficulty_label, lane_count, difficulty_score')
             .in('id', chartIds);
-        return { data: data || [], error };
+        if (chartErr) return { data: null, error: chartErr };
+
+        const songIds = [...new Set((charts || []).map(c => c.song_id))];
+        if (songIds.length === 0) return { data: [], error: null };
+
+        const { data: songs, error: songErr } = await _supabase
+            .from('beat_songs')
+            .select('id, title, artist')
+            .in('id', songIds);
+        if (songErr) return { data: null, error: songErr };
+
+        const songById = {};
+        (songs || []).forEach(s => { songById[s.id] = s; });
+
+        const merged = (charts || []).map(c => ({
+            ...c,
+            title: songById[c.song_id]?.title || null,
+            artist: songById[c.song_id]?.artist || null,
+        }));
+        return { data: merged, error: null };
     },
 };

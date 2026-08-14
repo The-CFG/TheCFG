@@ -305,6 +305,8 @@ const MultiplayerLobby = {
         MultiplayerRealtime.on('restart_vote', payload => this._onRestartVote(payload));
         MultiplayerRealtime.on('restart_start', payload => this._onRestartStartBroadcast(payload));
         MultiplayerRealtime.on('max_players_updated', payload => this._onMaxPlayersUpdated(payload));
+        MultiplayerRealtime.on('queue_updated', () => this._onQueueUpdated());
+        MultiplayerRealtime.on('chart_advanced', payload => this._onChartAdvanced(payload));
 
         // 호스트 기준 시간 오프셋 추정 — "시작" 버튼을 누르기 한참 전부터 미리 해둬야
         // 실제 시작 시점엔 이미 값이 준비돼 있다(참가자는 ping 왕복에 ~1초 걸림).
@@ -388,6 +390,88 @@ const MultiplayerLobby = {
         this._queueDetails = ids.map(id => byId[id]).filter(Boolean);
     },
 
+    // ── 대기열 추가 — 대기실 "+ 채보 추가" → Online 채보 선택(pickMode:'queue')에서 호출됨.
+    // 성공/실패 관계없이 대기실로 돌아간다(방을 나가지 않음).
+    async addToQueue(chartId) {
+        if (!this._room || !this._isHost) { this.show(); return; }
+
+        const { data, error } = await MultiplayerRooms.addChartToQueue(this._room.id, chartId);
+
+        UI.showScreen('multiplayer');
+        this._renderShell();
+        this._view = 'waiting';
+        if (this._chart) GameBackground.set(CloudCharts.getCoverUrl(this._chart.cover_storage_path));
+
+        if (error) {
+            await this._refreshQueueDetails();
+            this._renderWaiting();
+            this._showMsg('대기열 추가에 실패했습니다: ' + error.message);
+            return;
+        }
+
+        this._room.chart_queue = data.chart_queue;
+        await this._refreshQueueDetails();
+        this._renderWaiting();
+        await MultiplayerRealtime.send('queue_updated', {}).catch(() => {});
+    },
+
+    // 호스트 전용: 대기열에서 항목 하나 제거.
+    async _removeFromQueue(chartId) {
+        if (!this._room || !this._isHost) return;
+        const nextQueue = (Array.isArray(this._room.chart_queue) ? this._room.chart_queue : [])
+            .filter(id => id !== chartId);
+        const { error } = await MultiplayerRooms.setChartQueue(this._room.id, nextQueue);
+        if (error) { this._showMsg('대기열 제거에 실패했습니다: ' + error.message); return; }
+        this._room.chart_queue = nextQueue;
+        await this._refreshQueueDetails();
+        this._renderWaiting();
+        await MultiplayerRealtime.send('queue_updated', {}).catch(() => {});
+    },
+
+    // Online 채보 선택 화면(pickMode:'queue')에서 뒤로가기를 눌렀을 때 — 방은 그대로 두고
+    // 대기실 화면으로만 복귀한다(hostRoom의 pickMode처럼 show()로 전체 리셋하지 않음).
+    cancelQueuePick() {
+        if (!this._room) { this.show(); return; }
+        UI.showScreen('multiplayer');
+        this._renderShell();
+        this._view = 'waiting';
+        if (this._chart) GameBackground.set(CloudCharts.getCoverUrl(this._chart.cover_storage_path));
+        this._renderWaiting();
+    },
+
+    // 호스트가 대기열을 추가/제거했을 때 — 참가자 쪽 화면도 갱신한다.
+    async _onQueueUpdated() {
+        if (this._isHost || !this._room || this._view !== 'waiting') return;
+        const { data: room } = await MultiplayerRooms.getRoom(this._room.id);
+        if (room) this._room.chart_queue = room.chart_queue;
+        await this._refreshQueueDetails();
+        this._renderWaiting();
+    },
+
+    // 호스트가 대기열의 다음 채보로 넘어갔을 때(참가자 쪽에서만 수신) — 내 화면의 현재 채보를
+    // 갱신하고 바로 프리로드를 시작해둔다. 'restart_start'가 뒤이어 도착하며,
+    // 그 핸들러(_onRestartStartBroadcast)가 이 갱신이 끝나길 기다린 뒤 시작을 진행한다.
+    _onChartAdvanced(payload) {
+        if (this._isHost || !this._room || !payload?.chartId) return;
+        this._chartAdvancePromise = (async () => {
+            try {
+                const { data: chart, error } = await CloudBrowse.getBeatmapDetail(payload.chartId);
+                if (error || !chart) return;
+                this._room.chart_id = payload.chartId;
+                this._chart = chart;
+                this._preload = null;
+                this._preloadPromise = null;
+                GameBackground.set(CloudCharts.getCoverUrl(chart.cover_storage_path));
+                if (this._view === 'waiting') this._renderWaiting();
+                this._preloadChart(); // 미리 받아두기 시작(대기는 안 함)
+            } catch (err) {
+                Debugger?.logError?.(err, 'MultiplayerLobby:chartAdvanced');
+            } finally {
+                this._chartAdvancePromise = null;
+            }
+        })();
+    },
+
     // 같은 방의 누군가가 이번 판 프리로드에 실패했을 때 — 대기실/관전 중인 화면에 알려준다.
     // (게임에 이미 진입한 경우엔 UI가 다른 화면이라 이 메시지는 대기실에 남아있는 사람에게만 보인다.)
     _onPeerPreloadFailed(payload) {
@@ -466,6 +550,21 @@ const MultiplayerLobby = {
             </select>` : ''}
         </div>
         <div class="space-y-1.5 mb-4">${rows || '<p class="text-gray-500 text-xs text-center py-4">불러오는 중…</p>'}</div>
+        ${(this._isHost || this._queueDetails.length > 0) ? `
+        <div class="mb-4">
+            <div class="flex items-center justify-between mb-1.5">
+                <h3 class="text-sm font-semibold text-gray-300">다음 순서 대기열${this._queueDetails.length ? ` (${this._queueDetails.length})` : ''}</h3>
+                ${this._isHost ? `<button id="mp-add-queue-btn" class="text-xs text-teal-400 hover:text-teal-300 transition">+ 채보 추가</button>` : ''}
+            </div>
+            ${this._queueDetails.length > 0 ? `
+            <div class="space-y-1">
+                ${this._queueDetails.map((q, i) => `
+                <div class="flex items-center justify-between py-1.5 px-2 bg-gray-800 rounded-lg text-xs">
+                    <span class="truncate text-gray-300">${i + 1}. ${_esc(q.title || '(제목 없음)')} <span class="text-gray-500">— ${_esc(q.artist || '—')}${q.difficulty_label ? ` · ${_esc(q.difficulty_label)}` : ''}</span></span>
+                    ${this._isHost ? `<button class="mp-remove-queue-btn text-red-400 hover:text-red-300 flex-shrink-0 ml-2 px-1" data-id="${_esc(q.id)}" aria-label="대기열에서 제거">✕</button>` : ''}
+                </div>`).join('')}
+            </div>` : `<p class="text-xs text-gray-500">대기열이 비어 있어요. 다음 판은 지금 채보를 다시 플레이해요.</p>`}
+        </div>` : ''}
         <button id="mp-ready-btn" ${loading ? 'disabled' : ''}
             class="w-full py-3 mb-3 rounded-lg font-bold transition ${loading ? 'bg-gray-700 text-gray-500 cursor-not-allowed' : (selfReady ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-teal-600 hover:bg-teal-500 text-white')}">
             ${loading ? '불러오는 중…' : (selfReady ? '준비 취소' : '✓ 준비 완료')}
@@ -505,6 +604,12 @@ const MultiplayerLobby = {
             this._room.max_players = next;
             await MultiplayerRealtime.send('max_players_updated', { maxPlayers: next }).catch(() => {});
             this._renderWaiting();
+        });
+        document.getElementById('mp-add-queue-btn')?.addEventListener('click', () => {
+            Online.show('browse', null, { pickMode: 'queue' });
+        });
+        document.querySelectorAll('.mp-remove-queue-btn').forEach(btn => {
+            btn.addEventListener('click', () => this._removeFromQueue(btn.dataset.id));
         });
         document.getElementById('mp-ready-btn').addEventListener('click', () => this._toggleReady(!selfReady));
         document.getElementById('mp-start-btn')?.addEventListener('click', () => this._startRoom());
@@ -671,11 +776,41 @@ const MultiplayerLobby = {
 
     // 전원이 재시작에 동의하면 호스트가 새 목표 시각을 broadcast('restart_start')로 전파하고
     // 대기실 화면을 거치지 않은 채 바로 동시 시작을 진행한다(_startRoom()과 원리는 동일).
+    // 대기열에 다음 채보가 있으면 먼저 그쪽으로 넘어간다 — 큐가 비어있을 때만 같은 채보로 재도전한다.
     async _maybeStartRestart() {
         const total = this._resultTotal || ((Game.state._multiplayerOpponents?.length || 0) + 1);
         if (this._restartVotes.size < total) return;
         if (!this._isHost || !this._room || this._restarting) return;
         this._restarting = true;
+
+        const { data: advanced, error: advanceErr } = await MultiplayerRooms.advanceChartQueue(this._room.id);
+        if (advanceErr) {
+            this._restarting = false;
+            this._restartVotes.delete(this._userId);
+            this._restartRequested = false;
+            this._updateRestartButton();
+            this._showMsg('다음 채보로 넘어가지 못했습니다: ' + advanceErr.message);
+            return;
+        }
+        if (advanced) {
+            const { data: chart, error: chartErr } = await CloudBrowse.getBeatmapDetail(advanced.chart_id);
+            if (chartErr || !chart) {
+                this._restarting = false;
+                this._restartVotes.delete(this._userId);
+                this._restartRequested = false;
+                this._updateRestartButton();
+                this._showMsg('다음 채보 정보를 불러오지 못했습니다: ' + (chartErr?.message || ''));
+                return;
+            }
+            this._room.chart_id = advanced.chart_id;
+            this._room.chart_queue = advanced.chart_queue;
+            this._chart = chart;
+            this._preload = null;
+            this._preloadPromise = null;
+            GameBackground.set(CloudCharts.getCoverUrl(chart.cover_storage_path));
+            await this._refreshQueueDetails();
+            await MultiplayerRealtime.send('chart_advanced', { chartId: advanced.chart_id }).catch(() => {});
+        }
 
         const ok = await this._preloadChart(); // 이미 캐시돼 있으면 즉시 true로 resolve됨
         if (!ok) {
@@ -695,10 +830,12 @@ const MultiplayerLobby = {
     },
 
     // broadcast('self:false')라 호스트는 자기 자신의 'restart_start' 이벤트를 받지 못한다 —
-    // 참가자 쪽에서만 이 핸들러로 들어온다.
-    _onRestartStartBroadcast(payload) {
+    // 참가자 쪽에서만 이 핸들러로 들어온다. 큐가 다음 채보로 넘어간 경우 'chart_advanced'가
+    // 먼저 도착해 있어야 하므로, 아직 처리 중이면(_chartAdvancePromise) 끝날 때까지 기다린다.
+    async _onRestartStartBroadcast(payload) {
         if (this._isHost || !this._room || this._restarting) return;
         this._restarting = true;
+        if (this._chartAdvancePromise) await this._chartAdvancePromise.catch(() => {});
         const targetLocalTime = MultiplayerRealtime.toLocalTime(payload.hostStartTime);
         this._beginInstantRestart(targetLocalTime);
     },
