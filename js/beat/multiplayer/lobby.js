@@ -373,6 +373,22 @@ const MultiplayerLobby = {
         this._renderWaiting();
     },
 
+    // 산정 난이도(difficulty_score) → 색상. Online._ratingColor와 동일한 팔레트를 그대로 씀.
+    _ratingColor(rating) {
+        if (rating >= 8) return '#fc8181';
+        if (rating >= 6) return '#f6ad55';
+        if (rating >= 4) return '#ffd700';
+        if (rating >= 2) return '#68d391';
+        return '#63b3ed';
+    },
+
+    // 별점 배지 하나. 대기실에서는 곡보다 난이도 정보(별점/난이도명/키 수)를 우선 보여주기 위해 씀.
+    _diffBadgeHtml(difficultyScore, sizeCls = 'text-xs') {
+        const rating = Difficulty.toRating(difficultyScore || 0);
+        const color = this._ratingColor(rating);
+        return `<span class="inline-flex items-center ${sizeCls} font-mono font-bold px-1.5 py-0.5 rounded flex-shrink-0" style="background:${color}22;color:${color};border:1px solid ${color}66;">★ ${rating.toFixed(2)}</span>`;
+    },
+
     async _refreshPlayers() {
         if (!this._room) return;
         const { data } = await MultiplayerRooms.listPlayers(this._room.id);
@@ -528,8 +544,12 @@ const MultiplayerLobby = {
         this._setContent(`
         <div class="p-4 bg-gray-800 rounded-lg mb-4">
             ${chart ? `
-            <p class="font-semibold text-white truncate">${_esc(chart.title)}</p>
-            <p class="text-sm text-gray-400 truncate">${_esc(chart.artist || '—')}</p>
+            <p class="text-xs text-gray-500 truncate mb-1.5">${_esc(chart.artist || '—')} — ${_esc(chart.title)}</p>
+            <div class="flex flex-wrap items-center gap-2">
+                ${this._diffBadgeHtml(chart.difficulty_score, 'text-sm')}
+                <span class="text-base font-bold text-teal-300 truncate">${_esc(chart.difficulty_label || '난이도 미지정')}</span>
+                <span class="text-xs text-gray-400 flex-shrink-0">${chart.lane_count}키</span>
+            </div>
             ` : ''}
             ${loading ? `
             <div class="flex items-center gap-2 mt-2 text-xs text-teal-300">
@@ -559,9 +579,16 @@ const MultiplayerLobby = {
             ${this._queueDetails.length > 0 ? `
             <div class="space-y-1">
                 ${this._queueDetails.map((q, i) => `
-                <div class="flex items-center justify-between py-1.5 px-2 bg-gray-800 rounded-lg text-xs">
-                    <span class="truncate text-gray-300">${i + 1}. ${_esc(q.title || '(제목 없음)')} <span class="text-gray-500">— ${_esc(q.artist || '—')}${q.difficulty_label ? ` · ${_esc(q.difficulty_label)}` : ''}</span></span>
-                    ${this._isHost ? `<button class="mp-remove-queue-btn text-red-400 hover:text-red-300 flex-shrink-0 ml-2 px-1" data-id="${_esc(q.id)}" aria-label="대기열에서 제거">✕</button>` : ''}
+                <div class="flex items-center justify-between py-1.5 px-2 bg-gray-800 rounded-lg text-xs gap-2">
+                    <div class="min-w-0 flex-1">
+                        <p class="text-gray-500 truncate">${i + 1}. ${_esc(q.artist || '—')} — ${_esc(q.title || '(제목 없음)')}</p>
+                        <div class="flex flex-wrap items-center gap-1.5 mt-0.5">
+                            ${this._diffBadgeHtml(q.difficulty_score, 'text-[10px]')}
+                            <span class="font-semibold text-teal-300">${_esc(q.difficulty_label || '난이도 미지정')}</span>
+                            <span class="text-gray-400">${q.lane_count}키</span>
+                        </div>
+                    </div>
+                    ${this._isHost ? `<button class="mp-remove-queue-btn text-red-400 hover:text-red-300 flex-shrink-0 px-1" data-id="${_esc(q.id)}" aria-label="대기열에서 제거">✕</button>` : ''}
                 </div>`).join('')}
             </div>` : `<p class="text-xs text-gray-500">대기열이 비어 있어요. 다음 판은 지금 채보를 다시 플레이해요.</p>`}
         </div>` : ''}
