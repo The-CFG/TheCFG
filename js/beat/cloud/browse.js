@@ -81,7 +81,7 @@ const CloudBrowse = {
         const pageSongs = ranked.slice(page * pageSize, (page + 1) * pageSize);
         const data = pageSongs.map(s => ({
             ...s,
-            ...(summaryBySongId[s.id] || { beatmapCount: 0, laneCountMin: null, laneCountMax: null, totalPlayCount: 0, totalLikeCount: 0, maxDifficultyScore: null }),
+            ...(summaryBySongId[s.id] || { beatmapCount: 0, laneCountMin: null, laneCountMax: null, totalPlayCount: 0, totalLikeCount: 0, minDifficultyScore: null, maxDifficultyScore: null }),
         }));
 
         return { data, error: null, count };
@@ -121,7 +121,7 @@ const CloudBrowse = {
         const pageSongs = ranked.slice(page * pageSize, (page + 1) * pageSize);
         const data = pageSongs.map(s => ({
             ...s,
-            ...(summaryBySongId[s.id] || { beatmapCount: 0, laneCountMin: null, laneCountMax: null, totalPlayCount: 0, totalLikeCount: 0, maxDifficultyScore: null }),
+            ...(summaryBySongId[s.id] || { beatmapCount: 0, laneCountMin: null, laneCountMax: null, totalPlayCount: 0, totalLikeCount: 0, minDifficultyScore: null, maxDifficultyScore: null }),
         }));
 
         return { data, error: null, count };
@@ -163,7 +163,7 @@ const CloudBrowse = {
         const pageSongs = ranked.slice(page * pageSize, (page + 1) * pageSize);
         const data = pageSongs.map(s => ({
             ...s,
-            ...(summaryBySongId[s.id] || { beatmapCount: 0, laneCountMin: null, laneCountMax: null, totalPlayCount: 0, totalLikeCount: 0, maxDifficultyScore: null }),
+            ...(summaryBySongId[s.id] || { beatmapCount: 0, laneCountMin: null, laneCountMax: null, totalPlayCount: 0, totalLikeCount: 0, minDifficultyScore: null, maxDifficultyScore: null }),
         }));
 
         return { data, error: null, count };
@@ -182,7 +182,7 @@ const CloudBrowse = {
         const summaryBySongId = this._buildSummary(charts || [], likeCountByChartId);
         return songs.map(s => ({
             ...s,
-            ...(summaryBySongId[s.id] || { beatmapCount: 0, laneCountMin: null, laneCountMax: null, totalPlayCount: 0, totalLikeCount: 0, maxDifficultyScore: null }),
+            ...(summaryBySongId[s.id] || { beatmapCount: 0, laneCountMin: null, laneCountMax: null, totalPlayCount: 0, totalLikeCount: 0, minDifficultyScore: null, maxDifficultyScore: null }),
         }));
     },
 
@@ -206,11 +206,14 @@ const CloudBrowse = {
     _buildSummary(charts, likeCountByChartId = {}) {
         const bySongId = {};
         charts.forEach(c => {
-            const cur = bySongId[c.song_id] || { beatmapCount: 0, laneCountMin: null, laneCountMax: null, totalPlayCount: 0, totalLikeCount: 0, maxDifficultyScore: null };
+            const cur = bySongId[c.song_id] || { beatmapCount: 0, laneCountMin: null, laneCountMax: null, totalPlayCount: 0, totalLikeCount: 0, minDifficultyScore: null, maxDifficultyScore: null };
             cur.beatmapCount += 1;
             cur.totalPlayCount += c.play_count || 0;
             cur.totalLikeCount += likeCountByChartId[c.id] || 0;
             if (typeof c.difficulty_score === 'number') {
+                cur.minDifficultyScore = cur.minDifficultyScore === null
+                    ? c.difficulty_score
+                    : Math.min(cur.minDifficultyScore, c.difficulty_score);
                 cur.maxDifficultyScore = cur.maxDifficultyScore === null
                     ? c.difficulty_score
                     : Math.max(cur.maxDifficultyScore, c.difficulty_score);

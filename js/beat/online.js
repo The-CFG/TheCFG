@@ -32,7 +32,7 @@ const Online = {
         // 방 생성용 채보 선택 모드에서는 비공개일 수 있는 "내 차트" 탭은 숨긴다
         // (같이 플레이하는 상대도 같은 채보를 받아야 하므로 공개 라이브러리만 허용).
         const myTabHtml = this._pickMode ? '' : `
-                <button id="online-tab-my" class="flex-1 min-w-0 py-2 rounded-lg text-sm font-semibold transition truncate
+                <button id="online-tab-my" class="flex-1 py-2 rounded-lg text-sm font-semibold transition
                     ${this._subView === 'my' ? 'bg-teal-600' : 'bg-gray-700 hover:bg-gray-600'}">
                     📁 내 차트
                 </button>`;
@@ -40,7 +40,7 @@ const Online = {
         <div class="flex flex-col h-full text-white">
             ${this._pickMode ? `<p class="mb-3 text-xs text-teal-400 flex-shrink-0">🎮 ${this._pickMode === 'queue' ? '대기열에 추가할 채보를 골라주세요.' : '멀티플레이 방을 만들 채보를 골라주세요.'}</p>` : ''}
             <div class="flex items-center space-x-2 mb-4 flex-shrink-0">
-                <button id="online-tab-browse" class="flex-1 min-w-0 py-2 rounded-lg text-sm font-semibold transition truncate
+                <button id="online-tab-browse" class="flex-1 py-2 rounded-lg text-sm font-semibold transition
                     ${this._subView !== 'my' ? 'bg-teal-600' : 'bg-gray-700 hover:bg-gray-600'}">
                     🌐 공개 라이브러리
                 </button>
@@ -76,20 +76,65 @@ const Online = {
     // 산정 난이도(채보 지표 기반)이며 플레이 통계와 무관함을 시각적으로도 분리해서 보여준다.
     _starRatingHtml(difficultyScore, sizeCls = 'text-xs') {
         const rating = Difficulty.toRating(difficultyScore);
-        const color = this._ratingColor(rating);
+        const color = this._ratingColorRgb(rating);
         return `
         <span class="inline-flex items-center gap-1 ${sizeCls} flex-shrink-0" title="산정 난이도 (채보 지표 기반, 플레이 기록과 무관)">
-            <span class="font-mono font-bold px-1.5 py-0.5 rounded" style="background:${color}22;color:${color};border:1px solid ${color}66;">★ ${rating.toFixed(2)}</span>
+            <span class="font-mono font-bold px-1.5 py-0.5 rounded" style="background:${this._rgba(color, 0.13)};color:${this._rgba(color, 1)};border:1px solid ${this._rgba(color, 0.4)};">★ ${rating.toFixed(2)}</span>
         </span>`;
     },
 
-    // 난이도 수치(0~10)에 따른 색상 — 도움말의 판정 색상 팔레트와 통일.
+    // 노래 카드용: 그 노래가 가진 공개 난이도들의 [최저-최고] 별점 범위 배지.
+    // 왼쪽(최저)은 최저 별점 색, 오른쪽(최고)은 최고 별점 색이 되도록 텍스트/배경에
+    // 좌→우 그라디언트를 적용해 난이도 스펙트럼을 한눈에 보여준다.
+    _starRatingRangeHtml(minDifficultyScore, maxDifficultyScore, sizeCls = 'text-xs') {
+        // 난이도가 하나뿐이면(최저==최고) 범위 표기 대신 단일 값으로 표시.
+        if (minDifficultyScore === maxDifficultyScore) {
+            return this._starRatingHtml(maxDifficultyScore, sizeCls);
+        }
+
+        const minRating = Difficulty.toRating(minDifficultyScore);
+        const maxRating = Difficulty.toRating(maxDifficultyScore);
+        const colorMin = this._ratingColorRgb(minRating);
+        const colorMax = this._ratingColorRgb(maxRating);
+        const gradSolid = `linear-gradient(90deg, ${this._rgba(colorMin, 1)}, ${this._rgba(colorMax, 1)})`;
+        const gradFaint = `linear-gradient(90deg, ${this._rgba(colorMin, 0.13)}, ${this._rgba(colorMax, 0.13)})`;
+
+        return `
+        <span class="inline-flex items-center gap-1 ${sizeCls} flex-shrink-0" title="공개 난이도 별점 범위 (최저~최고, 채보 지표 기반)">
+            <span class="font-mono font-bold px-1.5 py-0.5 rounded" style="background:${gradFaint}; border:1px solid ${this._rgba(colorMax, 0.4)};">
+                <span style="background:${gradSolid}; -webkit-background-clip:text; background-clip:text; color:transparent;">[ ★ ${minRating.toFixed(2)}-${maxRating.toFixed(2)} ]</span>
+            </span>
+        </span>`;
+    },
+
+    // 색상 [r,g,b] 배열 → rgba(...) 문자열.
+    _rgba(rgb, alpha) { return `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha})`; },
+
+    // 난이도 수치(0~10)에 따른 색상 — 초록(쉬움) → 노랑 → 주황 → 빨강(어려움) 순으로
+    // 연속적으로 보간되는 스펙트럼. 구간 사이는 RGB 선형 보간으로 부드럽게 이어진다.
+    _ratingColorRgb(rating) {
+        const stops = [
+            { at: 0, color: [99, 179, 237] },   // 매우 쉬움 (파랑) #63b3ed
+            { at: 2, color: [104, 211, 145] },  // 쉬움 (초록) #68d391
+            { at: 4, color: [255, 215, 0] },    // 보통 (금색/노랑) #ffd700
+            { at: 6, color: [246, 173, 85] },   // 어려움 (주황) #f6ad55
+            { at: 8, color: [252, 129, 129] },  // 매우 어려움 (빨강) #fc8181
+        ];
+        const r = Math.max(0, Math.min(10, rating));
+        let lo = stops[0], hi = stops[stops.length - 1];
+        for (let i = 0; i < stops.length - 1; i++) {
+            if (r >= stops[i].at && r <= stops[i + 1].at) { lo = stops[i]; hi = stops[i + 1]; break; }
+        }
+        const span = hi.at - lo.at || 1;
+        const t = Math.max(0, Math.min(1, (r - lo.at) / span));
+        const mix = (a, b) => Math.round(a + (b - a) * t);
+        return [mix(lo.color[0], hi.color[0]), mix(lo.color[1], hi.color[1]), mix(lo.color[2], hi.color[2])];
+    },
+
+    // (구) hex 기반 색상 API 호환용 — 다른 곳에서 단일 hex 값이 필요하면 사용.
     _ratingColor(rating) {
-        if (rating >= 8) return '#fc8181'; // 매우 어려움 (빨강)
-        if (rating >= 6) return '#f6ad55'; // 어려움 (주황)
-        if (rating >= 4) return '#ffd700'; // 보통 (금색)
-        if (rating >= 2) return '#68d391'; // 쉬움 (초록)
-        return '#63b3ed';                  // 매우 쉬움 (파랑)
+        const [r, g, b] = this._ratingColorRgb(rating);
+        return `rgb(${r}, ${g}, ${b})`;
     },
 
     // ════════════════════════════════════════════════════════════════════════
@@ -223,7 +268,7 @@ const Online = {
                     ${dateLine ? `<p class="text-xs text-gray-500 mt-1">${dateLine}</p>` : ''}
                 </div>
                 <div class="flex flex-col items-end space-y-1 ml-2 flex-shrink-0">
-                    ${s.maxDifficultyScore != null ? this._starRatingHtml(s.maxDifficultyScore) : ''}
+                    ${s.maxDifficultyScore != null ? this._starRatingRangeHtml(s.minDifficultyScore, s.maxDifficultyScore) : ''}
                     <span class="text-xs px-1.5 py-0.5 bg-gray-600 rounded">난이도 ${s.beatmapCount}개</span>
                     <span class="text-xs text-gray-400">${laneRange}</span>
                     <span class="text-xs text-gray-500">▶ ${s.totalPlayCount} · ♥ ${s.totalLikeCount || 0}</span>
