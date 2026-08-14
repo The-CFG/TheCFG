@@ -167,13 +167,21 @@ const EditorSong = {
     },
 
     // 난이도 카드를 fromIndex에서 toIndex 위치로 옮긴다. 이 배열 순서가 로컬 저장(json)의
-    // 난이도 순서이자, 클라우드 업로드 시 신규 생성 순서(=created_at)로도 이어져 라이브러리의
-    // 난이도 선택란 정렬(동일 레인 수 내에서는 created_at 오름차순)에 반영된다.
+    // 난이도 순서이자, 클라우드 업로드 시 각 난이도의 sort_order로 그대로 저장되어 라이브러리의
+    // 난이도 선택란 정렬(동일 레인 수 내에서는 sort_order 오름차순)에 반영된다.
+    // 이미 클라우드에 올라간 난이도라도 위치가 바뀌면 다음 업로드 시 새 sort_order를
+    // 보내야 하므로, 순서가 실제로 바뀐 구간(from~to)에 걸친 것들은 수정됨으로 표시한다.
     moveBeatmap(fromIndex, toIndex) {
         const list = Editor.state.beatmaps;
         if (fromIndex < 0 || fromIndex >= list.length || toIndex < 0 || toIndex >= list.length) return;
         const [moved] = list.splice(fromIndex, 1);
         list.splice(toIndex, 0, moved);
+
+        const lo = Math.min(fromIndex, toIndex);
+        const hi = Math.max(fromIndex, toIndex);
+        for (let i = lo; i <= hi; i++) {
+            if (list[i].cloudChartId) list[i]._cloudDirty = true;
+        }
 
         const active = Editor.state.activeBeatmapIndex;
         if (active === fromIndex) {
@@ -519,6 +527,7 @@ const EditorSong = {
                     difficulty_label: bm.difficultyLabel,
                     lane_count: bm.laneCount,
                     bpm: bm.bpm,
+                    sort_order: Editor.state.beatmaps.indexOf(bm),
                 };
                 const { data, error } = await CloudCharts.addBeatmapToSong(Editor.state.song.cloudSongId, meta, chartData);
                 if (error) {
@@ -539,6 +548,7 @@ const EditorSong = {
                         difficulty_label: bm.difficultyLabel,
                         lane_count: bm.laneCount,
                         bpm: bm.bpm,
+                        sort_order: Editor.state.beatmaps.indexOf(bm),
                     };
                     // 편집 화면을 열어 notes/triggers를 갖고 있는 상태(_loaded !== false)일 때만
                     // 차트 데이터도 같이 보낸다. 이름변경만 했다면 메타만 보내 기존 노트를 보존한다.

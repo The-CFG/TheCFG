@@ -312,7 +312,8 @@ const CloudCharts = {
 
     // ── 기존 노래에 난이도(beatmap) 하나 추가 ───────────────────────────────
     // 오디오는 song이 이미 갖고 있으므로 다시 올리지 않고 song_id로만 연결한다.
-    // meta: { difficulty_label, lane_count, bpm }
+    // meta: { difficulty_label, lane_count, bpm, sort_order } — sort_order는 노래 안에서
+    // 이 난이도가 표시될 순서(작을수록 앞). 종합 창의 카드 목록 순서(=드래그 결과)를 그대로 씀.
     // chartData: { bpm, startTimeOffset, laneCount, notes, triggers } (Editor의 flat 상태에서 뽑아낸 것)
     async addBeatmapToSong(songId, meta, chartData) {
         const user = await CloudAuth.getUser();
@@ -357,6 +358,7 @@ const CloudCharts = {
                 note_count: noteCount,
                 note_speed: noteSpeed,
                 difficulty_score: difficultyScore,
+                sort_order: typeof meta.sort_order === 'number' ? meta.sort_order : null,
                 chart_storage_path: chartPath,
                 is_public: true,
             })
@@ -463,9 +465,10 @@ const CloudCharts = {
 
         const { data: beatmaps, error: bmErr } = await _supabase
             .from('beat_charts')
-            .select('id, difficulty_label, lane_count, bpm, note_count, difficulty_score, chart_storage_path, created_at, updated_at')
+            .select('id, difficulty_label, lane_count, bpm, note_count, difficulty_score, chart_storage_path, sort_order, created_at, updated_at')
             .eq('song_id', songId)
             .eq('owner_id', user.id)
+            .order('sort_order', { ascending: true, nullsFirst: false })
             .order('created_at', { ascending: true });
         if (bmErr) return { data: null, error: bmErr };
 
@@ -473,7 +476,7 @@ const CloudCharts = {
     },
 
     // ── 이미 클라우드에 올라간 난이도(beatmap) 메타/데이터 수정 ─────────────
-    // meta: { difficulty_label, lane_count, bpm } 중 바뀐 필드만 넘기면 됨.
+    // meta: { difficulty_label, lane_count, bpm, sort_order } 중 바뀐 필드만 넘기면 됨.
     // chartData: null이면 노트/트리거는 그대로 두고 메타만 갱신한다 (이름변경만 했을 때 등,
     // 편집 화면을 열지 않아 최신 notes/triggers를 갖고 있지 않은 경우 이 경로를 탄다).
     async updateBeatmap(chartId, meta, chartData = null) {
