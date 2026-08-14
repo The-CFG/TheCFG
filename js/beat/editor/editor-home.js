@@ -113,6 +113,11 @@ const EditorHome = {
             laneCount: bm.lane_count || 4,
             bpm: bm.bpm || 120,
             startTimeOffset: 0,
+            // notes/triggers 로딩 전에도 배지 표시나 메타 전용 저장(이름변경 등)이 정확하도록,
+            // DB에 저장된 값으로 미리 채워둔다. 실제 노트가 필요할 때는
+            // Editor.ensureBeatmapLoaded()가 chart.json에서 다시 정확히 덮어쓴다.
+            fallSpeed: typeof bm.note_speed === 'number' ? bm.note_speed : null,
+            useCustomFallSpeed: bm.use_custom_fall_speed === true,
             notes: [],
             triggers: [],
             cloudChartId: bm.id,

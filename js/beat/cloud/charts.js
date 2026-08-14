@@ -466,7 +466,7 @@ const CloudCharts = {
 
         const { data: beatmaps, error: bmErr } = await _supabase
             .from('beat_charts')
-            .select('id, difficulty_label, lane_count, bpm, note_count, difficulty_score, chart_storage_path, sort_order, created_at, updated_at')
+            .select('id, difficulty_label, lane_count, bpm, note_count, note_speed, difficulty_score, chart_storage_path, sort_order, use_custom_fall_speed, created_at, updated_at')
             .eq('song_id', songId)
             .eq('owner_id', user.id)
             .order('sort_order', { ascending: true, nullsFirst: false })
