@@ -82,7 +82,9 @@ const UI = {
         if (percentage >= 70) return 'B';
         return 'C';
     },
-    // 점수/총 노트 수 → 랭크(S/A/B/C) 계산. 결과 화면(로컬 플레이 직후)에서 쓴다.
+    // 점수/총 노트 수 → 랭크(S/A/B/C) 계산. ⚠️ 롱노트가 있으면 totalNotes(long_tail 제외 카운트)와
+    // 실제 판정 개수(head+tail 각각 판정됨)가 어긋나 100%를 넘어서는 경우가 생겨 등급이 잘못
+    // 나올 수 있다 — 더 이상 쓰지 않는다. updateResultScreen()은 rankFromJudgements()를 쓴다.
     calculateRank(score, totalNotes) {
         if (!totalNotes || totalNotes <= 0) return 'C';
         const maxScore = totalNotes * CONFIG.POINTS.perfect;
@@ -91,6 +93,7 @@ const UI = {
     },
     // PERFECT/GOOD/BAD/MISS 개수 → 랭크(S/A/B/C) 계산. 서버에 저장된 판정 개수로부터
     // 직접 계산하므로, 온라인 리더보드처럼 note_count 등 별도 값 없이도 정확한 등급을 매길 수 있다.
+    // 결과 화면(로컬 플레이 직후)과 리더보드가 항상 같은 등급을 보여주도록 두 곳 다 이 함수만 쓴다.
     rankFromJudgements(perfect, good, bad, miss) {
         perfect = perfect || 0; good = good || 0; bad = bad || 0; miss = miss || 0;
         const judgedCount = perfect + good + bad + miss;
@@ -101,7 +104,8 @@ const UI = {
     },
     updateResultScreen() {
         DOM.finalScoreEl.textContent = Game.state.score;
-        DOM.rankEl.textContent = this.calculateRank(Game.state.score, Game.state.totalNotes);
+        const j = Game.state.judgements;
+        DOM.rankEl.textContent = this.rankFromJudgements(j.perfect, j.good, j.bad, j.miss);
         DOM.finalPerfectEl.textContent = Game.state.judgements.perfect;
         DOM.finalGoodEl.textContent = Game.state.judgements.good;
         DOM.finalBadEl.textContent = Game.state.judgements.bad;
