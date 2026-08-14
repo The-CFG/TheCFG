@@ -221,6 +221,14 @@
 }
 .animate-pulse { animation: tb-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
 
+@keyframes tb-spin {
+    to { transform: rotate(360deg); }
+}
+.animate-spin { animation: tb-spin 0.8s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+    .animate-spin { animation: none; }
+}
+
 .opacity-50 { opacity: 0.5; }
 .shadow-xl { box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1); }
 
@@ -299,10 +307,6 @@
 .hover\:bg-gray-500:hover  { background-color: var(--tb-gray-500); }
 .hover\:bg-gray-600:hover  { background-color: var(--tb-gray-600); }
 .hover\:bg-gray-700:hover  { background-color: var(--tb-gray-700); }
-
-/* ══════════════ 11b. disabled 상태 (disabled:*) — mp-restart-btn(재시작 요청됨) 등 ══════════════ */
-.disabled\:bg-gray-700:disabled  { background-color: var(--tb-gray-700); }
-.disabled\:text-gray-400:disabled { color: var(--tb-gray-400); }
 
 .hover\:bg-blue-400:hover  { background-color: var(--tb-blue-400); }
 .hover\:bg-blue-500:hover  { background-color: var(--tb-blue-500); }
