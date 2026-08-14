@@ -713,6 +713,16 @@ const Game = {
                 if (self.state._multiplayerActive && typeof MultiplayerRealtime !== 'undefined' && MultiplayerRealtime.isConnected) {
                     if (timestamp - self.state._multiplayerLastBroadcastAt >= 750) {
                         self.state._multiplayerLastBroadcastAt = timestamp;
+                        // 내 점수도 상대와 같은 갱신 주기로 HUD에 반영 — updateSpectateHud가
+                        // 끝에서 점수 내림차순으로 행을 다시 정렬하므로, 순위가 바뀌면
+                        // 그 즉시(다음 판별 시각) 리스트 순서도 같이 바뀐다.
+                        UI.updateSpectateHud({
+                            [self.state._multiplayerUserId]: {
+                                score: self.state.score,
+                                accuracy: accuracyPercent,
+                                combo: self.state.combo,
+                            },
+                        });
                         MultiplayerRealtime.send('progress', {
                             user_id: self.state._multiplayerUserId,
                             score: self.state.score,
@@ -1196,8 +1206,9 @@ const Game = {
     // start()에 syncStartPerfTime을 넘겨 오디오/카운트다운을 목표 시각에 맞춘다.
     // userId: 나 자신의 user_id (progress/finish broadcast 발신자 식별용).
     // opponents: [{ user_id, nickname }] — 나를 제외한 같은 방 참가자 목록(관전 HUD/결과 비교 골격용).
+    // selfNickname: 관전 HUD에 내 점수도 같이 띄우기 위한 내 닉네임.
     // roomId: beat_rooms.id — 결과 화면에서 전원 완료 시 status를 finished로 정리하는 데 쓴다.
-    async startMultiplayer({ chartData, audioUrl, startOffsetMs = 0, targetPerfTime, onlineChartId = null, userId = null, opponents = [], roomId = null, hostId = null }) {
+    async startMultiplayer({ chartData, audioUrl, startOffsetMs = 0, targetPerfTime, onlineChartId = null, userId = null, opponents = [], roomId = null, hostId = null, selfNickname = null }) {
         chartData.startTimeOffset = (startOffsetMs || 0) / 1000;
         if (!this.loadChartNotes(chartData)) return;
 
@@ -1207,7 +1218,7 @@ const Game = {
         this.state.settings.songStartOffset = (startOffsetMs || 0) / 1000;
         DOM.musicPlayer.src = audioUrl;
 
-        this._setupMultiplayerSpectate(userId, opponents, roomId, hostId);
+        this._setupMultiplayerSpectate(userId, opponents, roomId, hostId, selfNickname);
 
         UI.showScreen('menu');
         await this.start({ syncStartPerfTime: targetPerfTime });
@@ -1218,7 +1229,7 @@ const Game = {
     // 진행 중 상대 관전(Phase 5) + 결과 비교(Phase 6) 준비: 상대 목록으로 HUD 골격을 그리고,
     // 방 채널의 'progress'/'finish' broadcast를 구독한다. 실제 progress 송신은 loop()에서,
     // finish 송신은 end()→_finishMultiplayer()에서, 채널 연결/해제는 MultiplayerLobby가 담당한다.
-    _setupMultiplayerSpectate(userId, opponents, roomId, hostId) {
+    _setupMultiplayerSpectate(userId, opponents, roomId, hostId, selfNickname = null) {
         this._teardownMultiplayerSpectate();
         this._teardownMultiplayerFinish();
         this.state._multiplayerActive = true;
@@ -1231,7 +1242,7 @@ const Game = {
         this.state._multiplayerSelfFinished = false;
         this.state._multiplayerLastBroadcastAt = 0;
 
-        UI.showSpectateHud(this.state._multiplayerOpponents);
+        UI.showSpectateHud(this.state._multiplayerOpponents, userId, selfNickname);
 
         if (typeof MultiplayerRealtime === 'undefined') return;
 

@@ -112,37 +112,54 @@ const UI = {
     },
     // ── 멀티플레이 관전 HUD: 상대 닉네임 + 점수/콤보 표시 전용 ──────────────────────
     // opponents: [{ user_id, nickname }] — 자기 자신은 제외된 목록.
-    // 게임 시작 시 한 번 골격(닉네임 행)을 그려두고, 이후 'progress' 브로드캐스트가
-    // 올 때마다 updateSpectateHud로 숫자만 갱신한다(매번 다시 그리지 않음).
-    showSpectateHud(opponents) {
+    // selfUserId/selfNickname: 내 점수도 같은 리스트에 포함시켜서, 점수 갱신 때마다
+    // 순위(점수 내림차순)대로 자동 재정렬되게 한다(updateSpectateHud 참고).
+    // 게임 시작 시 한 번 골격(닉네임 행)을 그려두고, 이후 progress 갱신이 올 때마다
+    // updateSpectateHud로 숫자만 갱신한다(매번 다시 그리지 않음).
+    showSpectateHud(opponents, selfUserId, selfNickname) {
         if (!DOM.spectateHudEl) return;
         if (!opponents || opponents.length === 0) {
             this.hideSpectateHud();
             return;
         }
-        DOM.spectateHudEl.innerHTML = opponents.map(o => `
-            <div class="mp-spectate-row" data-user-id="${_esc(o.user_id)}">
+        const all = [{ user_id: selfUserId, nickname: selfNickname || '나', isSelf: true }, ...opponents];
+        DOM.spectateHudEl.innerHTML = all.map(o => `
+            <div class="mp-spectate-row${o.isSelf ? ' mp-spectate-self' : ''}" data-user-id="${_esc(o.user_id)}" data-score="0">
                 <span class="mp-spectate-name">${_esc(o.nickname || o.user_id.slice(0, 8))}</span>
                 <span class="mp-spectate-score">0</span>
                 <span class="mp-spectate-combo">0 combo</span>
             </div>`).join('');
         DOM.spectateHudEl.classList.remove('hidden');
     },
-    // progressByUserId: { [user_id]: { score, accuracy, combo } } — 상대들의 마지막 broadcast 값.
+    // progressByUserId: { [user_id]: { score, accuracy, combo } } — 나를 포함해 갱신할 참가자의
+    // 최신 값(전체를 매번 넘길 필요 없음 — 바뀐 사람만 있어도 됨). 반영 후 점수 내림차순으로
+    // 행 순서를 다시 정렬한다.
     updateSpectateHud(progressByUserId) {
         if (!DOM.spectateHudEl || !progressByUserId) return;
         Object.keys(progressByUserId).forEach(userId => {
             const row = DOM.spectateHudEl.querySelector(`[data-user-id="${CSS.escape(userId)}"]`);
             if (!row) return;
             const p = progressByUserId[userId];
+            const score = Math.round(p.score || 0);
+            row.dataset.score = score;
             const scoreEl = row.querySelector('.mp-spectate-score');
             const comboEl = row.querySelector('.mp-spectate-combo');
-            if (scoreEl) scoreEl.textContent = Math.round(p.score || 0);
+            if (scoreEl) scoreEl.textContent = score;
             if (comboEl) {
                 comboEl.dataset.combo = p.combo || 0;
                 comboEl.textContent = `${p.combo || 0} combo`;
             }
         });
+        this._resortSpectateHud();
+    },
+    // 점수 내림차순(동점이면 기존 순서 유지 — Array.sort는 안정 정렬)으로 행을 재배치한다.
+    // 새로 그리지 않고 기존 DOM 노드를 옮기기만 해서, 재정렬 중에도 요소 자체는 그대로 유지된다.
+    _resortSpectateHud() {
+        const el = DOM.spectateHudEl;
+        if (!el) return;
+        const rows = Array.from(el.children);
+        rows.sort((a, b) => (Number(b.dataset.score) || 0) - (Number(a.dataset.score) || 0));
+        rows.forEach(row => el.appendChild(row));
     },
     // onlineIds: presence sync 스냅샷의 키(user_id) 집합. 여기 없는 상대는 연결이 끊긴 것으로 표시.
     updateSpectateConnectionStatus(opponents, onlineIds) {

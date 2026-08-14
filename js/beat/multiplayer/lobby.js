@@ -742,6 +742,7 @@ const MultiplayerLobby = {
             onlineChartId: this._chart.id,
             userId: this._userId,
             roomId: this._room.id,
+            selfNickname: this._players.find(p => p.user_id === this._userId)?.nickname || null,
             opponents: this._players
                 .filter(p => p.user_id !== this._userId)
                 .map(p => ({ user_id: p.user_id, nickname: p.nickname })),
