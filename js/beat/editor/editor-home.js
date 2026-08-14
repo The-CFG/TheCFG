@@ -13,7 +13,7 @@
  */
 const EditorHome = {
     async refresh() {
-        this._renderMessage('불러오는 중…');
+        this._renderMessage('불러오는 중…', true);
 
         const user = await CloudAuth.getUser();
         if (!user) {
@@ -34,10 +34,16 @@ const EditorHome = {
         this._renderList(data);
     },
 
-    _renderMessage(text) {
+    // spinner: true면 문구 위에 로딩 서클을 같이 보여준다 ("불러오는 중" 류 상태 전용,
+    // 로그인 안내/빈 목록/에러 메시지처럼 로딩이 아닌 문구는 스피너 없이 그대로 텍스트로 표시).
+    _renderMessage(text, spinner = false) {
         const container = DOM.editorHome.songList;
         if (!container) return;
         container.innerHTML = '';
+        if (spinner) {
+            container.innerHTML = UI.loadingBlockHtml(text);
+            return;
+        }
         const p = document.createElement('p');
         p.className = 'text-gray-400 text-sm text-center mt-8';
         p.textContent = text;
@@ -74,7 +80,7 @@ const EditorHome = {
             return;
         }
 
-        this._renderMessage('노래 정보를 불러오는 중…');
+        this._renderMessage('노래 정보를 불러오는 중…', true);
 
         const { data, error } = await CloudCharts.getSongWithBeatmaps(songId);
         if (error) {

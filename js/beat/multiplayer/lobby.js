@@ -208,7 +208,7 @@ const MultiplayerLobby = {
         UI.showScreen('multiplayer');
         this._renderShell();
         this._view = 'waiting';
-        this._setContent('<p class="text-gray-400 text-sm mt-8 text-center animate-pulse">방 만드는 중…</p>');
+        this._setContent(UI.loadingBlockHtml('방 만드는 중…'));
 
         const user = await CloudAuth.getUser();
         if (!user) {
@@ -553,7 +553,7 @@ const MultiplayerLobby = {
             ` : ''}
             ${loading ? `
             <div class="flex items-center gap-2 mt-2 text-xs text-teal-300">
-                <span class="inline-block w-4 h-4 border-2 border-teal-400 border-t-transparent rounded-full animate-spin flex-shrink-0"></span>
+                ${UI.spinnerHtml('w-4 h-4')}
                 음악과 채보를 불러오는 중…
             </div>` : ''}
             <div class="flex items-center gap-2 mt-2">
@@ -569,7 +569,7 @@ const MultiplayerLobby = {
                 ${[2, 3, 4, 5, 6, 7, 8].map(n => `<option value="${n}" ${n === (room.max_players || 6) ? 'selected' : ''}>정원 ${n}명</option>`).join('')}
             </select>` : ''}
         </div>
-        <div class="space-y-1.5 mb-4">${rows || '<p class="text-gray-500 text-xs text-center py-4">불러오는 중…</p>'}</div>
+        <div class="space-y-1.5 mb-4">${rows || `<p class="text-gray-500 text-xs text-center py-4 flex items-center justify-center gap-2">${UI.spinnerHtml('w-3.5 h-3.5')}불러오는 중…</p>`}</div>
         ${(this._isHost || this._queueDetails.length > 0) ? `
         <div class="mb-4">
             <div class="flex items-center justify-between mb-1.5">
@@ -594,12 +594,12 @@ const MultiplayerLobby = {
         </div>` : ''}
         <button id="mp-ready-btn" ${loading ? 'disabled' : ''}
             class="w-full py-3 mb-3 rounded-lg font-bold transition ${loading ? 'bg-gray-700 text-gray-500 cursor-not-allowed' : (selfReady ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-teal-600 hover:bg-teal-500 text-white')}">
-            ${loading ? '불러오는 중…' : (selfReady ? '준비 취소' : '✓ 준비 완료')}
+            ${loading ? UI.loadingInlineHtml('불러오는 중…') : (selfReady ? '준비 취소' : '✓ 준비 완료')}
         </button>
         ${this._isHost ? `
         <button id="mp-start-btn" ${canStart ? '' : 'disabled'}
             class="w-full py-3 rounded-lg font-bold transition ${canStart ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-gray-700 text-gray-500 cursor-not-allowed'}">
-            ${loading ? '불러오는 중…' : `▶ 시작${this._players.length < 2 ? ' (2명 이상 필요)' : (allReady ? '' : ' (전원 준비 대기 중)')}`}
+            ${loading ? UI.loadingInlineHtml('불러오는 중…') : `▶ 시작${this._players.length < 2 ? ' (2명 이상 필요)' : (allReady ? '' : ' (전원 준비 대기 중)')}`}
         </button>` : `
         <p class="text-center text-xs text-gray-500 py-2">호스트가 시작하기를 기다리는 중…</p>`}
         <p class="mt-4 text-xs text-gray-600 text-center">시작하면 화면 좌측 상단에서 상대 점수/콤보를 실시간으로 볼 수 있어요.</p>
@@ -742,7 +742,6 @@ const MultiplayerLobby = {
             onlineChartId: this._chart.id,
             userId: this._userId,
             roomId: this._room.id,
-            selfNickname: this._players.find(p => p.user_id === this._userId)?.nickname || null,
             opponents: this._players
                 .filter(p => p.user_id !== this._userId)
                 .map(p => ({ user_id: p.user_id, nickname: p.nickname })),

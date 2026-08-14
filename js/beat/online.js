@@ -282,7 +282,7 @@ const Online = {
     // ════════════════════════════════════════════════════════════════════════
     async _showSongDetail(songId) {
         this._currentSongId = songId;
-        this._setContent('<p class="text-gray-400 text-sm mt-8 text-center animate-pulse">불러오는 중…</p>');
+        this._setContent(UI.loadingBlockHtml());
 
         const { data, error } = await CloudBrowse.getSongDetail(songId);
         if (error) {
@@ -358,7 +358,7 @@ const Online = {
     // ════════════════════════════════════════════════════════════════════════
     async _showDetail(chartId) {
         this._currentChartId = chartId;
-        this._setContent('<p class="text-gray-400 text-sm mt-8 text-center animate-pulse">불러오는 중…</p>');
+        this._setContent(UI.loadingBlockHtml());
 
         const [detailRes, lbRes, myRes, currentUser, likeRes] = await Promise.all([
             CloudBrowse.getBeatmapDetail(chartId),
@@ -465,7 +465,7 @@ const Online = {
             <span id="detail-like-icon">${like.likedByMe ? '♥' : '♡'}</span> 좋아요 <span id="detail-like-count">${like.count}</span>
         </button>
         <div id="online-preview-hint" class="mb-4 p-3 bg-gray-800 rounded-lg text-center text-xs text-gray-400">
-            불러오는 중…
+            ${UI.loadingInlineHtml()}
         </div>
         <button id="detail-play-btn" class="w-full py-3 mb-4 rounded-lg font-bold transition text-lg
             ${this._pickMode === 'queue' ? 'bg-teal-600 hover:bg-teal-500' : (this._pickMode ? 'bg-purple-600 hover:bg-purple-500' : 'bg-blue-600 hover:bg-blue-500')}">
@@ -526,7 +526,7 @@ const Online = {
         SongPreview.stop();
         const btn = document.getElementById('detail-play-btn');
         btn.disabled = true;
-        btn.textContent = '방 만드는 중…';
+        btn.innerHTML = UI.loadingInlineHtml('방 만드는 중…');
         this._pickMode = false;
         GameBackground.clear();
         await MultiplayerLobby.hostRoom(c);
@@ -539,7 +539,7 @@ const Online = {
         SongPreview.stop();
         const btn = document.getElementById('detail-play-btn');
         btn.disabled = true;
-        btn.textContent = '추가하는 중…';
+        btn.innerHTML = UI.loadingInlineHtml('추가하는 중…');
         this._pickMode = false;
         GameBackground.clear();
         await MultiplayerLobby.addToQueue(c.id);
@@ -551,7 +551,7 @@ const Online = {
         SongPreview.stop();
         const btn = document.getElementById('detail-play-btn');
         btn.disabled = true;
-        btn.textContent = '불러오는 중…';
+        btn.innerHTML = UI.loadingInlineHtml();
 
         try {
             const { data: chartData, error: cdErr } = await CloudCharts.downloadChartData(c.chart_storage_path);
@@ -590,7 +590,7 @@ const Online = {
     // ════════════════════════════════════════════════════════════════════════
     async _loadMyCharts() {
         GameBackground.clear();
-        this._setContent('<p class="text-gray-400 text-sm mt-8 text-center animate-pulse">불러오는 중…</p>');
+        this._setContent(UI.loadingBlockHtml());
 
         const user = await CloudAuth.getUser();
         if (!user) {

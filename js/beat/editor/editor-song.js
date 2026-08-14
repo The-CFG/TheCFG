@@ -477,7 +477,7 @@ const EditorSong = {
 
             if (DOM.editorSong.uploadCloudBtn) {
                 DOM.editorSong.uploadCloudBtn.disabled = true;
-                DOM.editorSong.uploadCloudBtn.textContent = '업로드 중…';
+                DOM.editorSong.uploadCloudBtn.innerHTML = UI.loadingInlineHtml('업로드 중…');
             }
 
             // 1) 노래 자체가 아직 클라우드에 없으면 먼저 생성

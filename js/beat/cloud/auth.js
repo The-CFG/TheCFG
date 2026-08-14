@@ -249,7 +249,7 @@ function setupAuthUI() {
         if (!email || !pw) { alert('이메일과 비밀번호를 입력해주세요.'); return; }
 
         executeBtn.disabled    = true;
-        executeBtn.textContent = '처리 중...';
+        executeBtn.innerHTML   = UI.loadingInlineHtml('처리 중...');
 
         try {
             const { data, error } = isSignUpMode
