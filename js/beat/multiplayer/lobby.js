@@ -852,17 +852,32 @@ const MultiplayerLobby = {
         const LEAD_MS = 4500;
         const hostStartTime = performance.now() + LEAD_MS;
         await MultiplayerRooms.updateRoomStatus(this._room.id, 'countdown');
-        await MultiplayerRealtime.send('restart_start', { hostStartTime }).catch(() => {});
+        // chartId를 같이 보내서, 참가자 쪽에서 chart_advanced가 어떤 이유로든(메시지 순서 뒤바뀜,
+        // 유실 등) 아직 반영되기 전에 이 broadcast를 먼저 처리하더라도 자기 자신을 교정할 수 있게 한다.
+        await MultiplayerRealtime.send('restart_start', { hostStartTime, chartId: this._room.chart_id }).catch(() => {});
         this._beginInstantRestart(hostStartTime);
     },
 
     // broadcast('self:false')라 호스트는 자기 자신의 'restart_start' 이벤트를 받지 못한다 —
     // 참가자 쪽에서만 이 핸들러로 들어온다. 큐가 다음 채보로 넘어간 경우 'chart_advanced'가
     // 먼저 도착해 있어야 하므로, 아직 처리 중이면(_chartAdvancePromise) 끝날 때까지 기다린다.
+    // 그래도 payload의 chartId와 내 현재 채보가 다르면(메시지 순서가 뒤바뀌었거나 chart_advanced
+    // 자체를 못 받은 경우) 여기서 직접 다시 받아와 스스로 바로잡는다 — 그렇지 않으면
+    // "다음 채보가 있는데 안 넘어가고 이전 곡이 반복 재생되는" 현상이 생긴다.
     async _onRestartStartBroadcast(payload) {
         if (this._isHost || !this._room || this._restarting) return;
         this._restarting = true;
         if (this._chartAdvancePromise) await this._chartAdvancePromise.catch(() => {});
+        if (payload?.chartId && this._chart?.id !== payload.chartId) {
+            const { data: chart, error } = await CloudBrowse.getBeatmapDetail(payload.chartId);
+            if (!error && chart) {
+                this._room.chart_id = payload.chartId;
+                this._chart = chart;
+                this._preload = null;
+                this._preloadPromise = null;
+                GameBackground.set(CloudCharts.getCoverUrl(chart.cover_storage_path));
+            }
+        }
         const targetLocalTime = MultiplayerRealtime.toLocalTime(payload.hostStartTime);
         this._beginInstantRestart(targetLocalTime);
     },
