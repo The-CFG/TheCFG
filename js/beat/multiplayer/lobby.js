@@ -21,6 +21,12 @@ const MultiplayerLobby = {
     _starting: false,        // 동시 시작 진행 중 중복 트리거 방지
     _queueDetails: [],       // room.chart_queue(id 배열) 각각의 표시용 요약(난이도 라벨/키수/산정 난이도)
     _chartAdvancePromise: null, // 참가자 쪽에서 'chart_advanced' 수신 후 다음 채보 상세를 받아오는 중인 promise
+    _clockSyncPromise: null, // 호스트 기준 클록 오프셋 추정이 끝나는 시점을 알기 위한 promise —
+                              // 'start'/'restart_start' 수신 시 이게 끝나기 전이면 반드시 먼저 기다려야 한다.
+                              // (버그: 참가자가 유난히 빨리 준비를 마쳐 방장이 그만큼 빨리 시작을 누르면
+                              //  이 추정이 채 끝나기 전에 브로드캐스트가 도착 — 오프셋 초기값(0)을 그대로
+                              //  쓰면 목표 시각이 완전히 어긋나 시작하자마자 전 노트가 미스 처리되며
+                              //  0점으로 강제 종료됐다.)
     _hasPlayedOnce: false,   // 이 방에서 한 판이라도 끝난 적이 있는지(첫 시작인지 구분용)
     _pendingQueueAdvance: false, // 방금 판이 끝나서 대기실 복귀 시 큐를 아직 안 넘겼는지(1회성 소비 플래그)
 
@@ -47,6 +53,7 @@ const MultiplayerLobby = {
         this._resultTotal = 0;
         this._queueDetails = [];
         this._chartAdvancePromise = null;
+        this._clockSyncPromise = null;
         this._hasPlayedOnce = false;
         this._pendingQueueAdvance = false;
         GameBackground.clear();
@@ -314,7 +321,9 @@ const MultiplayerLobby = {
 
         // 호스트 기준 시간 오프셋 추정 — "시작" 버튼을 누르기 한참 전부터 미리 해둬야
         // 실제 시작 시점엔 이미 값이 준비돼 있다(참가자는 ping 왕복에 ~1초 걸림).
-        MultiplayerRealtime.syncClockWithHost({ isHost: this._isHost }).catch(() => {});
+        // 이 promise를 들고 있다가, 혹시 아직 안 끝난 채로 'start'가 도착하면
+        // _onStartBroadcast/_onRestartStartBroadcast에서 반드시 먼저 기다린다.
+        this._clockSyncPromise = MultiplayerRealtime.syncClockWithHost({ isHost: this._isHost }).catch(() => {});
 
         const self = this._players.find(p => p.user_id === this._userId);
         await MultiplayerRealtime.trackPresence({
@@ -743,7 +752,17 @@ const MultiplayerLobby = {
     // broadcast('self:false')라 호스트는 자기 자신의 'start' 이벤트를 받지 못한다 —
     // 참가자 쪽에서만 이 핸들러로 들어온다. payload의 chartId가 내 현재 채보와 다르면(대기열
     // 전환 broadcast를 놓쳤거나 순서가 뒤바뀐 경우) 여기서 직접 다시 받아와 바로잡는다.
+    //
+    // 클록 오프셋 추정(_clockSyncPromise)이 아직 안 끝났으면 toLocalTime() 변환에 초기값(0)이
+    // 쓰여 목표 시각이 완전히 어긋난다 — 참가자가 대기실에 들어오자마자 프리로드를 빨리 끝내고
+    // 방장도 그만큼 빨리 "시작"을 누르면(=참가자 준비 완료가 빨라 클록 동기화용 ping 왕복이
+    // 끝나기 전에 브로드캐스트가 도착) 발생하며, 그 상태로 시작하면 진행 시간이 처음부터
+    // 크게 어긋나 있어 노트가 시작하자마자 전부 미스 처리되고 0점으로 강제 종료된다.
+    // 그래서 반드시 이 promise가 끝난 뒤에(늦어도 syncClockWithHost의 자체 타임아웃 내에)
+    // toLocalTime()을 호출해야 한다.
     async _onStartBroadcast(payload) {
+        if (this._isHost || this._view !== 'waiting' || this._starting) return;
+        if (this._clockSyncPromise) await this._clockSyncPromise.catch(() => {});
         if (this._isHost || this._view !== 'waiting' || this._starting) return;
         if (this._chartAdvancePromise) await this._chartAdvancePromise.catch(() => {});
         if (payload?.chartId && this._chart?.id !== payload.chartId) {
@@ -901,6 +920,9 @@ const MultiplayerLobby = {
     async _onRestartStartBroadcast(payload) {
         if (this._isHost || !this._room || this._restarting) return;
         this._restarting = true;
+        // 재시작 시점엔 보통 이미 오래전에 끝나있지만(첫 판 클록 동기화가 이미 완료됐을 것이므로),
+        // 혹시 모를 경합을 막기 위해 _onStartBroadcast와 동일하게 한 번 더 확인한다.
+        if (this._clockSyncPromise) await this._clockSyncPromise.catch(() => {});
         if (this._chartAdvancePromise) await this._chartAdvancePromise.catch(() => {});
         if (payload?.chartId && this._chart?.id !== payload.chartId) {
             const { data: chart, error } = await CloudBrowse.getBeatmapDetail(payload.chartId);
