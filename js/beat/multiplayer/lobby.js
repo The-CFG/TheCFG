@@ -692,7 +692,8 @@ const MultiplayerLobby = {
 
     // 호스트 전용. 대기열에 다음 채보가 있으면 그쪽으로 넘어간다. 반환값: true면 계속
     // 진행해도 됨(넘어갔거나 큐가 비어 원래 채보 유지), false면 실패해서 메시지까지 띄운 상태.
-    async _advanceQueueIfNeeded() {        const { data: advanced, error: advanceErr } = await MultiplayerRooms.advanceChartQueue(this._room.id);
+    async _advanceQueueIfNeeded() {
+        const { data: advanced, error: advanceErr } = await MultiplayerRooms.advanceChartQueue(this._room.id);
         if (advanceErr) {
             this._showMsg('다음 채보로 넘어가지 못했습니다: ' + advanceErr.message);
             return false;
@@ -959,6 +960,18 @@ const MultiplayerLobby = {
         this._preload = null;
         this._preloadPromise = null;
         this._preloading = false;
+
+        // 대기열에 다음 채보가 있으면 대기실로 돌아가는 시점에 그걸 "현재 채보"로 승격해서
+        // 초대 코드 위 곡 정보 카드에 갖다 붙인다 — "즉시 재시작"(전원 투표 → _maybeStartRestart)
+        // 흐름에서는 이미 하던 걸, "방으로 돌아가기" 흐름에도 동일하게 적용한다.
+        // _pendingQueueAdvance는 이번 판이 끝난 뒤(resetResultButtons) 아직 큐를 소비하지
+        // 않았음을 나타내는 1회성 플래그 — 성공했을 때만 꺼서, 실패 시 다음에 다시 시도되게 한다.
+        // 큐 승격은 방장만 DB에 반영할 수 있다(advanceChartQueue가 호스트 전용) — 참가자는
+        // 방장이 broadcast하는 'chart_advanced'를 _onChartAdvanced에서 그대로 받아 반영한다.
+        if (this._isHost && this._pendingQueueAdvance) {
+            const advanceOk = await this._advanceQueueIfNeeded();
+            if (advanceOk) this._pendingQueueAdvance = false;
+        }
 
         UI.showScreen('multiplayer');
         await this._enterWaitingRoom();
