@@ -21,8 +21,8 @@ const MultiplayerLobby = {
     _starting: false,        // 동시 시작 진행 중 중복 트리거 방지
     _queueDetails: [],       // room.chart_queue(id 배열) 각각의 표시용 요약(난이도 라벨/키수/산정 난이도)
     _chartAdvancePromise: null, // 참가자 쪽에서 'chart_advanced' 수신 후 다음 채보 상세를 받아오는 중인 promise
-    _hasPlayedOnce: false,   // 이 방에서 한 판이라도 끝난 적이 있는지 — true여야 대기실 "시작"도 큐를 소비한다
-                              // (방 만들고 첫 시작 땐 호스트가 고른 채보를 그대로 써야 하므로 큐를 건드리면 안 됨)
+    _hasPlayedOnce: false,   // 이 방에서 한 판이라도 끝난 적이 있는지(첫 시작인지 구분용)
+    _pendingQueueAdvance: false, // 방금 판이 끝나서 대기실 복귀 시 큐를 아직 안 넘겼는지(1회성 소비 플래그)
 
     // ── 결과 화면 "재시작" 투표(관전형 — 서버 검증 없음, 클라이언트끼리 broadcast로만 집계) ──
     _restartVotes: new Set(),  // 재시작에 동의한 user_id 집합
@@ -48,6 +48,7 @@ const MultiplayerLobby = {
         this._queueDetails = [];
         this._chartAdvancePromise = null;
         this._hasPlayedOnce = false;
+        this._pendingQueueAdvance = false;
         GameBackground.clear();
         UI.showScreen('multiplayer');
         this._renderShell();
@@ -680,14 +681,9 @@ const MultiplayerLobby = {
         }
     },
 
-    // 호스트 전용. 방금 판이 끝난 적 있고(_hasPlayedOnce) 대기열에 다음 채보가 있으면 그쪽으로
-    // 넘어간다. 방을 막 만들고 첫 시작을 하는 경우엔 호출조차 되지 않아야 한다 —
-    // 그때는 호스트가 고른 채보를 그대로 써야 하므로 큐를 건드리면 안 된다.
-    // 반환값: true면 계속 진행(시작해도 됨), false면 실패해서 이미 UI 복구까지 마친 상태.
-    async _advanceQueueIfNeeded() {
-        if (!this._hasPlayedOnce) return true;
-
-        const { data: advanced, error: advanceErr } = await MultiplayerRooms.advanceChartQueue(this._room.id);
+    // 호스트 전용. 대기열에 다음 채보가 있으면 그쪽으로 넘어간다. 반환값: true면 계속
+    // 진행해도 됨(넘어갔거나 큐가 비어 원래 채보 유지), false면 실패해서 메시지까지 띄운 상태.
+    async _advanceQueueIfNeeded() {        const { data: advanced, error: advanceErr } = await MultiplayerRooms.advanceChartQueue(this._room.id);
         if (advanceErr) {
             this._showMsg('다음 채보로 넘어가지 못했습니다: ' + advanceErr.message);
             return false;
@@ -724,15 +720,6 @@ const MultiplayerLobby = {
         this._showMsg('');
 
         await AudioEngine.resumeContext().catch(() => {});
-
-        // "방으로 돌아가기"로 돌아와 대기실에서 다시 시작하는 경우 — 대기열에 다음 채보가
-        // 있으면 먼저 그쪽으로 넘어간다. (첫 시작이면 _hasPlayedOnce가 false라 아무 것도 안 함)
-        const advanceOk = await this._advanceQueueIfNeeded();
-        if (!advanceOk) {
-            if (startBtn) { startBtn.disabled = false; startBtn.textContent = '▶ 시작'; }
-            this._renderWaiting();
-            return;
-        }
 
         const ok = await this._preloadChart();
         if (!ok) {
@@ -830,7 +817,8 @@ const MultiplayerLobby = {
         this._restartRequested = false;
         this._restarting = false;
         this._resultTotal = (Game.state._multiplayerOpponents?.length || 0) + 1;
-        this._hasPlayedOnce = true; // 이제 대기실 "시작"도 이 방에선 큐를 먼저 소비해야 한다
+        this._hasPlayedOnce = true;
+        this._pendingQueueAdvance = true; // 대기실로 돌아가면(또는 즉시 재시작하면) 큐를 한 번 소비해야 함
         this._updateRestartButton();
     },
 
@@ -876,6 +864,7 @@ const MultiplayerLobby = {
         this._restarting = true;
 
         const advanceOk = await this._advanceQueueIfNeeded();
+        if (advanceOk) this._pendingQueueAdvance = false; // 성공했을 때만 소비 처리(실패하면 대기실 복귀 시 재시도)
         if (!advanceOk) {
             this._restarting = false;
             this._restartVotes.delete(this._userId);
