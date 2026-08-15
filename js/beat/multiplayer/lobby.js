@@ -21,6 +21,8 @@ const MultiplayerLobby = {
     _starting: false,        // 동시 시작 진행 중 중복 트리거 방지
     _queueDetails: [],       // room.chart_queue(id 배열) 각각의 표시용 요약(난이도 라벨/키수/산정 난이도)
     _chartAdvancePromise: null, // 참가자 쪽에서 'chart_advanced' 수신 후 다음 채보 상세를 받아오는 중인 promise
+    _hasPlayedOnce: false,   // 이 방에서 한 판이라도 끝난 적이 있는지 — true여야 대기실 "시작"도 큐를 소비한다
+                              // (방 만들고 첫 시작 땐 호스트가 고른 채보를 그대로 써야 하므로 큐를 건드리면 안 됨)
 
     // ── 결과 화면 "재시작" 투표(관전형 — 서버 검증 없음, 클라이언트끼리 broadcast로만 집계) ──
     _restartVotes: new Set(),  // 재시작에 동의한 user_id 집합
@@ -45,6 +47,7 @@ const MultiplayerLobby = {
         this._resultTotal = 0;
         this._queueDetails = [];
         this._chartAdvancePromise = null;
+        this._hasPlayedOnce = false;
         GameBackground.clear();
         UI.showScreen('multiplayer');
         this._renderShell();
@@ -674,6 +677,36 @@ const MultiplayerLobby = {
         }
     },
 
+    // 호스트 전용. 방금 판이 끝난 적 있고(_hasPlayedOnce) 대기열에 다음 채보가 있으면 그쪽으로
+    // 넘어간다. 방을 막 만들고 첫 시작을 하는 경우엔 호출조차 되지 않아야 한다 —
+    // 그때는 호스트가 고른 채보를 그대로 써야 하므로 큐를 건드리면 안 된다.
+    // 반환값: true면 계속 진행(시작해도 됨), false면 실패해서 이미 UI 복구까지 마친 상태.
+    async _advanceQueueIfNeeded() {
+        if (!this._hasPlayedOnce) return true;
+
+        const { data: advanced, error: advanceErr } = await MultiplayerRooms.advanceChartQueue(this._room.id);
+        if (advanceErr) {
+            this._showMsg('다음 채보로 넘어가지 못했습니다: ' + advanceErr.message);
+            return false;
+        }
+        if (!advanced) return true; // 큐가 비어있음 — 같은 채보로 계속 진행
+
+        const { data: chart, error: chartErr } = await CloudBrowse.getBeatmapDetail(advanced.chart_id);
+        if (chartErr || !chart) {
+            this._showMsg('다음 채보 정보를 불러오지 못했습니다: ' + (chartErr?.message || ''));
+            return false;
+        }
+        this._room.chart_id = advanced.chart_id;
+        this._room.chart_queue = advanced.chart_queue;
+        this._chart = chart;
+        this._preload = null;
+        this._preloadPromise = null;
+        GameBackground.set(CloudCharts.getCoverUrl(chart.cover_storage_path));
+        await this._refreshQueueDetails();
+        await MultiplayerRealtime.send('chart_advanced', { chartId: advanced.chart_id }).catch(() => {});
+        return true;
+    },
+
     // 호스트 전용. 목표 시작 시각(내 performance.now() 기준)을 정해 broadcast('start')로
     // 전파한 뒤, 호스트 자신도(자기 브로드캐스트는 못 받으므로) 곧바로 동시 시작을 진행한다.
     async _startRoom() {
@@ -683,6 +716,15 @@ const MultiplayerLobby = {
         this._showMsg('');
 
         await AudioEngine.resumeContext().catch(() => {});
+
+        // "방으로 돌아가기"로 돌아와 대기실에서 다시 시작하는 경우 — 대기열에 다음 채보가
+        // 있으면 먼저 그쪽으로 넘어간다. (첫 시작이면 _hasPlayedOnce가 false라 아무 것도 안 함)
+        const advanceOk = await this._advanceQueueIfNeeded();
+        if (!advanceOk) {
+            if (startBtn) { startBtn.disabled = false; startBtn.textContent = '▶ 시작'; }
+            this._renderWaiting();
+            return;
+        }
 
         const ok = await this._preloadChart();
         if (!ok) {
@@ -696,15 +738,29 @@ const MultiplayerLobby = {
         const hostStartTime = performance.now() + LEAD_MS;
 
         await MultiplayerRooms.updateRoomStatus(this._room.id, 'countdown');
-        await MultiplayerRealtime.send('start', { hostStartTime });
+        // chartId를 같이 보내서, chart_advanced가 유실되거나 순서가 뒤바뀌어도 참가자 쪽이
+        // 자가 교정할 수 있게 한다(_onStartBroadcast 참고).
+        await MultiplayerRealtime.send('start', { hostStartTime, chartId: this._room.chart_id });
 
         this._beginSyncedStart(hostStartTime);
     },
 
     // broadcast('self:false')라 호스트는 자기 자신의 'start' 이벤트를 받지 못한다 —
-    // 참가자 쪽에서만 이 핸들러로 들어온다.
-    _onStartBroadcast(payload) {
+    // 참가자 쪽에서만 이 핸들러로 들어온다. payload의 chartId가 내 현재 채보와 다르면(대기열
+    // 전환 broadcast를 놓쳤거나 순서가 뒤바뀐 경우) 여기서 직접 다시 받아와 바로잡는다.
+    async _onStartBroadcast(payload) {
         if (this._isHost || this._view !== 'waiting' || this._starting) return;
+        if (this._chartAdvancePromise) await this._chartAdvancePromise.catch(() => {});
+        if (payload?.chartId && this._chart?.id !== payload.chartId) {
+            const { data: chart, error } = await CloudBrowse.getBeatmapDetail(payload.chartId);
+            if (!error && chart) {
+                this._room.chart_id = payload.chartId;
+                this._chart = chart;
+                this._preload = null;
+                this._preloadPromise = null;
+                GameBackground.set(CloudCharts.getCoverUrl(chart.cover_storage_path));
+            }
+        }
         const targetLocalTime = MultiplayerRealtime.toLocalTime(payload.hostStartTime);
         this._beginSyncedStart(targetLocalTime);
     },
@@ -766,6 +822,7 @@ const MultiplayerLobby = {
         this._restartRequested = false;
         this._restarting = false;
         this._resultTotal = (Game.state._multiplayerOpponents?.length || 0) + 1;
+        this._hasPlayedOnce = true; // 이제 대기실 "시작"도 이 방에선 큐를 먼저 소비해야 한다
         this._updateRestartButton();
     },
 
@@ -810,33 +867,13 @@ const MultiplayerLobby = {
         if (!this._isHost || !this._room || this._restarting) return;
         this._restarting = true;
 
-        const { data: advanced, error: advanceErr } = await MultiplayerRooms.advanceChartQueue(this._room.id);
-        if (advanceErr) {
+        const advanceOk = await this._advanceQueueIfNeeded();
+        if (!advanceOk) {
             this._restarting = false;
             this._restartVotes.delete(this._userId);
             this._restartRequested = false;
             this._updateRestartButton();
-            this._showMsg('다음 채보로 넘어가지 못했습니다: ' + advanceErr.message);
             return;
-        }
-        if (advanced) {
-            const { data: chart, error: chartErr } = await CloudBrowse.getBeatmapDetail(advanced.chart_id);
-            if (chartErr || !chart) {
-                this._restarting = false;
-                this._restartVotes.delete(this._userId);
-                this._restartRequested = false;
-                this._updateRestartButton();
-                this._showMsg('다음 채보 정보를 불러오지 못했습니다: ' + (chartErr?.message || ''));
-                return;
-            }
-            this._room.chart_id = advanced.chart_id;
-            this._room.chart_queue = advanced.chart_queue;
-            this._chart = chart;
-            this._preload = null;
-            this._preloadPromise = null;
-            GameBackground.set(CloudCharts.getCoverUrl(chart.cover_storage_path));
-            await this._refreshQueueDetails();
-            await MultiplayerRealtime.send('chart_advanced', { chartId: advanced.chart_id }).catch(() => {});
         }
 
         const ok = await this._preloadChart(); // 이미 캐시돼 있으면 즉시 true로 resolve됨
