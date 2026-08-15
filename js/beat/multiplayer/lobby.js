@@ -477,10 +477,13 @@ const MultiplayerLobby = {
                 const { data: chart, error } = await CloudBrowse.getBeatmapDetail(payload.chartId);
                 if (error || !chart) return;
                 this._room.chart_id = payload.chartId;
+                // 소비되고 남은 대기열도 같이 반영해야 "다음 순서 대기열" 목록이 갱신된다.
+                if (Array.isArray(payload.chartQueue)) this._room.chart_queue = payload.chartQueue;
                 this._chart = chart;
                 this._preload = null;
                 this._preloadPromise = null;
                 GameBackground.set(CloudCharts.getCoverUrl(chart.cover_storage_path));
+                await this._refreshQueueDetails();
                 if (this._view === 'waiting') this._renderWaiting();
                 this._preloadChart(); // 미리 받아두기 시작(대기는 안 함)
             } catch (err) {
@@ -703,7 +706,12 @@ const MultiplayerLobby = {
         this._preloadPromise = null;
         GameBackground.set(CloudCharts.getCoverUrl(chart.cover_storage_path));
         await this._refreshQueueDetails();
-        await MultiplayerRealtime.send('chart_advanced', { chartId: advanced.chart_id }).catch(() => {});
+        // 남은 대기열도 같이 보내야 멤버(비호스트) 쪽 화면의 "다음 순서 대기열" 목록이
+        // 같이 갱신된다 — chartId만 보내면 현재 곡 표시만 바뀌고 대기열 목록은 그대로 남는다.
+        await MultiplayerRealtime.send('chart_advanced', { chartId: advanced.chart_id, chartQueue: advanced.chart_queue }).catch(() => {});
+        // 나(방장)의 대기실 화면도 곧바로 새 곡 정보로 다시 그려준다 — 이걸 안 하면 실제
+        // 플레이는 새 곡으로 시작되는데도 "시작하는 중…" 동안 화면엔 예전 곡이 그대로 보인다.
+        if (this._view === 'waiting') this._renderWaiting();
         return true;
     },
 
