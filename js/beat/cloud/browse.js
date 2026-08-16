@@ -230,12 +230,20 @@ const CloudBrowse = {
     // ── 노래 상세 (메타 + 그 노래의 공개 난이도 목록) ─────────────────────────
     // "난이도 선택" 화면에 필요한 정보만 담는다. 실제 notes/triggers는 여기서
     // 받아오지 않고, 플레이 시점에 getBeatmapDetail()의 chart_storage_path로 받는다.
+    //
+    // is_public=true 외에 owner_id=나 도 함께 허용한다 — beat_songs/beat_charts의
+    // SELECT RLS(beat_songs_select_own / charts_select)가 원래 "공개 OR 내 소유"를
+    // 허용하는데, 여기서 쿼리에 .eq('is_public', true)만 걸어놓으면 RLS보다 더 빡빡하게
+    // 걸려서 내가 만든 비공개 노래/차트인데도 0 rows(PGRST116)로 막혀버린다.
     async getSongDetail(songId) {
+        const user = await CloudAuth.getUser();
+        const ownFilter = user ? `is_public.eq.true,owner_id.eq.${user.id}` : 'is_public.eq.true';
+
         const { data: song, error: songErr } = await _supabase
             .from('beat_songs')
             .select('*')
             .eq('id', songId)
-            .eq('is_public', true)
+            .or(ownFilter)
             .single();
         if (songErr) return { data: null, error: songErr };
 
@@ -243,7 +251,7 @@ const CloudBrowse = {
             .from('beat_charts')
             .select('id, difficulty_label, lane_count, bpm, note_count, difficulty_score, play_count, sort_order, created_at, updated_at, owner_id')
             .eq('song_id', songId)
-            .eq('is_public', true)
+            .or(ownFilter)
             .order('lane_count', { ascending: true })
             .order('sort_order', { ascending: true, nullsFirst: false })
             .order('created_at', { ascending: true });
@@ -255,12 +263,19 @@ const CloudBrowse = {
     // ── 난이도(beatmap) 상세 = "플레이 전 화면"에 필요한 전부 ────────────────
     // 리더보드/플레이 버튼에 필요한 beatmap 메타 + 오디오를 갖고 있는 song 메타를
     // 합쳐서 기존 getChartDetail()과 같은 모양(title/artist/audio_storage_path 포함)으로 반환한다.
+    //
+    // getSongDetail과 같은 이유로 is_public=true 뿐 아니라 owner_id=나 도 허용한다.
+    // 특히 "내 업로드 차트" 목록의 "랭킹" 버튼(.my-lb-btn)은 비공개 차트에도 붙어있어서,
+    // 이 필터가 없으면 자기 비공개 차트의 랭킹/상세를 열 때마다 PGRST116으로 막혔다.
     async getBeatmapDetail(chartId) {
+        const user = await CloudAuth.getUser();
+        const ownFilter = user ? `is_public.eq.true,owner_id.eq.${user.id}` : 'is_public.eq.true';
+
         const { data: chart, error: chartErr } = await _supabase
             .from('beat_charts')
             .select('*')
             .eq('id', chartId)
-            .eq('is_public', true)
+            .or(ownFilter)
             .single();
         if (chartErr) return { data: null, error: chartErr };
 
@@ -268,7 +283,7 @@ const CloudBrowse = {
             .from('beat_songs')
             .select('id, title, artist, audio_storage_path, audio_mime, preview_start_ms, start_offset_ms, cover_storage_path')
             .eq('id', chart.song_id)
-            .eq('is_public', true)
+            .or(ownFilter)
             .single();
         if (songErr) return { data: null, error: songErr };
 
