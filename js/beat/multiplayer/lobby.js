@@ -978,13 +978,12 @@ const MultiplayerLobby = {
     },
 
     async _leaveRoom() {
-        this._teardownRealtime();
         GameBackground.clear();
         const roomId = this._room?.id;
         const wasHost = this._isHost;
 
         if (roomId) {
-            // 순서 중요: 호스트 위임 판단(transferHost → listPlayers)은 반드시 내(호스트) 자신의
+            // 순서 중요 (1): 호스트 위임 판단(transferHost → listPlayers)은 반드시 내(호스트) 자신의
             // beat_room_players row가 아직 있는 상태에서 먼저 해야 한다. beat_room_players의
             // SELECT RLS가 "그 방의 멤버만 목록을 읽을 수 있다"는 조건이라, 내 row를 먼저
             // 지워버리면(= leaveRoom을 먼저 호출하면) 그 순간부터 나는 더 이상 그 방의 멤버가
@@ -992,6 +991,14 @@ const MultiplayerLobby = {
             // 즉 호스트가 나갈 때마다 참가자가 남아있는지와 무관하게 무조건 방이 abandoned
             // 처리되던 버그가 있었다. 그래서 transferHost를 먼저 하고, 내 row 삭제(leaveRoom)는
             // 그다음에 한다.
+            //
+            // 순서 중요 (2): _teardownRealtime()은 반드시 이 블록이 다 끝난 뒤(맨 아래)에 호출해야
+            // 한다. 예전엔 함수 맨 위에서 제일 먼저 호출했는데, 그러면 realtime 채널이 이미
+            // null이 된 상태라 밑에서 하는 MultiplayerRealtime.send('host_transferred', ...)가
+            // send() 내부의 `if (!this._channel) return;` 가드에 걸려 아무 것도 안 보내고
+            // 조용히 무시된다(에러도 안 남음). DB의 host_id 자체는 transfer_host RPC로 정상
+            // 갱신되지만, 남은 플레이어들은 이 broadcast를 못 받으니 자기가 새 호스트가 됐다는
+            // 걸 전혀 모르고 화면도 안 바뀐다 — "방장 권한이 안 넘어가는" 버그의 원인이었다.
             if (wasHost) {
                 const { data: newHost } = await MultiplayerRooms.transferHost(roomId);
                 if (newHost) {
@@ -1003,6 +1010,8 @@ const MultiplayerLobby = {
             }
             await MultiplayerRooms.leaveRoom(roomId);
         }
+
+        this._teardownRealtime();
 
         this._room = null;
         this._chart = null;
