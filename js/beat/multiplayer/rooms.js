@@ -55,10 +55,21 @@ const MultiplayerRooms = {
 
     // 호스트 이탈 시 남은 사람 중 가장 먼저 join한 사람에게 호스트를 넘긴다.
     // 남은 사람이 없으면 { data: null }을 반환 — 호출 측(lobby.js)이 방을 abandoned로 정리한다.
+    //
+    // 중요: 반드시 "호스트 자신의 beat_room_players row가 아직 남아있는 상태"에서 호출해야
+    // 한다. beat_room_players의 SELECT RLS 정책(room members can read player list of their
+    // room)이 is_room_member(room_id, auth.uid())로 호출자 자신이 그 방의 멤버인지부터
+    // 검사하기 때문에, 호스트가 자기 row를 먼저 지우고 나서 이 함수를 부르면 listPlayers가
+    // (다른 참가자가 남아있어도) 무조건 빈 배열을 돌려받아 항상 "아무도 없음"으로 오판하고
+    // 방을 그냥 abandoned 처리해버린다 — 실제로는 참가자가 남아있는데도. 호출 순서는
+    // lobby.js의 _leaveRoom()에서 leaveRoom()(자기 row 삭제)보다 먼저 오도록 되어 있다.
     async transferHost(roomId) {
+        const user = await CloudAuth.getUser();
         const { data: players, error: listErr } = await this.listPlayers(roomId);
         if (listErr) return { error: listErr };
-        const next = players?.[0]; // joined_at 오름차순이므로 가장 오래된 멤버
+        // joined_at 오름차순 목록에서 나(곧 나갈 호스트) 자신은 후보에서 제외 — 안 그러면
+        // 대개 내가 가장 먼저 join한 사람(=호스트 본인)이라 스스로를 다음 호스트로 뽑아버린다.
+        const next = players?.find(p => p.user_id !== user?.id);
         if (!next) return { data: null };
 
         const { error } = await _supabase.rpc('transfer_host', {

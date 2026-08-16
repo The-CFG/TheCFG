@@ -984,16 +984,24 @@ const MultiplayerLobby = {
         const wasHost = this._isHost;
 
         if (roomId) {
-            await MultiplayerRooms.leaveRoom(roomId);
+            // 순서 중요: 호스트 위임 판단(transferHost → listPlayers)은 반드시 내(호스트) 자신의
+            // beat_room_players row가 아직 있는 상태에서 먼저 해야 한다. beat_room_players의
+            // SELECT RLS가 "그 방의 멤버만 목록을 읽을 수 있다"는 조건이라, 내 row를 먼저
+            // 지워버리면(= leaveRoom을 먼저 호출하면) 그 순간부터 나는 더 이상 그 방의 멤버가
+            // 아니게 되어 다른 참가자가 남아있어도 listPlayers가 항상 빈 배열을 돌려준다 —
+            // 즉 호스트가 나갈 때마다 참가자가 남아있는지와 무관하게 무조건 방이 abandoned
+            // 처리되던 버그가 있었다. 그래서 transferHost를 먼저 하고, 내 row 삭제(leaveRoom)는
+            // 그다음에 한다.
             if (wasHost) {
                 const { data: newHost } = await MultiplayerRooms.transferHost(roomId);
-                if (!newHost) {
+                if (newHost) {
+                    await MultiplayerRealtime.send('host_transferred', { newHostId: newHost.user_id }).catch(() => {});
+                } else {
                     // 남은 사람이 없음 — 방을 abandoned로 정리(크론이 나중에 완전히 삭제)
                     await MultiplayerRooms.updateRoomStatus(roomId, 'abandoned');
-                } else {
-                    await MultiplayerRealtime.send('host_transferred', { newHostId: newHost.user_id }).catch(() => {});
                 }
             }
+            await MultiplayerRooms.leaveRoom(roomId);
         }
 
         this._room = null;
