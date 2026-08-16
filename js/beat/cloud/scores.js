@@ -47,15 +47,15 @@ const CloudScores = {
         const user = await CloudAuth.getUser();
         if (!user) return { data: null };
 
+        // .single() 대신 .maybeSingle() — 아직 플레이 안 한 차트(0 rows)는 정상 케이스라
+        // PGRST116(406)로 시끄럽게 만들 것 없이 조용히 data:null로 받는다.
         const { data, error } = await _supabase
             .from('beat_scores')
             .select('score, accuracy, max_combo, judge_perfect, judge_good, judge_bad, judge_miss, achieved_at')
             .eq('chart_id', chartId)
             .eq('user_id', user.id)
-            .single();
+            .maybeSingle();
 
-        // 기록 없음은 에러가 아니므로 null 반환
-        if (error?.code === 'PGRST116') return { data: null };
         return { data, error };
     },
 };

@@ -65,16 +65,18 @@ const CloudAuth = {
     async getVolumeSettings() {
         const user = await this.getUser();
         if (!user) return null;
+        // 계정별 볼륨 저장도 마찬가지 — 한 번도 저장한 적 없는 계정(0 rows)이 정상 케이스라
+        // .maybeSingle()로 조용히 null 처리한다.
         const { data, error } = await _supabase
             .from('user_profiles')
             .select('beat_music_volume, beat_sfx_volume')
             .eq('user_id', user.id)
-            .single();
+            .maybeSingle();
         if (error) {
-            // PGRST116 = 행 없음 (아직 한 번도 저장 안 한 계정) → 정상, 기본값 사용
-            if (error.code !== 'PGRST116') console.warn('getVolumeSettings 오류:', error.message);
+            console.warn('getVolumeSettings 오류:', error.message);
             return null;
         }
+        if (!data) return null;
         return { musicVolume: data.beat_music_volume, sfxVolume: data.beat_sfx_volume };
     },
 
