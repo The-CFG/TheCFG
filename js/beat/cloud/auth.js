@@ -28,7 +28,13 @@ const CloudAuth = {
 
     // 디스코드 OAuth 로그인 — 리다이렉트 방식이라 이 호출 자체는 곧바로 페이지를 벗어난다.
     // 인증 완료 후 redirectTo로 돌아오면 onAuthStateChange가 세션을 감지해 UI를 갱신한다.
+    //
+    // Supabase 대시보드의 Redirect URLs 허용 목록에 현재 주소가 등록되어 있지 않으면
+    // Supabase가 redirectTo를 무시하고 대시보드에 등록된 Site URL(홈페이지)로 보내버릴 수 있다.
+    // 이 경우를 대비해 돌아갈 경로를 localStorage에 남겨두면, 홈페이지의 안전장치 스크립트가
+    // 이 값을 읽어 다시 이 페이지로 돌려보내준다.
     async loginWithDiscord() {
+        localStorage.setItem('thecfg_oauth_return', location.pathname);
         return await _supabase.auth.signInWithOAuth({
             provider: 'discord',
             options: { redirectTo: location.href }
