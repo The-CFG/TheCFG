@@ -177,7 +177,8 @@ const DOM = {
             lanesSelector: document.getElementById('keybind-lanes-selector'),
             rowsContainer: document.getElementById('keybind-rows-container'),
             statusLabel: document.getElementById('keybind-status-label'),
-            saveBtn: document.getElementById('save-keybinds-btn')
+            saveBtn: document.getElementById('save-keybinds-btn'),
+            restartHotkeyBox: document.getElementById('restart-hotkey-box')
         },
         editorTab: {
             keybindRows: document.getElementById('editor-keybind-rows'),

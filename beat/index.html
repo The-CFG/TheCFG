@@ -572,6 +572,14 @@
                                 <div id="keybind-rows-container" class="space-y-2 text-sm sm:text-base">
                                     <!-- populateKeybindUI()/renderKeybindGroup()가 채움 -->
                                 </div>
+                                <div class="border-t border-gray-700 pt-4">
+                                    <h3 class="text-sm font-semibold mb-2 text-white">즉시 재시작</h3>
+                                    <p class="text-xs text-gray-500 mb-2">플레이 중 이 키를 <strong>길게 누르고 있으면</strong> 결과 저장 없이 처음부터 바로 다시 시작합니다. (멀티플레이 중에는 동작하지 않습니다)</p>
+                                    <div class="flex justify-between items-center p-2 rounded-lg hover:bg-gray-700">
+                                        <span>재시작 홀드 키</span>
+                                        <div id="restart-hotkey-box" class="keybind-box w-28 text-center"></div>
+                                    </div>
+                                </div>
                                 <div class="pt-4 text-center">
                                     <p id="keybind-status-label" class="h-6 text-yellow-400"></p>
                                     <button id="save-keybinds-btn" class="mt-2 w-full max-w-xs py-2 bg-blue-600 hover:bg-blue-500 rounded transition" data-i18n="save">저장</button>

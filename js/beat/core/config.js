@@ -107,6 +107,13 @@ const CONFIG = {
     NOTE_SPAWN_TIME_MS: 2000, // 노트가 화면에 나타나는 시간
     GAME_AREA_HEIGHT: 600, // 게임 영역 높이 (픽셀)
     NOTE_FALL_SPEED_FACTOR: 35, // 노트 낙하 속도 배수
+
+    // 플레이 중 길게 눌러 즉시 다시 시작하는 단축키. e.code 기준(레인 키와 달리 물리적
+    // 키 위치 그대로 저장 — 에디터 키 설정과 같은 방식). 기본값은 레인 키(A/S/D/F/J/K/L/
+    // Semicolon/Space)와 겹치지 않는 백틱(`)으로 잡았다.
+    RESTART_HOTKEY_DEFAULT: 'Backquote',
+    RESTART_HOTKEY: 'Backquote', // 환경설정 → 조작 탭에서 저장한 값으로 아래에서 덮어씀
+    RESTART_HOTKEY_HOLD_MS: 600, // 이 시간(ms) 이상 누르고 있어야 재시작이 트리거됨
 };
 
 // 환경설정 → 에디터 탭에서 저장한 커스텀 값을 불러와 즉시 반영한다.
@@ -147,5 +154,16 @@ CONFIG.PERSISTED_USER_KEY_MAPPINGS = null;
         }
     } catch (err) {
         console.warn('키 설정을 불러오지 못했습니다:', err);
+    }
+})();
+
+// 환경설정 → 조작 탭에서 저장한 "즉시 재시작" 홀드 단축키를 불러온다. 위 레인 키와
+// 마찬가지로 계정 없이도 새로고침 후 유지되도록 localStorage에 별도 저장한다.
+(function loadPersistedRestartHotkey() {
+    try {
+        const saved = localStorage.getItem('theBeat_restartHotkey');
+        if (saved) CONFIG.RESTART_HOTKEY = saved;
+    } catch (err) {
+        console.warn('재시작 단축키 설정을 불러오지 못했습니다:', err);
     }
 })();

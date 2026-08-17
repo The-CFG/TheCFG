@@ -203,7 +203,7 @@ const Game = {
                     ctx.fill();
                     // 테두리 — 채워진 그라데이션만으로는 원 가장자리가 흐릿하게 퍼져
                     // 경계가 잘 안 보여서, 얇은 테두리선을 하나 둘러 판정 위치를 명확히 한다.
-                    ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+                    ctx.strokeStyle = 'rgba(255,255,255,1)';
                     ctx.lineWidth = 2;
                     ctx.stroke();
                 }
@@ -531,7 +531,14 @@ const Game = {
                 const musicUrl = URL.createObjectURL(this.state.settings.musicFileObject);
                 DOM.musicPlayer.src = musicUrl;
             } else if (this.state.settings.musicSrc) {
-                DOM.musicPlayer.src = this.state.settings.musicSrc;
+                // 같은 URL이면 재할당하지 않는다 — AudioEngine의 src setter는 할당될 때마다
+                // 무조건 버퍼를 버리고 fetch+decode를 처음부터 다시 하므로, 같은 곡으로
+                // restartCurrentChart()(길게 눌러 즉시 재시작)를 반복 호출할 때마다 매번
+                // 다운로드+디코딩이 새로 걸려 "즉시" 재시작이 실제로는 느려지는 문제가 있었다.
+                // 이미 로드된 같은 src라면 기존 버퍼를 그대로 재사용한다.
+                if (DOM.musicPlayer.src !== this.state.settings.musicSrc) {
+                    DOM.musicPlayer.src = this.state.settings.musicSrc;
+                }
             }
 
             // AudioEngine은 src 할당 시점에 이미 fetch+decode를 시작하므로,
@@ -642,6 +649,27 @@ const Game = {
         } catch (err) {
             Debugger.logError(err, 'Game.end');
         }
+    },
+
+    // 환경설정 → 조작 탭에서 지정한 키를 길게 눌렀을 때 호출되는 "즉시 재시작".
+    // end()와 달리 결과 제출/결과 화면 전환 없이 현재 차트를 그대로 처음부터 다시 시작한다.
+    // 멀티플레이는 대상에서 제외 — 전원 동의가 필요한 mp-restart-btn(_maybeStartRestart) 절차를
+    // 별도로 쓰고 있어서, 방 상태와 어긋나지 않도록 여기서는 아예 건드리지 않는다(호출부인
+    // handleRestartHoldKeyDown에서도 한 번 더 막지만, 안전하게 여기서도 확인).
+    async restartCurrentChart() {
+        if (this.state._multiplayerActive) return;
+        const activeStates = ['playing', 'countdown'];
+        if (!activeStates.includes(this.state.gameState) && !this.state.isPaused) return;
+
+        this.cancelCountdown();
+        cancelAnimationFrame(this.state.animationFrameId);
+        this.state.animationFrameId = null;
+
+        if (this.state.settings.mode === 'music' && DOM.musicPlayer.src) {
+            DOM.musicPlayer.pause();
+        }
+
+        await this.start();
     },
 
     prepareNotesFromChartData() {

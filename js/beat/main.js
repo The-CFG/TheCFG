@@ -138,6 +138,12 @@ document.addEventListener('DOMContentLoaded', () => {
     let tempEditorLaneKeys = {}; // laneId -> code (e.g. 'KeyQ') — 저장 전까지의 임시 편집본
     let tempEditorToolKeys = {}; // { create: 'z', edit: 'x' } — 저장 전까지의 임시 편집본
 
+    // ── 환경설정 → 조작 탭: 길게 눌러 즉시 재시작 단축키 ─────────────────────
+    let isListeningForRestartKey = false;
+    let tempRestartHotkeyCode = null; // 저장 전까지의 임시 편집본(e.code)
+    let restartHoldTimer = null;      // 현재 누르고 있는 홀드의 setTimeout id
+    let restartHoldActive = false;    // 지금 그 키를 누르고 있는 중인지(키 반복 이벤트 무시용)
+
     // 레인 id -> 라벨 i18n 키 (조작 탭에서 각 키 상자 옆에 표시할 텍스트)
     const KEYBIND_LABEL_I18N = {
         L4: 'left_4', L3: 'left_3', L2: 'left_2', L1: 'left_1',
@@ -209,16 +215,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 handleKeyBinding(e);
             } else if (isListeningForEditorKey) {
                 handleEditorKeyBinding(e);
+            } else if (isListeningForRestartKey) {
+                handleRestartKeyBinding(e);
             } else if (Game.state.gameState === 'editor') {
                 Editor.handleEditorKeyPress(e);
             } else {
                 Game.handleKeyDown(e);
+                handleRestartHoldKeyDown(e);
             }
         });
 
         window.addEventListener('keyup', (e) => {
-            if (!isListeningForKey && !isListeningForEditorKey) {
+            if (!isListeningForKey && !isListeningForEditorKey && !isListeningForRestartKey) {
                 Game.handleKeyUp(e);
+                handleRestartHoldKeyUp(e);
             }
         });
 
@@ -228,6 +238,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (isListeningForEditorKey && !e.target.classList.contains('keybind-box')) {
                 cancelEditorKeyBinding();
+            }
+            if (isListeningForRestartKey && !e.target.classList.contains('keybind-box')) {
+                cancelRestartKeyBinding();
             }
         });
 
@@ -680,6 +693,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const box = e.target.closest('.keybind-box');
             if (!box) return;
             if (isListeningForKey) cancelKeyBinding();
+            if (isListeningForRestartKey) cancelRestartKeyBinding();
             startKeyBinding(box);
         });
 
@@ -692,6 +706,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         DOM.settings.controls.saveBtn.addEventListener('click', () => saveKeyBindings());
+
+        DOM.settings.controls.restartHotkeyBox.addEventListener('click', () => {
+            if (isListeningForKey) cancelKeyBinding();
+            if (isListeningForEditorKey) cancelEditorKeyBinding();
+            if (isListeningForRestartKey) cancelRestartKeyBinding();
+            startRestartKeyBinding();
+        });
 
         // 환경설정 → 에디터 탭: 키 상자는 동적 생성이므로 이벤트 위임으로 처리
         DOM.settings.editorTab.keybindRows.addEventListener('click', (e) => {
@@ -875,6 +896,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (err) {
             console.warn('키 설정 저장 실패:', err);
         }
+        saveRestartHotkey();
         UI.showMessage('settings', '키 설정이 저장되었습니다.');
         DOM.settings.controls.statusLabel.textContent = '저장되었습니다!';
         setTimeout(() => {
@@ -882,6 +904,93 @@ document.addEventListener('DOMContentLoaded', () => {
                 DOM.settings.controls.statusLabel.textContent = '';
             }
         }, 2000);
+    }
+
+    // ── 조작 탭: 길게 눌러 즉시 재시작 단축키 ────────────────────────────────
+    function populateRestartHotkeyUI() {
+        tempRestartHotkeyCode = CONFIG.RESTART_HOTKEY || CONFIG.RESTART_HOTKEY_DEFAULT;
+        renderRestartHotkeyBox();
+    }
+
+    function renderRestartHotkeyBox() {
+        DOM.settings.controls.restartHotkeyBox.textContent = codeToKeyLabel(tempRestartHotkeyCode);
+    }
+
+    function startRestartKeyBinding() {
+        isListeningForRestartKey = true;
+        DOM.settings.controls.restartHotkeyBox.classList.add('listening');
+        DOM.settings.controls.restartHotkeyBox.textContent = '...';
+        DOM.settings.controls.statusLabel.textContent = '지정을 원하는 키를 입력하세요.';
+    }
+
+    function cancelRestartKeyBinding() {
+        if (!isListeningForRestartKey) return;
+        isListeningForRestartKey = false;
+        DOM.settings.controls.restartHotkeyBox.classList.remove('listening');
+        renderRestartHotkeyBox();
+        DOM.settings.controls.statusLabel.textContent = '';
+    }
+
+    function handleRestartKeyBinding(e) {
+        e.preventDefault();
+        if (e.key === 'Escape') {
+            cancelRestartKeyBinding();
+            return;
+        }
+        // 레인 키(main.js 상단 tempKeyMappingsByLanes)와 겹치는 키를 고르면 플레이 중
+        // 두 기능이 동시에 반응해버리므로, 현재 편집 중인 레인 수 그룹의 키와 충돌하는지
+        // 확인해서 막는다. (다른 레인 수 그룹과의 충돌까지는 확인하지 않음 — 한 번에 한
+        // 레인 수만 쓰기 때문에 실사용에는 지금 그룹만 확인하면 충분하다.)
+        const code = e.code;
+        const laneMapping = tempKeyMappingsByLanes[currentKeybindLanes] || {};
+        const conflictLaneId = Object.keys(laneMapping).find(laneId => {
+            let laneKeyName = laneMapping[laneId];
+            if (laneKeyName === ' ') laneKeyName = 'Space';
+            return laneKeyName === codeToKeyLabel(code) || laneKeyName === code;
+        });
+        if (conflictLaneId) {
+            DOM.settings.controls.statusLabel.textContent = '이미 레인 조작에 쓰는 키입니다.';
+            return;
+        }
+        tempRestartHotkeyCode = code;
+        isListeningForRestartKey = false;
+        DOM.settings.controls.restartHotkeyBox.classList.remove('listening');
+        renderRestartHotkeyBox();
+        DOM.settings.controls.statusLabel.textContent = '';
+    }
+
+    function saveRestartHotkey() {
+        CONFIG.RESTART_HOTKEY = tempRestartHotkeyCode || CONFIG.RESTART_HOTKEY_DEFAULT;
+        try {
+            localStorage.setItem('theBeat_restartHotkey', CONFIG.RESTART_HOTKEY);
+        } catch (err) {
+            console.warn('재시작 단축키 저장 실패:', err);
+        }
+    }
+
+    // 플레이 화면에서 실제로 홀드를 감지해 즉시 재시작을 트리거하는 부분.
+    // isListeningForKey 등 어떤 키 캡처 모드도 아닐 때만(= 실제 게임 입력 처리 분기에서만)
+    // 호출된다(setupEventListeners 참고).
+    function handleRestartHoldKeyDown(e) {
+        if (e.code !== CONFIG.RESTART_HOTKEY) return;
+        if (restartHoldActive) return; // 길게 눌러 반복 발생하는 keydown 이벤트는 무시
+        if (Game.state.gameState !== 'playing' && !Game.state.isPaused) return;
+        if (Game.state._multiplayerActive) return; // 멀티플레이는 mp-restart-btn(전원 동의) 절차를 따로 씀
+        restartHoldActive = true;
+        restartHoldTimer = setTimeout(() => {
+            restartHoldTimer = null;
+            restartHoldActive = false;
+            Game.restartCurrentChart();
+        }, CONFIG.RESTART_HOTKEY_HOLD_MS);
+    }
+
+    function handleRestartHoldKeyUp(e) {
+        if (e.code !== CONFIG.RESTART_HOTKEY) return;
+        restartHoldActive = false;
+        if (restartHoldTimer) {
+            clearTimeout(restartHoldTimer);
+            restartHoldTimer = null;
+        }
     }
 
     // localStorage에 현재 CONFIG의 에디터 설정을 저장한다(계정 없이도 유지됨).
@@ -1129,6 +1238,7 @@ document.addEventListener('DOMContentLoaded', () => {
         UI.showScreen('settings');
         populateKeybindUI();
         populateEditorKeybindUI();
+        populateRestartHotkeyUI();
         updateGridStyleButtons();
         DOM.settings.musicVolumeSlider.value = Game.state.settings.musicVolume;
         DOM.settings.musicVolumeValue.textContent = Game.state.settings.musicVolume;
