@@ -201,6 +201,11 @@ const Game = {
                     ctx.beginPath();
                     ctx.arc(cx, cy, r, 0, Math.PI * 2);
                     ctx.fill();
+                    // 테두리 — 채워진 그라데이션만으로는 원 가장자리가 흐릿하게 퍼져
+                    // 경계가 잘 안 보여서, 얇은 테두리선을 하나 둘러 판정 위치를 명확히 한다.
+                    ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
                 }
             } else {
                 // 바 노트: 전체 너비 가로선
