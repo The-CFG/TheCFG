@@ -491,6 +491,16 @@ const Game = {
     // 화면 카운트다운도 여기 맞춘다(runSyncedCountdown). 생략하면 기존 동작(로컬 4초 카운트다운) 그대로.
     async start(opts = {}) {
         await Audio.start();
+        // Fix (iPad 판정 오류): 실제 곡 재생에 쓰이는 AudioEngine의 AudioContext는
+        // Tone.js(Audio.start)의 AudioContext와 별개다. 기존에는 이 컨텍스트가
+        // 카운트다운이 끝난 뒤(사용자 제스처와 무관한 시점) play() 안에서야 처음 resume()됐는데,
+        // iOS/iPadOS Safari는 오토플레이 정책이 엄격해서 제스처 시점에서 몇 초 지난 뒤의
+        // resume()은 지연되거나 불안정하게 동작할 수 있다. 이게 원인이 되어 실제로 소리가
+        // 나오기 시작하는 시점과 게임 내부 시계(AudioEngine.currentTime)가 어긋나면,
+        // 터치/키보드 입력 자체는 정상이어도 판정만 이상해 보이는 증상이 생긴다.
+        // 사용자가 "시작"을 누른 이 시점(제스처 콜스택 안)에 곧바로 resume해두면
+        // 4초 카운트다운이 끝나기 전에 컨텍스트가 이미 안정적으로 활성화된 상태가 된다.
+        try { await AudioEngine.resumeContext(); } catch (e) { /* 무시 — play() 시점에 재시도됨 */ }
         this.resetState();
         resetPlayingScreenUI();
 

@@ -119,7 +119,14 @@ const AudioEngine = {
             // 의미상 0이 맞다 — 클램프 안 하면 이 음수가 _pausedAt에 저장되고,
             // 다음 play() 때 AudioBufferSourceNode.start()의 offset으로 그대로
             // 들어가 RangeError를 던진다.
-            return Math.max(0, this._startOffset + (this._ctx.currentTime - this._startContextTime));
+            //
+            // outputLatency 보정: ctx.currentTime은 오디오가 "스케줄된" 시각의 클럭일 뿐,
+            // 실제로 스피커에서 소리가 나오기까지는 outputLatency(iPad 등 모바일에서는
+            // 수십~100ms대까지도 커질 수 있음)만큼 더 걸린다. 이 값을 빼주지 않으면
+            // 게임 내부 시계가 실제 들리는 소리보다 앞서가서, 사용자가 귀로 듣고 정확히
+            // 맞춰 입력해도 (특히 지연이 큰 기기에서) 판정이 계속 밀린 것처럼 어긋난다.
+            const latency = this._ctx.outputLatency || this._ctx.baseLatency || 0;
+            return Math.max(0, this._startOffset + (this._ctx.currentTime - this._startContextTime) - latency);
         }
         return this._pausedAt;
     },
