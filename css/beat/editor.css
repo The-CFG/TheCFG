@@ -5,6 +5,18 @@
     min-height: 200px;
 }
 
+/* ── "차트 에디터" 제목 + "← 종합 창" 버튼 줄을 #editor-screen 스크롤 중에도 상단에
+   고정한다. #editor-screen 자신이 overflow-y-auto라 이게 그 스크롤의 기준이 된다.
+   sticky/top-0/z-* 유틸리티가 이 프로젝트의 커스텀 유틸 CSS엔 없어서 전용 규칙으로 뺐다. */
+#editor-sticky-header {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    background-color: #2d3748;
+    padding-bottom: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
 /* ── 채보 편집 영역 좌측 배치(데스크톱 1024px 이상, editor-layout.js가 재배치) ──────────
    #editor-container를 우측 #ui-area가 아니라 좌측 #game-area(실제 미리보기 캔버스가 있는
    자리) 위에 오버레이로 얹는다. 평소엔 이 오버레이가 채보 편집 UI를 그대로 덮어 보여주고,

@@ -1256,13 +1256,13 @@
 
                 <!-- Editor Screen (비트맵 창) -->
                 <div id="editor-screen" class="hidden flex flex-col h-full text-white overflow-y-auto" style="-webkit-overflow-scrolling: touch;">
-                    <div class="flex-shrink-0 touch-auto">
-                        <div class="flex items-center justify-between mb-4 gap-2">
-                            <h2 class="text-3xl font-bold" data-i18n="editor_title">차트 에디터<span id="editor-dirty-indicator" class="text-yellow-400 ml-2"></span></h2>
-                            <div class="flex gap-2 flex-shrink-0">
-                                <button id="editor-back-to-song-btn" class="py-2 px-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm">← 종합 창</button>
-                            </div>
+                    <div id="editor-sticky-header" class="flex items-center justify-between gap-2">
+                        <h2 class="text-3xl font-bold" data-i18n="editor_title">차트 에디터<span id="editor-dirty-indicator" class="text-yellow-400 ml-2"></span></h2>
+                        <div class="flex gap-2 flex-shrink-0">
+                            <button id="editor-back-to-song-btn" class="py-2 px-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm">← 종합 창</button>
                         </div>
+                    </div>
+                    <div class="flex-shrink-0 touch-auto">
                         <div id="editor-message" class="hidden p-3 mb-4 text-center bg-red-500 rounded-lg"></div>
                         <!-- 상단 컨트롤 영역 — 채보 찍는 영역(#editor-container)이 데스크톱에서 좌측
                              #game-area로 옮겨간 뒤로 이 영역은 우측 #ui-area(좁은 폭)에 남는다.
@@ -1277,7 +1277,6 @@
                                     <span>현재 음악:</span>
                                     <span id="audio-file-name-editor" class="flex-1 truncate text-gray-200">선택된 파일 없음</span>
                                 </div>
-                                <p class="text-xs text-gray-500">음악 불러오기/교체는 종합 창에서 관리합니다.</p>
                                 <div class="flex items-center space-x-2">
                                     <label for="editor-start-time" class="text-sm flex-shrink-0">미리보기 시작(초):</label>
                                     <input type="number" id="editor-start-time" value="0" min="0" title="이 비트맵 창 안에서만 쓰는 미리듣기 위치입니다. 종합 창의 '시작(초)'과는 별개입니다." class="w-24 p-2 bg-gray-700 rounded text-sm">
@@ -1314,7 +1313,7 @@
                                 </div>
                                 <div class="flex items-center space-x-2">
                                     <label for="editor-use-custom-fallspeed-toggle" class="text-sm" title="켜면 플레이어의 '플레이어 기본 하강 속도' 설정과 상관없이 이 맵은 항상 위에서 지정한 하강속도로 플레이됩니다.">이 맵 전용 하강 속도 사용</label>
-                                    <input type="checkbox" id="editor-use-custom-fallspeed-toggle" class="h-4 w-4 bg-gray-700 rounded border-gray-600 text-blue-500 focus:ring-blue-500">
+                                    <input type="checkbox" id="editor-use-custom-fallspeed-toggle" class="h-5 w-5 bg-gray-700 rounded border-gray-600 text-blue-500 focus:ring-blue-500">
                                 </div>
                                 <div class="flex items-center space-x-2">
                                     <label for="editor-snap-selector" class="text-sm flex-shrink-0">분할:</label>
