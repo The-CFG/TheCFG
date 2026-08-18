@@ -57,6 +57,34 @@ const UI = {
     loadingInlineHtml(text = '불러오는 중…') {
         return `<span class="inline-flex items-center justify-center gap-2">${this.spinnerHtml('w-4 h-4', 'border-current')}${text}</span>`;
     },
+    // ── 좌측 game-area 로딩 오버레이 ──────────────────────────────────
+    // 예전엔 "불러오는 중" 류 문구를 우측 ui-area의 작은 토스트(showMessage)로만
+    // 띄워서 로딩 중인지 알아채기 어려웠다. 훨씬 눈에 잘 띄는 좌측 game-area
+    // 전체에 오버레이로 띄우고, 무엇을 불러오는 중인지 구체적으로 밝힌다.
+    // key로 여러 로딩을 동시에 추적한다 (예: 사진+음악이 한꺼번에 로딩 중이어도
+    // 하나가 먼저 끝났다고 표시가 통째로 사라지지 않도록).
+    _areaLoads: {},
+    showAreaLoading(key, text = '불러오는 중…') {
+        this._areaLoads[key] = text;
+        this._renderAreaLoading();
+    },
+    hideAreaLoading(key) {
+        delete this._areaLoads[key];
+        this._renderAreaLoading();
+    },
+    _renderAreaLoading() {
+        const el = document.getElementById('game-area-loading');
+        const textEl = document.getElementById('game-area-loading-text');
+        if (!el || !textEl) return;
+        const texts = Object.values(this._areaLoads);
+        if (texts.length === 0) {
+            el.classList.add('hidden');
+            textEl.innerHTML = '';
+            return;
+        }
+        textEl.innerHTML = texts.map(t => `<div>${t}</div>`).join('');
+        el.classList.remove('hidden');
+    },
     updateScoreboard() {
         DOM.scoreEl.textContent = Game.state.score;
         DOM.comboEl.textContent = Game.state.combo;

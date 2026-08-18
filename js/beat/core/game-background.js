@@ -30,9 +30,13 @@ const GameBackground = {
         this._currentUrl = url;
 
         // 이미지를 미리 로드한 뒤 교체 → 깨진 이미지가 잠깐 노출되는 것 방지.
+        // 로딩 중임을 좌측 game-area에 표시(사진 불러오는 중…) — 다른 곡으로
+        // 다시 바뀌기 전까지(또는 로드 완료/실패 시) 유지된다.
+        UI.showAreaLoading('cover', '사진 불러오는 중…');
         const img = new Image();
         img.onload = () => {
             if (this._currentUrl !== url) return; // 로딩 도중 다른 곡으로 바뀌었으면 무시
+            UI.hideAreaLoading('cover');
             bg.style.transition = 'opacity 0.3s ease';
             bg.style.opacity = '0';
             requestAnimationFrame(() => {
@@ -41,7 +45,10 @@ const GameBackground = {
             });
         };
         img.onerror = () => {
-            if (this._currentUrl === url) this.clear();
+            if (this._currentUrl === url) {
+                UI.hideAreaLoading('cover');
+                this.clear();
+            }
         };
         img.src = url;
     },
@@ -49,6 +56,7 @@ const GameBackground = {
     clear() {
         const bg = document.getElementById('game-area-bg');
         if (!bg) return;
+        UI.hideAreaLoading('cover'); // 로딩 도중 취소된 경우에도 표시가 남지 않도록
         this._currentUrl = null;
         bg.style.transition = 'opacity 0.3s ease';
         bg.style.opacity = '0';

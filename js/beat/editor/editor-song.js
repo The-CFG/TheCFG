@@ -248,8 +248,7 @@ const EditorSong = {
         const bm = Editor.state.beatmaps[index];
         if (!bm) return;
         if (bm._loaded === false) {
-            UI.showMessage('editorSong', '난이도 데이터를 불러오는 중…');
-            const ok = await Editor.ensureBeatmapLoaded(bm);
+            const ok = await Editor.ensureBeatmapLoaded(bm); // 로딩 표시는 ensureBeatmapLoaded 내부(좌측 game-area)에서 처리
             if (!ok) return;
             this.render();
         }
@@ -286,8 +285,7 @@ const EditorSong = {
         const bm = Editor.state.beatmaps[index];
         if (!bm) return;
         if (bm._loaded === false) {
-            UI.showMessage('editorSong', '난이도 데이터를 불러오는 중…');
-            const ok = await Editor.ensureBeatmapLoaded(bm);
+            const ok = await Editor.ensureBeatmapLoaded(bm); // 로딩 표시는 ensureBeatmapLoaded 내부(좌측 game-area)에서 처리
             if (!ok) { this.render(); return; }
         }
         UI.showScreen('editor');
@@ -365,7 +363,7 @@ const EditorSong = {
             }
             const unloaded = Editor.state.beatmaps.filter(bm => bm._loaded === false);
             if (unloaded.length > 0) {
-                UI.showMessage('editorSong', '난이도 데이터를 불러오는 중…');
+                // 로딩 표시는 ensureBeatmapLoaded 내부(좌측 game-area)에서 각 난이도마다 처리
                 for (const bm of unloaded) {
                     const ok = await Editor.ensureBeatmapLoaded(bm);
                     if (!ok) return;

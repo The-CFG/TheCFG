@@ -24,6 +24,12 @@ body {
 #game-area {
     transition: width 0.25s ease;
 }
+
+/* ── 좌측 game-area 로딩 오버레이 ── 사진/음악/채보 데이터 등 동시에 여러 개가
+   로딩 중일 수 있어 문구를 줄바꿈으로 쌓아 보여준다 (UI.showAreaLoading 참고). */
+#game-area-loading-text > div + div {
+    margin-top: 4px;
+}
 #panel-toggle-btn {
     position: absolute;
     top: 50%;

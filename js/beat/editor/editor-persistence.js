@@ -175,7 +175,9 @@ Object.assign(Editor, {
             Debugger.logError(new Error('chartStoragePath 없음'), 'Editor.ensureBeatmapLoaded');
             return false;
         }
+        UI.showAreaLoading('chart', '채보 데이터 불러오는 중…');
         const { data, error } = await CloudCharts.downloadChartData(bm.chartStoragePath);
+        UI.hideAreaLoading('chart');
         if (error) {
             UI.showMessage('editorSong', `난이도 데이터 다운로드 실패: ${error.message}`);
             return false;

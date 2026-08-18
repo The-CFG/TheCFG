@@ -95,6 +95,7 @@ const Editor = {
             // 원인을 알 수 없었다.
             if (!this._musicErrorListenerAttached) {
                 DOM.musicPlayer.addEventListener('error', () => {
+                    UI.hideAreaLoading('audio'); // 로딩 중 실패했을 수도 있으니 표시를 내려준다
                     const mediaError = DOM.musicPlayer.error;
                     if (!mediaError) return;
                     const codeNames = {
@@ -208,13 +209,18 @@ const Editor = {
             this.state.isPlaying = false;
             cancelAnimationFrame(this.state.animationFrameId);
 
+            UI.showAreaLoading('audio', '음악 불러오는 중…');
             DOM.musicPlayer.src = URL.createObjectURL(blob);
             DOM.musicPlayer.load();
 
             this.state.audioFileName = fileName;
             DOM.editor.audioFileNameEl.textContent = fileName;
-            DOM.musicPlayer.onloadedmetadata = () => this.drawGrid();
+            DOM.musicPlayer.onloadedmetadata = () => {
+                UI.hideAreaLoading('audio');
+                this.drawGrid();
+            };
         } catch (err) {
+            UI.hideAreaLoading('audio');
             Debugger.logError(err, 'Editor.loadAudioFromBlob');
         }
     },
@@ -231,13 +237,18 @@ const Editor = {
             this.state.isPlaying = false;
             cancelAnimationFrame(this.state.animationFrameId);
 
+            UI.showAreaLoading('audio', '음악 불러오는 중…');
             DOM.musicPlayer.src = url;
             DOM.musicPlayer.load();
 
             this.state.audioFileName = fileName;
             DOM.editor.audioFileNameEl.textContent = fileName;
-            DOM.musicPlayer.onloadedmetadata = () => this.drawGrid();
+            DOM.musicPlayer.onloadedmetadata = () => {
+                UI.hideAreaLoading('audio');
+                this.drawGrid();
+            };
         } catch (err) {
+            UI.hideAreaLoading('audio');
             Debugger.logError(err, 'Editor.loadAudioFromUrl');
         }
     },
@@ -747,14 +758,19 @@ const Editor = {
                     const arrayBuffer = reader.result;
                     const typedBlob = new Blob([arrayBuffer], { type: mimeType });
 
+                    UI.showAreaLoading('audio', '음악 불러오는 중…');
                     DOM.musicPlayer.src = URL.createObjectURL(typedBlob);
                     // 새 소스를 명시적으로 로드해 이전 상태(readyState)를 깨끗하게 리셋한다.
                     DOM.musicPlayer.load();
 
                     this.state.audioFileName = fileName;
                     DOM.editor.audioFileNameEl.textContent = fileName;
-                    DOM.musicPlayer.onloadedmetadata = () => this.drawGrid();
+                    DOM.musicPlayer.onloadedmetadata = () => {
+                        UI.hideAreaLoading('audio');
+                        this.drawGrid();
+                    };
                 } catch (err) {
+                    UI.hideAreaLoading('audio');
                     Debugger.logError(err, 'Editor.handleAudioLoad:onload');
                 }
             };

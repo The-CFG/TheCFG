@@ -62,6 +62,14 @@
         <!-- 노래 커버 이미지 배경 (노래 선택~결과 화면 동안 표시). GameBackground.set()/clear()가 제어. -->
         <div id="game-area-bg" class="absolute inset-0 bg-cover bg-center" style="z-index:0;"></div>
         <div id="game-area-bg-dim" class="absolute inset-0 bg-black pointer-events-none" style="z-index:0;opacity:0.55;"></div>
+        <!-- 사진/음악/채보 데이터 등 비동기 로딩 상태 표시. 예전에는 우측 ui-area의 작은
+             빨간 토스트(UI.showMessage)로만 떠서 눈에 잘 안 띄었다 — 훨씬 넓고 눈에 잘
+             띄는 좌측 game-area로 옮기고, 무엇을 불러오는 중인지 구체적으로 표시한다.
+             UI.showAreaLoading(key, text) / UI.hideAreaLoading(key)로 제어. -->
+        <div id="game-area-loading" class="hidden absolute inset-0 flex flex-col items-center justify-center gap-3 text-white text-sm text-center px-4" style="z-index:4;background:rgba(0,0,0,0.45);">
+            <span class="inline-block w-8 h-8 border-2 border-teal-400 border-t-transparent rounded-full animate-spin flex-shrink-0"></span>
+            <div id="game-area-loading-text"></div>
+        </div>
         <!-- Canvas: 노트/판정선/레인 경계선 렌더링 전담 -->
         <div id="lanes-container" class="h-full flex relative" style="z-index:2;">
             <!-- 레인 div는 터치/클릭 이벤트 수신 전용 (렌더링 없음) -->
