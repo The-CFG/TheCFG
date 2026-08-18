@@ -218,8 +218,9 @@ const CloudCharts = {
     // ════════════════════════════════════════════════════════════════════════
 
     // ── 노래 업로드 (신규 beat_songs 행 + 오디오 [+ 커버 이미지]) ────────────
-    // meta: { title, artist, preview_start_ms, start_offset_ms, timing_start_ms }, audioFile: File 객체 (필수),
+    // meta: { title, artist, preview_start_ms, start_offset_ms, timing_start_ms, is_public }, audioFile: File 객체 (필수),
     // coverFile: File 객체 (선택 — 노래 선택~결과 화면 배경으로 쓰임)
+    // is_public: false로 넘기면 공개 라이브러리에는 노출되지 않고 "내 노래" 목록(서버 저장)에만 보인다.
     async uploadSong(meta, audioFile, coverFile) {
         const user = await CloudAuth.getUser();
         if (!user) return { error: new Error('로그인이 필요합니다.') };
@@ -260,7 +261,7 @@ const CloudCharts = {
                 audio_storage_path: audioPath,
                 audio_mime: audioFile.type || 'audio/mpeg',
                 cover_storage_path: coverPath,
-                is_public: true,
+                is_public: meta.is_public === true,
             })
             .select()
             .single();
@@ -275,7 +276,8 @@ const CloudCharts = {
     },
 
     // ── 이미 클라우드에 있는 노래의 메타(제목/가수/미리듣기 시각/시작(초)) [+ 커버 이미지] 갱신 ───
-    // meta: { title, artist, preview_start_ms, start_offset_ms, timing_start_ms } — 오디오/난이도는 건드리지 않는다.
+    // meta: { title, artist, preview_start_ms, start_offset_ms, timing_start_ms, is_public } — 오디오/난이도는 건드리지 않는다.
+    // is_public이 boolean으로 넘어오면 공개 여부도 같이 갱신한다(비공개 저장 ↔ 라이브러리 공개 전환).
     // coverFile: File 객체 (선택 — 넘기면 새 커버로 교체, 안 넘기면 기존 커버 유지)
     async updateSongMeta(songId, meta, coverFile) {
         const user = await CloudAuth.getUser();
@@ -288,6 +290,7 @@ const CloudCharts = {
             start_offset_ms: meta.start_offset_ms || 0,
             timing_start_ms: meta.timing_start_ms || 0,
         };
+        if (typeof meta.is_public === 'boolean') updatePayload.is_public = meta.is_public;
 
         if (coverFile) {
             const coverExt = (coverFile.name.split('.').pop() || 'jpg').toLowerCase();
@@ -312,8 +315,9 @@ const CloudCharts = {
 
     // ── 기존 노래에 난이도(beatmap) 하나 추가 ───────────────────────────────
     // 오디오는 song이 이미 갖고 있으므로 다시 올리지 않고 song_id로만 연결한다.
-    // meta: { difficulty_label, lane_count, bpm, sort_order } — sort_order는 노래 안에서
+    // meta: { difficulty_label, lane_count, bpm, sort_order, is_public } — sort_order는 노래 안에서
     // 이 난이도가 표시될 순서(작을수록 앞). 종합 창의 카드 목록 순서(=드래그 결과)를 그대로 씀.
+    // is_public은 이 난이도가 속한 노래의 현재 공개 여부를 그대로 따라간다(EditorSong.uploadToCloud 참고).
     // chartData: { bpm, startTimeOffset, laneCount, notes, triggers } (Editor의 flat 상태에서 뽑아낸 것)
     async addBeatmapToSong(songId, meta, chartData) {
         const user = await CloudAuth.getUser();
@@ -361,7 +365,7 @@ const CloudCharts = {
                 use_custom_fall_speed: meta.use_custom_fall_speed === true,
                 sort_order: typeof meta.sort_order === 'number' ? meta.sort_order : null,
                 chart_storage_path: chartPath,
-                is_public: true,
+                is_public: meta.is_public === true,
             })
             .select()
             .single();

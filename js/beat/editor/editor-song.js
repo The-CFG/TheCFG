@@ -56,6 +56,15 @@ const EditorSong = {
         if (DOM.editorSong.titleHeading) {
             DOM.editorSong.titleHeading.textContent = song.title ? song.title : '종합 창';
         }
+        if (DOM.editorSong.cloudStatusEl) {
+            if (!song.cloudSongId) {
+                DOM.editorSong.cloudStatusEl.textContent = '아직 서버에 저장되지 않음';
+            } else if (song.isPublic) {
+                DOM.editorSong.cloudStatusEl.textContent = '🌐 라이브러리에 공개됨';
+            } else {
+                DOM.editorSong.cloudStatusEl.textContent = '🔒 서버에 비공개로 저장됨';
+            }
+        }
         this._renderBeatmapList();
     },
 
@@ -85,7 +94,9 @@ const EditorSong = {
             info.className = 'flex-1 min-w-0';
             const label = document.createElement('p');
             label.className = 'font-semibold truncate';
-            const cloudBadge = bm.cloudChartId ? (bm._cloudDirty ? ' ☁·수정됨' : ' ☁') : '';
+            const cloudBadge = bm.cloudChartId
+                ? (bm._cloudDirty ? ' ☁·수정됨' : (Editor.state.song.isPublic ? ' 🌐' : ' 🔒'))
+                : '';
             label.textContent = `${bm.difficultyLabel || '기본'}${cloudBadge}`;
             const meta = document.createElement('p');
             meta.className = 'text-xs text-gray-400';
@@ -443,13 +454,19 @@ const EditorSong = {
         });
     },
 
-    // ── Phase 3d/4d: 클라우드 업로드 ────────────────────────────────────
+    // ── Phase 3d/4d/5a: 클라우드 저장 ────────────────────────────────────
+    // publish: true면 "🌐 라이브러리에 공개"(공개 라이브러리에 노출), false면 "🔒 서버에 저장"
+    // (미완성 작업물을 서버에만 보관 — 라이브러리에는 안 뜨고, 나중에 "에디터 홈"에서 다시 열 수 있음).
+    // 두 동작 모두 결국 같은 beat_songs/beat_charts 행에 is_public만 다르게 써서 처리한다.
+    //
     // 신규 노래(song.cloudSongId 없음)면 CloudCharts.uploadSong으로 노래+오디오를 먼저 만들고,
-    // 기존 노래면 오디오는 건드리지 않는다. 그 다음 두 종류의 난이도를 처리한다:
+    // 기존 노래면 오디오는 건드리지 않는다. 그 다음 세 종류의 난이도를 처리한다:
     //   - 아직 안 올라간(cloudChartId 없는) 난이도 → addBeatmapToSong으로 신규 추가
     //   - 이미 올라갔지만 이름변경/편집 후 손대지 않은(cloudChartId 있고 _cloudDirty === true) 난이도
     //     → updateBeatmap으로 메타(+ 편집 화면을 열었다면 notes/triggers까지) 갱신
-    async uploadToCloud() {
+    //   - 편집은 안 했지만 지금 공개 여부(publish)만 이전과 달라진 난이도 → updateBeatmap으로
+    //     메타(is_public)만 갱신 (예: 비공개로 저장해둔 걸 나중에 그대로 "라이브러리에 공개"할 때)
+    async uploadToCloud(publish = true) {
         try {
             const user = await CloudAuth.getUser();
             if (!user) {
@@ -460,33 +477,40 @@ const EditorSong = {
                 UI.showMessage('editorSong', '노래 제목을 입력해주세요.');
                 return;
             }
+            const isNewSong = !Editor.state.song.cloudSongId;
             const pendingBeatmaps = Editor.state.beatmaps.filter(bm => !bm.cloudChartId);
             const dirtyBeatmaps = Editor.state.beatmaps.filter(bm => bm.cloudChartId && bm._cloudDirty);
-            if (!Editor.state.song.cloudSongId && !Editor.state.song.audioFileObject) {
+            // 공개 여부가 지금 이 클릭으로 바뀌는 경우(비공개↔공개 전환)에는, 편집 안 해서
+            // _cloudDirty가 아닌 난이도들도 메타(is_public)만 다시 보내 노래와 상태를 맞춰준다.
+            const publicStateChanged = !isNewSong && Editor.state.song.isPublic !== publish;
+            const publicSyncBeatmaps = publicStateChanged
+                ? Editor.state.beatmaps.filter(bm => bm.cloudChartId && !bm._cloudDirty)
+                : [];
+            if (isNewSong && !Editor.state.song.audioFileObject) {
                 // 신규 노래 업로드 — 오디오 필수
                 UI.showMessage('editorSong', '먼저 오디오 파일을 선택해주세요.');
                 return;
             }
             // 난이도 변경사항이 없어도, 이미 클라우드에 있는 노래라면 제목/가수/미리듣기 시작 시각이
             // 바뀌었을 수 있으니 아래로 계속 진행해서 노래 메타는 항상 갱신한다.
-            const noBeatmapChanges = pendingBeatmaps.length === 0 && dirtyBeatmaps.length === 0;
-            if (noBeatmapChanges && !Editor.state.song.cloudSongId) {
+            const noBeatmapChanges = pendingBeatmaps.length === 0 && dirtyBeatmaps.length === 0 && publicSyncBeatmaps.length === 0;
+            if (noBeatmapChanges && !isNewSong && !publicStateChanged) {
                 UI.showMessage('editorSong', '이미 모든 난이도가 클라우드와 동기화되어 있습니다.');
                 return;
             }
 
-            if (DOM.editorSong.uploadCloudBtn) {
-                DOM.editorSong.uploadCloudBtn.disabled = true;
-                DOM.editorSong.uploadCloudBtn.innerHTML = UI.loadingInlineHtml('업로드 중…');
-            }
+            const busyBtns = [DOM.editorSong.uploadCloudBtn, DOM.editorSong.saveDraftBtn].filter(Boolean);
+            const activeBtn = publish ? DOM.editorSong.uploadCloudBtn : DOM.editorSong.saveDraftBtn;
+            busyBtns.forEach(btn => { btn.disabled = true; });
+            if (activeBtn) activeBtn.innerHTML = UI.loadingInlineHtml(publish ? '공개 업로드 중…' : '저장 중…');
 
             // 1) 노래 자체가 아직 클라우드에 없으면 먼저 생성
             const previewStartMs = Math.round((Editor.state.song.previewStartSec || 0) * 1000);
             const startOffsetMs = Math.round((Editor.state.song.startOffsetSec || 0) * 1000);
             const timingStartMs = Math.round((Editor.state.song.timingStartSec || 0) * 1000);
-            if (!Editor.state.song.cloudSongId) {
+            if (isNewSong) {
                 const { data, error } = await CloudCharts.uploadSong(
-                    { title: Editor.state.song.title, artist: Editor.state.song.artist, preview_start_ms: previewStartMs, start_offset_ms: startOffsetMs, timing_start_ms: timingStartMs },
+                    { title: Editor.state.song.title, artist: Editor.state.song.artist, preview_start_ms: previewStartMs, start_offset_ms: startOffsetMs, timing_start_ms: timingStartMs, is_public: publish },
                     Editor.state.song.audioFileObject,
                     Editor.state.song.coverFileObject
                 );
@@ -496,13 +520,14 @@ const EditorSong = {
                 }
                 Editor.state.song.cloudSongId = data.id;
             } else {
-                // 이미 클라우드에 있는 노래면 제목/가수/미리듣기 시작 시각/시작(초)/타이밍 시작(초)/커버 이미지(고른 경우)만 갱신해준다.
+                // 이미 클라우드에 있는 노래면 제목/가수/미리듣기 시작 시각/시작(초)/타이밍 시작(초)/커버 이미지(고른 경우)/공개 여부를 갱신해준다.
                 const { error: metaErr } = await CloudCharts.updateSongMeta(Editor.state.song.cloudSongId, {
                     title: Editor.state.song.title,
                     artist: Editor.state.song.artist,
                     preview_start_ms: previewStartMs,
                     start_offset_ms: startOffsetMs,
                     timing_start_ms: timingStartMs,
+                    is_public: publish,
                 }, Editor.state.song.coverFileObject);
                 if (metaErr) {
                     UI.showMessage('editorSong', `노래 정보 갱신 실패: ${metaErr.message}`);
@@ -530,6 +555,7 @@ const EditorSong = {
                     bpm: bm.bpm,
                     use_custom_fall_speed: bm.useCustomFallSpeed === true,
                     sort_order: Editor.state.beatmaps.indexOf(bm),
+                    is_public: publish,
                 };
                 const { data, error } = await CloudCharts.addBeatmapToSong(Editor.state.song.cloudSongId, meta, chartData);
                 if (error) {
@@ -542,7 +568,7 @@ const EditorSong = {
             }
 
             // 3) 이미 올라갔지만 이름변경/편집으로 바뀐 난이도들을 갱신
-            //    (1)에서 실패했다면 굳이 더 진행하지 않고 여기서 멈춘다.
+            //    (2)에서 실패했다면 굳이 더 진행하지 않고 여기서 멈춘다.
             let updatedCount = 0;
             if (!failure) {
                 for (const bm of dirtyBeatmaps) {
@@ -552,6 +578,7 @@ const EditorSong = {
                         bpm: bm.bpm,
                         use_custom_fall_speed: bm.useCustomFallSpeed === true,
                         sort_order: Editor.state.beatmaps.indexOf(bm),
+                        is_public: publish,
                     };
                     // 편집 화면을 열어 notes/triggers를 갖고 있는 상태(_loaded !== false)일 때만
                     // 차트 데이터도 같이 보낸다. 이름변경만 했다면 메타만 보내 기존 노트를 보존한다.
@@ -575,29 +602,58 @@ const EditorSong = {
                 }
             }
 
+            // 4) 편집은 안 됐지만 공개 여부만 이번에 바뀐 난이도들 — 메타(is_public)만 갱신, 노트는 안 건드림
+            let publicSyncedCount = 0;
+            if (!failure) {
+                for (const bm of publicSyncBeatmaps) {
+                    const { data, error } = await CloudCharts.updateBeatmap(bm.cloudChartId, {
+                        difficulty_label: bm.difficultyLabel,
+                        lane_count: bm.laneCount,
+                        bpm: bm.bpm,
+                        use_custom_fall_speed: bm.useCustomFallSpeed === true,
+                        sort_order: Editor.state.beatmaps.indexOf(bm),
+                        is_public: publish,
+                    }, null);
+                    if (error) {
+                        failure = { label: bm.difficultyLabel, message: error.message };
+                        break;
+                    }
+                    bm.updatedAt = data?.updated_at || new Date().toISOString();
+                    publicSyncedCount++;
+                }
+            }
+
+            if (!failure) Editor.state.song.isPublic = publish;
             this.render();
             if (failure) {
                 // 실패 전에 일부는 성공했을 수 있으니 진행 상황도 같이 알려준다.
                 const progressParts = [];
                 if (addedCount > 0) progressParts.push(`신규 ${addedCount}개`);
                 if (updatedCount > 0) progressParts.push(`수정 ${updatedCount}개`);
+                if (publicSyncedCount > 0) progressParts.push(`공개상태 갱신 ${publicSyncedCount}개`);
                 const progressNote = progressParts.length > 0 ? ` (이전에 ${progressParts.join(', ')} 성공)` : '';
-                UI.showMessage('editorSong', `"${failure.label}" 업로드 실패: ${failure.message}${progressNote}`);
-            } else {
+                UI.showMessage('editorSong', `"${failure.label}" 저장 실패: ${failure.message}${progressNote}`);
+            } else if (publish) {
                 const parts = [];
                 if (addedCount > 0) parts.push(`신규 ${addedCount}개`);
                 if (updatedCount > 0) parts.push(`수정 ${updatedCount}개`);
                 UI.showMessage('editorSong', parts.length > 0
-                    ? `클라우드에 ${parts.join(', ')} 반영했습니다.`
-                    : '노래 정보(제목/가수/미리듣기 시작 시각)를 갱신했습니다.');
+                    ? `라이브러리에 공개했습니다. (${parts.join(', ')})`
+                    : '라이브러리에 공개했습니다.');
+            } else {
+                UI.showMessage('editorSong', '서버에 비공개로 저장했습니다. 라이브러리에는 노출되지 않으며, "에디터 홈"에서 다시 열어 이어서 작업하거나 나중에 공개할 수 있습니다.');
             }
         } catch (err) {
             Debugger.logError(err, 'EditorSong.uploadToCloud');
-            UI.showMessage('editorSong', `업로드 중 오류: ${err.message}`);
+            UI.showMessage('editorSong', `저장 중 오류: ${err.message}`);
         } finally {
             if (DOM.editorSong.uploadCloudBtn) {
                 DOM.editorSong.uploadCloudBtn.disabled = false;
-                DOM.editorSong.uploadCloudBtn.textContent = '☁ 클라우드에 업로드';
+                DOM.editorSong.uploadCloudBtn.textContent = '🌐 라이브러리에 공개';
+            }
+            if (DOM.editorSong.saveDraftBtn) {
+                DOM.editorSong.saveDraftBtn.disabled = false;
+                DOM.editorSong.saveDraftBtn.textContent = '🔒 서버에 저장 (비공개)';
             }
         }
     },

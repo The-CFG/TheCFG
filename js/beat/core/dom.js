@@ -130,6 +130,8 @@ const DOM = {
         loadLocalInput: document.getElementById('editor-song-load-local-input'),
         titleHeading: document.getElementById('editor-song-title'),
         uploadCloudBtn: document.getElementById('editor-song-upload-cloud-btn'),
+        saveDraftBtn: document.getElementById('editor-song-save-draft-btn'),
+        cloudStatusEl: document.getElementById('editor-song-cloud-status'),
     },
     // ── Phase 3d: 에디터 홈 (내 노래 클라우드 목록) ──────────────────────────
     editorHome: {

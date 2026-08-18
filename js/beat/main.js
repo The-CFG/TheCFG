@@ -398,8 +398,11 @@ document.addEventListener('DOMContentLoaded', () => {
             '오디오/이미지/json(로컬 채보) 파일만 끌어다 놓을 수 있습니다.'
         );
 
-        // ── Phase 3d: 종합 창 클라우드 업로드 ──
-        DOM.editorSong.uploadCloudBtn.addEventListener('click', () => EditorSong.uploadToCloud());
+        // ── Phase 3d/5a: 종합 창 클라우드 저장 — 공개(라이브러리 노출) / 비공개(서버 저장만) ──
+        DOM.editorSong.uploadCloudBtn.addEventListener('click', () => EditorSong.uploadToCloud(true));
+        if (DOM.editorSong.saveDraftBtn) {
+            DOM.editorSong.saveDraftBtn.addEventListener('click', () => EditorSong.uploadToCloud(false));
+        }
 
         // Trigger modal event listeners
         DOM.triggerModal.confirmBtn.addEventListener('click', () => {

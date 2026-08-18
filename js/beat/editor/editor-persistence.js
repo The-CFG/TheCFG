@@ -154,6 +154,9 @@ Object.assign(Editor, {
             coverFileName: '',
             coverUrl: null,
             cloudSongId: null,
+            // 서버에 저장된 적이 있다면 그 노래가 지금 공개 라이브러리에 노출 중인지 여부.
+            // 신규 노래는 기본값 false(비공개) — 명시적으로 "라이브러리에 공개"를 눌러야 노출된다.
+            isPublic: false,
             previewStartSec: 0,
             startOffsetSec: 0,
             timingStartSec: 0,

@@ -66,7 +66,8 @@ const EditorHome = {
 
             const meta = document.createElement('p');
             meta.className = 'text-xs text-gray-400';
-            meta.textContent = `${song.artist || '—'} · 난이도 ${song.beatmapCount}개`;
+            const statusLabel = song.is_public ? '🌐 공개' : '🔒 비공개(서버 저장)';
+            meta.textContent = `${song.artist || '—'} · 난이도 ${song.beatmapCount}개 · ${statusLabel}`;
 
             card.append(title, meta);
             card.addEventListener('click', () => this.open(song.id));
@@ -92,6 +93,7 @@ const EditorHome = {
         Editor.state.song.title = data.song.title || '';
         Editor.state.song.artist = data.song.artist || '';
         Editor.state.song.cloudSongId = data.song.id;
+        Editor.state.song.isPublic = data.song.is_public === true;
         Editor.state.song.previewStartSec = (data.song.preview_start_ms || 0) / 1000;
         Editor.state.song.startOffsetSec = (data.song.start_offset_ms || 0) / 1000;
         Editor.state.song.timingStartSec = (data.song.timing_start_ms || 0) / 1000;
