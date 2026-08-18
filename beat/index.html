@@ -16,6 +16,7 @@
     <link rel="stylesheet" href="/css/beat/responsive.css">
     <link rel="stylesheet" href="/css/beat/help.css">
     <link rel="stylesheet" href="/css/beat/theme.css">
+    <script src="/js/beat/theme.js"></script><!-- FOUC 방지: defer 없이 즉시 실행 -->
     <style>
         /* 터치 디바이스 레이아웃 - 좁은 화면(1024px 이하)에서만 세로 배치 */
         /* [수정] 기존에는 'body > div'로 잡아서 업로드/로그인/트리거/디버그 모달도
@@ -377,6 +378,24 @@
                                         </div>
                                         <input id="player-default-fallspeed-slider" type="range" min="1" max="20" value="7" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
                                         <p class="text-xs text-gray-500 mt-1">비트맵에 "이 맵 전용 하강 속도"가 지정되어 있지 않은 경우에만 적용됩니다.</p>
+                                    </div>
+                                </div>
+                                <div class="border-t border-gray-700 pt-4 mt-4 space-y-6">
+                                    <div>
+                                        <div class="flex justify-between items-center text-gray-300 mb-2">
+                                            <label for="input-offset-slider" data-i18n="input_offset">판정 보정 (입력 지연 보정)</label>
+                                            <span id="input-offset-value" class="font-mono">0ms</span>
+                                        </div>
+                                        <input id="input-offset-slider" type="range" min="-300" max="300" step="5" value="0" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                        <p class="text-xs text-gray-500 mt-1">판정이 계속 느리게(BAD/MISS) 나온다면 값을 올리고, 계속 빠르게 나온다면 값을 내려보세요. 키보드/마우스/터치 입력 모두에 적용됩니다.</p>
+                                    </div>
+                                    <div>
+                                        <div class="flex justify-between items-center text-gray-300 mb-2">
+                                            <label for="touch-input-offset-slider" data-i18n="touch_input_offset">터치 입력 추가 보정</label>
+                                            <span id="touch-input-offset-value" class="font-mono">0ms</span>
+                                        </div>
+                                        <input id="touch-input-offset-slider" type="range" min="-300" max="300" step="5" value="0" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                        <p class="text-xs text-gray-500 mt-1">일부 모바일 브라우저(특히 iOS의 Chrome 등)는 터치 입력 전달이 키보드/마우스보다 느릴 수 있습니다. 터치로 플레이할 때만 위 보정값에 추가로 더해집니다. 터치 판정이 유독 심하게 늦게(MISS) 나온다면 이 값을 올려보세요.</p>
                                     </div>
                                 </div>
                             </div>

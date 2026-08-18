@@ -627,6 +627,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // 드래그가 끝났을 때(change)만 저장 — input마다 저장하면 요청이 너무 잦음
             DOM.settings.gameplayImageOpacitySlider.addEventListener('change', () => {
                 localStorage.setItem('theBeat_gameplayImageOpacity', Game.state.settings.gameplayImageOpacity);
+                savePlaySettingsToCloud();
             });
         }
 
@@ -641,6 +642,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             DOM.settings.laneBackgroundOpacitySlider.addEventListener('change', () => {
                 localStorage.setItem('theBeat_laneBackgroundOpacity', Game.state.settings.laneBackgroundOpacity);
+                savePlaySettingsToCloud();
             });
         }
 
@@ -649,6 +651,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const enabled = e.target.checked;
                 Game.state.settings.laneHighlightOnInput = enabled;
                 localStorage.setItem('theBeat_laneHighlightOnInput', enabled ? 'true' : 'false');
+                savePlaySettingsToCloud();
             });
         }
 
@@ -657,6 +660,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const enabled = e.target.checked;
                 Game.state.settings.autoHideUiOnPlay = enabled;
                 localStorage.setItem('theBeat_autoHideUiOnPlay', enabled ? 'true' : 'false');
+                savePlaySettingsToCloud();
                 // 플레이 중(일시정지 아님)에 설정을 켜고 끄면 즉시 반영
                 if (UI.currentScreen === 'playing' && !Game.state.isPaused) {
                     UI.setPanelCollapsed(enabled);
@@ -669,6 +673,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const enabled = e.target.checked;
                 Game.state.settings.useDefaultFallSpeed = enabled;
                 localStorage.setItem('theBeat_useDefaultFallSpeed', enabled ? 'true' : 'false');
+                savePlaySettingsToCloud();
                 if (DOM.settings.defaultFallSpeedContainer) {
                     DOM.settings.defaultFallSpeedContainer.classList.toggle('hidden', !enabled);
                 }
@@ -685,6 +690,35 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             DOM.settings.defaultFallSpeedSlider.addEventListener('change', () => {
                 localStorage.setItem('theBeat_defaultFallSpeedValue', Game.state.settings.defaultFallSpeedValue);
+                savePlaySettingsToCloud();
+            });
+        }
+
+        if (DOM.settings.inputOffsetSlider) {
+            DOM.settings.inputOffsetSlider.addEventListener('input', (e) => {
+                const value = parseInt(e.target.value);
+                Game.state.settings.inputOffsetMs = value;
+                if (DOM.settings.inputOffsetValue) {
+                    DOM.settings.inputOffsetValue.textContent = `${value}ms`;
+                }
+            });
+            DOM.settings.inputOffsetSlider.addEventListener('change', () => {
+                localStorage.setItem('theBeat_inputOffsetMs', Game.state.settings.inputOffsetMs);
+                savePlaySettingsToCloud();
+            });
+        }
+
+        if (DOM.settings.touchInputOffsetSlider) {
+            DOM.settings.touchInputOffsetSlider.addEventListener('input', (e) => {
+                const value = parseInt(e.target.value);
+                Game.state.settings.touchInputOffsetMs = value;
+                if (DOM.settings.touchInputOffsetValue) {
+                    DOM.settings.touchInputOffsetValue.textContent = `${value}ms`;
+                }
+            });
+            DOM.settings.touchInputOffsetSlider.addEventListener('change', () => {
+                localStorage.setItem('theBeat_touchInputOffsetMs', Game.state.settings.touchInputOffsetMs);
+                savePlaySettingsToCloud();
             });
         }
 
@@ -1244,6 +1278,14 @@ document.addEventListener('DOMContentLoaded', () => {
         DOM.settings.musicVolumeValue.textContent = Game.state.settings.musicVolume;
         DOM.settings.sfxVolumeSlider.value = Game.state.settings.sfxVolume;
         DOM.settings.sfxVolumeValue.textContent = Game.state.settings.sfxVolume;
+        refreshPlaySettingsUI();
+    }
+
+    // ── 플레이 탭 설정(계정 동기화 대상) UI 반영 ──────────────────────
+    // Game.state.settings의 값을 화면의 슬라이더/토글에 그대로 그려준다.
+    // showSettingsScreen()에서 설정 화면을 열 때, 그리고 계정에서 값을 불러온 직후
+    // (applyAccountPlaySettings) 양쪽에서 재사용한다.
+    function refreshPlaySettingsUI() {
         if (DOM.settings.gameplayImageOpacitySlider) {
             const opacityValue = Game.state.settings.gameplayImageOpacity;
             DOM.settings.gameplayImageOpacitySlider.value = opacityValue;
@@ -1257,6 +1299,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (DOM.settings.laneBackgroundOpacityValue) {
                 DOM.settings.laneBackgroundOpacityValue.textContent = laneBgValue;
             }
+            document.documentElement.style.setProperty('--lane-bg-opacity', laneBgValue / 100);
         }
         if (DOM.settings.laneHighlightToggle) {
             DOM.settings.laneHighlightToggle.checked = Game.state.settings.laneHighlightOnInput !== false;
@@ -1276,6 +1319,20 @@ document.addEventListener('DOMContentLoaded', () => {
             DOM.settings.defaultFallSpeedSlider.value = speed;
             if (DOM.settings.defaultFallSpeedValue) {
                 DOM.settings.defaultFallSpeedValue.textContent = speed;
+            }
+        }
+        if (DOM.settings.inputOffsetSlider) {
+            const offset = Game.state.settings.inputOffsetMs;
+            DOM.settings.inputOffsetSlider.value = offset;
+            if (DOM.settings.inputOffsetValue) {
+                DOM.settings.inputOffsetValue.textContent = `${offset}ms`;
+            }
+        }
+        if (DOM.settings.touchInputOffsetSlider) {
+            const touchOffset = Game.state.settings.touchInputOffsetMs;
+            DOM.settings.touchInputOffsetSlider.value = touchOffset;
+            if (DOM.settings.touchInputOffsetValue) {
+                DOM.settings.touchInputOffsetValue.textContent = `${touchOffset}ms`;
             }
         }
     }
@@ -1326,6 +1383,33 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('#difficulty-selector button').forEach(b => b.classList.remove('active'));
     }
 
+    // ── 플레이 탭 설정 계정 동기화 ──────────────────────────────────
+    // localStorage는 기기별로만 남기 때문에, 로그인 상태라면 계정(user_profiles.beat_settings,
+    // jsonb 한 컬럼에 묶어서 저장 — HOI4Editor가 쓰는 settings 컬럼과는 별개)에도 함께 저장해서
+    // 다른 기기/브라우저에서 로그인했을 때도 같은 설정으로 이어서 플레이할 수 있게 한다.
+    // localStorage 저장은 그대로 유지 — 로그아웃 상태(게스트)에서도 기기별로는 계속 동작해야 하고,
+    // 오프라인/서버 오류 시에도 최소한 이 기기에서는 값이 남아있도록 하는 폴백이다.
+    const PLAY_SETTINGS_KEYS = [
+        'gameplayImageOpacity', 'laneBackgroundOpacity', 'laneHighlightOnInput',
+        'autoHideUiOnPlay', 'useDefaultFallSpeed', 'defaultFallSpeedValue',
+        'inputOffsetMs', 'touchInputOffsetMs',
+    ];
+
+    function collectPlaySettings() {
+        const settings = {};
+        for (const key of PLAY_SETTINGS_KEYS) settings[key] = Game.state.settings[key];
+        return settings;
+    }
+
+    // 슬라이더를 드래그하는 동안 계속 change가 튈 수 있어(터치 기기 등) 짧게 디바운스한다.
+    let _savePlaySettingsTimer = null;
+    function savePlaySettingsToCloud() {
+        clearTimeout(_savePlaySettingsTimer);
+        _savePlaySettingsTimer = setTimeout(() => {
+            CloudAuth.savePlaySettings(collectPlaySettings());
+        }, 500);
+    }
+
     // ── 계정 볼륨 설정 자동 적용 ──────────────────────────────────
     // 로그인 상태가 될 때(최초 로드 시 세션 복원 포함 / 로그인 직후) 계정에 저장된
     // 볼륨을 불러와 적용한다. 같은 유저에 대해 중복 적용되지 않도록 가드한다.
@@ -1345,6 +1429,24 @@ document.addEventListener('DOMContentLoaded', () => {
         DOM.settings.sfxVolumeValue.textContent = vol.sfxVolume;
     }
 
+    // 로그인 시 계정에 저장된 플레이 탭 설정을 불러와 적용한다. 처음 저장해본 적 없는
+    // 계정(null)이거나 개별 값이 비어있는 경우 그 항목은 건드리지 않고 기존(localStorage 기반)
+    // 기본값을 그대로 둔다 — 계정에 일부만 저장돼 있어도 나머지가 초기화되지 않도록.
+    let _lastPlaySettingsAppliedUserId = null;
+    async function applyAccountPlaySettings(user) {
+        if (!user || user.id === _lastPlaySettingsAppliedUserId) return;
+        _lastPlaySettingsAppliedUserId = user.id;
+        const settings = await CloudAuth.getPlaySettings();
+        if (!settings) return; // 아직 저장한 적 없는 계정 → 기존 기본값 유지
+        for (const key of PLAY_SETTINGS_KEYS) {
+            if (settings[key] !== undefined && settings[key] !== null) {
+                Game.state.settings[key] = settings[key];
+            }
+        }
+        GameBackground.applyOpacity();
+        refreshPlaySettingsUI();
+    }
+
     function initialize() {
         setupEventListeners();
         document.querySelector('#difficulty-selector button[data-difficulty="normal"]').classList.add('active');
@@ -1358,10 +1460,15 @@ document.addEventListener('DOMContentLoaded', () => {
         UI.initPanelToggle();
         if (typeof setupAuthUI === 'function') setupAuthUI();
 
-        // 최초 세션 복원 / 로그인 / 로그아웃 시 볼륨 동기화
+        // 최초 세션 복원 / 로그인 / 로그아웃 시 볼륨·플레이 설정 동기화
         _supabase.auth.onAuthStateChange((_event, session) => {
-            if (session?.user) applyAccountVolume(session.user);
-            else _lastVolumeAppliedUserId = null;
+            if (session?.user) {
+                applyAccountVolume(session.user);
+                applyAccountPlaySettings(session.user);
+            } else {
+                _lastVolumeAppliedUserId = null;
+                _lastPlaySettingsAppliedUserId = null;
+            }
         });
     }
 

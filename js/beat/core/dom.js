@@ -172,6 +172,10 @@ const DOM = {
         defaultFallSpeedContainer: document.getElementById('player-default-fallspeed-container'),
         defaultFallSpeedSlider: document.getElementById('player-default-fallspeed-slider'),
         defaultFallSpeedValue: document.getElementById('player-default-fallspeed-value'),
+        inputOffsetSlider: document.getElementById('input-offset-slider'),
+        inputOffsetValue: document.getElementById('input-offset-value'),
+        touchInputOffsetSlider: document.getElementById('touch-input-offset-slider'),
+        touchInputOffsetValue: document.getElementById('touch-input-offset-value'),
         debugModeToggle: document.getElementById('debug-mode-toggle'),
         controls: {
             lanesSelector: document.getElementById('keybind-lanes-selector'),

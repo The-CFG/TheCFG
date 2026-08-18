@@ -99,6 +99,39 @@ const CloudAuth = {
             }, { onConflict: 'user_id' });
         if (error) console.warn('saveVolumeSettings 오류:', error.message);
     },
+
+    // ── 플레이 탭 설정 (계정별 저장) ──────────────────────────
+    // user_profiles.beat_settings (jsonb) 컬럼 사용 — 게임플레이 이미지 표시,
+    // 레인 배경, 하이라이트, 판정 보정 등을 하나의 객체로 묶어서 저장한다.
+    // 설정 항목이 앞으로 늘어나도 매번 새 컬럼을 추가하지 않도록 jsonb로 통일.
+    // HOI4Editor가 쓰는 settings jsonb 컬럼과는 별개 (같은 프로젝트 공유이므로 충돌 방지).
+    async getPlaySettings() {
+        const user = await this.getUser();
+        if (!user) return null;
+        const { data, error } = await _supabase
+            .from('user_profiles')
+            .select('beat_settings')
+            .eq('user_id', user.id)
+            .maybeSingle();
+        if (error) {
+            console.warn('getPlaySettings 오류:', error.message);
+            return null;
+        }
+        return data?.beat_settings || null;
+    },
+
+    async savePlaySettings(settings) {
+        const user = await this.getUser();
+        if (!user) return;
+        const { error } = await _supabase
+            .from('user_profiles')
+            .upsert({
+                user_id: user.id,
+                beat_settings: settings,
+                updated_at: new Date().toISOString(),
+            }, { onConflict: 'user_id' });
+        if (error) console.warn('savePlaySettings 오류:', error.message);
+    },
 };
 
 // ── 계정 아이콘 표시 갱신 ────────────────────────────────────

@@ -47,6 +47,22 @@ const Game = {
                 const parsed = parseInt(stored, 10);
                 return Number.isNaN(parsed) ? 7 : Math.max(1, Math.min(20, parsed));
             })(),
+            // 입력 판정 보정(ms). 기기/브라우저마다 입력이 인지되는 시점에 지연이 있을 수 있어
+            // (예: 오디오 출력 지연) 값을 올릴수록 입력을 그만큼 더 빨리 인식된 것으로 쳐서 판정한다.
+            // 키보드/마우스에는 이 값만 적용되고, 터치에는 아래 touchInputOffsetMs가 추가로 더해진다.
+            inputOffsetMs: (() => {
+                const stored = localStorage.getItem('theBeat_inputOffsetMs');
+                const parsed = parseInt(stored, 10);
+                return Number.isNaN(parsed) ? 0 : Math.max(-300, Math.min(300, parsed));
+            })(),
+            // 터치 입력 전용 추가 보정(ms). iOS의 Chrome 등 WKWebView 기반 브라우저는
+            // 터치 이벤트가 JS로 전달되기까지 자체 지연이 더 붙는 경우가 있어, 위의 일반
+            // 보정과 별도로 터치에만 추가로 적용할 수 있게 분리했다.
+            touchInputOffsetMs: (() => {
+                const stored = localStorage.getItem('theBeat_touchInputOffsetMs');
+                const parsed = parseInt(stored, 10);
+                return Number.isNaN(parsed) ? 0 : Math.max(-300, Math.min(300, parsed));
+            })(),
             bpm: 120,
             startTimeOffset: 0, // 채보 박자 계산 기준점 (bpm/noteoffset 등 노트 타이밍용)
             songStartOffset: 0, // 실제 오디오 재생을 시작할 지점 (종합 창의 "시작(초)")
@@ -961,17 +977,25 @@ const Game = {
         if (this.state.gameState !== 'playing' || this.state.isPaused) return;
         const laneIndex = this.state.keyMapping.findIndex(code => code === e.keyCode || code === e.key.toUpperCase().charCodeAt(0));
         if (laneIndex === -1 || this.state.activeLanes[laneIndex]) return;
-        this.handleInputDown(laneIndex);
+        this.handleInputDown(laneIndex, false);
     },
 
     handleKeyUp(e) {
         if (this.state.gameState !== 'playing' || this.state.isPaused) return;
         const laneIndex = this.state.keyMapping.findIndex(code => code === e.keyCode || code === e.key.toUpperCase().charCodeAt(0));
         if (laneIndex === -1) return;
-        this.handleInputUp(laneIndex);
+        this.handleInputUp(laneIndex, false);
     },
 
-    handleInputDown(laneIndex) {
+    // isTouch: 설정의 "판정 보정"에 터치 전용 추가 보정을 더할지 여부.
+    // (키보드/마우스에는 일반 보정만, 터치에는 일반 보정 + 터치 전용 보정이 함께 적용된다)
+    getInputOffsetMs(isTouch) {
+        const base = this.state.settings.inputOffsetMs || 0;
+        const touchExtra = isTouch ? (this.state.settings.touchInputOffsetMs || 0) : 0;
+        return base + touchExtra;
+    },
+
+    handleInputDown(laneIndex, isTouch = false) {
         try {
             if (this.state.gameState !== 'playing') return;
 
@@ -979,11 +1003,12 @@ const Game = {
             const laneEl = DOM.lanesContainer.children[laneIndex];
             if (laneEl && this.state.settings.laneHighlightOnInput) laneEl.classList.add('active-feedback');
 
+            const offsetMs = this.getInputOffsetMs(isTouch);
             let elapsedTime;
             if (this.state.settings.mode === 'music') {
-                elapsedTime = Math.max(0, (DOM.musicPlayer.currentTime - this.state.settings.startTimeOffset) * 1000);
+                elapsedTime = Math.max(0, (DOM.musicPlayer.currentTime - this.state.settings.startTimeOffset) * 1000 - offsetMs);
             } else {
-                elapsedTime = performance.now() - this.state.gameStartTime - this.state.totalPausedTime;
+                elapsedTime = performance.now() - this.state.gameStartTime - this.state.totalPausedTime - offsetMs;
             }
 
             const isCircleMode = document.body.classList.contains('circle-notes');
@@ -1019,18 +1044,19 @@ const Game = {
         }
     },
 
-    handleInputUp(laneIndex) {
+    handleInputUp(laneIndex, isTouch = false) {
         this.state.activeLanes[laneIndex] = false;
         const laneEl = DOM.lanesContainer.children[laneIndex];
         if (laneEl) laneEl.classList.remove('active-feedback');
 
         if (this.state.gameState !== 'playing') return;
 
+        const offsetMs = this.getInputOffsetMs(isTouch);
         let elapsedTime;
         if (this.state.settings.mode === 'music') {
-            elapsedTime = Math.max(0, (DOM.musicPlayer.currentTime - this.state.settings.startTimeOffset) * 1000);
+            elapsedTime = Math.max(0, (DOM.musicPlayer.currentTime - this.state.settings.startTimeOffset) * 1000 - offsetMs);
         } else {
-            elapsedTime = performance.now() - this.state.gameStartTime - this.state.totalPausedTime;
+            elapsedTime = performance.now() - this.state.gameStartTime - this.state.totalPausedTime - offsetMs;
         }
 
         const isCircleMode = document.body.classList.contains('circle-notes');
@@ -1131,11 +1157,11 @@ const Game = {
             lane.appendChild(keyHint);
 
             // 이벤트: 클릭/터치 처리
-            lane.addEventListener('mousedown',  (e) => { e.preventDefault(); this.handleInputDown(i); });
-            lane.addEventListener('mouseup',    (e) => { e.preventDefault(); this.handleInputUp(i); });
-            lane.addEventListener('mouseleave', (e) => { if (this.state.activeLanes[i]) this.handleInputUp(i); });
-            lane.addEventListener('touchstart', (e) => { e.preventDefault(); this.handleInputDown(i); });
-            lane.addEventListener('touchend',   (e) => { e.preventDefault(); this.handleInputUp(i); });
+            lane.addEventListener('mousedown',  (e) => { e.preventDefault(); this.handleInputDown(i, false); });
+            lane.addEventListener('mouseup',    (e) => { e.preventDefault(); this.handleInputUp(i, false); });
+            lane.addEventListener('mouseleave', (e) => { if (this.state.activeLanes[i]) this.handleInputUp(i, false); });
+            lane.addEventListener('touchstart', (e) => { e.preventDefault(); this.handleInputDown(i, true); });
+            lane.addEventListener('touchend',   (e) => { e.preventDefault(); this.handleInputUp(i, true); });
             DOM.lanesContainer.appendChild(lane);
         }
     },
