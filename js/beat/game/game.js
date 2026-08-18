@@ -907,8 +907,8 @@ const Game = {
 
     _processSingleJudgement(judgement, note) {
         note.processed = true;
-        // long_head + perfect/good: shrinking 수축 애니메이션 → updateNotes가 _visible 관리
-        // 그 외(miss/bad 포함 모든 타입): 즉시 숨김
+        // long_head + perfect/good/bad(=miss가 아닌 모든 판정): shrinking 수축 애니메이션 → updateNotes가 _visible 관리
+        // miss만 즉시 숨김
         const willShrink = note.type === 'long_head' && judgement !== 'miss';
         if (!willShrink) {
             note._visible = false;
@@ -925,20 +925,23 @@ const Game = {
             this.state.processedNotes++;
         }
         this.state.score += CONFIG.POINTS[judgement];
+        // 버그 수정: 이전에는 이 shrinking 설정이 콤보 증가(else) 분기 안에만 있어서,
+        // long_head가 'bad'로 판정되면(콤보는 리셋되지만 miss는 아님 → willShrink는 true) shrinking
+        // 플래그가 끝내 설정되지 않아 노트가 판정선에서 수축도 안 되고 사라지지도 않는 문제가 있었다.
+        // 콤보 증감과 무관하게, willShrink 조건(=miss가 아닌 모든 long_head 판정)과 항상 함께 처리한다.
+        if (willShrink) {
+            note.shrinking = true;
+            const tailNote = this.state.notes.find(n => n.noteId === note.noteId && n.type === 'long_tail');
+            if (tailNote) {
+                tailNote.headProcessed = true;
+                note.tailTime = tailNote.time;
+            }
+        }
         if (judgement === 'miss' || judgement === 'bad') {
             this.state.combo = 0;
         } else {
             this.state.combo++;
             if (this.state.combo > this.state.maxCombo) this.state.maxCombo = this.state.combo;
-            if (note.type === 'long_head') {
-                // 롱노트 헤드 성공 → 수축 시작
-                note.shrinking = true;
-                const tailNote = this.state.notes.find(n => n.noteId === note.noteId && n.type === 'long_tail');
-                if (tailNote) {
-                    tailNote.headProcessed = true;
-                    note.tailTime = tailNote.time;
-                }
-            }
         }
     },
 
