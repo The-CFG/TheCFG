@@ -82,8 +82,9 @@ const DOM = {
         timingStartMarker: document.getElementById('editor-timing-start-marker'),
         
         // 상단 컨트롤
-        audioFileInput: document.getElementById('audio-file-input-editor'),
-        audioDropzone: document.getElementById('editor-audio-dropzone'),
+        // audioFileInput/audioDropzone: 개별 비트맵 창의 "음악 불러오기" 버튼은 제거됨
+        // (음악 로딩은 이제 종합 창 EditorSong에서만 관리). audioFileNameEl은 현재 로드된
+        // 음악 파일명을 보여주는 정보 표시로만 남아있다.
         audioFileNameEl: document.getElementById('audio-file-name-editor'),
         startTimeInput: document.getElementById('editor-start-time'),
         timingStartInput: document.getElementById('editor-timing-start-input'),

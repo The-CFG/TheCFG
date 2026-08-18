@@ -781,8 +781,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        DOM.editor.audioFileInput.addEventListener('change', (e) => Editor.handleAudioLoad(e));
-        setupFileDropzone(DOM.editor.audioDropzone, () => DOM.editor.audioFileInput);
+        // 개별 비트맵 창의 "음악 불러오기"는 제거됨 — 음악은 종합 창(EditorSong)에서만 로드/교체한다.
+        // 비트맵 창의 audioFileNameEl은 EditorSong이 loadAudioFromUrl()로 넣어준 음악의
+        // 파일명을 그냥 보여주기만 한다.
         // 비트맵 창 자체의 "미리보기 시작(초)" — song.startOffsetSec(종합 창의 "시작(초)")과는
         // 완전히 별개의 값(state.previewSeekSec)이다. 여기서 숫자를 바꿔도 종합 창 값에는
         // 전혀 영향이 없다.

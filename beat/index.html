@@ -1264,27 +1264,31 @@
                             </div>
                         </div>
                         <div id="editor-message" class="hidden p-3 mb-4 text-center bg-red-500 rounded-lg"></div>
-                        <!-- 상단 컨트롤 영역 -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                        <!-- 상단 컨트롤 영역 — 채보 찍는 영역(#editor-container)이 데스크톱에서 좌측
+                             #game-area로 옮겨간 뒤로 이 영역은 우측 #ui-area(좁은 폭)에 남는다.
+                             그래서 그리드가 아니라 세로 스택으로 배치해 폭에 상관없이 넉넉하게
+                             쓰고, 각 패널 사이/안쪽 여백을 넓혀 나중에 패널을 더 추가해도
+                             자연스럽게 이어붙을 수 있도록 했다. -->
+                        <div class="flex flex-col gap-5">
                             <!-- 1. 음악 설정 -->
-                            <div id="editor-audio-dropzone" class="flex flex-col space-y-2 p-4 bg-gray-800 rounded-lg">
-                                <h3 class="text-xs font-bold uppercase tracking-wide text-gray-400 border-b border-gray-600 pb-2 mb-1">🎵 음악 설정</h3>
+                            <div id="editor-audio-panel" class="flex flex-col space-y-3 p-5 bg-gray-800 rounded-lg">
+                                <h3 class="text-sm font-bold uppercase tracking-wide text-gray-400 border-b border-gray-600 pb-2 mb-1">🎵 음악 설정</h3>
+                                <div class="flex items-center space-x-2 text-sm text-gray-400">
+                                    <span>현재 음악:</span>
+                                    <span id="audio-file-name-editor" class="flex-1 truncate text-gray-200">선택된 파일 없음</span>
+                                </div>
+                                <p class="text-xs text-gray-500">음악 불러오기/교체는 종합 창에서 관리합니다.</p>
                                 <div class="flex items-center space-x-2">
-                                    <label for="audio-file-input-editor" class="cursor-pointer text-center flex-1 py-2 px-3 bg-teal-600 hover:bg-teal-500 rounded transition text-sm">음악 불러오기</label>
-                                    <input type="file" id="audio-file-input-editor" accept="*" class="hidden">
-                                    <span id="audio-file-name-editor" class="text-xs text-gray-400 flex-1 truncate">선택된 파일 없음</span>
+                                    <label for="editor-start-time" class="text-sm flex-shrink-0">미리보기 시작(초):</label>
+                                    <input type="number" id="editor-start-time" value="0" min="0" title="이 비트맵 창 안에서만 쓰는 미리듣기 위치입니다. 종합 창의 '시작(초)'과는 별개입니다." class="w-24 p-2 bg-gray-700 rounded text-sm">
                                 </div>
                                 <div class="flex items-center space-x-2">
-                                    <label for="editor-start-time" class="text-sm">미리보기 시작(초):</label>
-                                    <input type="number" id="editor-start-time" value="0" min="0" title="이 비트맵 창 안에서만 쓰는 미리듣기 위치입니다. 종합 창의 '시작(초)'과는 별개입니다." class="w-20 p-1 bg-gray-700 rounded text-sm">
+                                    <label for="editor-timing-start-input" class="text-sm flex-shrink-0">타이밍 시작(초):</label>
+                                    <input type="number" id="editor-timing-start-input" value="0" min="0" step="0.1" title="이 시각(절대) 이전에는 그리드/노트가 없습니다. '시작(초)'과는 별개 값입니다." class="w-24 p-2 bg-gray-700 rounded text-sm">
                                 </div>
                                 <div class="flex items-center space-x-2">
-                                    <label for="editor-timing-start-input" class="text-sm">타이밍 시작(초):</label>
-                                    <input type="number" id="editor-timing-start-input" value="0" min="0" step="0.1" title="이 시각(절대) 이전에는 그리드/노트가 없습니다. '시작(초)'과는 별개 값입니다." class="w-20 p-1 bg-gray-700 rounded text-sm">
-                                </div>
-                                <div class="flex items-center space-x-2">
-                                    <label for="editor-preview-lanes" class="text-sm">미리보기:</label>
-                                    <select id="editor-preview-lanes" class="p-1 bg-gray-700 rounded text-sm flex-1">
+                                    <label for="editor-preview-lanes" class="text-sm flex-shrink-0">미리보기:</label>
+                                    <select id="editor-preview-lanes" class="p-2 bg-gray-700 rounded text-sm flex-1">
                                         <option value="4" selected>4레인</option>
                                         <option value="5">5레인</option>
                                         <option value="6">6레인</option>
@@ -1292,29 +1296,29 @@
                                         <option value="8">8레인</option>
                                     </select>
                                 </div>
-                                <div class="flex items-center space-x-2 pt-1">
-                                    <button id="editor-play-btn" class="flex-1 py-1 px-2 bg-green-600 hover:bg-green-500 rounded text-sm">재생</button>
-                                    <button id="editor-stop-btn" class="flex-1 py-1 px-2 bg-gray-500 hover:bg-gray-400 rounded text-sm">정지</button>
+                                <div class="flex items-center space-x-3 pt-1">
+                                    <button id="editor-play-btn" class="flex-1 py-2 px-3 bg-green-600 hover:bg-green-500 rounded text-sm font-semibold">재생</button>
+                                    <button id="editor-stop-btn" class="flex-1 py-2 px-3 bg-gray-500 hover:bg-gray-400 rounded text-sm font-semibold">정지</button>
                                 </div>
                             </div>
                             <!-- 2. 차트 설정 -->
-                            <div class="flex flex-col space-y-2 p-4 bg-gray-800 rounded-lg">
-                                <h3 class="text-xs font-bold uppercase tracking-wide text-gray-400 border-b border-gray-600 pb-2 mb-1">🎼 차트 설정</h3>
+                            <div class="flex flex-col space-y-3 p-5 bg-gray-800 rounded-lg">
+                                <h3 class="text-sm font-bold uppercase tracking-wide text-gray-400 border-b border-gray-600 pb-2 mb-1">🎼 차트 설정</h3>
                                 <div class="flex items-center space-x-2">
-                                    <label for="bpm-input" class="text-sm">BPM:</label>
-                                    <input type="number" id="bpm-input" value="120" class="w-20 p-1 bg-gray-700 rounded text-sm">
+                                    <label for="bpm-input" class="text-sm flex-shrink-0">BPM:</label>
+                                    <input type="number" id="bpm-input" value="120" class="w-24 p-2 bg-gray-700 rounded text-sm">
                                 </div>
                                 <div class="flex items-center space-x-2">
-                                    <label for="editor-note-fall-speed" class="text-sm">하강속도:</label>
-                                    <input type="number" id="editor-note-fall-speed" value="7" min="1" max="20" class="w-20 p-1 bg-gray-700 rounded text-sm">
+                                    <label for="editor-note-fall-speed" class="text-sm flex-shrink-0">하강속도:</label>
+                                    <input type="number" id="editor-note-fall-speed" value="7" min="1" max="20" class="w-24 p-2 bg-gray-700 rounded text-sm">
                                 </div>
                                 <div class="flex items-center space-x-2">
                                     <label for="editor-use-custom-fallspeed-toggle" class="text-sm" title="켜면 플레이어의 '플레이어 기본 하강 속도' 설정과 상관없이 이 맵은 항상 위에서 지정한 하강속도로 플레이됩니다.">이 맵 전용 하강 속도 사용</label>
                                     <input type="checkbox" id="editor-use-custom-fallspeed-toggle" class="h-4 w-4 bg-gray-700 rounded border-gray-600 text-blue-500 focus:ring-blue-500">
                                 </div>
                                 <div class="flex items-center space-x-2">
-                                    <label for="editor-snap-selector" class="text-sm">분할:</label>
-                                    <select id="editor-snap-selector" class="p-1 bg-gray-700 rounded text-sm">
+                                    <label for="editor-snap-selector" class="text-sm flex-shrink-0">분할:</label>
+                                    <select id="editor-snap-selector" class="p-2 bg-gray-700 rounded text-sm flex-1">
                                         <option value="4">1/4</option>
                                         <option value="8">1/8</option>
                                         <option value="12">1/12</option>
@@ -1324,32 +1328,32 @@
                                     </select>
                                 </div>
                                 <div class="flex items-center space-x-2">
-                                    <label class="text-sm">마디:</label>
-                                    <button id="editor-add-measure-btn" class="px-2 py-0.5 bg-gray-600 hover:bg-gray-500 rounded text-sm">+</button>
-                                    <button id="editor-remove-measure-btn" class="px-2 py-0.5 bg-gray-600 hover:bg-gray-500 rounded text-sm">-</button>
+                                    <label class="text-sm flex-shrink-0">마디:</label>
+                                    <button id="editor-add-measure-btn" class="px-3 py-1 bg-gray-600 hover:bg-gray-500 rounded text-sm">+</button>
+                                    <button id="editor-remove-measure-btn" class="px-3 py-1 bg-gray-600 hover:bg-gray-500 rounded text-sm">-</button>
                                 </div>
-                                <div id="editor-tool-selector" class="flex space-x-2 btn-group pt-1">
-                                    <button data-tool="create" class="px-3 py-1.5 bg-gray-600 hover:bg-gray-500 rounded text-sm font-semibold transition active" title="생성 (Z)">생성</button>
-                                    <button data-tool="edit" class="px-3 py-1.5 bg-gray-600 hover:bg-gray-500 rounded text-sm font-semibold transition" title="편집 (X)">편집</button>
-                                    <button id="editor-delete-selected-btn" class="px-3 py-1.5 bg-red-700 hover:bg-red-600 rounded text-sm font-semibold transition" title="편집 도구로 선택한 노트를 삭제합니다 (모바일: 우클릭 대체)">선택 삭제</button>
+                                <div id="editor-tool-selector" class="flex flex-wrap gap-2 btn-group pt-1">
+                                    <button data-tool="create" class="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded text-sm font-semibold transition active" title="생성 (Z)">생성</button>
+                                    <button data-tool="edit" class="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded text-sm font-semibold transition" title="편집 (X)">편집</button>
+                                    <button id="editor-delete-selected-btn" class="px-4 py-2 bg-red-700 hover:bg-red-600 rounded text-sm font-semibold transition" title="편집 도구로 선택한 노트를 삭제합니다 (모바일: 우클릭 대체)">선택 삭제</button>
                                     <span class="text-xs text-gray-400 self-center pl-1 hidden sm:inline">우클릭: 삭제</span>
                                 </div>
-                                <div id="editor-note-type-selector" class="flex space-x-2 btn-group pt-1">
-                                    <button data-type="tap" class="w-10 h-8 bg-blue-500 hover:bg-blue-400 rounded transition active" title="기본 노트"></button>
-                                    <button data-type="long" class="w-10 h-8 bg-purple-500 hover:bg-purple-400 rounded transition" title="롱 노트"></button>
-                                    <button data-type="false" class="w-10 h-8 bg-red-400 hover:bg-red-300 rounded transition" title="가짜 노트"></button>
-                                    <button data-type="trigger" class="w-10 h-8 bg-yellow-500 hover:bg-yellow-400 rounded transition" title="설정 트리거">⚙️</button>
+                                <div id="editor-note-type-selector" class="flex flex-wrap gap-2 btn-group pt-1">
+                                    <button data-type="tap" class="w-12 h-10 bg-blue-500 hover:bg-blue-400 rounded transition active" title="기본 노트"></button>
+                                    <button data-type="long" class="w-12 h-10 bg-purple-500 hover:bg-purple-400 rounded transition" title="롱 노트"></button>
+                                    <button data-type="false" class="w-12 h-10 bg-red-400 hover:bg-red-300 rounded transition" title="가짜 노트"></button>
+                                    <button data-type="trigger" class="w-12 h-10 bg-yellow-500 hover:bg-yellow-400 rounded transition" title="설정 트리거">⚙️</button>
                                 </div>
                             </div>
                             <!-- 3. 현재 난이도 -->
-                            <div class="flex flex-col space-y-2 p-4 bg-gray-800 rounded-lg">
-                                <h3 class="text-xs font-bold uppercase tracking-wide text-gray-400 border-b border-gray-600 pb-2 mb-1">💾 현재 난이도</h3>
+                            <div class="flex flex-col space-y-3 p-5 bg-gray-800 rounded-lg">
+                                <h3 class="text-sm font-bold uppercase tracking-wide text-gray-400 border-b border-gray-600 pb-2 mb-1">💾 현재 난이도</h3>
                                 <div class="flex items-center space-x-2">
-                                    <input type="text" id="editor-chart-filename" readonly placeholder="난이도" class="flex-grow p-1 bg-gray-700 rounded text-sm min-w-0 text-gray-400 cursor-default">
+                                    <input type="text" id="editor-chart-filename" readonly placeholder="난이도" class="flex-grow p-2 bg-gray-700 rounded text-sm min-w-0 text-gray-400 cursor-default">
                                 </div>
-                                <div class="grid grid-cols-2 gap-2 pt-1">
-                                    <button id="editor-quick-save-btn" class="py-1 px-2 bg-blue-600 hover:bg-blue-500 rounded text-sm font-semibold">저장</button>
-                                    <button id="editor-reset-btn" class="py-1 px-2 bg-red-700 hover:bg-red-600 rounded text-sm">재설정</button>
+                                <div class="grid grid-cols-2 gap-3 pt-1">
+                                    <button id="editor-quick-save-btn" class="py-2 px-3 bg-blue-600 hover:bg-blue-500 rounded text-sm font-semibold">저장</button>
+                                    <button id="editor-reset-btn" class="py-2 px-3 bg-red-700 hover:bg-red-600 rounded text-sm">재설정</button>
                                 </div>
                                 <p class="text-xs text-gray-500 pt-1">저장은 이 난이도만 갱신합니다 (종합 창으로 돌아가지 않음). 노래 전체 저장/클라우드 업로드는 종합 창에서 하세요.</p>
                             </div>
