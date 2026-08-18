@@ -14,6 +14,11 @@ const UI = {
         if (appShell) {
             const isPlaying = screenName === 'playing';
             appShell.classList.toggle('in-play', isPlaying);
+            // 데스크톱(1024px 이상)에서는 채보 편집 영역(#editor-container)이 editor-layout.js에
+            // 의해 좌측 #game-area 위 오버레이로 옮겨진다 — 그 오버레이를 이 화면일 때만 노출한다
+            // (css/beat/editor.css의 #app-shell.in-editor 규칙 참고). 좁은 화면에서는 오버레이
+            // 클래스 자체가 안 붙으므로(editor-layout.js) 이 토글은 영향이 없다.
+            appShell.classList.toggle('in-editor', screenName === 'editor');
             // 플레이 화면에 들어갈 때는 "게임플레이 시 우측 화면 숨기기" 설정값을 그대로 적용.
             // (기존에는 여기서 아무 것도 안 해서 이전 화면의 접힘 상태가 그대로 남아있었음)
             // 단, 일시정지 중(예: 설정 화면 갔다 되돌아온 경우)에는 패널을 계속 펼쳐둔다.

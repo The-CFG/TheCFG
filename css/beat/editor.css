@@ -4,6 +4,33 @@
     cursor: pointer;
     min-height: 200px;
 }
+
+/* ── 채보 편집 영역 좌측 배치(데스크톱 1024px 이상, editor-layout.js가 재배치) ──────────
+   #editor-container를 우측 #ui-area가 아니라 좌측 #game-area(실제 미리보기 캔버스가 있는
+   자리) 위에 오버레이로 얹는다. 평소엔 이 오버레이가 채보 편집 UI를 그대로 덮어 보여주고,
+   "재생"(미리보기)을 누르면 이 오버레이만 부드럽게 페이드아웃되어 그 아래에서 이미 그려지고
+   있는 실제 노트 미리보기(Game.canvas)가 드러난다. 정지/일시정지하면 다시 페이드인된다.
+   좁은 화면에서는 editor-layout.js가 이 클래스를 붙이지 않으므로 기존 레이아웃 그대로다. */
+#editor-container.editor-container-overlay {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    z-index: 40;
+    display: none;
+    background-color: #0b0e14;
+    opacity: 1;
+    transition: opacity 0.35s ease;
+}
+#app-shell.in-editor #editor-container.editor-container-overlay {
+    display: flex;
+}
+/* 미리보기 재생 중: 편집 UI 오버레이를 투명하게 만들어 아래 미리보기 캔버스를 드러낸다.
+   pointer-events도 꺼서, 페이드아웃된 상태에서 실수로 편집 UI를 클릭하는 걸 막는다. */
+#editor-container.editor-container-overlay.editor-preview-fading {
+    opacity: 0;
+    pointer-events: none;
+}
+
 .beat-line {
     position: absolute;
     width: 100%;

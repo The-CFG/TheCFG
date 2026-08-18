@@ -42,7 +42,12 @@ Object.assign(Editor, {
                 }
                 DOM.editor.playBtn.textContent = "일시정지";
                 this.state.isPlaying = true;
-                
+
+                // 좌측 오버레이로 옮겨진 채보 편집 UI라면(데스크톱, editor-layout.js) 재생 시작과
+                // 함께 페이드아웃시켜, 그 아래에서 바로 시작되는 실제 노트 미리보기가 드러나게 한다.
+                // 오버레이가 아닌 경우(좁은 화면)는 이 클래스가 붙어도 CSS상 아무 효과가 없다.
+                DOM.editor.container.classList.add('editor-preview-fading');
+
                 // 게임 화면 미리보기 시작
                 this.startPreview();
                 
@@ -53,7 +58,10 @@ Object.assign(Editor, {
                 DOM.editor.playBtn.textContent = "재생";
                 this.state.isPlaying = false;
                 cancelAnimationFrame(this.state.animationFrameId);
-                
+
+                // 일시정지 → 채보 편집 UI 오버레이를 다시 페이드인
+                DOM.editor.container.classList.remove('editor-preview-fading');
+
                 // 게임 화면 미리보기 정지 (노트는 유지)
                 if (this.state.previewAnimationId) {
                     cancelAnimationFrame(this.state.previewAnimationId);
@@ -76,6 +84,9 @@ Object.assign(Editor, {
                 cancelAnimationFrame(this.state.previewAnimationId);
                 this.state.previewAnimationId = null;
             }
+
+            // 정지 → 채보 편집 UI 오버레이를 다시 페이드인
+            DOM.editor.container.classList.remove('editor-preview-fading');
             
             this.state.playbackStartTime = 0;
             this.state.timeWhenPaused = 0;
