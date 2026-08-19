@@ -378,3 +378,39 @@ body {
     z-index: 30;
     pointer-events: none;
 }
+
+/* ── 탭 타이밍 자동 보정 (연습모드-개선계획.md 4번) ───────────────────────────── */
+.calibration-mode-btn.selected {
+    outline: 2px solid #14b8a6;
+    outline-offset: -2px;
+}
+.calibration-tap-zone {
+    width: 200px;
+    height: 200px;
+    max-width: 60vw;
+    max-height: 60vw;
+    border-radius: 50%;
+    background: #374151;
+    border: 3px solid #4b5563;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    text-align: center;
+    font-size: 0.85rem;
+    color: #d1d5db;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color 0.06s ease, border-color 0.06s ease, transform 0.06s ease;
+}
+/* 신호(깜빡임) 표시 — JS가 매 박자마다 짧게 붙였다 뗀다 */
+.calibration-tap-zone.beat-flash {
+    background: #14b8a6;
+    border-color: #5eead4;
+    transform: scale(1.05);
+}
+/* 사용자가 실제로 탭한 순간의 시각 피드백 — beat-flash와 별개로 짧게 붙는다 */
+.calibration-tap-zone.tap-flash {
+    border-color: #facc15;
+}

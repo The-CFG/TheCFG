@@ -33,6 +33,7 @@ const DOM = {
         online: document.getElementById('online-screen'),
         multiplayer: document.getElementById('multiplayer-screen'),
         osuConvert: document.getElementById('osu-convert-screen'),
+        calibration: document.getElementById('calibration-screen'),
     },
     messages: {
         menu: document.getElementById('menu-message'),
