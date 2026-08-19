@@ -304,3 +304,77 @@ body {
     background-color: #4299e1;
     color: white;
 }
+
+/* ── 연습 모드 설정 UI 그룹핑(연습모드-개선계획.md 1번) ──────────────────────────
+   detailed-difficulty-settings 안의 슬라이더를 노트 밀도/패턴 복잡도/특수 노트
+   3개 섹션으로 나누고, 섹션별로 접었다 펼 수 있게 하는 스타일. */
+.settings-section-toggle {
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+}
+.settings-section-toggle .section-toggle-icon {
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
+}
+.settings-section-body.hidden {
+    display: none;
+}
+
+/* 슬라이더 옆 "?" 툴팁 아이콘. 데스크톱은 hover로, 모바일은 탭(‌JS로 .active 토글)으로 뜬다. */
+.info-tooltip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background: #4b5563;
+    color: #d1d5db;
+    font-size: 10px;
+    font-weight: bold;
+    line-height: 1;
+    margin-left: 5px;
+    cursor: help;
+    position: relative;
+    flex-shrink: 0;
+    user-select: none;
+}
+.info-tooltip:hover,
+.info-tooltip.active {
+    background: #6b7280;
+}
+.info-tooltip:hover::after,
+.info-tooltip.active::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 135%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #111827;
+    color: #e5e7eb;
+    padding: 6px 9px;
+    border-radius: 6px;
+    font-size: 11.5px;
+    font-weight: normal;
+    line-height: 1.4;
+    white-space: normal;
+    width: 190px;
+    max-width: 60vw;
+    z-index: 30;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+    pointer-events: none;
+}
+.info-tooltip:hover::before,
+.info-tooltip.active::before {
+    content: '';
+    position: absolute;
+    bottom: 118%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: #111827;
+    z-index: 30;
+    pointer-events: none;
+}

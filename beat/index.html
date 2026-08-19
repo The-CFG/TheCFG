@@ -188,6 +188,15 @@
                                         <button data-difficulty="drillComplex" class="w-full py-3 px-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition" data-i18n="drill_complex">🎯 복합 패턴</button>
                                     </div>
                                 </div>
+                                <!-- 내 프리셋: 커스텀 슬라이더 조합을 이름 붙여 저장/불러오기 (연습모드-개선계획.md 1번) -->
+                                <div class="mt-3 flex items-center gap-2" id="custom-preset-controls">
+                                    <select id="custom-preset-select" class="flex-1 min-w-0 p-2 bg-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        <option value="" data-i18n="custom_preset_placeholder">내 프리셋 선택…</option>
+                                    </select>
+                                    <button id="custom-preset-load-btn" type="button" class="flex-shrink-0 py-2 px-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm transition" data-i18n="custom_preset_load">불러오기</button>
+                                    <button id="custom-preset-save-btn" type="button" class="flex-shrink-0 py-2 px-3 bg-teal-700 hover:bg-teal-600 rounded-lg text-sm transition" data-i18n="custom_preset_save">저장</button>
+                                    <button id="custom-preset-delete-btn" type="button" class="flex-shrink-0 py-2 px-3 bg-red-900 hover:bg-red-800 rounded-lg text-sm transition" data-i18n="custom_preset_delete">삭제</button>
+                                </div>
                             </div>
                             <div id="detailed-difficulty-settings" class="hidden mt-4 p-4 bg-gray-800 rounded-lg space-y-4">
                                 <div>
@@ -197,71 +206,126 @@
                                     </div>
                                     <input id="note-fall-speed-slider" type="range" min="1" max="20" value="7" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
                                 </div>
-                                <div>
-                                    <div class="flex justify-between items-center text-gray-300">
-                                        <label for="note-spawn-speed-slider">노트 속도 (생성 빈도)</label>
-                                        <span id="note-spawn-speed-value" class="font-mono">1.5x</span>
-                                    </div>
-                                    <input id="note-spawn-speed-slider" type="range" min="50" max="300" value="150" step="10" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
-                                </div>
-                                <div>
-                                    <div class="flex justify-between items-center text-gray-300">
-                                        <label for="dongta-prob-slider">동시타 확률</label>
-                                        <span id="dongta-prob-value" class="font-mono">25%</span>
-                                    </div>
-                                    <input id="dongta-prob-slider" type="range" min="0" max="100" value="25" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
-                                </div>
-                                <div>
-                                    <div class="flex justify-between items-center text-gray-300">
-                                        <label for="max-simultaneous-slider">최대 동시타 개수</label>
-                                        <span id="max-simultaneous-value" class="font-mono">3</span>
-                                    </div>
-                                    <input id="max-simultaneous-slider" type="range" min="2" max="8" value="3" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
-                                </div>
+
+                                <!-- 노트 밀도: 노트가 얼마나 자주(생성 빈도), 얼마나 많이(노트 수) 나오는지 -->
                                 <div class="border-t border-gray-700 pt-4">
-                                    <h4 class="text-sm font-semibold text-gray-400 mb-3">동시타 노트 타입 확률</h4>
-                                    <div class="space-y-3">
+                                    <button type="button" class="settings-section-toggle w-full flex justify-between items-center" data-target="settings-section-density">
+                                        <h4 class="text-sm font-semibold text-gray-400 flex items-center">
+                                            <span data-i18n="settings_section_density">노트 밀도</span>
+                                            <span class="info-tooltip" data-tooltip="노트가 화면에 얼마나 자주 나올지를 조절합니다. 노트 수는 위쪽 '노트 수' 입력칸에서 따로 정할 수 있어요.">?</span>
+                                        </h4>
+                                        <svg class="section-toggle-icon h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </button>
+                                    <div id="settings-section-density" class="settings-section-body space-y-4 mt-3">
                                         <div>
                                             <div class="flex justify-between items-center text-gray-300">
-                                                <label for="dongta-tap-prob-slider" class="text-sm">기본 노트</label>
-                                                <span id="dongta-tap-prob-value" class="font-mono text-sm">70%</span>
+                                                <label for="note-spawn-speed-slider">노트 속도 (생성 빈도)</label>
+                                                <span id="note-spawn-speed-value" class="font-mono">1.5x</span>
                                             </div>
-                                            <input id="dongta-tap-prob-slider" type="range" min="0" max="100" value="70" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
-                                        </div>
-                                        <div>
-                                            <div class="flex justify-between items-center text-gray-300">
-                                                <label for="dongta-long-prob-slider" class="text-sm">롱 노트</label>
-                                                <span id="dongta-long-prob-value" class="font-mono text-sm">20%</span>
-                                            </div>
-                                            <input id="dongta-long-prob-slider" type="range" min="0" max="100" value="20" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
-                                        </div>
-                                        <div>
-                                            <div class="flex justify-between items-center text-gray-300">
-                                                <label for="dongta-false-prob-slider" class="text-sm">가짜 노트</label>
-                                                <span id="dongta-false-prob-value" class="font-mono text-sm">10%</span>
-                                            </div>
-                                            <input id="dongta-false-prob-slider" type="range" min="0" max="100" value="10" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                            <input id="note-spawn-speed-slider" type="range" min="50" max="300" value="150" step="10" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
                                         </div>
                                     </div>
                                 </div>
-                                <div>
-                                    <div class="flex justify-between items-center text-gray-300">
-                                        <label for="long-note-prob-slider">롱노트 확률</label>
-                                        <span id="long-note-prob-value" class="font-mono">15%</span>
-                                    </div>
-                                    <input id="long-note-prob-slider" type="range" min="0" max="100" value="15" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
-                                </div>
-                                <div class="border-t border-gray-700 pt-4 space-y-4">
-                                    <div class="flex items-center justify-between text-gray-300">
-                                        <label for="false-note-toggle">가짜 노트 활성화</label>
-                                        <input id="false-note-toggle" type="checkbox" class="h-5 w-5 bg-gray-700 rounded border-gray-600 text-blue-500 focus:ring-blue-500">
-                                    </div>
-                                    <div id="false-note-prob-container" class="hidden">
-                                        <div class="flex justify-between items-center text-gray-300">
-                                            <label for="false-note-prob-slider">가짜 노트 등장 확률</label>
-                                            <span id="false-note-prob-value" class="font-mono">0%</span>
+
+                                <!-- 패턴 복잡도: 동시타 확률·최대 개수·타입 비율 -->
+                                <div class="border-t border-gray-700 pt-4">
+                                    <button type="button" class="settings-section-toggle w-full flex justify-between items-center" data-target="settings-section-complexity">
+                                        <h4 class="text-sm font-semibold text-gray-400 flex items-center" data-i18n="settings_section_complexity">
+                                            패턴 복잡도
+                                            <span class="info-tooltip" data-tooltip="여러 노트가 동시에 나오는 '동시타'가 얼마나 자주, 몇 개씩, 어떤 타입으로 섞여 나올지를 조절합니다." data-i18n-tooltip="settings_section_complexity_tip">?</span>
+                                        </h4>
+                                        <svg class="section-toggle-icon h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </button>
+                                    <div id="settings-section-complexity" class="settings-section-body space-y-4 mt-3">
+                                        <div>
+                                            <div class="flex justify-between items-center text-gray-300">
+                                                <label for="dongta-prob-slider" class="flex items-center">동시타 확률
+                                                    <span class="info-tooltip" data-tooltip="한 타이밍에 노트 2개 이상이 동시에 나올 확률입니다.">?</span>
+                                                </label>
+                                                <span id="dongta-prob-value" class="font-mono">25%</span>
+                                            </div>
+                                            <input id="dongta-prob-slider" type="range" min="0" max="100" value="25" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
                                         </div>
-                                        <input id="false-note-prob-slider" type="range" min="0" max="500" value="0" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                        <div>
+                                            <div class="flex justify-between items-center text-gray-300">
+                                                <label for="max-simultaneous-slider" class="flex items-center">최대 동시타 개수
+                                                    <span class="info-tooltip" data-tooltip="동시타가 나올 때 최대 몇 개의 노트까지 겹쳐서 나올 수 있는지입니다.">?</span>
+                                                </label>
+                                                <span id="max-simultaneous-value" class="font-mono">3</span>
+                                            </div>
+                                            <input id="max-simultaneous-slider" type="range" min="2" max="8" value="3" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                        </div>
+                                        <div class="border-t border-gray-700 pt-4">
+                                            <h5 class="text-sm font-semibold text-gray-400 mb-3 flex items-center">동시타 노트 타입 확률
+                                                <span class="info-tooltip" data-tooltip="동시타로 나오는 노트들이 각각 기본/롱/가짜 노트 중 무엇일 확률인지입니다. 세 값의 합이 100%가 되도록 맞춰주세요.">?</span>
+                                            </h5>
+                                            <div class="space-y-3">
+                                                <div>
+                                                    <div class="flex justify-between items-center text-gray-300">
+                                                        <label for="dongta-tap-prob-slider" class="text-sm">기본 노트</label>
+                                                        <span id="dongta-tap-prob-value" class="font-mono text-sm">70%</span>
+                                                    </div>
+                                                    <input id="dongta-tap-prob-slider" type="range" min="0" max="100" value="70" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                                </div>
+                                                <div>
+                                                    <div class="flex justify-between items-center text-gray-300">
+                                                        <label for="dongta-long-prob-slider" class="text-sm">롱 노트</label>
+                                                        <span id="dongta-long-prob-value" class="font-mono text-sm">20%</span>
+                                                    </div>
+                                                    <input id="dongta-long-prob-slider" type="range" min="0" max="100" value="20" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                                </div>
+                                                <div>
+                                                    <div class="flex justify-between items-center text-gray-300">
+                                                        <label for="dongta-false-prob-slider" class="text-sm">가짜 노트</label>
+                                                        <span id="dongta-false-prob-value" class="font-mono text-sm">10%</span>
+                                                    </div>
+                                                    <input id="dongta-false-prob-slider" type="range" min="0" max="100" value="10" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 특수 노트: 롱노트·가짜노트 -->
+                                <div class="border-t border-gray-700 pt-4">
+                                    <button type="button" class="settings-section-toggle w-full flex justify-between items-center" data-target="settings-section-special">
+                                        <h4 class="text-sm font-semibold text-gray-400 flex items-center" data-i18n="settings_section_special">
+                                            특수 노트
+                                            <span class="info-tooltip" data-tooltip="누르고 있어야 하는 '롱노트'와, 누르면 안 되는 '가짜노트'가 나올 확률을 조절합니다.">?</span>
+                                        </h4>
+                                        <svg class="section-toggle-icon h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </button>
+                                    <div id="settings-section-special" class="settings-section-body space-y-4 mt-3">
+                                        <div>
+                                            <div class="flex justify-between items-center text-gray-300">
+                                                <label for="long-note-prob-slider" class="flex items-center">롱노트 확률
+                                                    <span class="info-tooltip" data-tooltip="동시타가 아닌 단독 노트가 롱노트로 나올 확률입니다.">?</span>
+                                                </label>
+                                                <span id="long-note-prob-value" class="font-mono">15%</span>
+                                            </div>
+                                            <input id="long-note-prob-slider" type="range" min="0" max="100" value="15" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                        </div>
+                                        <div class="border-t border-gray-700 pt-4 space-y-4">
+                                            <div class="flex items-center justify-between text-gray-300">
+                                                <label for="false-note-toggle" class="flex items-center">가짜 노트 활성화
+                                                    <span class="info-tooltip" data-tooltip="누르면 안 되는 '가짜 노트'를 등장시킵니다. 판정선을 그냥 지나가야 PERFECT로 처리돼요.">?</span>
+                                                </label>
+                                                <input id="false-note-toggle" type="checkbox" class="h-5 w-5 bg-gray-700 rounded border-gray-600 text-blue-500 focus:ring-blue-500">
+                                            </div>
+                                            <div id="false-note-prob-container" class="hidden">
+                                                <div class="flex justify-between items-center text-gray-300">
+                                                    <label for="false-note-prob-slider">가짜 노트 등장 확률</label>
+                                                    <span id="false-note-prob-value" class="font-mono">0%</span>
+                                                </div>
+                                                <input id="false-note-prob-slider" type="range" min="0" max="500" value="0" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

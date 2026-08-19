@@ -216,6 +216,7 @@
 /* ══════════════ 8. Effects / 애니메이션 ══════════════ */
 .transition           { transition-property: color, background-color, border-color, opacity, box-shadow, transform; transition-duration: 0.15s; transition-timing-function: ease; }
 .transition-transform { transition-property: transform; transition-duration: 0.15s; transition-timing-function: ease; }
+.rotate-180 { transform: rotate(180deg); }
 
 @keyframes tb-pulse {
     0%, 100% { opacity: 1; }
