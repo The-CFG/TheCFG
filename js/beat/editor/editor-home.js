@@ -13,15 +13,18 @@
  */
 const EditorHome = {
     async refresh() {
-        this._renderMessage('불러오는 중…', true);
+        this._renderSkeleton();
+        UI.showAreaLoading('editorHome', '내 노래 목록 불러오는 중…');
 
         const user = await CloudAuth.getUser();
         if (!user) {
+            UI.hideAreaLoading('editorHome');
             this._renderMessage('로그인 후 클라우드에 저장된 노래가 여기 표시됩니다.');
             return;
         }
 
         const { data, error } = await CloudCharts.listMySongs();
+        UI.hideAreaLoading('editorHome');
         if (error) {
             this._renderMessage(`불러오기 실패: ${error.message}`);
             return;
@@ -34,16 +37,19 @@ const EditorHome = {
         this._renderList(data);
     },
 
-    // spinner: true면 문구 위에 로딩 서클을 같이 보여준다 ("불러오는 중" 류 상태 전용,
-    // 로그인 안내/빈 목록/에러 메시지처럼 로딩이 아닌 문구는 스피너 없이 그대로 텍스트로 표시).
-    _renderMessage(text, spinner = false) {
+    // 목록을 받아오는 동안 카드 자리를 어렴풋이 보여주는 자리 채움(반짝임).
+    // "무엇을 불러오는 중인지"는 좌측 game-area 오버레이(UI.showAreaLoading)가 담당한다.
+    _renderSkeleton() {
+        const container = DOM.editorHome.songList;
+        if (!container) return;
+        container.innerHTML = UI.listSkeletonHtml();
+    },
+
+    // 로그인 안내/빈 목록/에러처럼 로딩이 아닌 상태 문구.
+    _renderMessage(text) {
         const container = DOM.editorHome.songList;
         if (!container) return;
         container.innerHTML = '';
-        if (spinner) {
-            container.innerHTML = UI.loadingBlockHtml(text);
-            return;
-        }
         const p = document.createElement('p');
         p.className = 'text-gray-400 text-sm text-center mt-8';
         p.textContent = text;

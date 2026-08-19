@@ -219,10 +219,12 @@ const MultiplayerLobby = {
         UI.showScreen('multiplayer');
         this._renderShell();
         this._view = 'waiting';
-        this._setContent(UI.loadingBlockHtml('방 만드는 중…'));
+        this._setContent(UI.staticSkeletonHtml());
+        UI.showAreaLoading('multiplayer', '방 만드는 중…');
 
         const user = await CloudAuth.getUser();
         if (!user) {
+            UI.hideAreaLoading('multiplayer');
             // _renderMenu()가 내부에서 _showMsg('')를 호출해 메시지를 지우므로,
             // 반드시 _renderMenu() 이후에 _showMsg()를 불러야 에러가 화면에 남는다.
             this._renderMenu();
@@ -232,6 +234,7 @@ const MultiplayerLobby = {
 
         const { data: room, error } = await MultiplayerRooms.createRoom(chart.id);
         if (error) {
+            UI.hideAreaLoading('multiplayer');
             this._renderMenu();
             this._showMsg('방 생성에 실패했습니다: ' + error.message);
             return false;
@@ -242,6 +245,7 @@ const MultiplayerLobby = {
         this._userId = user.id;
         this._isHost = true;
         await this._enterWaitingRoom();
+        UI.hideAreaLoading('multiplayer');
         return true;
     },
 

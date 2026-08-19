@@ -144,22 +144,18 @@ const Online = {
         GameBackground.clear();
         const s = this._browseState;
         if (reset) s.page = 0;
-        this._setContent(this._skeleton());
+        this._setContent(UI.listSkeletonHtml());
+        UI.showAreaLoading('online', '라이브러리 불러오는 중…');
 
         const { data, error, count } = await CloudBrowse.listPublicSongs({
             sort: s.sort, search: s.search, page: s.page, pageSize: s.pageSize,
         });
+        UI.hideAreaLoading('online');
 
         if (error) { this._setContent(`<p class="text-red-400 text-sm mt-4">${error.message}</p>`); return; }
         this._browseCache = data || [];
         s.totalCount = count || 0;
         this._renderBrowse();
-    },
-
-    _skeleton() {
-        return `<div class="space-y-2 animate-pulse">
-            ${Array(5).fill('<div class="h-16 bg-gray-700 rounded-lg"></div>').join('')}
-        </div>`;
     },
 
     _renderBrowse() {
@@ -282,9 +278,11 @@ const Online = {
     // ════════════════════════════════════════════════════════════════════════
     async _showSongDetail(songId) {
         this._currentSongId = songId;
-        this._setContent(UI.loadingBlockHtml());
+        this._setContent(UI.staticSkeletonHtml());
+        UI.showAreaLoading('online', '노래 정보 불러오는 중…');
 
         const { data, error } = await CloudBrowse.getSongDetail(songId);
+        UI.hideAreaLoading('online');
         if (error) {
             this._setContent(`<p class="text-red-400 text-sm">${error.message}</p>`);
             return;
@@ -358,7 +356,8 @@ const Online = {
     // ════════════════════════════════════════════════════════════════════════
     async _showDetail(chartId) {
         this._currentChartId = chartId;
-        this._setContent(UI.loadingBlockHtml());
+        this._setContent(UI.staticSkeletonHtml());
+        UI.showAreaLoading('online', '채보 정보 불러오는 중…');
 
         const [detailRes, lbRes, myRes, currentUser, likeRes] = await Promise.all([
             CloudBrowse.getBeatmapDetail(chartId),
@@ -367,6 +366,7 @@ const Online = {
             CloudAuth.getUser(),
             CloudLikes.getLikeInfo([chartId]),
         ]);
+        UI.hideAreaLoading('online');
 
         if (detailRes.error) {
             this._setContent(`<p class="text-red-400 text-sm">${detailRes.error.message}</p>`);
@@ -591,10 +591,12 @@ const Online = {
     // ════════════════════════════════════════════════════════════════════════
     async _loadMyCharts() {
         GameBackground.clear();
-        this._setContent(UI.loadingBlockHtml());
+        this._setContent(UI.listSkeletonHtml());
+        UI.showAreaLoading('online', '내 차트 불러오는 중…');
 
         const user = await CloudAuth.getUser();
         if (!user) {
+            UI.hideAreaLoading('online');
             this._setContent(`
             <div class="text-center mt-10">
                 <p class="text-gray-400 mb-4">내 차트를 보려면 로그인이 필요합니다.</p>
@@ -606,9 +608,10 @@ const Online = {
         }
 
         const { data, error } = await CloudCharts.listMyCharts();
-        if (error) { this._setContent(`<p class="text-red-400 text-sm">${error.message}</p>`); return; }
+        if (error) { UI.hideAreaLoading('online'); this._setContent(`<p class="text-red-400 text-sm">${error.message}</p>`); return; }
 
         const { data: songs, error: songsError } = await CloudCharts.listMySongs();
+        UI.hideAreaLoading('online');
         if (songsError) { this._setContent(`<p class="text-red-400 text-sm">${songsError.message}</p>`); return; }
 
         const songCards = (songs || []).length === 0
