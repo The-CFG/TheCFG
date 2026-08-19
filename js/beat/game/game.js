@@ -419,6 +419,12 @@ const Game = {
         this.state.combo = 0;
         this.state.maxCombo = 0;
         this.state.judgements = { perfect: 0, good: 0, bad: 0, miss: 0 };
+        // 판정 타이밍 편향(빠름/느림) 누적 — 실제로 입력이 들어온 판정(perfect/good/bad)에서만
+        // 부호 있는 시간차(note.time - elapsedTime)를 집계한다. 자동 MISS(입력 없음)는 타이밍
+        // 정보가 없으므로 제외.
+        this.state.earlyLateStats = { early: 0, late: 0 };
+        // 레인별 미스율 집계 — { [laneIndex]: { total, miss } }. 판정이 실제로 일어난 레인만 채워진다.
+        this.state.laneStats = {};
         this.state.processedNotes = 0;
         this.state.isPaused = false;
         this.state.totalPausedTime = 0;
@@ -769,10 +775,7 @@ const Game = {
                 const totalMs = lastNote ? lastNote.time : 0;
                 const remainingMs = totalMs - elapsedTime;
                 const j = self.state.judgements;
-                const judgedCount = j.perfect + j.good + j.bad + j.miss;
-                const accuracyPercent = judgedCount === 0
-                    ? 100
-                    : ((j.perfect * CONFIG.POINTS.perfect + j.good * CONFIG.POINTS.good + j.bad * CONFIG.POINTS.bad) / (judgedCount * CONFIG.POINTS.perfect)) * 100;
+                const accuracyPercent = UI.accuracyFromJudgements(j.perfect, j.good, j.bad, j.miss);
                 UI.updateHud(remainingMs, accuracyPercent);
 
                 // 멀티플레이 관전: 500ms~1s 간격으로 내 진행 상황(점수/정확도/콤보)을 방 채널에
@@ -905,8 +908,23 @@ const Game = {
         }
     },
 
-    _processSingleJudgement(judgement, note) {
+    // signedDiffMs: note.time - elapsedTime의 부호를 유지한 값. 실제 입력으로 인한 판정(perfect/
+    // good/bad)일 때만 넘어온다 — 양수면 판정선 도달 전에 누른 것(빠름), 음수면 지난 뒤에 누른 것(느림).
+    _processSingleJudgement(judgement, note, signedDiffMs) {
         note.processed = true;
+
+        // 레인별 판정 집계 (미스율 계산용) — 노트 타입 상관없이 실제 판정이 난 모든 노트를 센다.
+        if (note.lane !== undefined && note.lane !== null) {
+            if (!this.state.laneStats[note.lane]) this.state.laneStats[note.lane] = { total: 0, miss: 0 };
+            this.state.laneStats[note.lane].total++;
+            if (judgement === 'miss') this.state.laneStats[note.lane].miss++;
+        }
+
+        // 빠름/느림 편향 집계 — 'false' 노트는 안 누르는 게 정답이라 타이밍의 의미가 달라 제외.
+        if (typeof signedDiffMs === 'number' && judgement !== 'miss' && note.type !== 'false') {
+            if (signedDiffMs > 0) this.state.earlyLateStats.early++;
+            else if (signedDiffMs < 0) this.state.earlyLateStats.late++;
+        }
         // long_head + perfect/good/bad(=miss가 아닌 모든 판정): shrinking 수축 애니메이션 → updateNotes가 _visible 관리
         // miss만 즉시 숨김
         const willShrink = note.type === 'long_head' && judgement !== 'miss';
@@ -945,7 +963,9 @@ const Game = {
         }
     },
 
-    handleJudgement(judgement, note) {
+    // signedDiffMs: 입력으로 인한 판정일 때 handleInputDown/Up이 넘겨주는 부호 있는 시간차.
+    // updateNotes()의 자동 MISS 호출에서는 넘기지 않는다(입력 자체가 없었으므로 타이밍 없음).
+    handleJudgement(judgement, note, signedDiffMs) {
         try {
             if (note.processed) return;
             if (note.type === 'false') {
@@ -963,7 +983,7 @@ const Game = {
                 UI.showJudgementFeedback('MISS', 0);
                 UI.updateScoreboard();
             } else {
-                this._processSingleJudgement(judgement, note);
+                this._processSingleJudgement(judgement, note, signedDiffMs);
                 UI.showJudgementFeedback(judgement.toUpperCase(), this.state.combo);
                 UI.updateScoreboard();
             }
@@ -1026,21 +1046,24 @@ const Game = {
 
             let bestMatch = null;
             let smallestDiff = Infinity;
+            let bestSignedDiff = 0;
             for (let i = this.state.unprocessedNoteIndex; i < this.state.notes.length; i++) {
                 const note = this.state.notes[i];
                 if (note.time - elapsedTime > judgementWindow.miss) break;
                 if (!note.processed && note.lane === laneIndex && (note.type === 'tap' || note.type === 'long_head' || note.type === 'false')) {
-                    const timeDiff = Math.abs(note.time - elapsedTime);
+                    const rawDiff = note.time - elapsedTime;
+                    const timeDiff = Math.abs(rawDiff);
                     if (timeDiff <= judgementWindow.miss && timeDiff < smallestDiff) {
                         smallestDiff = timeDiff;
+                        bestSignedDiff = rawDiff;
                         bestMatch = note;
                     }
                 }
             }
             if (bestMatch) {
-                if (smallestDiff <= judgementWindow.perfect) this.handleJudgement('perfect', bestMatch);
-                else if (smallestDiff <= judgementWindow.good) this.handleJudgement('good', bestMatch);
-                else if (smallestDiff <= judgementWindow.bad) this.handleJudgement('bad', bestMatch);
+                if (smallestDiff <= judgementWindow.perfect) this.handleJudgement('perfect', bestMatch, bestSignedDiff);
+                else if (smallestDiff <= judgementWindow.good) this.handleJudgement('good', bestMatch, bestSignedDiff);
+                else if (smallestDiff <= judgementWindow.bad) this.handleJudgement('bad', bestMatch, bestSignedDiff);
             }
         } catch (err) {
             Debugger.logError(err, 'Game.handleInputDown');
@@ -1074,21 +1097,24 @@ const Game = {
 
         let bestMatch = null;
         let smallestDiff = Infinity;
+        let bestSignedDiff = 0;
         for (let i = this.state.unprocessedNoteIndex; i < this.state.notes.length; i++) {
             const note = this.state.notes[i];
             if (note.time - elapsedTime > judgementWindow.miss) break;
             if (!note.processed && note.lane === laneIndex && note.type === 'long_tail' && note.headProcessed) {
-                const timeDiff = Math.abs(note.time - elapsedTime);
+                const rawDiff = note.time - elapsedTime;
+                const timeDiff = Math.abs(rawDiff);
                 if (timeDiff <= judgementWindow.miss && timeDiff < smallestDiff) {
                     smallestDiff = timeDiff;
+                    bestSignedDiff = rawDiff;
                     bestMatch = note;
                 }
             }
         }
         if (bestMatch) {
-            if (smallestDiff <= judgementWindow.perfect) this.handleJudgement('perfect', bestMatch);
-            else if (smallestDiff <= judgementWindow.good) this.handleJudgement('good', bestMatch);
-            else if (smallestDiff <= judgementWindow.bad) this.handleJudgement('bad', bestMatch);
+            if (smallestDiff <= judgementWindow.perfect) this.handleJudgement('perfect', bestMatch, bestSignedDiff);
+            else if (smallestDiff <= judgementWindow.good) this.handleJudgement('good', bestMatch, bestSignedDiff);
+            else if (smallestDiff <= judgementWindow.bad) this.handleJudgement('bad', bestMatch, bestSignedDiff);
         }
     },
 

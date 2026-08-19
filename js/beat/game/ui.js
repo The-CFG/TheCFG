@@ -135,6 +135,14 @@ const UI = {
             / (judgedCount * CONFIG.POINTS.perfect)) * 100;
         return this.rankFromPercentage(percentage);
     },
+    // PERFECT/GOOD/BAD/MISS 개수 → 정확도(%). 인게임 HUD와 결과 화면이 같은 공식을 쓰도록 공용화.
+    accuracyFromJudgements(perfect, good, bad, miss) {
+        perfect = perfect || 0; good = good || 0; bad = bad || 0; miss = miss || 0;
+        const judgedCount = perfect + good + bad + miss;
+        if (judgedCount === 0) return 100;
+        return ((perfect * CONFIG.POINTS.perfect + good * CONFIG.POINTS.good + bad * CONFIG.POINTS.bad)
+            / (judgedCount * CONFIG.POINTS.perfect)) * 100;
+    },
     updateResultScreen() {
         DOM.finalScoreEl.textContent = Game.state.score;
         const j = Game.state.judgements;
@@ -143,6 +151,60 @@ const UI = {
         DOM.finalGoodEl.textContent = Game.state.judgements.good;
         DOM.finalBadEl.textContent = Game.state.judgements.bad;
         DOM.finalMissEl.textContent = Game.state.judgements.miss;
+
+        // 정확도 / 최대 콤보 — 이미 계산·집계되는 값이라 화면에 노출만 하면 됨.
+        if (DOM.finalAccuracyEl) {
+            const accuracy = this.accuracyFromJudgements(j.perfect, j.good, j.bad, j.miss);
+            DOM.finalAccuracyEl.textContent = `${accuracy.toFixed(2)}%`;
+        }
+        if (DOM.finalMaxComboEl) {
+            DOM.finalMaxComboEl.textContent = Game.state.maxCombo || 0;
+        }
+
+        // 빠름/느림 판정 타이밍 편향
+        if (DOM.finalEarlyLateEl) {
+            const el = Game.state.earlyLateStats || { early: 0, late: 0 };
+            const total = el.early + el.late;
+            if (total === 0) {
+                DOM.finalEarlyLateEl.textContent = '-';
+            } else {
+                DOM.finalEarlyLateEl.textContent = `${I18n.t ? I18n.t('early') : '빠름'} ${el.early} / ${I18n.t ? I18n.t('late') : '느림'} ${el.late}`;
+            }
+        }
+
+        // 레인별 미스율 미니 바 차트
+        this.renderLaneMissStats();
+    },
+    // Game.state.laneStats({ [lane]: {total, miss} })를 레인 순서대로 미니 바 차트로 그린다.
+    // 판정 UI에서만 쓰는 결과 화면 전용 렌더러 — 레인 수는 settings.lanes 기준으로 처음부터 끝까지 채운다
+    // (한 번도 판정이 안 난 레인은 0%로 표시해 "이 레인은 아예 안 눌렀다"도 알 수 있게 함).
+    renderLaneMissStats() {
+        const container = document.getElementById('final-lane-stats');
+        if (!container) return;
+        const laneCount = (Game.state.settings && Game.state.settings.lanes) || 0;
+        const laneStats = Game.state.laneStats || {};
+        if (!laneCount) {
+            container.innerHTML = '';
+            container.classList.add('hidden');
+            return;
+        }
+        const rows = [];
+        for (let lane = 0; lane < laneCount; lane++) {
+            const s = laneStats[lane] || { total: 0, miss: 0 };
+            const missRate = s.total > 0 ? (s.miss / s.total) * 100 : 0;
+            rows.push(`
+                <div class="flex items-center gap-2 text-sm">
+                    <span class="w-14 flex-shrink-0 text-gray-400">${I18n.t ? I18n.t('lane') : '레인'} ${lane + 1}</span>
+                    <div class="flex-1 h-3 bg-gray-600 rounded-full overflow-hidden">
+                        <div class="h-full bg-red-500" style="width: ${missRate.toFixed(1)}%"></div>
+                    </div>
+                    <span class="w-16 flex-shrink-0 text-right text-gray-300">${s.total > 0 ? missRate.toFixed(0) + '%' : '-'}</span>
+                </div>`);
+        }
+        container.innerHTML = `
+            <p class="text-sm font-semibold text-gray-300 mb-2">${I18n.t ? I18n.t('lane_miss_rate') : '레인별 미스율'}</p>
+            <div class="space-y-1.5">${rows.join('')}</div>`;
+        container.classList.remove('hidden');
     },
     // 인게임 HUD: 남은 시간(마지막 노트 기준) / 현재 정확도(판정 가중 평균) 갱신.
     // remainingMs: 남은 시간(ms, 음수 가능 → 0으로 클램프). accuracyPercent: 0~100.

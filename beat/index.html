@@ -1116,15 +1116,24 @@
                         <p id="final-score" class="text-5xl sm:text-6xl font-bold mb-6">0</p>
                         <p class="text-2xl text-gray-400 mb-2" data-i18n="rank">랭크</p>
                         <p id="rank" class="text-6xl sm:text-7xl font-bold text-yellow-400 mb-8">C</p>
+                        <!-- 정확도 / 최대 콤보: 이미 계산되는 값을 결과 화면에도 노출 -->
+                        <div class="grid grid-cols-2 gap-4 text-lg sm:text-xl mb-4">
+                            <p><span data-i18n="accuracy">정확도</span>: <span id="final-accuracy">100.00%</span></p>
+                            <p><span data-i18n="max_combo">최대 콤보</span>: <span id="final-max-combo">0</span></p>
+                        </div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-lg sm:text-xl">
                             <p><span data-i18n="perfect">PERFECT</span>: <span id="final-perfect">0</span></p>
                             <p><span data-i18n="good">GOOD</span>: <span id="final-good">0</span></p>
                             <p><span data-i18n="bad">BAD</span>: <span id="final-bad">0</span></p>
                             <p><span data-i18n="miss">MISS</span>: <span id="final-miss">0</span></p>
                         </div>
+                        <!-- 판정 타이밍 편향(빠름/느림) -->
+                        <p class="mt-4 text-sm text-gray-300"><span data-i18n="timing_tendency">타이밍 경향</span>: <span id="final-early-late">-</span></p>
                         <!-- 온라인 점수 제출 결과 -->
                         <p id="online-score-result" class="hidden text-sm mt-2"></p>
                     </div>
+                    <!-- 레인별 미스율 미니 바 차트 -->
+                    <div id="final-lane-stats" class="hidden w-full mt-4 bg-gray-800 rounded-lg p-4 text-left"></div>
                     <!-- 멀티플레이 결과 비교(관전형): 각자 broadcast('finish')한 값을 클라이언트끼리만
                          비교해 표시(서버 검증 없음). 싱글/온라인 플레이에서는 계속 숨김. -->
                     <div id="mp-result-compare" class="hidden w-full mt-4 bg-gray-800 rounded-lg p-4 text-left">

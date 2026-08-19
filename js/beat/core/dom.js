@@ -72,6 +72,9 @@ const DOM = {
     finalGoodEl: document.getElementById('final-good'),
     finalBadEl: document.getElementById('final-bad'),
     finalMissEl: document.getElementById('final-miss'),
+    finalAccuracyEl: document.getElementById('final-accuracy'),
+    finalMaxComboEl: document.getElementById('final-max-combo'),
+    finalEarlyLateEl: document.getElementById('final-early-late'),
     editor: {
         container: document.getElementById('editor-container'),
         seekGutter: document.getElementById('editor-seek-gutter'),
