@@ -158,6 +158,8 @@
                         <h2 class="text-2xl font-bold text-white">연습</h2>
                     </div>
                     <div id="practice-message" class="hidden p-3 mb-4 text-center text-white bg-red-500 rounded-lg"></div>
+                    <!-- 최근 성적 기반 드릴 추천 배너 (연습모드-개선계획.md 3번 후속) -->
+                    <div id="drill-recommendation-banner" class="hidden mb-4 p-3 bg-purple-900/40 border border-purple-700 rounded-lg text-sm text-purple-100"></div>
                     <div class="space-y-6">
                         <div id="note-count-container">
                             <h3 class="text-xl mb-2 text-gray-300" data-i18n="note_count">노트 수</h3>
@@ -479,6 +481,7 @@
                                         <input id="touch-input-offset-slider" type="range" min="-300" max="300" step="5" value="0" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
                                         <p class="text-xs text-gray-500 mt-1">일부 모바일 브라우저(특히 iOS의 Chrome 등)는 터치 입력 전달이 키보드/마우스보다 느릴 수 있습니다. 터치로 플레이할 때만 위 보정값에 추가로 더해집니다. 터치 판정이 유독 심하게 늦게(MISS) 나온다면 이 값을 올려보세요.</p>
                                     </div>
+                                    <button id="open-calibration-btn" class="w-full py-2 bg-purple-700 hover:bg-purple-600 rounded-lg text-sm font-semibold" data-i18n="calibration_open_btn">🎯 탭 타이밍 자동 보정 (다시 측정)</button>
                                 </div>
                             </div>
                             <div id="tab-content-appearance" class="tab-content hidden space-y-6">
@@ -1208,6 +1211,8 @@
                     </div>
                     <!-- 레인별 미스율 미니 바 차트 -->
                     <div id="final-lane-stats" class="hidden w-full mt-4 bg-gray-800 rounded-lg p-4 text-left"></div>
+                    <!-- 최근 5회 연습 세션 추이 (연습 모드에서만 표시 — 연습모드-개선계획.md 2번) -->
+                    <div id="final-session-history" class="hidden w-full mt-4 bg-gray-800 rounded-lg p-4 text-left"></div>
                     <!-- 멀티플레이 결과 비교(관전형): 각자 broadcast('finish')한 값을 클라이언트끼리만
                          비교해 표시(서버 검증 없음). 싱글/온라인 플레이에서는 계속 숨김. -->
                     <div id="mp-result-compare" class="hidden w-full mt-4 bg-gray-800 rounded-lg p-4 text-left">
@@ -1279,9 +1284,60 @@
                     <button id="osu-convert-import-btn" class="w-full py-2 mt-2 bg-teal-600 hover:bg-teal-500 rounded-lg text-sm font-semibold" style="margin-bottom: var(--safe-bottom, 80px);" disabled>📥 가져오기</button>
                 </div>
 
+                <!-- Calibration Screen (탭 타이밍 자동 보정 — 연습모드-개선계획.md 4번) -->
+                <div id="calibration-screen" class="hidden flex flex-col h-full text-white overflow-y-auto" style="-webkit-overflow-scrolling: touch;">
+                    <div class="flex items-center justify-between mb-4 gap-2 flex-shrink-0">
+                        <h2 class="text-3xl font-bold" data-i18n="calibration_title">탭 타이밍 자동 보정</h2>
+                        <button id="calibration-back-btn" class="flex-shrink-0 py-2 px-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm" data-i18n="calibration_back">← 설정</button>
+                    </div>
+
+                    <!-- Step 1: 모드 선택 + 설명 -->
+                    <div id="calibration-step-intro" class="flex-1 flex flex-col">
+                        <p class="text-sm text-gray-400 mb-4" data-i18n="calibration_intro_desc">
+                            0.5초 간격으로 나오는 신호(깜빡임 + 소리)에 맞춰 20여 회 탭하면, 평소 얼마나 빠르거나 느리게 입력되는 경향이 있는지 측정해서 판정 보정값을 자동으로 맞춰줍니다.
+                        </p>
+                        <div class="space-y-3 mb-4">
+                            <button id="calibration-mode-general-btn" data-mode="general" class="calibration-mode-btn w-full p-4 bg-gray-800 hover:bg-gray-700 rounded-lg text-left transition">
+                                <div class="font-semibold" data-i18n="calibration_mode_general">⌨️ 키보드 / 마우스</div>
+                                <div class="text-xs text-gray-400 mt-1" data-i18n="calibration_mode_general_desc">평소 플레이하는 키를 누르거나 화면을 클릭해서 박자에 맞춰 탭합니다.</div>
+                            </button>
+                            <button id="calibration-mode-touch-btn" data-mode="touch" class="calibration-mode-btn w-full p-4 bg-gray-800 hover:bg-gray-700 rounded-lg text-left transition">
+                                <div class="font-semibold" data-i18n="calibration_mode_touch">👆 터치</div>
+                                <div class="text-xs text-gray-400 mt-1" data-i18n="calibration_mode_touch_desc">화면을 손가락으로 직접 두드려서 박자에 맞춰 탭합니다.</div>
+                            </button>
+                        </div>
+                        <p class="text-xs text-gray-500" data-i18n="calibration_intro_note">
+                            언제든 다시 측정할 수 있으니 컨디션이 다른 날 한 번씩 다시 해봐도 좋습니다.
+                        </p>
+                    </div>
+
+                    <!-- Step 2: 측정 진행 -->
+                    <div id="calibration-step-running" class="hidden flex-1 flex flex-col items-center justify-center text-center">
+                        <p id="calibration-progress-text" class="text-sm text-gray-400 mb-6">0 / 25</p>
+                        <div id="calibration-tap-zone" tabindex="0" class="calibration-tap-zone">
+                            <span id="calibration-tap-zone-label" data-i18n="calibration_tap_zone_label">박자에 맞춰 여기를 탭하세요</span>
+                        </div>
+                        <button id="calibration-cancel-btn" class="mt-6 py-2 px-4 text-sm text-gray-400 hover:text-white transition" data-i18n="calibration_cancel">취소</button>
+                    </div>
+
+                    <!-- Step 3: 결과 확인 -->
+                    <div id="calibration-step-result" class="hidden flex-1 flex flex-col items-center justify-center text-center">
+                        <p id="calibration-result-headline" class="text-lg font-semibold mb-2"></p>
+                        <p id="calibration-result-detail" class="text-xs text-gray-500 mb-6"></p>
+                        <div id="calibration-result-warning" class="hidden p-3 mb-4 text-sm text-yellow-200 bg-yellow-900/40 border border-yellow-700 rounded-lg" data-i18n="calibration_too_many_missed">
+                            놓친 박자가 너무 많아서 결과가 정확하지 않을 수 있어요. 다시 측정해보는 걸 권장합니다.
+                        </div>
+                        <div class="flex gap-3">
+                            <button id="calibration-retry-btn" class="py-2 px-4 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm" data-i18n="calibration_retry">다시 측정</button>
+                            <button id="calibration-apply-btn" class="py-2 px-4 bg-teal-600 hover:bg-teal-500 rounded-lg text-sm font-semibold" data-i18n="calibration_apply">이 값으로 보정하기</button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Editor Song Screen (종합 창) -->
                 <div id="editor-song-screen" class="hidden flex flex-col h-full text-white overflow-y-auto" style="-webkit-overflow-scrolling: touch;">
                     <div class="flex items-center justify-between mb-4 gap-2">
+
                         <h2 class="text-3xl font-bold truncate" id="editor-song-title">종합 창</h2>
                         <button id="editor-song-back-btn" class="flex-shrink-0 py-2 px-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm">← 에디터 홈</button>
                     </div>
@@ -1603,6 +1659,8 @@
         <script defer src="/js/beat/editor/editor-osu-convert.js"></script>
         <script defer src="/js/beat/game/game.js"></script>
         <script defer src="/js/beat/game/ui.js"></script>
+        <script defer src="/js/beat/game/session-history.js"></script>
+        <script defer src="/js/beat/game/calibration.js"></script>
         <script defer src="/js/beat/cloud/auth.js"></script>
         <script defer src="/js/beat/cloud/charts.js"></script>
         <script defer src="/js/beat/cloud/browse.js"></script>

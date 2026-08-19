@@ -262,6 +262,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('practice-btn').addEventListener('click', () => {
             UI.showScreen('practice');
+            if (typeof SessionHistory !== 'undefined') SessionHistory.renderRecommendation();
         });
 
         document.getElementById('practice-back-btn').addEventListener('click', () => {
@@ -291,6 +292,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 Online.show('browse');
             } else if (wasRandom) {
                 UI.showScreen('practice');
+                if (typeof SessionHistory !== 'undefined') SessionHistory.renderRecommendation();
             } else {
                 UI.showScreen('menu');
             }
@@ -1636,6 +1638,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loadLastPracticeSettings();
         refreshCustomPresetSelect();
         Appearance.init();
+        Calibration.init();
         UI.initPanelToggle();
         if (typeof setupAuthUI === 'function') setupAuthUI();
 

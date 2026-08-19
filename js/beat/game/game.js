@@ -649,6 +649,12 @@ const Game = {
             this.state.gameState = 'result';
             resetPlayingScreenUI();
             UI.updateResultScreen();
+            // 연습 모드로 끝난 세션만 기록 — 실제 채보 플레이는 곡마다 난이도가 달라
+            // "최근 성적 추이"에 섞으면 비교가 무의미하다 (연습모드-개선계획.md 2번).
+            if (this.state.settings.mode === 'random' && typeof SessionHistory !== 'undefined') {
+                SessionHistory.recordSession();
+            }
+            if (typeof SessionHistory !== 'undefined') SessionHistory.renderResultTrend();
             UI.showScreen('result');
 
             // 결과 화면 하단 버튼: 멀티플레이는 전용 버튼(재시작/방으로 돌아가기)을,
