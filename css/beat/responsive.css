@@ -17,8 +17,14 @@
 
 /* Touch device layout - column only on NARROW screens (phones/small tablets) */
 @media (hover: none) and (pointer: coarse) and (max-width: 1024px) {
-    /* Force column layout only on narrow touch devices */
-    body > div {
+    /* Force column layout only on narrow touch devices.
+       body > div이 아니라 #app-shell만 타겟한다 — body 바로 아래에는
+       #auth-modal/#trigger-modal 같은 모달도 있어서, 이 셀렉터가
+       "body > div" 전체를 잡으면 JS가 display:none으로 닫은 모달까지
+       !important로 display:flex가 되어 다시 강제로 열려버린다
+       (beat/index.html <head> 인라인 <style>에서 이미 한 번 고쳤던
+       것과 동일한 버그가 이 파일엔 남아있었음). */
+    #app-shell {
         display: flex !important;
         flex-direction: column !important;
         height: 100vh !important;
@@ -64,8 +70,10 @@
         height: 100%;
     }
     
-    /* Force proper flex layout on tablet/mobile */
-    body > div {
+    /* Force proper flex layout on tablet/mobile.
+       body > div이 아니라 #app-shell만 타겟 — 위 터치 디바이스 블록과 동일한 이유
+       (body 바로 아래의 #auth-modal/#trigger-modal이 함께 강제로 열리는 것 방지). */
+    #app-shell {
         display: flex !important;
         flex-direction: column !important;
         height: 100vh !important;
@@ -220,7 +228,9 @@
 
 /* Desktop only - restore side-by-side layout */
 @media (min-width: 1025px) {
-    body > div {
+    /* 위와 동일한 이유로 body > div 대신 #app-shell만 타겟 (일관성 유지 목적 —
+       flex-direction만 건드리므로 이 규칙 자체는 모달 표시엔 영향 없었음). */
+    #app-shell {
         flex-direction: row !important;
     }
     
