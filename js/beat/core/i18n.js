@@ -24,6 +24,18 @@ const I18n = {
             'drill_section_title': '실전형 드릴',
             'drill_speed': '⚡ 순발력',
             'drill_complex': '🎯 복합 패턴',
+            'custom_preset_placeholder': '내 프리셋 선택…',
+            'custom_preset_load': '불러오기',
+            'custom_preset_save': '저장',
+            'custom_preset_delete': '삭제',
+            'custom_preset_name_prompt': '프리셋 이름을 입력하세요.',
+            'custom_preset_delete_confirm': '"{name}" 프리셋을 삭제할까요?',
+            'settings_section_density': '노트 밀도',
+            'settings_section_density_tip': "노트가 화면에 얼마나 자주 나올지를 조절합니다. 노트 수는 위쪽 '노트 수' 입력칸에서 따로 정할 수 있어요.",
+            'settings_section_complexity': '패턴 복잡도',
+            'settings_section_complexity_tip': "여러 노트가 동시에 나오는 '동시타'가 얼마나 자주, 몇 개씩, 어떤 타입으로 섞여 나올지를 조절합니다.",
+            'settings_section_special': '특수 노트',
+            'settings_section_special_tip': "누르고 있어야 하는 '롱노트'와, 누르면 안 되는 '가짜노트'가 나올 확률을 조절합니다.",
             'load_chart': '차트 불러오기',
             'load_music': '음악 불러오기',
             
@@ -158,6 +170,18 @@ const I18n = {
             'drill_section_title': 'Real-World Drills',
             'drill_speed': '⚡ Reflex',
             'drill_complex': '🎯 Complex Pattern',
+            'custom_preset_placeholder': 'Select my preset…',
+            'custom_preset_load': 'Load',
+            'custom_preset_save': 'Save',
+            'custom_preset_delete': 'Delete',
+            'custom_preset_name_prompt': 'Enter a name for this preset.',
+            'custom_preset_delete_confirm': 'Delete preset "{name}"?',
+            'settings_section_density': 'Note Density',
+            'settings_section_density_tip': "Controls how often notes appear on screen. Note count is set separately in the 'Note Count' field above.",
+            'settings_section_complexity': 'Pattern Complexity',
+            'settings_section_complexity_tip': "Controls how often, how many, and what types of notes appear together as simultaneous hits.",
+            'settings_section_special': 'Special Notes',
+            'settings_section_special_tip': "Controls the chance of long notes (hold) and false notes (must not press) appearing.",
             'load_chart': 'Load Chart',
             'load_music': 'Load Music',
             
@@ -323,6 +347,17 @@ const I18n = {
                 }
             }
         });
+
+        // ?-아이콘 툴팁(data-tooltip)도 언어에 맞게 갱신 — data-i18n-tooltip에 번역 키를 지정한
+        // 요소만 대상으로 하고, 나머지 개별 슬라이더 툴팁은 아직 한국어 텍스트만 있다.
+        const tooltipElements = document.querySelectorAll('[data-i18n-tooltip]');
+        tooltipElements.forEach(el => {
+            const key = el.getAttribute('data-i18n-tooltip');
+            const translation = this.translations[this.currentLang][key];
+            if (translation) {
+                el.setAttribute('data-tooltip', translation);
+            }
+        });
     },
     
     updateButtonStates() {
@@ -340,7 +375,10 @@ const I18n = {
         }
     },
     
-    t(key) {
-        return this.translations[this.currentLang][key] || key;
+    // params: { name: 'value', ... } — 번역 문자열 안의 {name} 같은 자리표시자를 치환한다.
+    t(key, params) {
+        const text = this.translations[this.currentLang][key] || key;
+        if (!params) return text;
+        return Object.keys(params).reduce((acc, k) => acc.split(`{${k}}`).join(params[k]), text);
     }
 };

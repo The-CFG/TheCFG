@@ -444,12 +444,75 @@ document.addEventListener('DOMContentLoaded', () => {
             updateDetailedSettingsUI();
             document.querySelectorAll('#difficulty-selector button, #drill-selector button').forEach(b => b.classList.remove('active'));
             e.target.classList.add('active');
+            saveLastPracticeSettings();
         }
 
         DOM.difficulty.toggleBtn.addEventListener('click', () => {
             DOM.difficulty.detailsPanel.classList.toggle('hidden');
             DOM.difficulty.toggleIcon.classList.toggle('rotate-180');
         });
+
+        // 노트 밀도/패턴 복잡도/특수 노트 섹션 접기·펼치기 (연습모드-개선계획.md 1번)
+        document.querySelectorAll('.settings-section-toggle').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const body = document.getElementById(btn.dataset.target);
+                if (!body) return;
+                body.classList.toggle('hidden');
+                const icon = btn.querySelector('.section-toggle-icon');
+                if (icon) icon.classList.toggle('rotate-180');
+            });
+        });
+
+        // "?" 툴팁 — 데스크톱은 CSS hover만으로 뜨지만, 모바일은 호버가 없으므로 탭으로 토글한다.
+        // 한 번에 하나만 열리도록 다른 툴팁은 탭 시 닫는다. 툴팁 바깥을 탭하면 모두 닫는다.
+        document.querySelectorAll('.info-tooltip').forEach(tip => {
+            tip.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const wasActive = tip.classList.contains('active');
+                document.querySelectorAll('.info-tooltip.active').forEach(t => t.classList.remove('active'));
+                if (!wasActive) tip.classList.add('active');
+            });
+        });
+        document.addEventListener('click', () => {
+            document.querySelectorAll('.info-tooltip.active').forEach(t => t.classList.remove('active'));
+        });
+
+        // 내 프리셋(이름 붙여 저장/불러오기/삭제) — 연습모드-개선계획.md 1번
+        const customPresetSelect = document.getElementById('custom-preset-select');
+        const customPresetLoadBtn = document.getElementById('custom-preset-load-btn');
+        const customPresetSaveBtn = document.getElementById('custom-preset-save-btn');
+        const customPresetDeleteBtn = document.getElementById('custom-preset-delete-btn');
+
+        customPresetSaveBtn.addEventListener('click', () => {
+            const name = (prompt(I18n.t('custom_preset_name_prompt')) || '').trim();
+            if (!name) return;
+            const map = loadCustomPresetsMap();
+            map[name] = collectPracticeSettings();
+            saveCustomPresetsMap(map);
+            refreshCustomPresetSelect();
+            customPresetSelect.value = name;
+        });
+
+        customPresetLoadBtn.addEventListener('click', () => {
+            if (!customPresetSelect.value) return;
+            const map = loadCustomPresetsMap();
+            const preset = map[customPresetSelect.value];
+            if (preset) {
+                applyPracticeSettings(preset);
+                saveLastPracticeSettings();
+            }
+        });
+
+        customPresetDeleteBtn.addEventListener('click', () => {
+            if (!customPresetSelect.value) return;
+            if (!confirm(I18n.t('custom_preset_delete_confirm', { name: customPresetSelect.value }))) return;
+            const map = loadCustomPresetsMap();
+            delete map[customPresetSelect.value];
+            saveCustomPresetsMap(map);
+            refreshCustomPresetSelect();
+        });
+
+        DOM.noteCountInput.addEventListener('change', saveLastPracticeSettings);
 
         DOM.difficulty.fallSpeedSlider.addEventListener('input', (e) => {
             Game.state.settings.noteSpeed = parseInt(e.target.value);
@@ -543,6 +606,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 DOM.difficulty.maxSimultaneousValue.textContent = newLanes;
                 UI.showMessage('menu', `레인 수가 ${newLanes}개로 변경되어 최대 동시타 개수도 ${newLanes}개로 조정되었습니다.`);
             }
+            saveLastPracticeSettings();
         });
 
         document.getElementById('chart-file-input').addEventListener('change', (e) => {
@@ -1392,6 +1456,106 @@ document.addEventListener('DOMContentLoaded', () => {
     function setCustomDifficulty() {
         Game.state.settings.difficulty = 'custom';
         document.querySelectorAll('#difficulty-selector button, #drill-selector button').forEach(b => b.classList.remove('active'));
+        saveLastPracticeSettings();
+    }
+
+    // ── 연습 모드: 마지막 사용 설정 자동 저장/복원 + 이름 붙인 내 프리셋 (연습모드-개선계획.md 1번) ──
+    // 설정 UI를 나갔다 들어오면 값이 초기화되던 문제 해결. 여기 담기는 값은 detailed-difficulty-settings의
+    // 슬라이더 7종 + 노트 수 + 레인 수 + 어떤 프리셋(난이도/드릴/custom)이 선택돼 있었는지다.
+    const PRACTICE_DIFFICULTY_FIELDS = [
+        'noteSpeed', 'noteSpawnSpeed', 'dongtaProbability', 'maxSimultaneousNotes',
+        'dongtaNoteTypeProbabilities', 'longNoteProbability', 'falseNoteProbability',
+    ];
+
+    function collectPracticeSettings() {
+        const s = Game.state.settings;
+        const settings = { difficulty: s.difficulty, lanes: s.lanes };
+        for (const key of PRACTICE_DIFFICULTY_FIELDS) {
+            settings[key] = key === 'dongtaNoteTypeProbabilities' ? { ...s[key] } : s[key];
+        }
+        const noteCount = parseInt(DOM.noteCountInput.value);
+        if (noteCount) settings.noteCount = noteCount;
+        return settings;
+    }
+
+    function applyPracticeSettings(settings) {
+        const s = Game.state.settings;
+        for (const key of PRACTICE_DIFFICULTY_FIELDS) {
+            if (settings[key] === undefined) continue;
+            s[key] = key === 'dongtaNoteTypeProbabilities' ? { ...settings[key] } : settings[key];
+        }
+        if (settings.lanes) {
+            s.lanes = settings.lanes;
+            const lanesSelector = document.getElementById('lanes-selector');
+            if (lanesSelector) lanesSelector.value = settings.lanes;
+        }
+        if (settings.noteCount) DOM.noteCountInput.value = settings.noteCount;
+        s.difficulty = settings.difficulty || 'custom';
+        updateDetailedSettingsUI();
+        document.querySelectorAll('#difficulty-selector button, #drill-selector button').forEach(b => {
+            b.classList.toggle('active', b.dataset.difficulty === s.difficulty);
+        });
+    }
+
+    // 슬라이더를 드래그하는 동안 계속 input이 튈 수 있어 짧게 디바운스한다.
+    let _savePracticeSettingsTimer = null;
+    function saveLastPracticeSettings() {
+        clearTimeout(_savePracticeSettingsTimer);
+        _savePracticeSettingsTimer = setTimeout(() => {
+            try {
+                localStorage.setItem('theBeat_lastPracticeSettings', JSON.stringify(collectPracticeSettings()));
+            } catch (err) {
+                // localStorage 저장 실패해도 연습 진행에는 지장 없으므로 조용히 무시
+            }
+        }, 300);
+    }
+
+    function loadLastPracticeSettings() {
+        try {
+            const raw = localStorage.getItem('theBeat_lastPracticeSettings');
+            if (!raw) return false;
+            applyPracticeSettings(JSON.parse(raw));
+            return true;
+        } catch (err) {
+            return false;
+        }
+    }
+
+    function loadCustomPresetsMap() {
+        try {
+            const raw = localStorage.getItem('theBeat_customPresets');
+            return raw ? JSON.parse(raw) : {};
+        } catch (err) {
+            return {};
+        }
+    }
+
+    function saveCustomPresetsMap(map) {
+        try {
+            localStorage.setItem('theBeat_customPresets', JSON.stringify(map));
+        } catch (err) {
+            // 저장 실패해도 화면상의 선택 목록은 그대로 둔다
+        }
+    }
+
+    function refreshCustomPresetSelect() {
+        const select = document.getElementById('custom-preset-select');
+        if (!select) return;
+        const map = loadCustomPresetsMap();
+        const currentValue = select.value;
+        select.innerHTML = '';
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.setAttribute('data-i18n', 'custom_preset_placeholder');
+        placeholder.textContent = I18n.t('custom_preset_placeholder');
+        select.appendChild(placeholder);
+        Object.keys(map).sort((a, b) => a.localeCompare(b, 'ko')).forEach(name => {
+            const opt = document.createElement('option');
+            opt.value = name;
+            opt.textContent = name;
+            select.appendChild(opt);
+        });
+        if (Object.prototype.hasOwnProperty.call(map, currentValue)) select.value = currentValue;
     }
 
     // ── 플레이 탭 설정 계정 동기화 ──────────────────────────────────
@@ -1467,6 +1631,10 @@ document.addEventListener('DOMContentLoaded', () => {
         document.documentElement.style.setProperty('--lane-bg-opacity', Game.state.settings.laneBackgroundOpacity / 100);
         Debugger.init();
         I18n.init();
+        // 연습 화면을 나갔다 들어와도 마지막에 쓰던 설정이 유지되도록 복원 (없으면 기본값 '보통' 유지).
+        // "내 프리셋" 목록도 여기서 채운다 — I18n.init() 이후라야 플레이스홀더가 올바른 언어로 나온다.
+        loadLastPracticeSettings();
+        refreshCustomPresetSelect();
         Appearance.init();
         UI.initPanelToggle();
         if (typeof setupAuthUI === 'function') setupAuthUI();
