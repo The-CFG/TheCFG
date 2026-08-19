@@ -57,6 +57,49 @@ const UI = {
     loadingInlineHtml(text = '불러오는 중…') {
         return `<span class="inline-flex items-center justify-center gap-2">${this.spinnerHtml('w-4 h-4', 'border-current')}${text}</span>`;
     },
+    // ── 스켈레톤(자리 채움) 마크업 ──────────────────────────────────
+    // "무엇을 불러오는 중인지"는 이제 좌측 game-area 오버레이(showAreaLoading)가 말로
+    // 알려주므로, 콘텐츠 영역 자체는 문구 없이 카드 모양만 어렴풋이 반짝이며 보여준다
+    // (레이아웃이 로딩 전후로 갑자기 들썩이는 것도 방지).
+    //
+    // listSkeletonHtml: online.js의 목록 카드(_chartCard/_beatmapCard)나
+    // editor-home.js의 노래 목록처럼, 같은 모양 카드가 여러 개 쌓이는 화면용.
+    listSkeletonHtml(count = 4) {
+        const card = `
+        <div class="w-full p-3 bg-gray-800 rounded-lg animate-pulse">
+            <div class="flex justify-between items-start">
+                <div class="flex-1 min-w-0 space-y-2">
+                    <div class="h-4 bg-gray-700 rounded w-2/3"></div>
+                    <div class="h-3 bg-gray-700 rounded w-1/3"></div>
+                </div>
+                <div class="flex flex-col items-end space-y-2 ml-2 flex-shrink-0">
+                    <div class="h-3 bg-gray-700 rounded w-16"></div>
+                    <div class="h-3 bg-gray-700 rounded w-10"></div>
+                </div>
+            </div>
+        </div>`;
+        return `<div class="space-y-2">${card.repeat(count)}</div>`;
+    },
+    // staticSkeletonHtml: online.js의 노래/난이도 상세, lobby.js의 대기실처럼
+    // 카드 목록이 아니라 제목+본문 형태 단일 페이지용. 헤더 블록 하나 + 본문 줄
+    // 몇 개로 대충의 레이아웃 형태만 잡아준다(정확한 구조는 화면마다 다르므로
+    // 범용적인 뼈대만 제공).
+    staticSkeletonHtml() {
+        return `
+        <div class="animate-pulse">
+            <div class="h-4 bg-gray-700 rounded w-24 mb-4"></div>
+            <div class="p-4 bg-gray-800 rounded-lg space-y-3">
+                <div class="h-5 bg-gray-700 rounded w-1/2"></div>
+                <div class="h-3 bg-gray-700 rounded w-1/3"></div>
+                <div class="h-3 bg-gray-700 rounded w-full"></div>
+                <div class="h-3 bg-gray-700 rounded w-2/3"></div>
+            </div>
+            <div class="mt-4 space-y-2">
+                <div class="h-14 bg-gray-800 rounded-lg"></div>
+                <div class="h-14 bg-gray-800 rounded-lg"></div>
+            </div>
+        </div>`;
+    },
     // ── 좌측 game-area 로딩 오버레이 ──────────────────────────────────
     // 예전엔 "불러오는 중" 류 문구를 우측 ui-area의 작은 토스트(showMessage)로만
     // 띄워서 로딩 중인지 알아채기 어려웠다. 훨씬 눈에 잘 띄는 좌측 game-area
