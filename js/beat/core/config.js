@@ -1,34 +1,52 @@
 const CONFIG = {
-    DIFFICULTY_SPEED: { easy: 4, normal: 7, hard: 10 },
-    NOTE_SPAWN_SPEED: { easy: 1.0, normal: 1.5, hard: 2.0 }, // 노트 생성 속도 배율
+    DIFFICULTY_SPEED: { easy: 4, normal: 7, hard: 10, drillSpeed: 8, drillComplex: 8 },
+    NOTE_SPAWN_SPEED: { easy: 1.0, normal: 1.5, hard: 2.0, drillSpeed: 2.5, drillComplex: 1.5 }, // 노트 생성 속도 배율
     JUDGEMENT_WINDOWS_MS: { perfect: 50, good: 100, bad: 150, miss: 200 },
     VALID_LANES: [4, 5, 6, 7, 8],
+    // ── 실전형 드릴 프리셋 (연습모드-개선계획.md 3번) ──────────────────────────────
+    // 노트 타입이 아니라 실제 채보에서 마주치는 "상황" 기준으로 만든 프리셋. 기존
+    // easy/normal/hard와 동일한 구조로 아래 모든 프리셋 상수 맵에 나란히 추가되어 있어서,
+    // difficulty-selector 클릭 핸들러(main.js)를 전혀 건드리지 않고도 그대로 재사용된다.
+    // - drillSpeed(순발력/연타 훈련): 빠르게 쏟아지는 단일 노트에 계속 반응하는 힘을 기른다.
+    //   생성빈도↑, 동시타·롱노트 확률↓.
+    // - drillComplex(복합 패턴 훈련): 동시타+롱노트가 겹치는 "손 꼬이는" 구간 대응력을 기른다.
+    //   동시타 확률↑, 최대 동시타 개수↑, 동시타 타입 중 롱노트 비중↑.
     SIMULTANEOUS_NOTE_PROBABILITY: {
         easy: 0.1,
         normal: 0.25,
         hard: 0.4,
+        drillSpeed: 0.05,
+        drillComplex: 0.5,
     },
     // 최대 동시타 개수 설정
     MAX_SIMULTANEOUS_NOTES: {
         easy: 2,
         normal: 3,
         hard: 4,
+        drillSpeed: 2,
+        drillComplex: 5,
     },
     // 동시타 내 노트 타입별 확률
     SIMULTANEOUS_NOTE_TYPE_PROBABILITY: {
         easy: { tap: 0.9, long: 0.05, false: 0.05 },
         normal: { tap: 0.7, long: 0.2, false: 0.1 },
         hard: { tap: 0.6, long: 0.25, false: 0.15 },
+        drillSpeed: { tap: 0.95, long: 0.03, false: 0.02 },
+        drillComplex: { tap: 0.4, long: 0.5, false: 0.1 },
     },
     LONG_NOTE_PROBABILITY: {
         easy: 0.1,
         normal: 0.15,
         hard: 0.2,
+        drillSpeed: 0.03,
+        drillComplex: 0.3,
     },
     FALSE_NOTE_PROBABILITY: {
         easy: 0,
         normal: 0,
         hard: 0.03, // 3%
+        drillSpeed: 0,
+        drillComplex: 0.03,
     },
     EDITOR_LANE_IDS: ['L4', 'L3', 'L2', 'L1', 'C1', 'R1', 'R2', 'R3', 'R4'],
     KEY_BINDING_IDS: ['L4', 'L3', 'L2', 'L1', 'C1', 'R1', 'R2', 'R3', 'R4'],

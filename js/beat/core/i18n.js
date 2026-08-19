@@ -21,6 +21,9 @@ const I18n = {
             'normal': '보통',
             'hard': '어려움',
             'note_count': '노트 수 (랜덤 모드)',
+            'drill_section_title': '실전형 드릴',
+            'drill_speed': '⚡ 순발력',
+            'drill_complex': '🎯 복합 패턴',
             'load_chart': '차트 불러오기',
             'load_music': '음악 불러오기',
             
@@ -152,6 +155,9 @@ const I18n = {
             'normal': 'Normal',
             'hard': 'Hard',
             'note_count': 'Note Count (Random)',
+            'drill_section_title': 'Real-World Drills',
+            'drill_speed': '⚡ Reflex',
+            'drill_complex': '🎯 Complex Pattern',
             'load_chart': 'Load Chart',
             'load_music': 'Load Music',
             

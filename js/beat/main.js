@@ -423,7 +423,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        document.getElementById('difficulty-selector').addEventListener('click', (e) => {
+        // 난이도(쉬움/보통/어려움) + 실전형 드릴(순발력/복합 패턴) 버튼 — 두 그룹 다 같은 프리셋
+        // 적용 로직을 타므로 리스너를 공유한다. 클릭된 프리셋만 active로 남기려면 두 그룹의
+        // 버튼을 모두 대상으로 active 클래스를 지워야 한다(안 그러면 난이도 버튼과 드릴 버튼이
+        // 동시에 active로 남는 경우가 생김).
+        document.getElementById('difficulty-selector').addEventListener('click', handleDifficultyPresetClick);
+        document.getElementById('drill-selector').addEventListener('click', handleDifficultyPresetClick);
+
+        function handleDifficultyPresetClick(e) {
             if (e.target.tagName !== 'BUTTON') return;
             const preset = e.target.dataset.difficulty;
             Game.state.settings.difficulty = preset;
@@ -435,9 +442,9 @@ document.addEventListener('DOMContentLoaded', () => {
             Game.state.settings.longNoteProbability = CONFIG.LONG_NOTE_PROBABILITY[preset];
             Game.state.settings.falseNoteProbability = CONFIG.FALSE_NOTE_PROBABILITY[preset];
             updateDetailedSettingsUI();
-            document.querySelectorAll('#difficulty-selector button').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('#difficulty-selector button, #drill-selector button').forEach(b => b.classList.remove('active'));
             e.target.classList.add('active');
-        });
+        }
 
         DOM.difficulty.toggleBtn.addEventListener('click', () => {
             DOM.difficulty.detailsPanel.classList.toggle('hidden');
@@ -1384,7 +1391,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function setCustomDifficulty() {
         Game.state.settings.difficulty = 'custom';
-        document.querySelectorAll('#difficulty-selector button').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('#difficulty-selector button, #drill-selector button').forEach(b => b.classList.remove('active'));
     }
 
     // ── 플레이 탭 설정 계정 동기화 ──────────────────────────────────

@@ -178,6 +178,16 @@
                                     <button data-difficulty="normal" class="w-full py-3 px-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition active" data-i18n="normal">보통</button>
                                     <button data-difficulty="hard" class="w-full py-3 px-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition" data-i18n="hard">어려움</button>
                                 </div>
+                                <!-- 실전형 드릴 프리셋: 난이도 단계가 아니라 "실제 채보에서 마주치는 상황" 기준
+                                     프리셋. difficulty-selector와 같은 클릭 핸들러를 그대로 타므로 별도 로직 없음
+                                     (연습모드-개선계획.md 3번). -->
+                                <div class="mt-2">
+                                    <p class="text-xs text-gray-500 mb-1" data-i18n="drill_section_title">실전형 드릴</p>
+                                    <div class="flex space-x-2 btn-group" id="drill-selector">
+                                        <button data-difficulty="drillSpeed" class="w-full py-3 px-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition" data-i18n="drill_speed">⚡ 순발력</button>
+                                        <button data-difficulty="drillComplex" class="w-full py-3 px-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition" data-i18n="drill_complex">🎯 복합 패턴</button>
+                                    </div>
+                                </div>
                             </div>
                             <div id="detailed-difficulty-settings" class="hidden mt-4 p-4 bg-gray-800 rounded-lg space-y-4">
                                 <div>
