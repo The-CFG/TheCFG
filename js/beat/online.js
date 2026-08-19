@@ -6,6 +6,12 @@ const Online = {
     _currentSongId: null,
     _browseState: { sort: 'newest', search: '', page: 0, pageSize: 20, totalCount: 0 },
     _browseCache: [], // 현재 페이지에 보여줄 아이템만 담는다 (예전처럼 누적하지 않음)
+    // 비동기 로딩 중단(취소) 토큰 — _loadBrowse/_showSongDetail/_showDetail/_loadMyCharts는
+    // 전부 "화면 갱신 전 네트워크 왕복"을 거치는데, 빠르게 연속 탭하면(모바일에서 흔함)
+    // 먼저 시작된 요청이 나중 요청보다 늦게 끝날 수 있다. 그 경우 화면에 반영하면 안 되므로
+    // 함수 진입 시 토큰을 발급해 두고, await 이후 토큰이 여전히 최신인지 확인한 뒤에만
+    // _setContent/상태 반영을 한다 (AudioEngine._loadToken과 동일한 패턴).
+    _loadSeq: 0,
     // 멀티플레이 방 생성용 채보 선택 모드 — pickMode가 true면 상세 화면의 "플레이" 버튼이
     // "이 채보로 방 만들기"로 바뀌고, 뒤로가기가 메뉴 대신 멀티플레이 화면으로 간다.
     // pickMode가 'queue'면 이미 있는 방의 대기열에 채보를 추가하는 모드로 동작하고,
@@ -55,6 +61,7 @@ const Online = {
         document.getElementById('online-tab-browse').addEventListener('click', () => this.show('browse'));
         document.getElementById('online-tab-my')?.addEventListener('click', () => this.show('my'));
         document.getElementById('online-back-btn').addEventListener('click', () => {
+            this._loadSeq++; // 이 시점에 아직 안 끝난 로딩(오디오 미리듣기 포함)은 전부 무효화
             SongPreview.stop();
             GameBackground.clear();
             if (this._pickMode === 'queue') {
@@ -146,11 +153,13 @@ const Online = {
         if (reset) s.page = 0;
         this._setContent(UI.listSkeletonHtml());
         UI.showAreaLoading('online', '라이브러리 불러오는 중…');
+        const seq = ++this._loadSeq;
 
         const { data, error, count } = await CloudBrowse.listPublicSongs({
             sort: s.sort, search: s.search, page: s.page, pageSize: s.pageSize,
         });
         UI.hideAreaLoading('online');
+        if (seq !== this._loadSeq) return; // 그 사이 다른 로딩이 시작됨 — 이 결과는 폐기
 
         if (error) { this._setContent(`<p class="text-red-400 text-sm mt-4">${error.message}</p>`); return; }
         this._browseCache = data || [];
@@ -280,9 +289,11 @@ const Online = {
         this._currentSongId = songId;
         this._setContent(UI.staticSkeletonHtml());
         UI.showAreaLoading('online', '노래 정보 불러오는 중…');
+        const seq = ++this._loadSeq;
 
         const { data, error } = await CloudBrowse.getSongDetail(songId);
         UI.hideAreaLoading('online');
+        if (seq !== this._loadSeq) return; // 그 사이 다른 곳으로 이동함
         if (error) {
             this._setContent(`<p class="text-red-400 text-sm">${error.message}</p>`);
             return;
@@ -291,7 +302,9 @@ const Online = {
         const { song, beatmaps } = data;
         GameBackground.set(CloudCharts.getCoverUrl(song.cover_storage_path));
         const nickMap = await CloudAuth._fetchNicknameMap(beatmaps.map(bm => bm.owner_id).filter(Boolean));
+        if (seq !== this._loadSeq) return;
         const { data: likeInfo } = await CloudLikes.getLikeInfo(beatmaps.map(bm => bm.id));
+        if (seq !== this._loadSeq) return;
         const cards = beatmaps.length === 0
             ? '<p class="text-gray-400 text-sm text-center mt-8">등록된 난이도가 없습니다.</p>'
             : beatmaps.map(bm => this._beatmapCard(bm, nickMap, likeInfo || {})).join('');
@@ -308,6 +321,7 @@ const Online = {
         `);
 
         document.getElementById('song-back-btn').addEventListener('click', () => {
+            this._loadSeq++; // 진행 중이던 상세 로딩/미리듣기 요청 무효화
             SongPreview.stop();
             GameBackground.clear();
             this._subView = 'browse';
@@ -358,6 +372,7 @@ const Online = {
         this._currentChartId = chartId;
         this._setContent(UI.staticSkeletonHtml());
         UI.showAreaLoading('online', '채보 정보 불러오는 중…');
+        const seq = ++this._loadSeq;
 
         const [detailRes, lbRes, myRes, currentUser, likeRes] = await Promise.all([
             CloudBrowse.getBeatmapDetail(chartId),
@@ -367,6 +382,7 @@ const Online = {
             CloudLikes.getLikeInfo([chartId]),
         ]);
         UI.hideAreaLoading('online');
+        if (seq !== this._loadSeq) return; // 그 사이 다른 곳으로 이동함
 
         if (detailRes.error) {
             this._setContent(`<p class="text-red-400 text-sm">${detailRes.error.message}</p>`);
@@ -379,6 +395,7 @@ const Online = {
         const like = (likeRes.data && likeRes.data[chartId]) || { count: 0, likedByMe: false };
         GameBackground.set(CloudCharts.getCoverUrl(c.cover_storage_path));
         const creatorNickMap = c.owner_id ? await CloudAuth._fetchNicknameMap([c.owner_id]) : {};
+        if (seq !== this._loadSeq) return;
         const creatorName = c.owner_id
             ? (creatorNickMap[c.owner_id] ? _esc(creatorNickMap[c.owner_id]) : `${_esc(c.owner_id.slice(0, 8))}…`)
             : '';
@@ -480,6 +497,7 @@ const Online = {
         `);
 
         document.getElementById('detail-back-btn').addEventListener('click', () => {
+            this._loadSeq++; // 진행 중이던 미리보기(_startDetailPreview) 요청 무효화
             SongPreview.stop();
             if (this._currentSongId) this.show('song', this._currentSongId);
             else { this._subView = 'browse'; this._renderShell(); this._renderBrowse(); }
@@ -499,10 +517,11 @@ const Online = {
 
     async _startDetailPreview(c) {
         const hintEl = document.getElementById('online-preview-hint');
+        const seq = this._loadSeq; // _showDetail이 이미 발급해 둔 토큰을 그대로 이어받는다
         try {
             const { data: chartData, error } = await CloudCharts.downloadChartData(c.chart_storage_path);
-            // 그 사이 다른 난이도/화면으로 이동했으면 무시
-            if (this._currentChartId !== c.id) return;
+            // 그 사이 다른 난이도/화면으로 이동했으면 무시 (currentChartId + 전역 토큰 이중 확인)
+            if (this._currentChartId !== c.id || seq !== this._loadSeq) return;
             if (error) throw error;
             await SongPreview.start({
                 chartData,
@@ -513,10 +532,11 @@ const Online = {
                 previewStartMs: 0,
                 laneCount: c.lane_count || chartData.laneCount || 4,
             });
+            if (this._currentChartId !== c.id || seq !== this._loadSeq) { SongPreview.stop(); return; }
             if (hintEl) hintEl.textContent = '◀ 왼쪽 게임 화면에서 미리보기가 재생됩니다.';
         } catch (err) {
             // 노트 미리보기 실패 시에도 오디오 미리듣기는 시도한다.
-            if (this._currentChartId !== c.id) return;
+            if (this._currentChartId !== c.id || seq !== this._loadSeq) return;
             SongPreview.playAudio(CloudCharts.getAudioUrl(c.audio_storage_path), c.preview_start_ms || 0);
             if (hintEl) hintEl.textContent = '🎵 노래 미리듣기만 재생 중입니다.';
         }
@@ -593,8 +613,10 @@ const Online = {
         GameBackground.clear();
         this._setContent(UI.listSkeletonHtml());
         UI.showAreaLoading('online', '내 차트 불러오는 중…');
+        const seq = ++this._loadSeq;
 
         const user = await CloudAuth.getUser();
+        if (seq !== this._loadSeq) return; // 그 사이 다른 곳으로 이동함
         if (!user) {
             UI.hideAreaLoading('online');
             this._setContent(`
@@ -608,10 +630,12 @@ const Online = {
         }
 
         const { data, error } = await CloudCharts.listMyCharts();
+        if (seq !== this._loadSeq) return;
         if (error) { UI.hideAreaLoading('online'); this._setContent(`<p class="text-red-400 text-sm">${error.message}</p>`); return; }
 
         const { data: songs, error: songsError } = await CloudCharts.listMySongs();
         UI.hideAreaLoading('online');
+        if (seq !== this._loadSeq) return;
         if (songsError) { this._setContent(`<p class="text-red-400 text-sm">${songsError.message}</p>`); return; }
 
         const songCards = (songs || []).length === 0

@@ -20,16 +20,25 @@ const SongPreview = {
     _baseNoteSpeed: 6,
     _active: false,
     _noteMode: false,
+    // playAudio()/start() 둘 다 stop() 후 resumeContext()/play() 같은 await 구간을 거친다.
+    // 그 사이에 다른 곡으로 playAudio/start가 다시 호출되면(빠르게 연속 탭) 먼저 시작된
+    // 호출이 나중에 깨어나면서 방금 재생 시작한 곡의 src/currentTime을 자기 것으로
+    // 덮어써버리는 상태 누수가 생긴다. AudioEngine._loadToken과 동일한 패턴으로
+    // 호출마다 토큰을 발급하고, await 이후 여전히 최신 호출인지 확인한 뒤에만 적용한다.
+    _loadToken: 0,
 
     // ── 오디오만 미리듣기 (난이도 선택 = 노래 상세 화면) ────────────────────
     async playAudio(audioUrl, previewStartMs = 0) {
         this.stop();
         if (!audioUrl) return;
+        const token = ++this._loadToken;
         try { await AudioEngine.resumeContext(); } catch (e) { /* 제스처 없이 호출된 경우 무시 */ }
+        if (token !== this._loadToken) return; // 그 사이 다른 곡 요청이 들어옴 — 이 호출은 폐기
         try {
             DOM.musicPlayer.src = audioUrl;
             DOM.musicPlayer.currentTime = Math.max(0, (previewStartMs || 0) / 1000);
             await DOM.musicPlayer.play();
+            if (token !== this._loadToken) { DOM.musicPlayer.pause(); return; }
             this._active = true;
         } catch (err) {
             Debugger?.logError?.(err, 'SongPreview.playAudio');
@@ -40,6 +49,7 @@ const SongPreview = {
     // opts: { chartData: {bpm, laneCount, notes, triggers}, audioUrl, previewStartMs, laneCount }
     async start(opts) {
         this.stop();
+        const token = ++this._loadToken;
         const { chartData, audioUrl, previewStartMs = 0 } = opts || {};
         const laneCount = (opts && opts.laneCount) || chartData?.laneCount || 4;
         const laneIds = CONFIG.LANE_KEY_MAPPING_ORDER[laneCount];
@@ -77,6 +87,7 @@ const SongPreview = {
         Game.canvas.resize(laneCount);
 
         try { await AudioEngine.resumeContext(); } catch (e) { /* 무시 */ }
+        if (token !== this._loadToken) return; // 그 사이 다른 곡 요청이 들어옴 — 이 호출은 폐기
         try {
             if (audioUrl) {
                 DOM.musicPlayer.src = audioUrl;
@@ -86,6 +97,7 @@ const SongPreview = {
         } catch (err) {
             Debugger?.logError?.(err, 'SongPreview.start');
         }
+        if (token !== this._loadToken) { DOM.musicPlayer.pause(); return; }
 
         this._active = true;
         this._loop();
@@ -175,6 +187,7 @@ const SongPreview = {
     },
 
     stop() {
+        this._loadToken++; // 진행 중이던 playAudio()/start() 호출을 전부 무효화
         this._active = false;
         if (this._animId) {
             cancelAnimationFrame(this._animId);
