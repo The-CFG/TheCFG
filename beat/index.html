@@ -1256,7 +1256,13 @@
                         <p class="text-[11px] text-gray-500 text-center pt-1">💡 이 카드 안 어디에든 오디오·이미지·채보(json) 파일을 끌어다 놓아도 자동으로 인식됩니다</p>
                     </div>
                     <h3 class="text-sm font-semibold text-gray-300 mb-2">난이도 목록</h3>
-                    <div id="editor-song-beatmap-list" class="space-y-2 flex-1 overflow-y-auto">
+                    <!-- flex-1 + overflow-y-auto로 이 목록만 따로 스크롤시키던 예전 방식은,
+                         바로 위 정보 카드(항목이 많아 세로로 길다)가 뷰포트 높이를 다 차지하면
+                         flex-basis 0%인 이 목록이 통째로 0px로 짜부라져 아예 안 보이는 문제가
+                         있었다(안드로이드 태블릿 분할화면이나 창이 안 넓은 컴퓨터처럼 세로
+                         공간이 빠듯할 때 특히 잘 드러남). 목록은 그냥 자연스러운 높이로 두고,
+                         이미 overflow-y-auto인 상위 #editor-song-screen 전체가 스크롤되게 한다. -->
+                    <div id="editor-song-beatmap-list" class="space-y-2">
                         <!-- EditorSong.render()가 채움 -->
                     </div>
                     <button id="editor-song-add-beatmap-btn" class="w-full py-2 mt-2 bg-teal-600 hover:bg-teal-500 rounded-lg text-sm font-semibold">+ 새 난이도 추가</button>
