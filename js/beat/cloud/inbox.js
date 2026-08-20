@@ -69,7 +69,7 @@ function _inboxInviteCardHtml(inv) {
     const songLabel = inv.song_title ? _inboxEsc(inv.song_title) : '비공개 노래';
     const artistLabel = inv.song_artist ? `<span class="text-gray-400 font-normal"> — ${_inboxEsc(inv.song_artist)}</span>` : '';
     return `
-        <div class="bg-gray-700/60 rounded-lg p-2.5" data-invite-id="${_inboxEsc(inv.id)}">
+        <div class="bg-gray-700/60 rounded-lg p-3" data-invite-id="${_inboxEsc(inv.id)}">
             <p class="text-sm text-white font-semibold truncate">🤝 ${songLabel}${artistLabel}</p>
             <p class="text-xs text-gray-400 mt-0.5">공동 작업 초대 · ${roleLabel}</p>
             <div class="flex gap-2 mt-2">
