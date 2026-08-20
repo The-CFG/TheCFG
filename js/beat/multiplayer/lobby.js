@@ -1003,16 +1003,27 @@ const MultiplayerLobby = {
             // 조용히 무시된다(에러도 안 남음). DB의 host_id 자체는 transfer_host RPC로 정상
             // 갱신되지만, 남은 플레이어들은 이 broadcast를 못 받으니 자기가 새 호스트가 됐다는
             // 걸 전혀 모르고 화면도 안 바뀐다 — "방장 권한이 안 넘어가는" 버그의 원인이었다.
+            //
+            // 남은 사람이 없을 때: 예전엔 status를 'abandoned'로만 바꿔두고 크론
+            // (cleanup_stale_beat_rooms, 30분 주기)이 나중에 지우게 했는데, 실제로 이 크론이
+            // 스케줄링되어 있지 않아 방이 계속 쌓이는 문제가 있었다. 어차피 abandoned 상태를
+            // 다른 곳에서 참조하는 로직도 없어서, 그냥 여기서 바로 방을 삭제한다.
+            // beat_room_players는 beat_rooms에 ON DELETE CASCADE라 같이 지워지므로,
+            // 아래 leaveRoom(내 row 삭제)은 방이 삭제된 경우엔 건너뛴다(이미 없는 row라
+            // 굳이 또 지울 필요 없음 — 시도해도 에러는 안 나지만 불필요한 요청이라 생략).
+            let roomDeleted = false;
             if (wasHost) {
                 const { data: newHost } = await MultiplayerRooms.transferHost(roomId);
                 if (newHost) {
                     await MultiplayerRealtime.send('host_transferred', { newHostId: newHost.user_id }).catch(() => {});
                 } else {
-                    // 남은 사람이 없음 — 방을 abandoned로 정리(크론이 나중에 완전히 삭제)
-                    await MultiplayerRooms.updateRoomStatus(roomId, 'abandoned');
+                    await MultiplayerRooms.deleteRoom(roomId);
+                    roomDeleted = true;
                 }
             }
-            await MultiplayerRooms.leaveRoom(roomId);
+            if (!roomDeleted) {
+                await MultiplayerRooms.leaveRoom(roomId);
+            }
         }
 
         this._teardownRealtime();

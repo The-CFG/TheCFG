@@ -53,8 +53,18 @@ const MultiplayerRooms = {
         return { error };
     },
 
+    // 방을 완전히 삭제한다(호스트 전용 — RLS "host can delete own room"이 host_id로 검증).
+    // beat_room_players는 beat_rooms에 ON DELETE CASCADE로 걸려 있어 같이 삭제된다.
+    async deleteRoom(roomId) {
+        const { error } = await _supabase
+            .from('beat_rooms')
+            .delete()
+            .eq('id', roomId);
+        return { error };
+    },
+
     // 호스트 이탈 시 남은 사람 중 가장 먼저 join한 사람에게 호스트를 넘긴다.
-    // 남은 사람이 없으면 { data: null }을 반환 — 호출 측(lobby.js)이 방을 abandoned로 정리한다.
+    // 남은 사람이 없으면 { data: null }을 반환 — 호출 측(lobby.js)이 방을 바로 삭제한다.
     //
     // 중요: 반드시 "호스트 자신의 beat_room_players row가 아직 남아있는 상태"에서 호출해야
     // 한다. beat_room_players의 SELECT RLS 정책(room members can read player list of their
