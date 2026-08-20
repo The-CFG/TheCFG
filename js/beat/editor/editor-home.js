@@ -96,43 +96,7 @@ const EditorHome = {
         }
 
         Editor.resetSongState();
-        Editor.state.song.title = data.song.title || '';
-        Editor.state.song.artist = data.song.artist || '';
-        Editor.state.song.cloudSongId = data.song.id;
-        Editor.state.song.isPublic = data.song.is_public === true;
-        Editor.state.song.previewStartSec = (data.song.preview_start_ms || 0) / 1000;
-        Editor.state.song.startOffsetSec = (data.song.start_offset_ms || 0) / 1000;
-        Editor.state.song.timingStartSec = (data.song.timing_start_ms || 0) / 1000;
-        // 오디오/커버는 서버에 이미 올라가 있으므로 다시 고를 필요 없이 URL로 자동 로드한다.
-        // (실제 디코딩은 비트맵 창 진입 시 Editor.loadAudioFromUrl에서 이뤄진다 — 게임 플레이 화면과 동일한 방식)
-        Editor.state.song.audioFileObject = null;
-        Editor.state.song.audioFileName = (data.song.audio_storage_path || '').split('/').pop() || '';
-        Editor.state.song.audioUrl = data.song.audio_storage_path
-            ? CloudCharts.getAudioUrl(data.song.audio_storage_path)
-            : null;
-        Editor.state.song.coverFileObject = null;
-        Editor.state.song.coverFileName = (data.song.cover_storage_path || '').split('/').pop() || '';
-        Editor.state.song.coverUrl = data.song.cover_storage_path
-            ? CloudCharts.getCoverUrl(data.song.cover_storage_path)
-            : null;
-
-        Editor.state.beatmaps = data.beatmaps.map(bm => ({
-            difficultyLabel: bm.difficulty_label || '기본',
-            laneCount: bm.lane_count || 4,
-            bpm: bm.bpm || 120,
-            startTimeOffset: 0,
-            // notes/triggers 로딩 전에도 배지 표시나 메타 전용 저장(이름변경 등)이 정확하도록,
-            // DB에 저장된 값으로 미리 채워둔다. 실제 노트가 필요할 때는
-            // Editor.ensureBeatmapLoaded()가 chart.json에서 다시 정확히 덮어쓴다.
-            fallSpeed: typeof bm.note_speed === 'number' ? bm.note_speed : null,
-            useCustomFallSpeed: bm.use_custom_fall_speed === true,
-            notes: [],
-            triggers: [],
-            cloudChartId: bm.id,
-            chartStoragePath: bm.chart_storage_path,
-            updatedAt: bm.updated_at || null,
-            _loaded: false, // 편집/복제/전체저장 시점에 Editor.ensureBeatmapLoaded()가 채운다
-        }));
+        Editor.applySongData(data);
         Editor.state.activeBeatmapIndex = 0;
 
         UI.showScreen('editorSong');

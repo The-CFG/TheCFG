@@ -464,6 +464,25 @@ const EditorSong = {
     //     → updateBeatmap으로 메타(+ 편집 화면을 열었다면 notes/triggers까지) 갱신
     //   - 편집은 안 했지만 지금 공개 여부(publish)만 이전과 달라진 난이도 → updateBeatmap으로
     //     메타(is_public)만 갱신 (예: 비공개로 저장해둔 걸 나중에 그대로 "라이브러리에 공개"할 때)
+    // ── 낙관적 잠금(A안) 충돌 처리 ──────────────────────────────────────
+    // updateSongMeta/updateBeatmap이 { error: { conflict: true } }를 반환하면 호출된다.
+    // "다른 곳"이라고만 쓴 건 지금 단계(2단계)엔 아직 협업 멤버 기능이 없어서 — 본인이 다른
+    // 탭/기기에서 먼저 저장한 경우도 똑같이 여기로 들어온다. 나중에 협업 기능이 붙어도
+    // 문구는 그대로 써도 무방하다.
+    _handleSaveConflict() {
+        const reload = confirm(
+            '다른 곳에서 이 사이 먼저 저장했습니다.\n' +
+            '지금 저장하면 그 변경사항을 덮어쓰게 됩니다.\n\n' +
+            '확인: 최신 내용을 새로 불러옵니다 (지금 화면의 변경사항은 사라집니다)\n' +
+            '취소: 아무것도 하지 않습니다 (필요하면 직접 백업 후 다시 시도해주세요)'
+        );
+        if (reload) {
+            Editor.reloadFromCloud();
+        } else {
+            UI.showMessage('editorSong', '저장하지 않았습니다. 최신 내용을 불러오려면 다시 시도해주세요.');
+        }
+    },
+
     async uploadToCloud(publish = true) {
         try {
             const user = await CloudAuth.getUser();
@@ -517,9 +536,10 @@ const EditorSong = {
                     return;
                 }
                 Editor.state.song.cloudSongId = data.id;
+                Editor.state.song.updatedAt = data.updated_at || null;
             } else {
                 // 이미 클라우드에 있는 노래면 제목/가수/미리듣기 시작 시각/시작(초)/타이밍 시작(초)/커버 이미지(고른 경우)/공개 여부를 갱신해준다.
-                const { error: metaErr } = await CloudCharts.updateSongMeta(Editor.state.song.cloudSongId, {
+                const { data: metaData, error: metaErr } = await CloudCharts.updateSongMeta(Editor.state.song.cloudSongId, {
                     title: Editor.state.song.title,
                     artist: Editor.state.song.artist,
                     preview_start_ms: previewStartMs,
@@ -535,6 +555,10 @@ const EditorSong = {
                     UI.showMessage('editorSong', `노래 정보 갱신 실패: ${metaErr.message}`);
                     return;
                 }
+                // 성공 시 스냅샷 갱신 — 이어서 아래 난이도들을 저장할 때, 그리고 같은 세션에서
+                // 다음에 또 저장 버튼을 누를 때도 이번에 막 바뀐 updated_at 기준으로 비교해야
+                // 방금 한 내 저장을 "충돌"로 오판하지 않는다.
+                Editor.state.song.updatedAt = metaData?.updated_at || Editor.state.song.updatedAt;
             }
 
             // 2) 아직 안 올라간 난이도들을 순서대로 신규 추가
@@ -593,7 +617,11 @@ const EditorSong = {
                         notes: bm.notes || [],
                         triggers: bm.triggers || [],
                     };
-                    const { data, error } = await CloudCharts.updateBeatmap(bm.cloudChartId, meta, chartData);
+                    const { data, error } = await CloudCharts.updateBeatmap(bm.cloudChartId, meta, chartData, bm.updatedAt);
+                    if (error?.conflict) {
+                        this._handleSaveConflict();
+                        return;
+                    }
                     if (error) {
                         failure = { label: bm.difficultyLabel, message: error.message };
                         break;
@@ -615,7 +643,11 @@ const EditorSong = {
                         use_custom_fall_speed: bm.useCustomFallSpeed === true,
                         sort_order: Editor.state.beatmaps.indexOf(bm),
                         is_public: publish,
-                    }, null);
+                    }, null, bm.updatedAt);
+                    if (error?.conflict) {
+                        this._handleSaveConflict();
+                        return;
+                    }
                     if (error) {
                         failure = { label: bm.difficultyLabel, message: error.message };
                         break;

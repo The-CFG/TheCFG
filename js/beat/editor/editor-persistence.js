@@ -169,6 +169,68 @@ Object.assign(Editor, {
         this.state._flatBeatmapIndex = null;
     },
 
+    // CloudCharts.getSongWithBeatmaps()가 반환한 { song, beatmaps }를 state.song/state.beatmaps에
+    // 반영한다. EditorHome.open()과 reloadFromCloud() 양쪽에서 공유 — 필드 매핑을 한 곳에만
+    // 둬서 두 경로가 서로 어긋나지 않게 한다. resetSongState()나 화면 전환은 호출부 책임이다.
+    applySongData(data) {
+        this.state.song.title = data.song.title || '';
+        this.state.song.artist = data.song.artist || '';
+        this.state.song.cloudSongId = data.song.id;
+        this.state.song.isPublic = data.song.is_public === true;
+        this.state.song.previewStartSec = (data.song.preview_start_ms || 0) / 1000;
+        this.state.song.startOffsetSec = (data.song.start_offset_ms || 0) / 1000;
+        this.state.song.timingStartSec = (data.song.timing_start_ms || 0) / 1000;
+        // 낙관적 잠금(A안) 스냅샷 — 이번에 새로 받은 값으로 갱신해야 다음 저장이 이걸 기준으로 비교된다.
+        this.state.song.updatedAt = data.song.updated_at || null;
+        // 오디오/커버는 서버에 이미 올라가 있으므로 다시 고를 필요 없이 URL로 자동 로드한다.
+        // (실제 디코딩은 비트맵 창 진입 시 Editor.loadAudioFromUrl에서 이뤄진다 — 게임 플레이 화면과 동일한 방식)
+        this.state.song.audioFileObject = null;
+        this.state.song.audioFileName = (data.song.audio_storage_path || '').split('/').pop() || '';
+        this.state.song.audioUrl = data.song.audio_storage_path
+            ? CloudCharts.getAudioUrl(data.song.audio_storage_path)
+            : null;
+        this.state.song.coverFileObject = null;
+        this.state.song.coverFileName = (data.song.cover_storage_path || '').split('/').pop() || '';
+        this.state.song.coverUrl = data.song.cover_storage_path
+            ? CloudCharts.getCoverUrl(data.song.cover_storage_path)
+            : null;
+
+        this.state.beatmaps = data.beatmaps.map(bm => ({
+            difficultyLabel: bm.difficulty_label || '기본',
+            laneCount: bm.lane_count || 4,
+            bpm: bm.bpm || 120,
+            startTimeOffset: 0,
+            // notes/triggers 로딩 전에도 배지 표시나 메타 전용 저장(이름변경 등)이 정확하도록,
+            // DB에 저장된 값으로 미리 채워둔다. 실제 노트가 필요할 때는
+            // Editor.ensureBeatmapLoaded()가 chart.json에서 다시 정확히 덮어쓴다.
+            fallSpeed: typeof bm.note_speed === 'number' ? bm.note_speed : null,
+            useCustomFallSpeed: bm.use_custom_fall_speed === true,
+            notes: [],
+            triggers: [],
+            cloudChartId: bm.id,
+            chartStoragePath: bm.chart_storage_path,
+            updatedAt: bm.updated_at || null,
+            _loaded: false, // 편집/복제/전체저장 시점에 Editor.ensureBeatmapLoaded()가 채운다
+        }));
+        this.state.activeBeatmapIndex = 0;
+    },
+
+    // 저장 충돌(낙관적 잠금, A안) 시 "최신 내용 다시 불러오기"를 선택하면 호출된다. open()과
+    // 달리 "저장 안 한 내용이 사라집니다" 확인 프롬프트를 다시 띄우지 않는다 — 이미 충돌 대화상자에서
+    // 그 의미를 안내했기 때문. resetSongState()도 부르지 않는다: cloudSongId처럼 그대로 이어써야
+    // 하는 값까지 지울 필요 없고, 어차피 applySongData()가 필요한 필드를 전부 새로 채운다.
+    async reloadFromCloud() {
+        if (!this.state.song.cloudSongId) return;
+        const { data, error } = await CloudCharts.getSongWithBeatmaps(this.state.song.cloudSongId);
+        if (error) {
+            UI.showMessage('editorSong', `다시 불러오기 실패: ${error.message}`);
+            return;
+        }
+        this.applySongData(data);
+        EditorSong.render();
+        UI.showMessage('editorSong', '최신 내용을 다시 불러왔습니다.');
+    },
+
     // Phase 3d: 클라우드에서 불러온 노래는 getSongWithBeatmaps()로 난이도 "메타"만 받아오고
     // (notes/triggers는 안 옴), 실제로 편집/복제/전체저장이 필요해지는 시점에만 이 함수로
     // chart_storage_path를 다운로드해서 채운다. bm._loaded === false 인 항목에서만 동작한다.
