@@ -54,13 +54,16 @@
 }
 .editor-note {
     position: absolute;
-    height: 8px;
+    /* 일반/가짜 노트 두께. 롱노트는 이 값과 무관하게 JS에서 duration만큼 height를 따로 계산해서
+       inline style로 덮어쓴다(editor-notes.js). 너무 얇아서 클릭/드래그가 어렵다는 피드백으로
+       8px → 12px로 살짝 키움. */
+    height: 12px;
     border-radius: 2px;
     box-sizing: border-box;
     border: 1px solid #1a202c;
     z-index: 10;
-    /* 노트를 그리드 라인에 정확히 정렬 */
-    transform: translateY(-4px);
+    /* 노트를 그리드 라인에 정확히 정렬 (height의 절반만큼 위로) */
+    transform: translateY(-6px);
 }
 
 /* 노트 타입별 색상 모드일 때만 CSS 변수 사용 */
