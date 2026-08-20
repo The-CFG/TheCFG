@@ -202,6 +202,25 @@ const CloudBrowse = {
         return counts;
     },
 
+    // 차트 id 배열 → chart_id별 기여자 user_id 목록 { [chartId]: [user_id, ...] } (최초 기여자부터 순서대로).
+    // 브라우즈 목록(_chartCard)에는 크레딧을 안 보여주므로, 호출 지점은 online.js의
+    // _showSongDetail/_showDetail(상세/플레이 전 화면)로 한정한다.
+    async _fetchContributorsForCharts(chartIds) {
+        const ids = (chartIds || []).filter(Boolean);
+        if (!ids.length) return {};
+        const { data, error } = await _supabase
+            .from('beat_chart_contributors')
+            .select('chart_id, user_id, first_edited_at')
+            .in('chart_id', ids)
+            .order('first_edited_at', { ascending: true });
+        if (error || !data) return {};
+        const byChartId = {};
+        data.forEach(row => {
+            (byChartId[row.chart_id] ||= []).push(row.user_id);
+        });
+        return byChartId;
+    },
+
     // beat_charts 행 배열(+좋아요 개수 맵) → song_id별 { beatmapCount, laneCountMin, laneCountMax, totalPlayCount, totalLikeCount }
     _buildSummary(charts, likeCountByChartId = {}) {
         const bySongId = {};
