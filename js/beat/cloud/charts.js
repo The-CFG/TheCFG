@@ -11,6 +11,18 @@ const CloudCharts = {
         return !!error && (error.code === 'PGRST116' || /0 rows|no rows|multiple \(or no\) rows/i.test(error.message || ''));
     },
 
+    // ── 공동 작업(A안 다음 단계) — 이 노래에서 내 역할 조회 ───────────────────
+    // beat_song_role(_song_id, _user_id) SQL 함수(SECURITY DEFINER)를 그대로 호출.
+    // 반환: 'owner' | 'editor' | 'viewer' | null (로그인 안 했거나, 노래가 없거나, 멤버가 아니면 null)
+    // addBeatmapToSong/updateBeatmap의 권한 체크와 UI(에디터 홈의 읽기전용 여부 판단)에서 공용으로 쓴다.
+    async getMyRoleForSong(songId) {
+        const user = await CloudAuth.getUser();
+        if (!user) return null;
+        const { data, error } = await _supabase.rpc('beat_song_role', { _song_id: songId, _user_id: user.id });
+        if (error) { console.warn('getMyRoleForSong 오류:', error.message); return null; }
+        return data || null;
+    },
+
     // ── 내 차트 목록 ─────────────────────────────────────────────────────────
     async listMyCharts() {
         const user = await CloudAuth.getUser();
@@ -338,14 +350,10 @@ const CloudCharts = {
         const user = await CloudAuth.getUser();
         if (!user) return { error: new Error('로그인이 필요합니다.') };
 
-        // 소유권 확인 (RLS로도 막히겠지만 명확한 에러 메시지를 위해 먼저 확인)
-        const { data: song, error: songErr } = await _supabase
-            .from('beat_songs')
-            .select('id, owner_id')
-            .eq('id', songId)
-            .single();
-        if (songErr) return { error: songErr };
-        if (song.owner_id !== user.id) return { error: new Error('권한이 없습니다.') };
+        // 소유자/editor 둘 다 허용 (RLS로도 막히겠지만 명확한 에러 메시지를 위해 먼저 확인).
+        // 예전엔 owner_id 단독 체크였는데, 공동 작업(editor 역할) 도입으로 beat_song_role 기반으로 바뀜.
+        const role = await this.getMyRoleForSong(songId);
+        if (role !== 'owner' && role !== 'editor') return { error: new Error('권한이 없습니다.') };
 
         const chartId = crypto.randomUUID();
         const chartPath = `${user.id}/songs/${songId}/beatmaps/${chartId}/chart.json`;
@@ -389,6 +397,11 @@ const CloudCharts = {
             await _supabase.storage.from('beat-files').remove([chartPath]);
             return { error: dbErr };
         }
+
+        // 채보자(기여자) 기록 — 실제로 노트 데이터를 넣어 신규 생성한 경우이므로 항상 기록한다.
+        // 실패해도 난이도 생성 자체는 이미 성공했으니 저장 실패로 취급하지 않고 로그만 남긴다.
+        const { error: contribErr } = await _supabase.rpc('record_chart_contribution', { _chart_id: chartId });
+        if (contribErr) console.warn('record_chart_contribution 오류:', contribErr.message);
 
         return { data };
     },
@@ -475,11 +488,13 @@ const CloudCharts = {
         const user = await CloudAuth.getUser();
         if (!user) return { data: null, error: new Error('로그인이 필요합니다.') };
 
+        // owner_id 단독 필터 제거 — 공동 작업 도입으로 RLS(songs_member_select/charts_member_select)가
+        // owner 아닌 editor/viewer 멤버의 조회도 허용하므로, 클라이언트에서 미리 owner로 좁히면
+        // 오히려 멤버들이 자기 몫을 못 읽는다. 접근 가능 여부는 이제 RLS가 전담한다.
         const { data: song, error: songErr } = await _supabase
             .from('beat_songs')
             .select('*')
             .eq('id', songId)
-            .eq('owner_id', user.id)
             .single();
         if (songErr) return { data: null, error: songErr };
 
@@ -487,7 +502,6 @@ const CloudCharts = {
             .from('beat_charts')
             .select('id, difficulty_label, lane_count, bpm, note_count, note_speed, difficulty_score, chart_storage_path, sort_order, use_custom_fall_speed, created_at, updated_at')
             .eq('song_id', songId)
-            .eq('owner_id', user.id)
             .order('sort_order', { ascending: true, nullsFirst: false })
             .order('created_at', { ascending: true });
         if (bmErr) return { data: null, error: bmErr };
@@ -507,11 +521,13 @@ const CloudCharts = {
 
         const { data: existing, error: fetchErr } = await _supabase
             .from('beat_charts')
-            .select('chart_storage_path, owner_id')
+            .select('chart_storage_path, song_id')
             .eq('id', chartId)
             .single();
         if (fetchErr) return { error: fetchErr };
-        if (existing.owner_id !== user.id) return { error: new Error('권한이 없습니다.') };
+        // owner_id 단독 체크 → beat_song_role 기반으로 변경 (addBeatmapToSong과 동일한 이유).
+        const role = await this.getMyRoleForSong(existing.song_id);
+        if (role !== 'owner' && role !== 'editor') return { error: new Error('권한이 없습니다.') };
 
         const updates = { ...meta };
 
@@ -545,6 +561,12 @@ const CloudCharts = {
 
         // 2) DB 행(=낙관적 잠금)을 확보했으니 이제 실제 노트 데이터를 Storage에 반영한다.
         if (chartData) {
+            // 채보자(기여자) 기록 — 이름변경/공개여부만 바꾼 경우(chartData === null)는 실제로
+            // 채보 작업을 한 게 아니므로 기록하지 않는다. 실패해도 저장 자체는 이미 성공했으니
+            // 저장 실패로 취급하지 않고 로그만 남긴다.
+            const { error: contribErr } = await _supabase.rpc('record_chart_contribution', { _chart_id: chartId });
+            if (contribErr) console.warn('record_chart_contribution 오류:', contribErr.message);
+
             const chartBlob = new Blob([JSON.stringify(chartData)], { type: 'application/json' });
             const { error: chartErr } = await _supabase.storage
                 .from('beat-files')
@@ -558,6 +580,185 @@ const CloudCharts = {
                 };
             }
         }
+
+        return { data, error: null };
+    },
+
+    // ══ 공동 작업 — 멤버/초대 관리 ═══════════════════════════════════════════
+    // js/hoi4/cloud/collab.js가 기대하는 CloudAuth.listMembers 등과 동일한 반환 모양으로
+    // 맞춰서, collab.js를 이쪽으로 포팅할 때 호출부 이름만 CloudCharts.xxxToSong류로
+    // 바꾸면 되게 해뒀다. 다만 hoi4 쪽은 (ownerUserId, projectName) 복합키였던 반면
+    // 여기는 song_id 하나가 곧 PK라 인자가 한 개 적다.
+
+    // 멤버 목록 조회 (닉네임 포함, 소유자 본인은 이 테이블에 행이 없으므로 안 나옴 — UI에서 별도 표시)
+    // 반환: [{ member_id, role, joined_at, nickname }]
+    async listSongMembers(songId) {
+        const { data, error } = await _supabase
+            .from('beat_song_members')
+            .select('member_id, role, joined_at')
+            .eq('song_id', songId)
+            .order('joined_at', { ascending: true });
+        if (error) { console.warn('listSongMembers 오류:', error.message); return []; }
+        const members = data || [];
+        const nickMap = await CloudAuth._fetchNicknameMap(members.map(m => m.member_id));
+        return members.map(m => ({
+            member_id: m.member_id,
+            role: m.role,
+            joined_at: m.joined_at,
+            nickname: nickMap[m.member_id] || null,
+        }));
+    },
+
+    // 이메일로 멤버 초대 (소유자만 — RLS의 invites_owner 정책이 최종적으로 막아준다)
+    // 반환: { ok: true } | { ok: false, error: string }
+    async inviteToSong(songId, email, role = 'editor') {
+        const user = await CloudAuth.getUser();
+        if (!user) return { ok: false, error: '로그인이 필요합니다.' };
+        if (email === user.email) return { ok: false, error: '본인은 초대할 수 없습니다.' };
+
+        // beat_song_invites엔 (song_id, invited_email) 유니크 제약이 없어서(마이그레이션에 없음)
+        // upsert 대신 "기존 pending 초대가 있으면 지우고 새로 꽂기"로 흉내낸다 — 역할을 바꿔서
+        // 다시 초대하는 경우에도 초대 목록에 중복이 안 쌓이게 하기 위함.
+        await _supabase
+            .from('beat_song_invites')
+            .delete()
+            .eq('song_id', songId)
+            .eq('invited_email', email)
+            .eq('status', 'pending');
+
+        const { error } = await _supabase
+            .from('beat_song_invites')
+            .insert({
+                song_id: songId,
+                owner_id: user.id,
+                invited_email: email,
+                role,
+                status: 'pending',
+                created_at: new Date().toISOString(),
+            });
+        if (error) return { ok: false, error: error.message };
+        return { ok: true };
+    },
+
+    // 멤버 역할 변경 (소유자만 — RLS members_update가 최종 방어)
+    async updateMemberRole(songId, memberId, newRole) {
+        const { error } = await _supabase
+            .from('beat_song_members')
+            .update({ role: newRole })
+            .eq('song_id', songId)
+            .eq('member_id', memberId);
+        if (error) throw error;
+    },
+
+    // 멤버 제거 (소유자가 강퇴하거나, 본인이 나가기 — RLS members_delete가 둘 다 허용)
+    async removeMember(songId, memberId) {
+        const { error } = await _supabase
+            .from('beat_song_members')
+            .delete()
+            .eq('song_id', songId)
+            .eq('member_id', memberId);
+        if (error) throw error;
+    },
+
+    // 이 노래에 대해 내가 보낸 초대 목록 (소유자용 — "발송한 초대" 섹션)
+    // 반환: [{ id, invited_email, role, status, created_at }]
+    async listSentInvites(songId) {
+        const { data, error } = await _supabase
+            .from('beat_song_invites')
+            .select('id, invited_email, role, status, created_at')
+            .eq('song_id', songId)
+            .order('created_at', { ascending: false });
+        if (error) { console.warn('listSentInvites 오류:', error.message); return []; }
+        return data || [];
+    },
+
+    // 초대 취소 (소유자가 보낸 초대 삭제)
+    async cancelInvite(inviteId) {
+        const { error } = await _supabase
+            .from('beat_song_invites')
+            .delete()
+            .eq('id', inviteId);
+        if (error) throw error;
+    },
+
+    // 내가 받은 pending 초대함
+    // 반환: [{ id, song_id, role, created_at, song_title, song_artist }]
+    // 주의: song_title/song_artist는 beat_songs 임베드 조회인데, 아직 수락 전이라 내가 이 노래의
+    // 멤버가 아닌 상태 — 노래가 비공개면 RLS(songs_member_select)에 걸려 null로 온다. 이 경우
+    // UI에서 "비공개 노래" 정도로 대체 표시하면 된다(수락하면 그 다음부턴 정상 조회 가능).
+    async listMyInvites() {
+        const user = await CloudAuth.getUser();
+        if (!user) return [];
+        const { data, error } = await _supabase
+            .from('beat_song_invites')
+            .select('id, song_id, role, created_at, beat_songs(title, artist)')
+            .eq('invited_email', user.email)
+            .eq('status', 'pending')
+            .order('created_at', { ascending: false });
+        if (error) { console.warn('listMyInvites 오류:', error.message); return []; }
+        return (data || []).map(inv => ({
+            id: inv.id,
+            song_id: inv.song_id,
+            role: inv.role,
+            created_at: inv.created_at,
+            song_title: inv.beat_songs?.title || null,
+            song_artist: inv.beat_songs?.artist || null,
+        }));
+    },
+
+    // 초대 수락 (RPC — 멤버 등록 + 초대 상태 갱신을 한 트랜잭션으로 처리)
+    async acceptInvite(inviteId) {
+        const { error } = await _supabase.rpc('accept_song_invite', { _invite_id: inviteId });
+        if (error) throw error;
+    },
+
+    // 초대 거절
+    async declineInvite(inviteId) {
+        const { error } = await _supabase
+            .from('beat_song_invites')
+            .update({ status: 'declined' })
+            .eq('id', inviteId);
+        if (error) throw error;
+    },
+
+    // ══ 공동 작업 — 공유받은 노래 목록 ═══════════════════════════════════════
+    // listMySongs()는 그대로 "내가 owner인 노래"만 반환하고, 초대받아 참여 중인 노래는
+    // 이 함수로 따로 제공한다 (에디터 홈에 "🤝 공유받은 노래" 섹션으로 별도 렌더링 — 4단계).
+    // 반환: [{ id, title, artist, owner_id, is_public, created_at, updated_at, beatmapCount, myRole }]
+    async listSharedSongs() {
+        const user = await CloudAuth.getUser();
+        if (!user) return { data: null, error: new Error('로그인이 필요합니다.') };
+
+        const { data: memberships, error: memErr } = await _supabase
+            .from('beat_song_members')
+            .select('song_id, role, joined_at')
+            .eq('member_id', user.id);
+        if (memErr) return { data: null, error: memErr };
+        if (!memberships || memberships.length === 0) return { data: [], error: null };
+
+        const songIds = memberships.map(m => m.song_id);
+        const { data: songs, error: songsErr } = await _supabase
+            .from('beat_songs')
+            .select('id, title, artist, owner_id, is_public, created_at, updated_at')
+            .in('id', songIds);
+        if (songsErr) return { data: null, error: songsErr };
+
+        const roleBySongId = {};
+        memberships.forEach(m => { roleBySongId[m.song_id] = m.role; });
+
+        // listMySongs()와 동일하게 난이도 개수도 붙여준다(카드에 표시용). 여기선 내가 owner가
+        // 아니므로 owner_id 필터 없이 song_id in만 사용.
+        const { data: charts, error: chartsErr } = await _supabase
+            .from('beat_charts')
+            .select('song_id')
+            .in('song_id', songIds);
+        if (chartsErr) return { data: null, error: chartsErr };
+        const countBySongId = {};
+        (charts || []).forEach(c => { countBySongId[c.song_id] = (countBySongId[c.song_id] || 0) + 1; });
+
+        const data = (songs || [])
+            .map(s => ({ ...s, beatmapCount: countBySongId[s.id] || 0, myRole: roleBySongId[s.id] || null }))
+            .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
 
         return { data, error: null };
     },
