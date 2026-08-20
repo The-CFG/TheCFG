@@ -526,7 +526,11 @@ const EditorSong = {
                     start_offset_ms: startOffsetMs,
                     timing_start_ms: timingStartMs,
                     is_public: publish,
-                }, Editor.state.song.coverFileObject);
+                }, Editor.state.song.coverFileObject, Editor.state.song.updatedAt);
+                if (metaErr?.conflict) {
+                    this._handleSaveConflict();
+                    return;
+                }
                 if (metaErr) {
                     UI.showMessage('editorSong', `노래 정보 갱신 실패: ${metaErr.message}`);
                     return;

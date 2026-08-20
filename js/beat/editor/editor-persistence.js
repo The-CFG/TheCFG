@@ -160,6 +160,9 @@ Object.assign(Editor, {
             previewStartSec: 0,
             startOffsetSec: 0,
             timingStartSec: 0,
+            // 낙관적 잠금(A안)용 — 이 노래를 불러온/직전에 저장한 시점의 updated_at.
+            // updateSongMeta 호출 시 그대로 실어보내 "그 사이 다른 곳에서 먼저 저장"됐는지 판별한다.
+            updatedAt: null,
         };
         this.state.beatmaps = [];
         this.state.activeBeatmapIndex = 0;

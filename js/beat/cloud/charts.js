@@ -3,6 +3,14 @@
 
 const CloudCharts = {
 
+    // ── 낙관적 잠금(A안) 충돌 판별 ───────────────────────────────────────────
+    // update(...).eq('updated_at', expected) 가 0행에 매치되면(=그 사이 다른 사람이 먼저
+    // 저장했거나 삭제됨) PostgREST가 .single()에서 "no rows"(PGRST116) 에러를 던진다.
+    // 이 경우를 일반 에러와 구분해 { conflict: true }로 정규화한다.
+    _isOptimisticLockConflict(error) {
+        return !!error && (error.code === 'PGRST116' || /0 rows|no rows|multiple \(or no\) rows/i.test(error.message || ''));
+    },
+
     // ── 내 차트 목록 ─────────────────────────────────────────────────────────
     async listMyCharts() {
         const user = await CloudAuth.getUser();
@@ -279,7 +287,10 @@ const CloudCharts = {
     // meta: { title, artist, preview_start_ms, start_offset_ms, timing_start_ms, is_public } — 오디오/난이도는 건드리지 않는다.
     // is_public이 boolean으로 넘어오면 공개 여부도 같이 갱신한다(비공개 저장 ↔ 라이브러리 공개 전환).
     // coverFile: File 객체 (선택 — 넘기면 새 커버로 교체, 안 넘기면 기존 커버 유지)
-    async updateSongMeta(songId, meta, coverFile) {
+    // expectedUpdatedAt: 이 노래를 불러온 시점의 updated_at 문자열(낙관적 잠금, A안). 넘기면
+    // 그 사이 다른 곳(협업자/다른 탭)에서 먼저 저장된 경우 갱신 없이 { error: { conflict: true } }를 반환한다.
+    // 넘기지 않으면(null) 기존과 동일하게 잠금 없이 그냥 덮어쓴다.
+    async updateSongMeta(songId, meta, coverFile, expectedUpdatedAt = null) {
         const user = await CloudAuth.getUser();
         if (!user) return { error: new Error('로그인이 필요합니다.') };
 
@@ -302,14 +313,18 @@ const CloudCharts = {
             updatePayload.cover_storage_path = coverPath;
         }
 
-        const { data, error } = await _supabase
+        let query = _supabase
             .from('beat_songs')
             .update(updatePayload)
             .eq('id', songId)
-            .eq('owner_id', user.id)
-            .select()
-            .single();
+            .eq('owner_id', user.id);
+        if (expectedUpdatedAt) query = query.eq('updated_at', expectedUpdatedAt);
 
+        const { data, error } = await query.select().single();
+
+        if (error && expectedUpdatedAt && this._isOptimisticLockConflict(error)) {
+            return { error: { conflict: true, message: '다른 곳에서 이 사이 먼저 저장했습니다.' } };
+        }
         return { data, error };
     },
 
@@ -484,7 +499,9 @@ const CloudCharts = {
     // meta: { difficulty_label, lane_count, bpm, sort_order } 중 바뀐 필드만 넘기면 됨.
     // chartData: null이면 노트/트리거는 그대로 두고 메타만 갱신한다 (이름변경만 했을 때 등,
     // 편집 화면을 열지 않아 최신 notes/triggers를 갖고 있지 않은 경우 이 경로를 탄다).
-    async updateBeatmap(chartId, meta, chartData = null) {
+    // expectedUpdatedAt: 이 난이도를 불러온/직전에 저장한 시점의 updated_at 문자열(낙관적 잠금, A안).
+    // 넘기면 그 사이 다른 곳에서 먼저 저장된 경우 { error: { conflict: true } }를 반환하고 아무것도 바꾸지 않는다.
+    async updateBeatmap(chartId, meta, chartData = null, expectedUpdatedAt = null) {
         const user = await CloudAuth.getUser();
         if (!user) return { error: new Error('로그인이 필요합니다.') };
 
@@ -499,11 +516,6 @@ const CloudCharts = {
         const updates = { ...meta };
 
         if (chartData) {
-            const chartBlob = new Blob([JSON.stringify(chartData)], { type: 'application/json' });
-            const { error: chartErr } = await _supabase.storage
-                .from('beat-files')
-                .update(existing.chart_storage_path, chartBlob, { contentType: 'application/json', upsert: true });
-            if (chartErr) return { error: chartErr };
             updates.note_count = Array.isArray(chartData.notes)
                 ? chartData.notes.filter(n => n.type !== 'long_tail').length
                 : 0;
@@ -517,13 +529,36 @@ const CloudCharts = {
             updates.title = updates.difficulty_label || '기본';
         }
 
-        const { data, error: dbErr } = await _supabase
-            .from('beat_charts')
-            .update(updates)
-            .eq('id', chartId)
-            .select()
-            .single();
+        // 1) DB 행부터 먼저 (조건부로) 갱신한다. Storage는 조건부 쓰기가 안 되므로, 순서를
+        //    바꿔 이걸 먼저 해야 한다 — 그래야 충돌이 났을 때 Storage의 chart.json(다른 곳에서
+        //    방금 저장한 실제 내용)이 내 낡은 데이터로 덮어써지는 걸 막을 수 있다.
+        let query = _supabase.from('beat_charts').update(updates).eq('id', chartId);
+        if (expectedUpdatedAt) query = query.eq('updated_at', expectedUpdatedAt);
+        const { data, error: dbErr } = await query.select().single();
 
-        return { data, error: dbErr };
+        if (dbErr) {
+            if (expectedUpdatedAt && this._isOptimisticLockConflict(dbErr)) {
+                return { error: { conflict: true, message: '다른 곳에서 이 사이 먼저 저장했습니다.' } };
+            }
+            return { error: dbErr };
+        }
+
+        // 2) DB 행(=낙관적 잠금)을 확보했으니 이제 실제 노트 데이터를 Storage에 반영한다.
+        if (chartData) {
+            const chartBlob = new Blob([JSON.stringify(chartData)], { type: 'application/json' });
+            const { error: chartErr } = await _supabase.storage
+                .from('beat-files')
+                .update(existing.chart_storage_path, chartBlob, { contentType: 'application/json', upsert: true });
+            if (chartErr) {
+                // DB의 note_count/difficulty_score는 이미 새 값으로 바뀌었지만 실제 파일은 아직
+                // 예전 그대로인 상태 — 흔치 않지만 생기면 재저장을 유도해야 하므로 구분해서 알려준다.
+                return {
+                    data,
+                    error: { storageOnly: true, message: `메타는 저장됐지만 노트 데이터 업로드에 실패했습니다: ${chartErr.message}. 다시 저장해주세요.` },
+                };
+            }
+        }
+
+        return { data, error: null };
     },
 };
