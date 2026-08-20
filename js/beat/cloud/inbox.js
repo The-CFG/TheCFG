@@ -66,12 +66,15 @@ function _inboxEmptyHtml(text) {
 // 카드 하나(초대 1건) 렌더링
 function _inboxInviteCardHtml(inv) {
     const roleLabel = inv.role === 'editor' ? '✏️ 편집자' : '👁 뷰어';
-    const songLabel = inv.song_title ? _inboxEsc(inv.song_title) : '비공개 노래';
+    const songLabel = inv.song_title ? _inboxEsc(inv.song_title) : '(제목 없음)';
     const artistLabel = inv.song_artist ? `<span class="text-gray-400 font-normal"> — ${_inboxEsc(inv.song_artist)}</span>` : '';
+    const ownerLabel = inv.owner_nickname
+        ? _inboxEsc(inv.owner_nickname)
+        : (inv.owner_id ? `${_inboxEsc(inv.owner_id.slice(0, 8))}…` : '알 수 없음');
     return `
         <div class="bg-gray-700/60 rounded-lg p-3" data-invite-id="${_inboxEsc(inv.id)}">
             <p class="text-sm text-white font-semibold truncate">🤝 ${songLabel}${artistLabel}</p>
-            <p class="text-xs text-gray-400 mt-0.5">공동 작업 초대 · ${roleLabel}</p>
+            <p class="text-xs text-gray-400 mt-0.5">소유자: ${ownerLabel} · ${roleLabel}로 초대</p>
             <div class="flex gap-2 mt-2">
                 <button type="button" class="inbox-accept-btn flex-1 py-1.5 bg-teal-600 hover:bg-teal-500 rounded text-xs font-semibold text-white transition">수락</button>
                 <button type="button" class="inbox-decline-btn flex-1 py-1.5 bg-gray-600 hover:bg-gray-500 rounded text-xs font-semibold text-white transition">거절</button>

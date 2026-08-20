@@ -415,7 +415,7 @@ const CloudCharts = {
 
         const { data: songs, error: songsErr } = await _supabase
             .from('beat_songs')
-            .select('id, title, artist, owner_id, is_public, created_at, updated_at')
+            .select('id, title, artist, is_public, created_at, updated_at')
             .eq('owner_id', user.id)
             .order('updated_at', { ascending: false });
         if (songsErr) return { data: null, error: songsErr };
@@ -682,27 +682,28 @@ const CloudCharts = {
     },
 
     // 내가 받은 pending 초대함
-    // 반환: [{ id, song_id, role, created_at, song_title, song_artist }]
-    // 주의: song_title/song_artist는 beat_songs 임베드 조회인데, 아직 수락 전이라 내가 이 노래의
-    // 멤버가 아닌 상태 — 노래가 비공개면 RLS(songs_member_select)에 걸려 null로 온다. 이 경우
-    // UI에서 "비공개 노래" 정도로 대체 표시하면 된다(수락하면 그 다음부턴 정상 조회 가능).
+    // 반환: [{ id, song_id, role, created_at, song_title, song_artist, owner_id, owner_nickname }]
+    // list_my_song_invites RPC(SECURITY DEFINER)를 사용 — 초대를 아직 수락하기 전이라
+    // beat_songs의 RLS(songs_member_select)는 통과하지 못하지만, 이 RPC는 "초대받은
+    // 사람에게 최소한 어떤 노래인지·누가 초대했는지는 보여줘야 한다"는 목적으로 제목/
+    // 아티스트/소유자 user_id만 별도로 반환한다(노래 전체 컬럼을 노출하지 않음).
+    // 소유자 닉네임은 기존 CloudAuth._fetchNicknameMap로 한 번에 붙인다.
     async listMyInvites() {
         const user = await CloudAuth.getUser();
         if (!user) return [];
-        const { data, error } = await _supabase
-            .from('beat_song_invites')
-            .select('id, song_id, role, created_at, beat_songs(title, artist)')
-            .eq('invited_email', user.email)
-            .eq('status', 'pending')
-            .order('created_at', { ascending: false });
+        const { data, error } = await _supabase.rpc('list_my_song_invites');
         if (error) { console.warn('listMyInvites 오류:', error.message); return []; }
-        return (data || []).map(inv => ({
+        const invites = data || [];
+        const nickMap = await CloudAuth._fetchNicknameMap(invites.map(inv => inv.owner_id));
+        return invites.map(inv => ({
             id: inv.id,
             song_id: inv.song_id,
             role: inv.role,
             created_at: inv.created_at,
-            song_title: inv.beat_songs?.title || null,
-            song_artist: inv.beat_songs?.artist || null,
+            song_title: inv.song_title || null,
+            song_artist: inv.song_artist || null,
+            owner_id: inv.owner_id,
+            owner_nickname: nickMap[inv.owner_id] || null,
         }));
     },
 
