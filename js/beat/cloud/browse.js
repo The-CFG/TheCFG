@@ -25,7 +25,7 @@ const CloudBrowse = {
     async _listPublicSongsByNewest({ keyword, page, pageSize }) {
         let query = _supabase
             .from('beat_songs')
-            .select('id, title, artist, created_at, updated_at', { count: 'exact' })
+            .select('id, title, artist, created_at, updated_at, cover_storage_path', { count: 'exact' })
             .eq('is_public', true)
             .order('created_at', { ascending: false })
             .range(page * pageSize, (page + 1) * pageSize - 1);
@@ -50,7 +50,7 @@ const CloudBrowse = {
 
         let songQuery = _supabase
             .from('beat_songs')
-            .select('id, title, artist, created_at, updated_at')
+            .select('id, title, artist, created_at, updated_at, cover_storage_path')
             .eq('is_public', true)
             .limit(CANDIDATE_CAP);
         if (keyword) songQuery = songQuery.or(`title.ilike.%${keyword}%,artist.ilike.%${keyword}%`);
@@ -93,7 +93,7 @@ const CloudBrowse = {
 
         let songQuery = _supabase
             .from('beat_songs')
-            .select('id, title, artist, created_at, updated_at')
+            .select('id, title, artist, created_at, updated_at, cover_storage_path')
             .eq('is_public', true)
             .limit(CANDIDATE_CAP);
         if (keyword) songQuery = songQuery.or(`title.ilike.%${keyword}%,artist.ilike.%${keyword}%`);
@@ -135,7 +135,7 @@ const CloudBrowse = {
 
         let songQuery = _supabase
             .from('beat_songs')
-            .select('id, title, artist, created_at, updated_at')
+            .select('id, title, artist, created_at, updated_at, cover_storage_path')
             .eq('is_public', true)
             .limit(CANDIDATE_CAP);
         if (keyword) songQuery = songQuery.or(`title.ilike.%${keyword}%,artist.ilike.%${keyword}%`);
@@ -200,25 +200,6 @@ const CloudBrowse = {
         const counts = {};
         data.forEach(r => { counts[r.chart_id] = (counts[r.chart_id] || 0) + 1; });
         return counts;
-    },
-
-    // 차트 id 배열 → chart_id별 기여자 user_id 목록 { [chartId]: [user_id, ...] } (최초 기여자부터 순서대로).
-    // 브라우즈 목록(_chartCard)에는 크레딧을 안 보여주므로, 호출 지점은 online.js의
-    // _showSongDetail/_showDetail(상세/플레이 전 화면)로 한정한다.
-    async _fetchContributorsForCharts(chartIds) {
-        const ids = (chartIds || []).filter(Boolean);
-        if (!ids.length) return {};
-        const { data, error } = await _supabase
-            .from('beat_chart_contributors')
-            .select('chart_id, user_id, first_edited_at')
-            .in('chart_id', ids)
-            .order('first_edited_at', { ascending: true });
-        if (error || !data) return {};
-        const byChartId = {};
-        data.forEach(row => {
-            (byChartId[row.chart_id] ||= []).push(row.user_id);
-        });
-        return byChartId;
     },
 
     // beat_charts 행 배열(+좋아요 개수 맵) → song_id별 { beatmapCount, laneCountMin, laneCountMax, totalPlayCount, totalLikeCount }

@@ -264,8 +264,18 @@ const Online = {
             ? '—'
             : (s.laneCountMin === s.laneCountMax ? `${s.laneCountMin}키` : `${s.laneCountMin}~${s.laneCountMax}키`);
         const dateLine = _formatDateLine(s.created_at, s.updated_at);
+
+        // 커버 사진이 있으면 카드 오른쪽에 은은하게 걸리도록 배경으로 깐다.
+        // 왼쪽(제목/아티스트 텍스트 자리)은 카드 배경색(bg-gray-800 = #1f2937)으로
+        // 완전히 덮어 가독성을 지키고, 오른쪽으로 갈수록 사진이 자연스럽게 드러나게 함.
+        // (utilities.css에 그라데이션 유틸이 없어서 인라인 style로 처리)
+        const coverUrl = CloudCharts.getCoverUrl(s.cover_storage_path);
+        const bgStyle = coverUrl
+            ? ` style="background-image: linear-gradient(to right, #1f2937 0%, #1f2937 35%, transparent 100%), url('${coverUrl}'); background-size: cover; background-position: center;"`
+            : '';
+
         return `
-        <button class="browse-card-btn w-full text-left p-3 bg-gray-800 hover:bg-gray-700 rounded-lg transition" data-id="${s.id}">
+        <button class="browse-card-btn w-full text-left p-3 bg-gray-800 hover:bg-gray-700 rounded-lg transition overflow-hidden" data-id="${s.id}"${bgStyle}>
             <div class="flex justify-between items-start">
                 <div class="flex-1 min-w-0">
                     <p class="font-semibold text-white truncate">${_esc(s.title)}</p>
