@@ -301,18 +301,13 @@ const Online = {
 
         const { song, beatmaps } = data;
         GameBackground.set(CloudCharts.getCoverUrl(song.cover_storage_path));
-        // 채보자(기여자) 표시 — beat_chart_contributors에서 난이도별 기여자 user_id를 받아온 뒤,
-        // 기존 bm.owner_id(구버전 단일 제작자) 목록과 합쳐서 닉네임을 한 번에 조회한다.
-        const contributorsByChart = await CloudBrowse._fetchContributorsForCharts(beatmaps.map(bm => bm.id));
-        if (seq !== this._loadSeq) return;
-        const allUserIds = beatmaps.flatMap(bm => contributorsByChart[bm.id] || (bm.owner_id ? [bm.owner_id] : []));
-        const nickMap = await CloudAuth._fetchNicknameMap(allUserIds);
+        const nickMap = await CloudAuth._fetchNicknameMap(beatmaps.map(bm => bm.owner_id).filter(Boolean));
         if (seq !== this._loadSeq) return;
         const { data: likeInfo } = await CloudLikes.getLikeInfo(beatmaps.map(bm => bm.id));
         if (seq !== this._loadSeq) return;
         const cards = beatmaps.length === 0
             ? '<p class="text-gray-400 text-sm text-center mt-8">등록된 난이도가 없습니다.</p>'
-            : beatmaps.map(bm => this._beatmapCard(bm, nickMap, likeInfo || {}, contributorsByChart)).join('');
+            : beatmaps.map(bm => this._beatmapCard(bm, nickMap, likeInfo || {})).join('');
 
         this._setContent(`
         <button id="song-back-btn" class="mb-3 text-sm text-gray-400 hover:text-white transition">← 목록으로</button>
@@ -342,15 +337,12 @@ const Online = {
         }
     },
 
-    _beatmapCard(bm, nickMap = {}, likeInfo = {}, contributorsByChart = {}) {
+    _beatmapCard(bm, nickMap = {}, likeInfo = {}) {
         const laneBadge = `<span class="text-xs px-1.5 py-0.5 bg-gray-600 rounded flex-shrink-0">${bm.lane_count}키</span>`;
         const label = bm.difficulty_label ? _esc(bm.difficulty_label) : '기본';
-        // 기여자 기록이 있으면 그걸 우선 쓰고(공동 작업 반영), 아직 백필 전이라 기록이 없으면
-        // 구버전 단일 제작자(bm.owner_id)로 대체 표시한다.
-        const contributorIds = contributorsByChart[bm.id] && contributorsByChart[bm.id].length > 0
-            ? contributorsByChart[bm.id]
-            : (bm.owner_id ? [bm.owner_id] : []);
-        const creatorLabel = this._contributorLabelHtml(contributorIds, nickMap);
+        const creatorName = bm.owner_id
+            ? (nickMap[bm.owner_id] ? _esc(nickMap[bm.owner_id]) : `${_esc(bm.owner_id.slice(0, 8))}…`)
+            : '';
         const dateLine = _formatDateLine(bm.created_at, bm.updated_at);
         const likeCount = likeInfo[bm.id]?.count || 0;
         return `
@@ -368,22 +360,9 @@ const Online = {
                     <span>♥ ${likeCount}</span>
                 </div>
             </div>
-            ${creatorLabel ? `<div class="mt-1 text-xs text-gray-500 truncate">${creatorLabel}</div>` : ''}
+            ${creatorName ? `<div class="mt-1 text-xs text-gray-500 truncate">제작자: ${creatorName}</div>` : ''}
             ${dateLine ? `<div class="mt-0.5 text-xs text-gray-500 truncate">${dateLine}</div>` : ''}
         </button>`;
-    },
-
-    // 채보자(기여자) 표시 문구 생성 — 단일 기여자는 "제작자: OO", 2명 이상은 "채보자: OO, XX"류,
-    // 4명 이상은 "채보자: OO, XX, AA 외 N명"으로 요약한다. userIds는 최초 기여자순으로 온다고 가정.
-    _contributorLabelHtml(userIds, nickMap = {}) {
-        if (!userIds || userIds.length === 0) return '';
-        const names = userIds.map(id => nickMap[id] ? _esc(nickMap[id]) : `${_esc(id.slice(0, 8))}…`);
-        if (names.length === 1) return `제작자: ${names[0]}`;
-        const MAX_SHOWN = 3;
-        if (names.length <= MAX_SHOWN) return `채보자: ${names.join(', ')}`;
-        const shown = names.slice(0, MAX_SHOWN);
-        const rest = names.length - MAX_SHOWN;
-        return `채보자: ${shown.join(', ')} 외 ${rest}명`;
     },
 
     // ════════════════════════════════════════════════════════════════════════
@@ -415,15 +394,11 @@ const Online = {
         const myScore = myRes.data;
         const like = (likeRes.data && likeRes.data[chartId]) || { count: 0, likedByMe: false };
         GameBackground.set(CloudCharts.getCoverUrl(c.cover_storage_path));
-        // 채보자(기여자) 표시 — bm과 동일하게 기여자 기록 우선, 없으면 owner_id로 대체.
-        const contributorsByChart = await CloudBrowse._fetchContributorsForCharts([chartId]);
+        const creatorNickMap = c.owner_id ? await CloudAuth._fetchNicknameMap([c.owner_id]) : {};
         if (seq !== this._loadSeq) return;
-        const contributorIds = contributorsByChart[chartId] && contributorsByChart[chartId].length > 0
-            ? contributorsByChart[chartId]
-            : (c.owner_id ? [c.owner_id] : []);
-        const creatorNickMap = await CloudAuth._fetchNicknameMap(contributorIds);
-        if (seq !== this._loadSeq) return;
-        const creatorLabel = this._contributorLabelHtml(contributorIds, creatorNickMap);
+        const creatorName = c.owner_id
+            ? (creatorNickMap[c.owner_id] ? _esc(creatorNickMap[c.owner_id]) : `${_esc(c.owner_id.slice(0, 8))}…`)
+            : '';
 
         // 내 순위 계산
         let myRank = null;
@@ -497,7 +472,7 @@ const Online = {
                 ${c.difficulty_label ? `<span>${_esc(c.difficulty_label)}</span>` : ''}
                 <span>${c.note_count}노트</span>
                 <span>▶ ${c.play_count}회</span>
-                ${creatorLabel ? `<span>${creatorLabel}</span>` : ''}
+                ${creatorName ? `<span>제작자: ${creatorName}</span>` : ''}
             </div>
             ${_formatDateLine(c.created_at, c.updated_at) ? `<div class="mt-1 text-xs text-gray-500">${_formatDateLine(c.created_at, c.updated_at)}</div>` : ''}
             ${c.use_custom_fall_speed ? `<div class="mt-2 px-2 py-1 bg-blue-950 border border-blue-700 rounded text-xs text-blue-300 inline-block">⚡ 이 비트맵은 전용 하강 속도를 사용합니다.</div>` : ''}
@@ -649,8 +624,10 @@ const Online = {
                 <p class="text-gray-400 mb-4">내 차트를 보려면 로그인이 필요합니다.</p>
                 <button id="my-login-btn" class="py-2 px-6 bg-teal-600 hover:bg-teal-500 rounded-lg">로그인</button>
             </div>`);
-            document.getElementById('my-login-btn')?.addEventListener('click', () =>
-                document.querySelector('.account-icon-btn')?.click());
+            document.getElementById('my-login-btn')?.addEventListener('click', () => {
+                if (typeof _openLoginModal === 'function') _openLoginModal();
+                else document.querySelector('.account-icon-btn')?.click();
+            });
             return;
         }
 

@@ -1641,6 +1641,7 @@ document.addEventListener('DOMContentLoaded', () => {
         Calibration.init();
         UI.initPanelToggle();
         if (typeof setupAuthUI === 'function') setupAuthUI();
+        if (typeof setupInboxUI === 'function') setupInboxUI();
 
         // 최초 세션 복원 / 로그인 / 로그아웃 시 볼륨·플레이 설정 동기화
         _supabase.auth.onAuthStateChange((_event, session) => {

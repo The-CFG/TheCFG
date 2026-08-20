@@ -196,6 +196,12 @@ function _openAccountPopover(user) {
     settingsLink.className = 'block px-2 py-1.5 rounded text-sm text-gray-200 hover:bg-gray-700 transition';
     settingsLink.textContent = '계정 설정';
 
+    const homeLink = document.createElement('a');
+    homeLink.href = '/';
+    homeLink.title = 'TheCFG 홈으로';
+    homeLink.className = 'block px-2 py-1.5 rounded text-sm text-gray-200 hover:bg-gray-700 transition';
+    homeLink.textContent = '홈페이지';
+
     const logoutBtn = document.createElement('button');
     logoutBtn.type = 'button';
     logoutBtn.className = 'block w-full text-left px-2 py-1.5 rounded text-sm text-gray-200 hover:bg-gray-700 transition';
@@ -205,11 +211,60 @@ function _openAccountPopover(user) {
         _closeAccountPopover();
     });
 
-    pop.append(nickEl, emailEl, hr, settingsLink, logoutBtn);
+    // 순서: 계정 설정 → 홈페이지 → 로그아웃
+    pop.append(nickEl, emailEl, hr, settingsLink, homeLink, logoutBtn);
     wrap.appendChild(pop);
 
     // 다음 이벤트 루프부터 바깥 클릭 감지 (버튼 클릭 자체와 겹치지 않도록)
     setTimeout(() => document.addEventListener('click', _onAccountPopoverOutsideClick, true), 0);
+}
+
+// ── 로그아웃 상태 계정 팝오버 (로그인 / 홈페이지) ──────────────────────
+// 원래 헤더에 별도로 있던 "TheCFG 홈으로" 아이콘 버튼을 없애고 계정 아이콘 쪽으로
+// 통합한 자리 — 로그인 전에는 팝오버에 로그인 / 홈페이지 순서로 노출한다.
+function _openLoggedOutPopover() {
+    _closeAccountPopover();
+
+    const wrap = document.getElementById('account-icon-wrap');
+    if (!wrap) return;
+
+    const pop = document.createElement('div');
+    pop.id = 'account-popover';
+    pop.className = 'absolute right-0 mt-2 w-48 bg-gray-800 border border-gray-600 rounded-lg shadow-xl p-3 z-50';
+
+    const loginBtn = document.createElement('button');
+    loginBtn.type = 'button';
+    loginBtn.className = 'block w-full text-left px-2 py-1.5 rounded text-sm text-gray-200 hover:bg-gray-700 transition';
+    loginBtn.textContent = '로그인';
+    loginBtn.addEventListener('click', () => {
+        _closeAccountPopover();
+        _openLoginModal();
+    });
+
+    const homeLink = document.createElement('a');
+    homeLink.href = '/';
+    homeLink.title = 'TheCFG 홈으로';
+    homeLink.className = 'block px-2 py-1.5 rounded text-sm text-gray-200 hover:bg-gray-700 transition';
+    homeLink.textContent = '홈페이지';
+
+    // 순서: 로그인 → 홈페이지
+    pop.append(loginBtn, homeLink);
+    wrap.appendChild(pop);
+
+    setTimeout(() => document.addEventListener('click', _onAccountPopoverOutsideClick, true), 0);
+}
+
+// 로그인 모달을 "로그인" 모드로 초기화해서 연다 (계정 팝오버의 로그인 항목 /
+// 다른 화면에서 로그인을 유도하는 버튼들이 공용으로 사용).
+function _openLoginModal() {
+    isSignUpMode = false;
+    const title      = document.getElementById('auth-title');
+    const executeBtn = document.getElementById('btn-auth-execute');
+    const switchBtn  = document.getElementById('auth-switch');
+    if (title)      title.textContent     = '서버 로그인';
+    if (executeBtn) executeBtn.textContent = '로그인';
+    if (switchBtn)  switchBtn.textContent  = '계정이 없으신가요? 회원가입';
+    _openAuthModal();
 }
 
 // ── 모달 열기 / 닫기 헬퍼 ──────────────────────────────────
@@ -250,22 +305,18 @@ function setupAuthUI() {
         }
     });
 
-    // 계정 아이콘 클릭 — 로그인 상태면 팝오버 토글, 아니면 로그인 모달 열기
+    // 계정 아이콘 클릭 — 팝오버 토글. 로그인 상태면 계정 설정/홈페이지/로그아웃,
+    // 로그아웃 상태면 로그인/홈페이지 순서로 노출한다.
     accountBtns.forEach(btn => {
         btn.addEventListener('click', async (e) => {
             e.stopPropagation();
-            const user = await CloudAuth.getUser();
-            if (user) {
-                document.getElementById('account-popover')
-                    ? _closeAccountPopover()
-                    : _openAccountPopover(user);
-            } else {
-                isSignUpMode = false;
-                if (title)      title.textContent     = '서버 로그인';
-                if (executeBtn) executeBtn.textContent = '로그인';
-                if (switchBtn)  switchBtn.textContent  = '계정이 없으신가요? 회원가입';
-                _openAuthModal();
+            if (document.getElementById('account-popover')) {
+                _closeAccountPopover();
+                return;
             }
+            const user = await CloudAuth.getUser();
+            if (user) _openAccountPopover(user);
+            else _openLoggedOutPopover();
         });
     });
 

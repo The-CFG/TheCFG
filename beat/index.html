@@ -16,7 +16,6 @@
     <link rel="stylesheet" href="/css/beat/responsive.css">
     <link rel="stylesheet" href="/css/beat/help.css">
     <link rel="stylesheet" href="/css/beat/theme.css">
-    <link rel="stylesheet" href="/css/beat/collab.css"><!-- 공동 작업 모달 -->
     <script src="/js/beat/theme.js"></script><!-- FOUC 방지: defer 없이 즉시 실행 -->
     <style>
         /* 터치 디바이스 레이아웃 - 좁은 화면(1024px 이하)에서만 세로 배치 */
@@ -104,11 +103,14 @@
                     <div class="flex justify-between items-center mb-8">
                         <h1 class="text-3xl sm:text-4xl font-bold text-white"><a href="/" title="TheCFG 홈으로">TheBeat v2.1</a></h1>
                         <div class="flex items-center space-x-1">
-                            <a href="/" class="p-2 rounded-full hover:bg-gray-600 transition" title="TheCFG 홈으로" aria-label="TheCFG 홈으로">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
-                                </svg>
-                            </a>
+                            <div id="inbox-icon-wrap" class="relative">
+                                <button id="inbox-icon-btn" type="button" class="p-2 rounded-full hover:bg-gray-600 transition relative" title="알림함" aria-label="알림함">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                                    </svg>
+                                    <span id="inbox-badge" class="hidden absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-1 flex items-center justify-center text-[10px] leading-none font-bold text-white bg-red-500 rounded-full">0</span>
+                                </button>
+                            </div>
                             <div id="account-icon-wrap" class="relative">
                                 <button id="account-icon-menu" class="account-icon-btn p-2 rounded-full hover:bg-gray-600 transition" title="로그인" aria-label="로그인">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-300 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -1343,7 +1345,6 @@
                         <button id="editor-song-back-btn" class="flex-shrink-0 py-2 px-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm">← 에디터 홈</button>
                     </div>
                     <div id="editor-song-message" class="hidden p-3 mb-4 text-center bg-red-500 rounded-lg"></div>
-                    <div id="editor-song-readonly-banner" class="hidden collab-readonly-banner">👁 뷰어 권한입니다. 편집할 수 없습니다.</div>
                     <div id="editor-song-info-card" class="p-4 bg-gray-800 rounded-lg mb-4 space-y-2">
                         <div class="flex items-center gap-2">
                             <label for="editor-song-title-input" class="text-sm w-12 flex-shrink-0">제목</label>
@@ -1665,7 +1666,7 @@
         <script defer src="/js/beat/game/calibration.js"></script>
         <script defer src="/js/beat/cloud/auth.js"></script>
         <script defer src="/js/beat/cloud/charts.js"></script>
-        <script defer src="/js/beat/cloud/collab.js"></script><!-- 공동 작업 모달: charts.js/auth.js 다음, editor-home.js가 실제로 호출하기 전이면 순서 무방 -->
+        <script defer src="/js/beat/cloud/inbox.js"></script>
         <script defer src="/js/beat/cloud/browse.js"></script>
         <script defer src="/js/beat/cloud/scores.js"></script>
         <script defer src="/js/beat/cloud/likes.js"></script>
