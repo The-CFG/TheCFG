@@ -270,8 +270,10 @@ const Online = {
         // 완전히 덮어 가독성을 지키고, 오른쪽으로 갈수록 사진이 자연스럽게 드러나게 함.
         // (utilities.css에 그라데이션 유틸이 없어서 인라인 style로 처리)
         const coverUrl = CloudCharts.getCoverUrl(s.cover_storage_path);
+        // 왼쪽도 완전히 불투명하게 가리지 않고 약 20~30%는 비쳐 보이도록 rgba 알파를 낮춤
+        // (기존엔 #1f2937 0~35%가 완전 불투명이라 왼쪽에서 사진이 아예 안 보였음)
         const bgStyle = coverUrl
-            ? ` style="background-image: linear-gradient(to right, #1f2937 0%, #1f2937 35%, transparent 100%), url('${coverUrl}'); background-size: cover; background-position: center;"`
+            ? ` style="background-image: linear-gradient(to right, rgba(31, 41, 55, 0.75) 0%, rgba(31, 41, 55, 0.75) 35%, transparent 100%), url('${coverUrl}'); background-size: cover; background-position: center;"`
             : '';
         // 오른쪽 통계 영역도 사진 위에 겹치니, 커버가 있을 때만 반투명 배경(scrim)을 깔아
         // 가독성을 지킨다. 커버 없는 카드는 기존 모양 그대로 유지.
