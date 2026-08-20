@@ -134,6 +134,7 @@ const DOM = {
         saveLocalBtn: document.getElementById('editor-song-save-local-btn'),
         loadLocalInput: document.getElementById('editor-song-load-local-input'),
         titleHeading: document.getElementById('editor-song-title'),
+        readonlyBanner: document.getElementById('editor-song-readonly-banner'),
         uploadCloudBtn: document.getElementById('editor-song-upload-cloud-btn'),
         saveDraftBtn: document.getElementById('editor-song-save-draft-btn'),
         cloudStatusEl: document.getElementById('editor-song-cloud-status'),

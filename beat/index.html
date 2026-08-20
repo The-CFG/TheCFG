@@ -16,6 +16,7 @@
     <link rel="stylesheet" href="/css/beat/responsive.css">
     <link rel="stylesheet" href="/css/beat/help.css">
     <link rel="stylesheet" href="/css/beat/theme.css">
+    <link rel="stylesheet" href="/css/beat/collab.css"><!-- 공동 작업 모달 -->
     <script src="/js/beat/theme.js"></script><!-- FOUC 방지: defer 없이 즉시 실행 -->
     <style>
         /* 터치 디바이스 레이아웃 - 좁은 화면(1024px 이하)에서만 세로 배치 */
@@ -1342,6 +1343,7 @@
                         <button id="editor-song-back-btn" class="flex-shrink-0 py-2 px-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm">← 에디터 홈</button>
                     </div>
                     <div id="editor-song-message" class="hidden p-3 mb-4 text-center bg-red-500 rounded-lg"></div>
+                    <div id="editor-song-readonly-banner" class="hidden collab-readonly-banner">👁 뷰어 권한입니다. 편집할 수 없습니다.</div>
                     <div id="editor-song-info-card" class="p-4 bg-gray-800 rounded-lg mb-4 space-y-2">
                         <div class="flex items-center gap-2">
                             <label for="editor-song-title-input" class="text-sm w-12 flex-shrink-0">제목</label>
@@ -1663,6 +1665,7 @@
         <script defer src="/js/beat/game/calibration.js"></script>
         <script defer src="/js/beat/cloud/auth.js"></script>
         <script defer src="/js/beat/cloud/charts.js"></script>
+        <script defer src="/js/beat/cloud/collab.js"></script><!-- 공동 작업 모달: charts.js/auth.js 다음, editor-home.js가 실제로 호출하기 전이면 순서 무방 -->
         <script defer src="/js/beat/cloud/browse.js"></script>
         <script defer src="/js/beat/cloud/scores.js"></script>
         <script defer src="/js/beat/cloud/likes.js"></script>

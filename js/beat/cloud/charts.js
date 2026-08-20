@@ -415,7 +415,7 @@ const CloudCharts = {
 
         const { data: songs, error: songsErr } = await _supabase
             .from('beat_songs')
-            .select('id, title, artist, is_public, created_at, updated_at')
+            .select('id, title, artist, owner_id, is_public, created_at, updated_at')
             .eq('owner_id', user.id)
             .order('updated_at', { ascending: false });
         if (songsErr) return { data: null, error: songsErr };

@@ -29,9 +29,21 @@ const EditorSong = {
         this.render();
     },
 
+    // 공동 작업 도입 — 내가 이 노래에서 'viewer'면 편집 관련 UI를 전부 잠근다.
+    // (편집자/소유자는 평소와 동일하게 전부 활성화)
+    _isReadOnly() {
+        return Editor.state.song.myRole === 'viewer';
+    },
+
     // 현재 Editor.state를 기준으로 종합 창을 다시 그린다. 화면 진입/변경마다 호출.
     render() {
         const song = Editor.state.song;
+        const readOnly = this._isReadOnly();
+
+        if (DOM.editorSong.readonlyBanner) {
+            DOM.editorSong.readonlyBanner.classList.toggle('hidden', !readOnly);
+        }
+
         if (DOM.editorSong.titleInput) DOM.editorSong.titleInput.value = song.title || '';
         if (DOM.editorSong.artistInput) DOM.editorSong.artistInput.value = song.artist || '';
         if (DOM.editorSong.audioNameEl) {
@@ -65,6 +77,16 @@ const EditorSong = {
                 DOM.editorSong.cloudStatusEl.textContent = '🔒 서버에 비공개로 저장됨';
             }
         }
+
+        // 메타 편집 폼 + 파일 선택 + 클라우드 저장 버튼 + 새 난이도 추가 버튼을 잠근다.
+        [
+            DOM.editorSong.titleInput, DOM.editorSong.artistInput,
+            DOM.editorSong.previewStartInput, DOM.editorSong.startTimeInput, DOM.editorSong.timingStartInput,
+            DOM.editorSong.audioFileInput, DOM.editorSong.coverFileInput,
+            DOM.editorSong.uploadCloudBtn, DOM.editorSong.saveDraftBtn,
+            DOM.editorSong.addBeatmapBtn,
+        ].forEach(el => { if (el) el.disabled = readOnly; });
+
         this._renderBeatmapList();
     },
 
@@ -88,7 +110,8 @@ const EditorSong = {
 
             // 순서 조정용 드래그 핸들(점 6개). 라이브러리의 난이도 선택란에 표시될 순서는
             // 이 목록의 순서(=Editor.state.beatmaps 배열 순서)를 그대로 따른다.
-            card.appendChild(this._makeDragHandle(i));
+            // 뷰어는 순서를 저장할 수 없으므로(저장 버튼 자체가 잠김) 핸들도 안 보여준다.
+            if (!this._isReadOnly()) card.appendChild(this._makeDragHandle(i));
 
             const info = document.createElement('div');
             info.className = 'flex-1 min-w-0';
@@ -113,12 +136,15 @@ const EditorSong = {
 
             const btns = document.createElement('div');
             btns.className = 'flex gap-1 flex-shrink-0';
-            btns.append(
-                this._makeBtn('편집', 'bg-teal-600 hover:bg-teal-500', () => this.editBeatmap(i)),
-                this._makeBtn('복제', 'bg-gray-600 hover:bg-gray-500', () => this.duplicateBeatmap(i)),
-                this._makeBtn('이름변경', 'bg-gray-600 hover:bg-gray-500', () => this.renameBeatmap(i)),
-                this._makeBtn('삭제', 'bg-red-700 hover:bg-red-600', () => this.deleteBeatmap(i)),
-            );
+            const readOnly = this._isReadOnly();
+            btns.appendChild(this._makeBtn(readOnly ? '보기' : '편집', 'bg-teal-600 hover:bg-teal-500', () => this.editBeatmap(i)));
+            if (!readOnly) {
+                btns.append(
+                    this._makeBtn('복제', 'bg-gray-600 hover:bg-gray-500', () => this.duplicateBeatmap(i)),
+                    this._makeBtn('이름변경', 'bg-gray-600 hover:bg-gray-500', () => this.renameBeatmap(i)),
+                    this._makeBtn('삭제', 'bg-red-700 hover:bg-red-600', () => this.deleteBeatmap(i)),
+                );
+            }
 
             card.append(info, btns);
             this._wireDragEvents(card);
@@ -183,6 +209,7 @@ const EditorSong = {
     // 이미 클라우드에 올라간 난이도라도 위치가 바뀌면 다음 업로드 시 새 sort_order를
     // 보내야 하므로, 순서가 실제로 바뀐 구간(from~to)에 걸친 것들은 수정됨으로 표시한다.
     moveBeatmap(fromIndex, toIndex) {
+        if (this._isReadOnly()) return;
         const list = Editor.state.beatmaps;
         if (fromIndex < 0 || fromIndex >= list.length || toIndex < 0 || toIndex >= list.length) return;
         const [moved] = list.splice(fromIndex, 1);
@@ -227,6 +254,7 @@ const EditorSong = {
 
     // ── 난이도 카드 액션 ──────────────────────────────────────────────
     addBeatmap() {
+        if (this._isReadOnly()) return; // 뷰어 방어(버튼은 이미 disabled지만 다른 경로 호출 대비)
         const label = prompt('새 난이도 이름을 입력하세요.', `난이도 ${Editor.state.beatmaps.length + 1}`);
         if (label === null) return; // 취소
         const bm = Editor.createDefaultBeatmap(label.trim() || '기본');
@@ -235,6 +263,7 @@ const EditorSong = {
     },
 
     renameBeatmap(index) {
+        if (this._isReadOnly()) return;
         const bm = Editor.state.beatmaps[index];
         if (!bm) return;
         const label = prompt('난이도 이름을 입력하세요.', bm.difficultyLabel || '');
@@ -245,6 +274,7 @@ const EditorSong = {
     },
 
     async duplicateBeatmap(index) {
+        if (this._isReadOnly()) return;
         const bm = Editor.state.beatmaps[index];
         if (!bm) return;
         if (bm._loaded === false) {
@@ -262,6 +292,7 @@ const EditorSong = {
     },
 
     deleteBeatmap(index) {
+        if (this._isReadOnly()) return;
         const bm = Editor.state.beatmaps[index];
         if (!bm) return;
         if (Editor.state.beatmaps.length <= 1) {
@@ -484,6 +515,7 @@ const EditorSong = {
     },
 
     async uploadToCloud(publish = true) {
+        if (this._isReadOnly()) return; // 뷰어 방어(버튼은 이미 disabled)
         try {
             const user = await CloudAuth.getUser();
             if (!user) {

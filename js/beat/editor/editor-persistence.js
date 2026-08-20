@@ -163,6 +163,11 @@ Object.assign(Editor, {
             // 낙관적 잠금(A안)용 — 이 노래를 불러온/직전에 저장한 시점의 updated_at.
             // updateSongMeta 호출 시 그대로 실어보내 "그 사이 다른 곳에서 먼저 저장"됐는지 판별한다.
             updatedAt: null,
+            // 공동 작업(2단계)용 — 소유자 user_id / 내 역할('owner'|'editor'|'viewer').
+            // 로컬에서 새로 만든(아직 클라우드에 없는) 노래는 항상 내가 owner이므로 기본값 'owner'.
+            // EditorHome.open()이 클라우드 노래를 열 때 실제 값으로 덮어쓴다.
+            ownerId: null,
+            myRole: 'owner',
         };
         this.state.beatmaps = [];
         this.state.activeBeatmapIndex = 0;
