@@ -273,6 +273,9 @@ const Online = {
         const bgStyle = coverUrl
             ? ` style="background-image: linear-gradient(to right, #1f2937 0%, #1f2937 35%, transparent 100%), url('${coverUrl}'); background-size: cover; background-position: center;"`
             : '';
+        // 오른쪽 통계 영역도 사진 위에 겹치니, 커버가 있을 때만 반투명 배경(scrim)을 깔아
+        // 가독성을 지킨다. 커버 없는 카드는 기존 모양 그대로 유지.
+        const statsWrapClass = coverUrl ? ' bg-gray-900/70 rounded-lg px-2 py-1.5' : '';
 
         return `
         <button class="browse-card-btn w-full text-left p-3 bg-gray-800 hover:bg-gray-700 rounded-lg transition overflow-hidden" data-id="${s.id}"${bgStyle}>
@@ -282,7 +285,7 @@ const Online = {
                     <p class="text-sm text-gray-400 truncate">${_esc(s.artist || '—')}</p>
                     ${dateLine ? `<p class="text-xs text-gray-500 mt-1">${dateLine}</p>` : ''}
                 </div>
-                <div class="flex flex-col items-end space-y-1 ml-2 flex-shrink-0">
+                <div class="flex flex-col items-end space-y-1 ml-2 flex-shrink-0${statsWrapClass}">
                     ${s.maxDifficultyScore != null ? this._starRatingRangeHtml(s.minDifficultyScore, s.maxDifficultyScore) : ''}
                     <span class="text-xs px-1.5 py-0.5 bg-gray-600 rounded">난이도 ${s.beatmapCount}개</span>
                     <span class="text-xs text-gray-400">${laneRange}</span>

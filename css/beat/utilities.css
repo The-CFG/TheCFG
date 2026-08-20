@@ -286,6 +286,7 @@
 .bg-gray-700\/60 { background-color: rgb(55 65 81 / 60%); } /* --tb-gray-700 (#374151) 60% */
 .bg-gray-800 { background-color: var(--tb-gray-800); }
 .bg-gray-900 { background-color: var(--tb-gray-900); }
+.bg-gray-900\/70 { background-color: rgb(17 24 39 / 70%); } /* --tb-gray-900 (#111827) 70% */
 
 .bg-blue-500 { background-color: var(--tb-blue-500); }
 .bg-blue-600 { background-color: var(--tb-blue-600); }
