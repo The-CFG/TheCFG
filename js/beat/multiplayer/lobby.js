@@ -99,7 +99,7 @@ const MultiplayerLobby = {
             this._renderWaiting();
         } else if (this._view === 'waiting') {
             this._leaveRoom();
-        } else if (this._view === 'join') {
+        } else if (this._view === 'join' || this._view === 'room-list') {
             this._renderMenu();
         } else {
             this._teardownRealtime();
@@ -128,6 +128,11 @@ const MultiplayerLobby = {
                 <span class="text-xl font-bold text-white">코드로 참가</span>
                 <span class="text-sm text-gray-400 mt-0.5">받은 초대 코드로 들어가기</span>
             </button>
+            <button id="mp-browse-btn" class="w-full py-6 flex flex-col items-center justify-center bg-gray-700 hover:bg-gray-600 rounded-xl transition">
+                <span class="text-3xl mb-1">📋</span>
+                <span class="text-xl font-bold text-white">방 목록</span>
+                <span class="text-sm text-gray-400 mt-0.5">공개된 방을 검색해서 들어가기</span>
+            </button>
         </div>`);
 
         document.getElementById('mp-host-btn').addEventListener('click', async () => {
@@ -136,6 +141,7 @@ const MultiplayerLobby = {
             Online.show('browse', null, { pickMode: true });
         });
         document.getElementById('mp-join-btn').addEventListener('click', () => this._renderJoin());
+        document.getElementById('mp-browse-btn').addEventListener('click', () => this._renderRoomList());
     },
 
     // ════════════════════════════════════════════════════════════════════════
@@ -200,6 +206,149 @@ const MultiplayerLobby = {
         if (chartErr) {
             this._showMsg('채보 정보를 불러오지 못했습니다.');
             if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '참가하기'; }
+            return;
+        }
+
+        this._room = room;
+        this._chart = chart;
+        this._userId = user.id;
+        this._isHost = room.host_id === user.id;
+        await this._enterWaitingRoom();
+    },
+
+    // ════════════════════════════════════════════════════════════════════════
+    // 방 목록 — 호스트가 "방 목록에 공개"를 켠 방들을 검색해서 참가
+    // ════════════════════════════════════════════════════════════════════════
+    async _renderRoomList() {
+        this._view = 'room-list';
+        this._showMsg('');
+        this._setContent(`
+        <div class="flex items-center justify-between mb-3">
+            <p class="text-sm text-gray-400">공개된 방 목록이에요. 자물쇠가 있으면 비밀번호가 필요해요.</p>
+            <button id="mp-room-list-refresh-btn" class="text-xs text-teal-400 hover:text-teal-300 flex-shrink-0 ml-2 transition">새로고침</button>
+        </div>
+        <div id="mp-room-list-body" class="space-y-2">
+            <p class="text-gray-500 text-xs text-center py-6 flex items-center justify-center gap-2">${UI.spinnerHtml('w-3.5 h-3.5')}불러오는 중…</p>
+        </div>`);
+
+        document.getElementById('mp-room-list-refresh-btn').addEventListener('click', () => this._loadRoomList());
+        await this._loadRoomList();
+    },
+
+    async _loadRoomList() {
+        const body = document.getElementById('mp-room-list-body');
+        if (!body) return;
+        body.innerHTML = `<p class="text-gray-500 text-xs text-center py-6 flex items-center justify-center gap-2">${UI.spinnerHtml('w-3.5 h-3.5')}불러오는 중…</p>`;
+
+        const { data: rooms, error } = await MultiplayerRooms.listPublicRooms();
+        if (error) {
+            body.innerHTML = `<p class="text-red-400 text-xs text-center py-6">방 목록을 불러오지 못했습니다: ${_esc(error.message)}</p>`;
+            return;
+        }
+        if (this._view !== 'room-list') return; // 응답 오는 사이 화면이 바뀌었으면 무시
+        if (!rooms || rooms.length === 0) {
+            body.innerHTML = `<p class="text-gray-500 text-xs text-center py-6">지금은 공개된 방이 없어요.</p>`;
+            return;
+        }
+
+        const chartIds = [...new Set(rooms.map(r => r.chart_id))];
+        const hostIds = [...new Set(rooms.map(r => r.host_id))];
+        const [{ data: charts }, nicknameMap] = await Promise.all([
+            CloudBrowse.getChartsByIds(chartIds),
+            CloudAuth._fetchNicknameMap(hostIds),
+        ]);
+        if (this._view !== 'room-list') return;
+
+        const chartById = {};
+        (charts || []).forEach(c => { chartById[c.id] = c; });
+
+        body.innerHTML = rooms.map(r => {
+            const chart = chartById[r.chart_id];
+            const hostName = nicknameMap[r.host_id] ? _esc(nicknameMap[r.host_id]) : `${_esc(r.host_id.slice(0, 8))}…`;
+            const full = r.player_count >= r.max_players;
+            return `
+            <button class="mp-room-list-item w-full text-left p-3 bg-gray-800 hover:bg-gray-700 rounded-lg transition ${full ? 'opacity-60' : ''}"
+                data-room-id="${_esc(r.id)}" data-has-password="${r.has_password ? '1' : '0'}" ${full ? 'disabled' : ''}>
+                <div class="flex items-center gap-1.5 mb-1">
+                    <span class="text-sm flex-shrink-0">${r.has_password ? '🔒' : '🔓'}</span>
+                    <p class="text-sm font-semibold text-white truncate min-w-0">${chart ? `${_esc(chart.artist || '—')} — ${_esc(chart.title || '(제목 없음)')}` : '채보 정보 없음'}</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-1.5 mb-1.5">
+                    ${chart ? this._diffBadgeHtml(chart.difficulty_score, 'text-[10px]') : ''}
+                    ${chart ? `<span class="text-xs font-semibold text-teal-300">${_esc(chart.difficulty_label || '난이도 미지정')}</span>` : ''}
+                    ${chart ? `<span class="text-xs text-gray-400">${chart.lane_count}키</span>` : ''}
+                </div>
+                <div class="flex items-center justify-between text-xs text-gray-400">
+                    <span>👑 ${hostName}</span>
+                    <span class="${full ? 'text-red-400' : ''}">${r.player_count}/${r.max_players}명${full ? ' (가득 참)' : ''}</span>
+                </div>
+            </button>`;
+        }).join('');
+
+        body.querySelectorAll('.mp-room-list-item').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const roomId = btn.dataset.roomId;
+                if (btn.dataset.hasPassword === '1') {
+                    this._promptRoomPassword(roomId);
+                } else {
+                    this._joinListedRoom(roomId, null, btn);
+                }
+            });
+        });
+    },
+
+    // 비밀번호가 걸린 방을 눌렀을 때 인라인 비밀번호 입력 UI로 그 항목을 대체한다.
+    _promptRoomPassword(roomId) {
+        const body = document.getElementById('mp-room-list-body');
+        const target = body?.querySelector(`.mp-room-list-item[data-room-id="${CSS.escape(roomId)}"]`);
+        if (!target) return;
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'p-3 bg-gray-800 rounded-lg';
+        wrapper.innerHTML = `
+            <p class="text-xs text-gray-400 mb-2">🔒 비밀번호가 필요한 방이에요.</p>
+            <div class="flex items-center gap-2">
+                <input type="password" class="mp-room-pw-input flex-1 min-w-0 px-2 py-1.5 bg-gray-900 rounded text-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder="비밀번호" autocomplete="off">
+                <button class="mp-room-pw-submit px-3 py-1.5 bg-teal-600 hover:bg-teal-500 rounded text-xs font-bold flex-shrink-0 transition">참가</button>
+                <button class="mp-room-pw-cancel px-2 py-1.5 bg-gray-700 hover:bg-gray-600 rounded text-xs flex-shrink-0 transition">취소</button>
+            </div>`;
+        target.replaceWith(wrapper);
+
+        const input = wrapper.querySelector('.mp-room-pw-input');
+        const submitBtn = wrapper.querySelector('.mp-room-pw-submit');
+        const submit = () => this._joinListedRoom(roomId, input.value, submitBtn);
+        submitBtn.addEventListener('click', submit);
+        input.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
+        wrapper.querySelector('.mp-room-pw-cancel').addEventListener('click', () => this._loadRoomList());
+        input.focus();
+    },
+
+    async _joinListedRoom(roomId, password, submitBtn) {
+        this._showMsg('');
+        const user = await CloudAuth.getUser();
+        if (!user) { this._showMsg('로그인이 필요합니다.'); return; }
+
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = '참가하는 중…'; }
+
+        // 실제 존재 확인 + 상태(waiting)/정원/비밀번호 검증은 전부 RPC 안에서 서버가 처리한다.
+        const { error: joinErr } = await MultiplayerRooms.joinListedRoom(roomId, password);
+        if (joinErr && !/duplicate|already/i.test(joinErr.message || '')) {
+            this._showMsg(joinErr.message || '참가에 실패했습니다.');
+            if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '참가'; }
+            return;
+        }
+
+        const { data: room, error: roomErr } = await MultiplayerRooms.getRoom(roomId);
+        if (roomErr || !room) {
+            this._showMsg('방 정보를 불러오지 못했습니다.');
+            if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '참가'; }
+            return;
+        }
+
+        const { data: chart, error: chartErr } = await CloudBrowse.getBeatmapDetail(room.chart_id);
+        if (chartErr) {
+            this._showMsg('채보 정보를 불러오지 못했습니다.');
+            if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '참가'; }
             return;
         }
 
@@ -582,6 +731,22 @@ const MultiplayerLobby = {
                 <button id="mp-copy-code-btn" class="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs flex-shrink-0 transition">복사</button>
             </div>
         </div>
+        ${this._isHost ? `
+        <div class="p-3 bg-gray-800 rounded-lg mb-4">
+            <label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer select-none">
+                <input type="checkbox" id="mp-listed-checkbox" ${room.is_listed ? 'checked' : ''} class="w-4 h-4 accent-teal-500 flex-shrink-0">
+                <span>📋 방 목록에 공개 <span class="text-gray-500">(초대 코드 없이 검색해서 들어올 수 있어요)</span></span>
+            </label>
+            <div id="mp-password-row" class="flex items-center gap-2 mt-2.5 ${room.is_listed ? '' : 'hidden'}">
+                <input id="mp-room-password" type="text" maxlength="20" autocomplete="off" spellcheck="false"
+                    placeholder="${room.has_password ? '새 비밀번호 (비워두고 저장하면 해제)' : '비밀번호 (선택 — 비워두면 누구나 참가)'}"
+                    class="flex-1 min-w-0 px-2 py-1.5 bg-gray-900 rounded text-white text-xs focus:outline-none focus:ring-2 focus:ring-teal-500">
+                <button id="mp-password-save-btn" class="px-2 py-1.5 bg-gray-700 hover:bg-gray-600 rounded text-xs flex-shrink-0 transition">저장</button>
+            </div>
+            <p id="mp-password-status" class="text-[11px] mt-1.5 ${room.is_listed ? '' : 'hidden'} ${room.has_password ? 'text-amber-400' : 'text-gray-500'}">
+                ${room.has_password ? '🔒 비밀번호가 걸려 있어요 (비공개)' : '🔓 비밀번호 없이 누구나 참가할 수 있어요 (공개)'}
+            </p>
+        </div>` : ''}
         <div class="flex items-center justify-between mb-2">
             <h3 class="text-sm font-semibold text-gray-300">플레이어 (${this._players.length}/${room.max_players || 6}명)</h3>
             ${this._isHost ? `
@@ -650,6 +815,37 @@ const MultiplayerLobby = {
             }
             this._room.max_players = next;
             await MultiplayerRealtime.send('max_players_updated', { maxPlayers: next }).catch(() => {});
+            this._renderWaiting();
+        });
+        document.getElementById('mp-listed-checkbox')?.addEventListener('change', async (e) => {
+            const next = e.target.checked;
+            e.target.disabled = true;
+            const { error } = await MultiplayerRooms.setListed(this._room.id, next);
+            if (error) {
+                this._showMsg('방 목록 공개 설정에 실패했습니다: ' + error.message);
+                e.target.checked = !next;
+                e.target.disabled = false;
+                return;
+            }
+            this._room.is_listed = next;
+            document.getElementById('mp-password-row')?.classList.toggle('hidden', !next);
+            document.getElementById('mp-password-status')?.classList.toggle('hidden', !next);
+        });
+        document.getElementById('mp-password-save-btn')?.addEventListener('click', async () => {
+            const input = document.getElementById('mp-room-password');
+            const btn = document.getElementById('mp-password-save-btn');
+            const pw = input.value;
+            btn.disabled = true;
+            btn.textContent = '저장 중…';
+            const { error } = await MultiplayerRooms.setPassword(this._room.id, pw);
+            if (error) {
+                this._showMsg('비밀번호 설정에 실패했습니다: ' + error.message);
+                btn.disabled = false;
+                btn.textContent = '저장';
+                return;
+            }
+            this._room.has_password = !!pw.trim();
+            input.value = '';
             this._renderWaiting();
         });
         document.getElementById('mp-add-queue-btn')?.addEventListener('click', () => {

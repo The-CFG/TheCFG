@@ -71,7 +71,7 @@ const MultiplayerRooms = {
     // room)이 is_room_member(room_id, auth.uid())로 호출자 자신이 그 방의 멤버인지부터
     // 검사하기 때문에, 호스트가 자기 row를 먼저 지우고 나서 이 함수를 부르면 listPlayers가
     // (다른 참가자가 남아있어도) 무조건 빈 배열을 돌려받아 항상 "아무도 없음"으로 오판하고
-    // 방을 그냥 abandoned 처리해버린다 — 실제로는 참가자가 남아있는데도. 호출 순서는
+    // 방을 그냥 삭제해버린다 — 실제로는 참가자가 남아있는데도. 호출 순서는
     // lobby.js의 _leaveRoom()에서 leaveRoom()(자기 row 삭제)보다 먼저 오도록 되어 있다.
     async transferHost(roomId) {
         const user = await CloudAuth.getUser();
@@ -173,7 +173,7 @@ const MultiplayerRooms = {
     async getRoom(roomId) {
         const { data, error } = await _supabase
             .from('beat_rooms')
-            .select('id, chart_id, chart_queue, host_id, status, started_at, created_at, invite_code, max_players')
+            .select('id, chart_id, chart_queue, host_id, status, started_at, created_at, invite_code, max_players, is_listed, has_password, player_count')
             .eq('id', roomId)
             .single();
         return { data, error };
@@ -182,9 +182,58 @@ const MultiplayerRooms = {
     async getRoomByInviteCode(code) {
         const { data, error } = await _supabase
             .from('beat_rooms')
-            .select('id, chart_id, chart_queue, host_id, status, started_at, created_at, invite_code, max_players')
+            .select('id, chart_id, chart_queue, host_id, status, started_at, created_at, invite_code, max_players, is_listed, has_password, player_count')
             .eq('invite_code', (code || '').toUpperCase())
             .single();
+        return { data, error };
+    },
+
+    // 호스트 전용: 방 목록(공개 검색) 노출 여부 토글. beat_rooms의 일반 컬럼이라
+    // 기존 "host can update own room" RLS로 이미 커버된다(setMaxPlayers와 동일한 방식).
+    async setListed(roomId, listed) {
+        const { error } = await _supabase
+            .from('beat_rooms')
+            .update({ is_listed: !!listed })
+            .eq('id', roomId);
+        return { error };
+    },
+
+    // 호스트 전용: 방 비밀번호 설정/변경. password가 빈 값이면 해제(공개 전환).
+    // 실제 해시 저장/검증은 전부 서버 쪽 RPC(set_room_password)가 처리 — 클라이언트는
+    // 평문을 딱 한 번 이 호출에만 실어 보내고 그 뒤로는 절대 다루지 않는다.
+    async setPassword(roomId, password) {
+        const { error } = await _supabase.rpc('set_room_password', {
+            _room_id: roomId,
+            _password: password || null,
+        });
+        return { error };
+    },
+
+    // 방 목록(공개 검색)에서 방 참가. 초대 코드 참가(joinRoom)와 달리 비밀번호 검증이
+    // 필요해서 클라이언트가 직접 insert하지 않고 RPC(join_listed_room)를 거친다 —
+    // 비밀번호 해시는 beat_room_passwords에 있고 그 테이블은 클라이언트가 아예
+    // 못 읽으므로, 검증은 반드시 서버(SECURITY DEFINER 함수) 쪽에서 이뤄져야 한다.
+    async joinListedRoom(roomId, password) {
+        const { error } = await _supabase.rpc('join_listed_room', {
+            _room_id: roomId,
+            _password: password || null,
+        });
+        return { error };
+    },
+
+    // 방 목록 화면: 공개(방 목록에 공개 = true) + 대기 중(waiting) + 30분 이내 생성된
+    // 방들을 최신순으로. player_count/has_password는 beat_rooms 컬럼이라 바로 읽힌다
+    // (플레이어 목록 자체는 방 멤버만 볼 수 있지만, 인원수 캐시 컬럼은 누구나 읽을 수 있음).
+    async listPublicRooms() {
+        const cutoff = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+        const { data, error } = await _supabase
+            .from('beat_rooms')
+            .select('id, chart_id, host_id, max_players, player_count, has_password, created_at')
+            .eq('status', 'waiting')
+            .eq('is_listed', true)
+            .gte('created_at', cutoff)
+            .order('created_at', { ascending: false })
+            .limit(30);
         return { data, error };
     },
 
