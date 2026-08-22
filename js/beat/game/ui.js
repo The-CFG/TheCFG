@@ -27,6 +27,9 @@ const UI = {
             } else {
                 this.setPanelCollapsed(false);
             }
+            // 모바일 메뉴 오버레이(#mobile-panel-toggle-btn)도 화면이 바뀔 때마다 항상 닫아둔다 —
+            // 플레이 화면을 벗어났는데 열려있던 상태가 남아 다음 판에서 game-area를 가리면 안 됨.
+            this.setMobilePanelOpen(false);
         }
     },
     showMessage(type, message) {
@@ -417,6 +420,39 @@ const UI = {
             const appShell = document.getElementById('app-shell');
             const collapsed = !(appShell && appShell.classList.contains('ui-collapsed'));
             this.setPanelCollapsed(collapsed);
+        });
+    },
+
+    // ── 모바일(1024px 이하) 전용: 게임 중 ui-area 오버레이 열람 ─────────────
+    // 이 화면 크기에서는 게임 중엔 game-area만, 아닐 땐 ui-area만 보이도록
+    // css/beat/responsive.css가 처리한다(#app-shell.in-play 여부 기준). 게임 중에도
+    // 일시정지/포기하기 등 메뉴에 손대야 할 때가 있으니, 이 버튼으로 ui-area를
+    // 전체화면 오버레이로 잠깐 띄운다 — game-area(캔버스/오디오)는 계속 뒤에서 그대로 돈다.
+    // 데스크톱 좌우 분할에서는 버튼 자체가 안 보이므로(css) 아무 영향 없음.
+    _mobilePanelIconHamburger: '<line x1="4" y1="7" x2="20" y2="7"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="17" x2="20" y2="17"></line>',
+    _mobilePanelIconClose: '<line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line>',
+
+    setMobilePanelOpen(open) {
+        const appShell = document.getElementById('app-shell');
+        const icon = document.getElementById('mobile-panel-toggle-icon');
+        const btn = DOM.mobilePanelToggleBtn;
+        if (!appShell) return;
+        appShell.classList.toggle('mobile-panel-open', open);
+        if (icon) icon.innerHTML = open ? this._mobilePanelIconClose : this._mobilePanelIconHamburger;
+        if (btn) {
+            const label = open ? '메뉴 닫기' : '메뉴 열기';
+            btn.setAttribute('aria-label', label);
+            btn.title = label;
+        }
+    },
+
+    initMobilePanelToggle() {
+        const btn = DOM.mobilePanelToggleBtn;
+        if (!btn) return;
+        btn.addEventListener('click', () => {
+            const appShell = document.getElementById('app-shell');
+            const open = !(appShell && appShell.classList.contains('mobile-panel-open'));
+            this.setMobilePanelOpen(open);
         });
     }
 };

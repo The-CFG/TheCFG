@@ -65,6 +65,30 @@ body {
     pointer-events: none;
 }
 
+/* 모바일 전용 메뉴 토글 버튼 — 기본은 항상 숨김. 표시 조건은 responsive.css의
+   max-width:1024px 블록에서 #app-shell.in-play일 때만 켠다. */
+#mobile-panel-toggle-btn {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 9999px;
+    background: rgba(45, 55, 72, 0.9);
+    border: 1px solid #4a5568;
+    color: #e2e8f0;
+    cursor: pointer;
+    padding: 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    transition: background-color 0.15s ease, transform 0.2s ease;
+}
+#mobile-panel-toggle-btn:active {
+    transform: scale(0.94);
+}
+#mobile-panel-toggle-icon {
+    pointer-events: none;
+}
+
 /* 패널 접힘 상태: 우측 메뉴 패널을 숨기고 게임 화면을 중앙(전체 폭)으로 확장.
    #ui-area는 Tailwind의 flex-1(flex-basis:0%)을 쓰고 있어 width만으로는
    레이아웃이 안 바뀔 수 있으므로 flex 자체를 직접 제어한다. */

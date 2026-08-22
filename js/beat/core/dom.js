@@ -2,6 +2,7 @@ const DOM = {
     gameArea: document.getElementById('game-area'),
     uiArea: document.getElementById('ui-area'),
     panelToggleBtn: document.getElementById('panel-toggle-btn'),
+    mobilePanelToggleBtn: document.getElementById('mobile-panel-toggle-btn'),
     gameCanvas: document.getElementById('game-canvas'),
     lanesContainer: document.getElementById('lanes-container'),
     scoreEl: document.getElementById('score'),

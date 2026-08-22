@@ -1640,6 +1640,7 @@ document.addEventListener('DOMContentLoaded', () => {
         Appearance.init();
         Calibration.init();
         UI.initPanelToggle();
+        UI.initMobilePanelToggle();
         if (typeof setupAuthUI === 'function') setupAuthUI();
         if (typeof setupInboxUI === 'function') setupInboxUI();
 
