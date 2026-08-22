@@ -35,6 +35,7 @@ const MultiplayerLobby = {
     _restartRequested: false,  // 내가 재시작 버튼을 눌렀는지
     _restarting: false,        // 전원 동의 후 실제 재시작 진행 중(중복 트리거 방지)
     _resultTotal: 0,           // 이번 판 결과 화면 기준 총 참가자 수(나 포함)
+    _presenceCount: 0,         // presence sync로 파악한 현재 접속 인원(화면과 무관하게 항상 갱신됨)
 
     // ── 진입점 ────────────────────────────────────────────────────────────────
     show() {
@@ -51,6 +52,7 @@ const MultiplayerLobby = {
         this._restartRequested = false;
         this._restarting = false;
         this._resultTotal = 0;
+        this._presenceCount = 0;
         this._queueDetails = [];
         this._chartAdvancePromise = null;
         this._clockSyncPromise = null;
@@ -519,7 +521,20 @@ const MultiplayerLobby = {
 
     // Presence sync 스냅샷 → 플레이어 목록. presence가 실시간 소스이므로
     // 이 시점부터는 DB 폴링 없이 이 콜백만으로 대기실 목록이 갱신된다.
+    //
+    // 대기실 Realtime 연결은 결과 화면에서도 유지되므로(관전 HUD가 그대로 씀),
+    // presence sync는 화면(view)과 무관하게 항상 들어온다. _players/렌더링은
+    // 대기실 화면일 때만 갱신하지만, "현재 접속해있는 인원 수"는 화면과 무관하게
+    // 항상 갱신해둔다 — 결과 화면 재시작 투표 total이 이 값을 참조한다. 안 그러면
+    // 결과 화면에서 누군가 나가도 total이 그대로라 재시작 투표가 영원히 안 채워짐.
     _onPresenceSync(state) {
+        this._presenceCount = Object.keys(state || {}).length;
+        // 게임 시작 후(_view === 'starting')는 결과 화면까지 포함한다 — 이 view는
+        // _afterReturnToRoom에서 'waiting'으로 바뀌기 전까지 유지된다.
+        if (this._view === 'starting') {
+            this._updateRestartButton();
+            this._maybeStartRestart();
+        }
         if (this._view !== 'waiting' || !this._room) return;
         const hostId = this._room.host_id;
         const list = Object.values(state)
@@ -1013,6 +1028,8 @@ const MultiplayerLobby = {
             onlineChartId: this._chart.id,
             userId: this._userId,
             roomId: this._room.id,
+            hostId: this._room.host_id,
+            selfNickname: this._players.find(p => p.user_id === this._userId)?.nickname || null,
             opponents: this._players
                 .filter(p => p.user_id !== this._userId)
                 .map(p => ({ user_id: p.user_id, nickname: p.nickname })),
@@ -1061,10 +1078,22 @@ const MultiplayerLobby = {
         this._maybeStartRestart();
     },
 
+    // 재시작 투표에 필요한 총 인원 수. 결과 화면에 들어온 시점의 스냅샷(_resultTotal)이
+    // 기본값이지만, 그 이후 presence sync로 받은 실시간 접속 인원(_presenceCount)이 있으면
+    // 그쪽을 우선한다 — 안 그러면 결과 화면에서 누가 나가도 total이 안 줄어서 투표가
+    // 영원히 안 채워지는 문제가 있었다.
+    _restartVoteTotal() {
+        const fallback = this._resultTotal || ((Game.state._multiplayerOpponents?.length || 0) + 1);
+        if (typeof this._presenceCount === 'number' && this._presenceCount > 0) {
+            return Math.min(fallback, this._presenceCount);
+        }
+        return fallback;
+    },
+
     _updateRestartButton() {
         const btn = document.getElementById('mp-restart-btn');
         if (!btn) return;
-        const total = this._resultTotal || ((Game.state._multiplayerOpponents?.length || 0) + 1);
+        const total = this._restartVoteTotal();
         if (this._restartVotes.size === 0) {
             btn.disabled = false;
             btn.textContent = '🔁 재시작';
@@ -1078,7 +1107,7 @@ const MultiplayerLobby = {
     // 대기실 화면을 거치지 않은 채 바로 동시 시작을 진행한다(_startRoom()과 원리는 동일).
     // 대기열에 다음 채보가 있으면 먼저 그쪽으로 넘어간다 — 큐가 비어있을 때만 같은 채보로 재도전한다.
     async _maybeStartRestart() {
-        const total = this._resultTotal || ((Game.state._multiplayerOpponents?.length || 0) + 1);
+        const total = this._restartVoteTotal();
         if (this._restartVotes.size < total) return;
         if (!this._isHost || !this._room || this._restarting) return;
         this._restarting = true;

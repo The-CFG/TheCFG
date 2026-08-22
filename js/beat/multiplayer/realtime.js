@@ -37,6 +37,7 @@ const MultiplayerRealtime = {
         this._presenceListeners = [];
         this._clockOffsetMs = 0;
         this._clockSynced = false;
+        this._hostPongHandler = null; // connect()마다 리셋 — 안 그러면 재연결 후 호스트가 clock_ping에 응답을 안 함
 
         return new Promise((resolve, reject) => {
             const channel = _supabase.channel(`room:${roomId}`, {
@@ -81,6 +82,7 @@ const MultiplayerRealtime = {
         this._roomId = null;
         this._broadcastListeners = {};
         this._presenceListeners = [];
+        this._hostPongHandler = null;
     },
 
     // 기존 채널을 정리하고 같은 방에 새로 연결한다. 재연결 버튼에서 사용.

@@ -82,11 +82,15 @@ const MultiplayerRooms = {
         const next = players?.find(p => p.user_id !== user?.id);
         if (!next) return { data: null };
 
-        const { error } = await _supabase.rpc('transfer_host', {
+        const { data: ok, error } = await _supabase.rpc('transfer_host', {
             _room_id: roomId,
             _new_host_id: next.user_id,
         });
-        return { error, data: next };
+        if (error) return { error };
+        // RPC가 boolean으로 실제 갱신 성공 여부를 돌려준다 — false면 DB의 host_id는
+        // 안 바뀐 것이므로 성공으로 착각해 broadcast하면 안 된다(로컬 상태와 DB가 어긋남).
+        if (!ok) return { data: null, error: new Error('호스트 위임에 실패했습니다.') };
+        return { error: null, data: next };
     },
 
     // 오디오/채보 로드 완료 시 ready 플래그 갱신.
