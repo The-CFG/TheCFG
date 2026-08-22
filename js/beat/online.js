@@ -79,6 +79,15 @@ const Online = {
 
     _setContent(html) { document.getElementById('online-content').innerHTML = html; },
 
+    // duration_seconds(숫자) → "3:07" 형식. 값이 없거나 이상하면 빈 문자열(호출부에서 조건부 렌더링).
+    _formatDuration(seconds) {
+        const s = Math.round(Number(seconds));
+        if (!Number.isFinite(s) || s <= 0) return '';
+        const m = Math.floor(s / 60);
+        const rem = s % 60;
+        return `${m}:${String(rem).padStart(2, '0')}`;
+    },
+
     // 별점(difficulty_score) → 10점 만점 난이도 수치 배지.
     // 산정 난이도(채보 지표 기반)이며 플레이 통계와 무관함을 시각적으로도 분리해서 보여준다.
     _starRatingHtml(difficultyScore, sizeCls = 'text-xs') {
@@ -367,6 +376,7 @@ const Online = {
                     ${laneBadge}
                     <span class="text-sm text-gray-300 truncate">${label}</span>
                     ${bm.bpm ? `<span class="text-xs text-gray-500 flex-shrink-0">BPM ${bm.bpm}</span>` : ''}
+                    ${this._formatDuration(bm.duration_seconds) ? `<span class="text-xs text-gray-500 flex-shrink-0">${this._formatDuration(bm.duration_seconds)}</span>` : ''}
                     ${this._starRatingHtml(bm.difficulty_score)}
                 </div>
                 <div class="flex items-center space-x-2 flex-shrink-0 text-xs text-gray-400">
@@ -483,6 +493,7 @@ const Online = {
             <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-gray-400">
                 ${this._starRatingHtml(c.difficulty_score, 'text-sm')}
                 ${c.bpm             ? `<span>BPM ${c.bpm}</span>` : ''}
+                ${this._formatDuration(c.duration_seconds) ? `<span>${this._formatDuration(c.duration_seconds)}</span>` : ''}
                 <span>${c.lane_count}키</span>
                 ${c.difficulty_label ? `<span>${_esc(c.difficulty_label)}</span>` : ''}
                 <span>${c.note_count}노트</span>

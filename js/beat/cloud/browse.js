@@ -249,7 +249,7 @@ const CloudBrowse = {
 
         const { data: beatmaps, error: bmErr } = await _supabase
             .from('beat_charts')
-            .select('id, difficulty_label, lane_count, bpm, note_count, difficulty_score, play_count, sort_order, created_at, updated_at, owner_id')
+            .select('id, difficulty_label, lane_count, bpm, duration_seconds, note_count, difficulty_score, play_count, sort_order, created_at, updated_at, owner_id')
             .eq('song_id', songId)
             .or(ownFilter)
             .order('lane_count', { ascending: true })
