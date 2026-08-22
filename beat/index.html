@@ -803,8 +803,12 @@
                                                 <span class="help-row-label">일시정지</span>
                                                 <span class="help-row-value help-keys"><kbd>ESC</kbd> <span class="help-key-sep">또는 화면 우상단 버튼</span></span>
                                             </div>
+                                            <div class="help-row">
+                                                <span class="help-row-label">빠른 재시작</span>
+                                                <span class="help-row-value help-keys"><kbd>`</kbd> <span class="help-key-sep">0.6초 이상 꾹 누르면 현재 채보 재시작 (플레이·일시정지 중 모두 가능)</span></span>
+                                            </div>
                                         </div>
-                                        <p class="help-tip">💡 조작 키는 <strong>환경설정 → 조작</strong> 탭에서 자유롭게 변경할 수 있습니다. 레인 수에 따라 활성화되는 키가 달라집니다.</p>
+                                        <p class="help-tip">💡 조작 키는 <strong>환경설정 → 조작</strong> 탭에서 자유롭게 변경할 수 있습니다. 레인 수에 따라 활성화되는 키가 달라집니다. 재시작 키는 멀티플레이 중에는 대신 "전원 동의 재시작" 버튼으로 대체됩니다.</p>
                                     </div>
                                 </details>
 
@@ -860,17 +864,17 @@
                                         <div class="help-judgement-grid">
                                             <div class="help-judgement-item" style="border-color:#ffd700;">
                                                 <div class="help-judgement-name" style="color:#ffd700;">PERFECT</div>
-                                                <div class="help-judgement-pts">+10점</div>
+                                                <div class="help-judgement-pts">+300점</div>
                                                 <div class="help-judgement-desc">±50ms 이내</div>
                                             </div>
                                             <div class="help-judgement-item" style="border-color:#68d391;">
                                                 <div class="help-judgement-name" style="color:#68d391;">GOOD</div>
-                                                <div class="help-judgement-pts">+5점</div>
+                                                <div class="help-judgement-pts">+150점</div>
                                                 <div class="help-judgement-desc">±100ms 이내</div>
                                             </div>
                                             <div class="help-judgement-item" style="border-color:#f6ad55;">
                                                 <div class="help-judgement-name" style="color:#f6ad55;">BAD</div>
-                                                <div class="help-judgement-pts">+2점</div>
+                                                <div class="help-judgement-pts">+50점</div>
                                                 <div class="help-judgement-desc">±150ms 이내</div>
                                             </div>
                                             <div class="help-judgement-item" style="border-color:#fc8181;">
@@ -882,21 +886,99 @@
                                         <div class="help-rows" style="margin-top:10px;">
                                             <div class="help-row">
                                                 <span class="help-row-label">콤보</span>
-                                                <span class="help-row-value">GOOD 이상 연속 시 쌓이며, 높을수록 추가 점수가 올라갑니다. BAD·MISS는 콤보를 초기화합니다.</span>
+                                                <span class="help-row-value">GOOD 이상 연속 시 쌓이며, BAD·MISS는 콤보를 초기화합니다. (점수에 별도로 가산되진 않고, 최대 콤보 기록으로 남습니다)</span>
                                             </div>
                                             <div class="help-row">
                                                 <span class="help-row-label">랭크</span>
-                                                <span class="help-row-value">결과 화면에서 최종 점수에 따라 <span style="color:#ffd700;font-weight:700;">S</span> / <span style="color:#68d391;font-weight:700;">A</span> / <span style="color:#63b3ed;font-weight:700;">B</span> / <span style="color:#a0aec0;font-weight:700;">C</span> 랭크가 부여됩니다.</span>
+                                                <span class="help-row-value">결과 화면에서 정확도(%)에 따라 <span style="color:#ffd700;font-weight:700;">S</span> / <span style="color:#68d391;font-weight:700;">A</span> / <span style="color:#63b3ed;font-weight:700;">B</span> / <span style="color:#a0aec0;font-weight:700;">C</span> 랭크가 부여됩니다.</span>
                                             </div>
                                             <div class="help-row">
                                                 <span class="help-row-label">온라인 점수</span>
                                                 <span class="help-row-value">로그인 상태에서 온라인 차트를 클리어하면 점수가 리더보드에 자동 기록됩니다.</span>
                                             </div>
                                         </div>
+                                        <div class="help-editor-section-label" style="margin-top:10px;">⭐ 별점 (산정 난이도)</div>
+                                        <p class="help-desc">각 난이도 옆의 별점은 <strong>채보 자체의 지표</strong>만으로 계산됩니다. 실제 플레이 정확도나 클리어율은 전혀 반영되지 않아, 유저 풀 구성(초보자/고수 비율)에 흔들리지 않고 업로드 즉시 확정됩니다.</p>
+                                        <div class="help-rows">
+                                            <div class="help-row">
+                                                <span class="help-row-label">계산 시점</span>
+                                                <span class="help-row-value">채보를 클라우드에 업로드하거나 노트/트리거를 수정해 다시 저장할 때 자동으로 계산되어 <strong>고정</strong>됩니다. 이후 아무리 플레이 기록이 쌓여도 별점은 바뀌지 않습니다.</span>
+                                            </div>
+                                            <div class="help-row">
+                                                <span class="help-row-label">노트 밀도 (35%)</span>
+                                                <span class="help-row-value">초당 처리해야 하는 노트 수(NPS). 별점에 가장 크게 반영되는 핵심 지표입니다.</span>
+                                            </div>
+                                            <div class="help-row">
+                                                <span class="help-row-label">노트 속도 (25%)</span>
+                                                <span class="help-row-value">채보에 설정된 낙하 속도. 반응할 수 있는 시간 여유를 결정합니다.</span>
+                                            </div>
+                                            <div class="help-row">
+                                                <span class="help-row-label">동시타 비율 (20%)</span>
+                                                <span class="help-row-value">여러 레인을 동시에 눌러야 하는 노트가 전체에서 차지하는 비중.</span>
+                                            </div>
+                                            <div class="help-row">
+                                                <span class="help-row-label">롱노트 비율 (10%)</span>
+                                                <span class="help-row-value">누른 채 유지해야 하는 롱노트가 차지하는 비중.</span>
+                                            </div>
+                                            <div class="help-row">
+                                                <span class="help-row-label">BPM (10%)</span>
+                                                <span class="help-row-value">곡의 빠르기. 노트 밀도와 상관이 높아 보정 성격으로 소폭만 반영됩니다.</span>
+                                            </div>
+                                            <div class="help-row">
+                                                <span class="help-row-label">레인 수 보정</span>
+                                                <span class="help-row-value">위 다섯 지표를 합산한 뒤, 4키를 기준으로 레인이 늘어날수록(5·6·7·8키) 별점이 한 단계 더 상향 보정됩니다.</span>
+                                            </div>
+                                            <div class="help-row">
+                                                <span class="help-row-label">표시</span>
+                                                <span class="help-row-value">0.00 ~ 10.00 사이 값을 소수점 둘째 자리까지 정확하게 표시합니다. (예: ★ 7.42) 값에 따라 배지 색이 파랑(쉬움)→초록→금색→주황→빨강(매우 어려움)으로 바뀝니다.</span>
+                                            </div>
+                                        </div>
+                                        <p class="help-tip">💡 카드에 함께 보이는 평균 정확도·클리어율 등은 별점과 무관한 <strong>참고용 플레이 통계</strong>입니다. "이 채보, 별점 대비 다들 잘 못 깨네" 같은 식으로 참고만 해주세요.</p>
                                     </div>
                                 </details>
 
-                                <!-- 섹션 4: 게임 모드 -->
+                                <!-- 섹션 4: 온라인 기능 (구 8번, 중요도 높아 앞으로 이동) -->
+                                <details class="help-card">
+                                    <summary class="help-card-header">
+                                        <span class="help-card-icon">🌐</span>
+                                        <span class="help-card-title">온라인 기능</span>
+                                        <svg class="help-card-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                                    </summary>
+                                    <div class="help-card-body">
+                                        <div class="help-rows">
+                                            <div class="help-row">
+                                                <span class="help-row-label">회원가입 / 로그인</span>
+                                                <span class="help-row-value">우측 상단 계정 아이콘을 누르면 로그인 전엔 <strong>로그인 / 홈페이지</strong>, 로그인 후엔 <strong>계정 설정 / 홈페이지 / 로그아웃</strong> 메뉴가 뜹니다.</span>
+                                            </div>
+                                            <div class="help-row">
+                                                <span class="help-row-label">알림함</span>
+                                                <span class="help-row-value">계정 아이콘 옆 봉투 아이콘 — 공동 작업 초대 등 개인 알림을 확인합니다. 안 읽은 알림은 빨간 배지로 표시되며, 초대 카드에서 곡 제목·아티스트·초대한 사람(소유자)을 확인한 뒤 수락/거절할 수 있습니다.</span>
+                                            </div>
+                                            <div class="help-row">
+                                                <span class="help-row-label">라이브러리 탐색</span>
+                                                <span class="help-row-value">플레이 버튼에서 다른 유저가 공유한 차트를 검색하고 바로 플레이할 수 있습니다.</span>
+                                            </div>
+                                            <div class="help-row">
+                                                <span class="help-row-label">리더보드</span>
+                                                <span class="help-row-value">온라인 차트 클리어 시 점수가 자동으로 기록되며, 차트별 리더보드에서 순위를 확인할 수 있습니다.</span>
+                                            </div>
+                                            <div class="help-row">
+                                                <span class="help-row-label">좋아요</span>
+                                                <span class="help-row-value">난이도 상세 화면의 <span style="color:#f472b6;">♥</span> 버튼으로 좋아요를 남길 수 있습니다. 다시 누르면 취소되며, 로그인해야 사용할 수 있습니다.</span>
+                                            </div>
+                                            <div class="help-row">
+                                                <span class="help-row-label">차트 업로드</span>
+                                                <span class="help-row-value">에디터에서 제작한 차트를 업로드해 다른 유저와 공유할 수 있습니다. 업로드 후 수정도 가능합니다.</span>
+                                            </div>
+                                            <div class="help-row">
+                                                <span class="help-row-label">닉네임 설정</span>
+                                                <span class="help-row-value">계정 아이콘 → 계정 설정에서 리더보드에 표시될 닉네임을 설정합니다.</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </details>
+
+                                <!-- 섹션 5: 게임 모드 (이름 개편: 싱글플레이 / 멀티플레이 / 연습) -->
                                 <details class="help-card">
                                     <summary class="help-card-header">
                                         <span class="help-card-icon">🕹️</span>
@@ -906,19 +988,42 @@
                                     <div class="help-card-body">
                                         <div class="help-mode-grid">
                                             <div class="help-mode-item">
+                                                <div class="help-mode-icon">🌐</div>
+                                                <div class="help-mode-name">싱글플레이</div>
+                                                <div class="help-mode-desc">온라인 라이브러리에서 다른 사람이 업로드한 차트를 검색해 바로 플레이하거나 리더보드를 확인합니다.</div>
+                                            </div>
+                                            <div class="help-mode-item">
+                                                <div class="help-mode-icon">🎮</div>
+                                                <div class="help-mode-name">멀티플레이 (BETA)</div>
+                                                <div class="help-mode-desc">방을 만들거나 코드로 참가해 다른 유저와 실시간으로 함께 플레이합니다.</div>
+                                            </div>
+                                            <div class="help-mode-item">
                                                 <div class="help-mode-icon">🎲</div>
-                                                <div class="help-mode-name">랜덤 모드</div>
+                                                <div class="help-mode-name">연습</div>
                                                 <div class="help-mode-desc">노트가 자동 생성됩니다. 난이도와 레인 수, 세부 파라미터를 원하는 대로 설정하세요.</div>
                                             </div>
-                                            <div class="help-mode-item">
-                                                <div class="help-mode-icon">🎼</div>
-                                                <div class="help-mode-name">뮤직 모드</div>
-                                                <div class="help-mode-desc">직접 만든 차트(JSON)와 음악 파일을 불러와 정확한 박자에 맞춰 플레이합니다.</div>
+                                        </div>
+                                        <div class="help-editor-section-label" style="margin-top:10px;">멀티플레이 세부</div>
+                                        <div class="help-rows">
+                                            <div class="help-row">
+                                                <span class="help-row-label">참가</span>
+                                                <span class="help-row-value">방을 새로 만들거나, 초대 코드를 입력해 참가합니다.</span>
                                             </div>
-                                            <div class="help-mode-item">
-                                                <div class="help-mode-icon">🌐</div>
-                                                <div class="help-mode-name">온라인 라이브러리</div>
-                                                <div class="help-mode-desc">다른 사람이 업로드한 차트를 검색하고 바로 플레이하거나 리더보드를 확인합니다.</div>
+                                            <div class="help-row">
+                                                <span class="help-row-label">동시 시작</span>
+                                                <span class="help-row-value">대기실에서 전원이 준비 완료하면 호스트가 시작하며, 자동으로 싱크를 맞춥니다.</span>
+                                            </div>
+                                            <div class="help-row">
+                                                <span class="help-row-label">관전</span>
+                                                <span class="help-row-value">플레이 중 상대방의 점수·콤보를 실시간으로 확인할 수 있습니다.</span>
+                                            </div>
+                                            <div class="help-row">
+                                                <span class="help-row-label">연속 플레이</span>
+                                                <span class="help-row-value">한 방에서 여러 채보를 큐에 담아 이어서 플레이할 수 있습니다.</span>
+                                            </div>
+                                            <div class="help-row">
+                                                <span class="help-row-label">재시작</span>
+                                                <span class="help-row-value">결과 화면에서 전원이 동의하면 같은 채보를 다시 플레이할 수 있습니다.</span>
                                             </div>
                                         </div>
                                         <div class="help-rows" style="margin-top:10px;">
@@ -927,22 +1032,22 @@
                                                 <span class="help-row-value">4 ~ 8레인 선택 가능. 레인이 많을수록 더 넓은 손가락 운용이 필요합니다.</span>
                                             </div>
                                             <div class="help-row">
-                                                <span class="help-row-label">난이도 (랜덤)</span>
+                                                <span class="help-row-label">난이도 (연습)</span>
                                                 <span class="help-row-value">쉬움 / 보통 / 어려움 선택 후 세부 설정으로 속도·확률을 직접 미세 조정할 수 있습니다.</span>
                                             </div>
                                         </div>
                                     </div>
                                 </details>
 
-                                <!-- 섹션 5: 난이도 세부 설정 -->
+                                <!-- 섹션 6: 연습 세부 설정 (구 "난이도 세부 설정") -->
                                 <details class="help-card">
                                     <summary class="help-card-header">
                                         <span class="help-card-icon">⚙️</span>
-                                        <span class="help-card-title">난이도 세부 설정</span>
+                                        <span class="help-card-title">연습 세부 설정</span>
                                         <svg class="help-card-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
                                     </summary>
                                     <div class="help-card-body">
-                                        <p class="help-desc">랜덤 모드에서 세부 설정 패널을 열어 각 파라미터를 개별 조절할 수 있습니다.</p>
+                                        <p class="help-desc">연습 모드에서 세부 설정 패널을 열어 각 파라미터를 개별 조절할 수 있습니다.</p>
                                         <div class="help-rows">
                                             <div class="help-row">
                                                 <span class="help-row-label">낙하 속도</span>
@@ -973,7 +1078,7 @@
                                     </div>
                                 </details>
 
-                                <!-- 섹션 6: 차트 에디터 -->
+                                <!-- 섹션 7: 차트 에디터 -->
                                 <details class="help-card">
                                     <summary class="help-card-header">
                                         <span class="help-card-icon">✏️</span>
@@ -1057,92 +1162,7 @@
                                     </div>
                                 </details>
 
-                                <!-- 섹션 7: 별점 (산정 난이도) -->
-                                <details class="help-card">
-                                    <summary class="help-card-header">
-                                        <span class="help-card-icon">⭐</span>
-                                        <span class="help-card-title">별점 (산정 난이도)</span>
-                                        <svg class="help-card-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-                                    </summary>
-                                    <div class="help-card-body">
-                                        <p class="help-desc">각 난이도 옆의 별점은 <strong>채보 자체의 지표</strong>만으로 계산됩니다. 실제 플레이 정확도나 클리어율은 전혀 반영되지 않아, 유저 풀 구성(초보자/고수 비율)에 흔들리지 않고 업로드 즉시 확정됩니다.</p>
-                                        <div class="help-rows">
-                                            <div class="help-row">
-                                                <span class="help-row-label">계산 시점</span>
-                                                <span class="help-row-value">채보를 클라우드에 업로드하거나 노트/트리거를 수정해 다시 저장할 때 자동으로 계산되어 <strong>고정</strong>됩니다. 이후 아무리 플레이 기록이 쌓여도 별점은 바뀌지 않습니다.</span>
-                                            </div>
-                                            <div class="help-row">
-                                                <span class="help-row-label">노트 밀도 (35%)</span>
-                                                <span class="help-row-value">초당 처리해야 하는 노트 수(NPS). 별점에 가장 크게 반영되는 핵심 지표입니다.</span>
-                                            </div>
-                                            <div class="help-row">
-                                                <span class="help-row-label">노트 속도 (25%)</span>
-                                                <span class="help-row-value">채보에 설정된 낙하 속도. 반응할 수 있는 시간 여유를 결정합니다.</span>
-                                            </div>
-                                            <div class="help-row">
-                                                <span class="help-row-label">동시타 비율 (20%)</span>
-                                                <span class="help-row-value">여러 레인을 동시에 눌러야 하는 노트가 전체에서 차지하는 비중.</span>
-                                            </div>
-                                            <div class="help-row">
-                                                <span class="help-row-label">롱노트 비율 (10%)</span>
-                                                <span class="help-row-value">누른 채 유지해야 하는 롱노트가 차지하는 비중.</span>
-                                            </div>
-                                            <div class="help-row">
-                                                <span class="help-row-label">BPM (10%)</span>
-                                                <span class="help-row-value">곡의 빠르기. 노트 밀도와 상관이 높아 보정 성격으로 소폭만 반영됩니다.</span>
-                                            </div>
-                                            <div class="help-row">
-                                                <span class="help-row-label">레인 수 보정</span>
-                                                <span class="help-row-value">위 다섯 지표를 합산한 뒤, 4키를 기준으로 레인이 늘어날수록(5·6·7·8키) 별점이 한 단계 더 상향 보정됩니다.</span>
-                                            </div>
-                                            <div class="help-row">
-                                                <span class="help-row-label">표시</span>
-                                                <span class="help-row-value">0.00 ~ 10.00 사이 값을 소수점 둘째 자리까지 정확하게 표시합니다. (예: ★ 7.42) 값에 따라 배지 색이 파랑(쉬움)→초록→금색→주황→빨강(매우 어려움)으로 바뀝니다.</span>
-                                            </div>
-                                        </div>
-                                        <p class="help-tip">💡 카드에 함께 보이는 평균 정확도·클리어율 등은 별점과 무관한 <strong>참고용 플레이 통계</strong>입니다. "이 채보, 별점 대비 다들 잘 못 깨네" 같은 식으로 참고만 해주세요.</p>
-                                    </div>
-                                </details>
-
-                                <!-- 섹션 8: 온라인 기능 -->
-                                <details class="help-card">
-                                    <summary class="help-card-header">
-                                        <span class="help-card-icon">🌐</span>
-                                        <span class="help-card-title">온라인 기능</span>
-                                        <svg class="help-card-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-                                    </summary>
-
-                                    <div class="help-card-body">
-                                        <div class="help-rows">
-                                            <div class="help-row">
-                                                <span class="help-row-label">회원가입 / 로그인</span>
-                                                <span class="help-row-value">우측 상단 계정 아이콘을 눌러 이메일로 가입하거나 로그인합니다.</span>
-                                            </div>
-                                            <div class="help-row">
-                                                <span class="help-row-label">라이브러리 탐색</span>
-                                                <span class="help-row-value">온라인 버튼에서 다른 유저가 공유한 차트를 검색하고 바로 플레이할 수 있습니다.</span>
-                                            </div>
-                                            <div class="help-row">
-                                                <span class="help-row-label">리더보드</span>
-                                                <span class="help-row-value">온라인 차트 클리어 시 점수가 자동으로 기록되며, 차트별 리더보드에서 순위를 확인할 수 있습니다.</span>
-                                            </div>
-                                            <div class="help-row">
-                                                <span class="help-row-label">좋아요</span>
-                                                <span class="help-row-value">난이도 상세 화면의 <span style="color:#f472b6;">♥</span> 버튼으로 좋아요를 남길 수 있습니다. 다시 누르면 취소되며, 로그인해야 사용할 수 있습니다.</span>
-                                            </div>
-                                            <div class="help-row">
-                                                <span class="help-row-label">차트 업로드</span>
-                                                <span class="help-row-value">에디터에서 제작한 차트를 업로드해 다른 유저와 공유할 수 있습니다. 업로드 후 수정도 가능합니다.</span>
-                                            </div>
-                                            <div class="help-row">
-                                                <span class="help-row-label">닉네임 설정</span>
-                                                <span class="help-row-value">계정 아이콘 → 프로필에서 리더보드에 표시될 닉네임을 설정합니다.</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </details>
-
-                                <!-- 섹션 9: 문의 -->
+                                <!-- 섹션 8: 문의 -->
                                 <div class="help-contact">
                                     <span>💬</span>
                                     <span>버그 리포트 및 기타 문의는 디스코드 서버 또는 개인 DM으로 연락 바랍니다.</span>
