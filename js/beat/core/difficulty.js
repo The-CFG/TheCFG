@@ -230,7 +230,7 @@ const Difficulty = {
         const laneCount =
             typeof chartData.laneCount === 'number' && chartData.laneCount > 0
                 ? chartData.laneCount
-                : Math.max(this.DEFAULT_LANE_COUNT, ...validNotes.map(n => (typeof n.lane === 'number' ? n.lane + 1 : 0)));
+                : validNotes.reduce((m, n) => Math.max(m, typeof n.lane === 'number' ? n.lane + 1 : 0), this.DEFAULT_LANE_COUNT);
 
         // 1) 레인별/전체 스트레인 궤적 계산
         const hitObjects = this._buildHitObjects(notes, laneCount);
@@ -250,7 +250,7 @@ const Difficulty = {
         let score = Math.max(0, starRating * 10); // toRating()과 대칭되도록 *10, 상한은 두지 않음
 
         // 4) fallSpeed 보정 (타이밍 기반 스트레인이 못 잡는 "시각적 여유" 축)
-        const lastTimeMs = Math.max(...notes.map(n => n.time || 0), 0);
+        const lastTimeMs = notes.reduce((m, n) => Math.max(m, n.time || 0), 0);
         const baseFallSpeed =
             typeof chartData.fallSpeed === 'number'
                 ? chartData.fallSpeed

@@ -1077,50 +1077,54 @@ const Game = {
     },
 
     handleInputUp(laneIndex, isTouch = false) {
-        this.state.activeLanes[laneIndex] = false;
-        const laneEl = DOM.lanesContainer.children[laneIndex];
-        if (laneEl) laneEl.classList.remove('active-feedback');
+        try {
+            this.state.activeLanes[laneIndex] = false;
+            const laneEl = DOM.lanesContainer.children[laneIndex];
+            if (laneEl) laneEl.classList.remove('active-feedback');
 
-        if (this.state.gameState !== 'playing') return;
+            if (this.state.gameState !== 'playing') return;
 
-        const offsetMs = this.getInputOffsetMs(isTouch);
-        let elapsedTime;
-        if (this.state.settings.mode === 'music') {
-            elapsedTime = Math.max(0, (DOM.musicPlayer.currentTime - this.state.settings.startTimeOffset) * 1000 - offsetMs);
-        } else {
-            elapsedTime = performance.now() - this.state.gameStartTime - this.state.totalPausedTime - offsetMs;
-        }
+            const offsetMs = this.getInputOffsetMs(isTouch);
+            let elapsedTime;
+            if (this.state.settings.mode === 'music') {
+                elapsedTime = Math.max(0, (DOM.musicPlayer.currentTime - this.state.settings.startTimeOffset) * 1000 - offsetMs);
+            } else {
+                elapsedTime = performance.now() - this.state.gameStartTime - this.state.totalPausedTime - offsetMs;
+            }
 
-        const isCircleMode = document.body.classList.contains('circle-notes');
-        const noteSize = isCircleMode ? 90 : 25;
-        const extraWindow = isCircleMode ? (noteSize / 2) * (10 / this.state.settings.noteSpeed) : 0;
-        const judgementWindow = {
-            perfect: CONFIG.JUDGEMENT_WINDOWS_MS.perfect + extraWindow,
-            good: CONFIG.JUDGEMENT_WINDOWS_MS.good + extraWindow,
-            bad: CONFIG.JUDGEMENT_WINDOWS_MS.bad + extraWindow,
-            miss: CONFIG.JUDGEMENT_WINDOWS_MS.miss + extraWindow
-        };
+            const isCircleMode = document.body.classList.contains('circle-notes');
+            const noteSize = isCircleMode ? 90 : 25;
+            const extraWindow = isCircleMode ? (noteSize / 2) * (10 / this.state.settings.noteSpeed) : 0;
+            const judgementWindow = {
+                perfect: CONFIG.JUDGEMENT_WINDOWS_MS.perfect + extraWindow,
+                good: CONFIG.JUDGEMENT_WINDOWS_MS.good + extraWindow,
+                bad: CONFIG.JUDGEMENT_WINDOWS_MS.bad + extraWindow,
+                miss: CONFIG.JUDGEMENT_WINDOWS_MS.miss + extraWindow
+            };
 
-        let bestMatch = null;
-        let smallestDiff = Infinity;
-        let bestSignedDiff = 0;
-        for (let i = this.state.unprocessedNoteIndex; i < this.state.notes.length; i++) {
-            const note = this.state.notes[i];
-            if (note.time - elapsedTime > judgementWindow.miss) break;
-            if (!note.processed && note.lane === laneIndex && note.type === 'long_tail' && note.headProcessed) {
-                const rawDiff = note.time - elapsedTime;
-                const timeDiff = Math.abs(rawDiff);
-                if (timeDiff <= judgementWindow.miss && timeDiff < smallestDiff) {
-                    smallestDiff = timeDiff;
-                    bestSignedDiff = rawDiff;
-                    bestMatch = note;
+            let bestMatch = null;
+            let smallestDiff = Infinity;
+            let bestSignedDiff = 0;
+            for (let i = this.state.unprocessedNoteIndex; i < this.state.notes.length; i++) {
+                const note = this.state.notes[i];
+                if (note.time - elapsedTime > judgementWindow.miss) break;
+                if (!note.processed && note.lane === laneIndex && note.type === 'long_tail' && note.headProcessed) {
+                    const rawDiff = note.time - elapsedTime;
+                    const timeDiff = Math.abs(rawDiff);
+                    if (timeDiff <= judgementWindow.miss && timeDiff < smallestDiff) {
+                        smallestDiff = timeDiff;
+                        bestSignedDiff = rawDiff;
+                        bestMatch = note;
+                    }
                 }
             }
-        }
-        if (bestMatch) {
-            if (smallestDiff <= judgementWindow.perfect) this.handleJudgement('perfect', bestMatch, bestSignedDiff);
-            else if (smallestDiff <= judgementWindow.good) this.handleJudgement('good', bestMatch, bestSignedDiff);
-            else if (smallestDiff <= judgementWindow.bad) this.handleJudgement('bad', bestMatch, bestSignedDiff);
+            if (bestMatch) {
+                if (smallestDiff <= judgementWindow.perfect) this.handleJudgement('perfect', bestMatch, bestSignedDiff);
+                else if (smallestDiff <= judgementWindow.good) this.handleJudgement('good', bestMatch, bestSignedDiff);
+                else if (smallestDiff <= judgementWindow.bad) this.handleJudgement('bad', bestMatch, bestSignedDiff);
+            }
+        } catch (err) {
+            Debugger.logError(err, 'Game.handleInputUp');
         }
     },
 

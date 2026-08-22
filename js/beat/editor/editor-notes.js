@@ -227,7 +227,7 @@ Object.assign(Editor, {
             // clamp하면 하한에 걸리는 노트들이 전부 같은 값으로 끌려가 뭉쳐버린다 —
             // 여기서는 delta를 제한해서 선택된 노트들 사이의 간격(상대 위치)을 그대로 유지한다.
             const minAllowedMs = this._minAllowedRelativeTimeMs();
-            const earliestOriginalTime = Math.min(...originals.map(o => o.time));
+            const earliestOriginalTime = originals.reduce((m, o) => Math.min(m, o.time), Infinity);
             deltaMs = Math.max(deltaMs, minAllowedMs - earliestOriginalTime);
 
             let deltaLaneIndex = 0;
@@ -349,7 +349,7 @@ Object.assign(Editor, {
             const playheadTop = parseFloat(DOM.editor.playhead.style.top) || 0;
             const targetTimeMs = this._yToSnappedRelativeTimeMs(playheadTop);
 
-            const anchorTime = Math.min(...this.state.clipboardNotes.map(n => n.time));
+            const anchorTime = this.state.clipboardNotes.reduce((m, n) => Math.min(m, n.time), Infinity);
             const deltaMs = targetTimeMs - anchorTime;
 
             const newNotes = this.state.clipboardNotes.map(note => {

@@ -83,7 +83,9 @@ Object.assign(Editor, {
             });
             let maxMeasure = 0;
             if (this.state.notes.length > 0) {
-                maxMeasure = Math.max(...this.state.notes.map(n => n.measure));
+                // Math.max(...array) 스프레드는 배열이 아주 크면(osu 변환기로 불러온 초대형
+                // 마라톤 맵 등) 콜스택 한도를 넘어 RangeError를 던질 수 있어 reduce로 바꿈.
+                maxMeasure = this.state.notes.reduce((m, n) => Math.max(m, n.measure), 0);
             }
             this.state.totalMeasures = maxMeasure + 5;
             // 이 파일에 startTimeOffset이 있으면 마이그레이션 기본값으로 채택한다.
@@ -299,7 +301,7 @@ Object.assign(Editor, {
             });
             let maxMeasure = 0;
             if (this.state.notes.length > 0) {
-                maxMeasure = Math.max(...this.state.notes.map(n => n.measure));
+                maxMeasure = this.state.notes.reduce((m, n) => Math.max(m, n.measure), 0);
             }
             this.state.totalMeasures = maxMeasure + 5;
 
