@@ -77,6 +77,8 @@ const DOM = {
     finalAccuracyEl: document.getElementById('final-accuracy'),
     finalMaxComboEl: document.getElementById('final-max-combo'),
     finalEarlyLateEl: document.getElementById('final-early-late'),
+    finalTimingGraphContainerEl: document.getElementById('final-timing-graph-container'),
+    finalTimingGraphCanvasEl: document.getElementById('final-timing-graph'),
     editor: {
         container: document.getElementById('editor-container'),
         seekGutter: document.getElementById('editor-seek-gutter'),

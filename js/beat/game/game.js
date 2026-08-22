@@ -423,6 +423,8 @@ const Game = {
         // 부호 있는 시간차(note.time - elapsedTime)를 집계한다. 자동 MISS(입력 없음)는 타이밍
         // 정보가 없으므로 제외.
         this.state.earlyLateStats = { early: 0, late: 0 };
+        // 판정 타이밍 분포 그래프용 — 실제 입력 판정(perfect/good/bad)의 signedDiffMs를 발생 순서대로 누적.
+        this.state.timingHits = [];
         // 레인별 미스율 집계 — { [laneIndex]: { total, miss } }. 판정이 실제로 일어난 레인만 채워진다.
         this.state.laneStats = {};
         this.state.processedNotes = 0;
@@ -930,6 +932,7 @@ const Game = {
         if (typeof signedDiffMs === 'number' && judgement !== 'miss' && note.type !== 'false') {
             if (signedDiffMs > 0) this.state.earlyLateStats.early++;
             else if (signedDiffMs < 0) this.state.earlyLateStats.late++;
+            this.state.timingHits.push(signedDiffMs);
         }
         // long_head + perfect/good/bad(=miss가 아닌 모든 판정): shrinking 수축 애니메이션 → updateNotes가 _visible 관리
         // miss만 즉시 숨김

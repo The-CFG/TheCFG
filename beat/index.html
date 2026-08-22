@@ -1225,6 +1225,16 @@
                         <!-- 온라인 점수 제출 결과 -->
                         <p id="online-score-result" class="hidden text-sm mt-2"></p>
                     </div>
+                    <!-- 판정 타이밍 분포 그래프(osu 스타일): 노랑(BAD)-파랑(GOOD)-보라(PERFECT)-파랑(GOOD)-노랑(BAD)
+                         구간을 배경으로 깔고, 각 판정마다 빠름(왼쪽)~느림(오른쪽) 위치에 세로선을 찍는다. -->
+                    <div id="final-timing-graph-container" class="hidden w-full mt-4 bg-gray-800 rounded-lg p-4 text-left">
+                        <p class="text-sm font-semibold text-gray-300 mb-2" data-i18n="timing_distribution">타이밍 분포</p>
+                        <canvas id="final-timing-graph" class="w-full block" height="56"></canvas>
+                        <div class="flex justify-between text-xs text-gray-400 mt-1">
+                            <span data-i18n="early">빠름</span>
+                            <span data-i18n="late">느림</span>
+                        </div>
+                    </div>
                     <!-- 레인별 미스율 미니 바 차트 -->
                     <div id="final-lane-stats" class="hidden w-full mt-4 bg-gray-800 rounded-lg p-4 text-left"></div>
                     <!-- 최근 5회 연습 세션 추이 (연습 모드에서만 표시 — 연습모드-개선계획.md 2번) -->

@@ -218,8 +218,92 @@ const UI = {
             }
         }
 
+        // 판정 타이밍 분포 그래프
+        this.renderTimingGraph();
+
         // 레인별 미스율 미니 바 차트
         this.renderLaneMissStats();
+    },
+    // Game.state.timingHits(판정 발생 순서대로 쌓인 signedDiffMs 배열)를 osu 스타일 타이밍 분포
+    // 그래프로 그린다. signedDiffMs는 양수=빠름(early), 음수=느림(late)이므로 화면 좌표는
+    // -signedDiffMs를 써서 왼쪽=빠름, 오른쪽=느림이 되도록 뒤집는다.
+    // 배경 구간(왼쪽→오른쪽): 노랑(BAD) - 파랑(GOOD) - 보라(PERFECT) - 파랑(GOOD) - 노랑(BAD),
+    // 각 구간 폭은 CONFIG.JUDGEMENT_WINDOWS_MS(perfect/good/bad)를 그대로 반영한다.
+    renderTimingGraph() {
+        const container = DOM.finalTimingGraphContainerEl;
+        const canvas = DOM.finalTimingGraphCanvasEl;
+        if (!container || !canvas) return;
+
+        const hits = Game.state.timingHits || [];
+        if (hits.length === 0) {
+            container.classList.add('hidden');
+            return;
+        }
+        container.classList.remove('hidden');
+
+        const windows = CONFIG.JUDGEMENT_WINDOWS_MS;
+        const half = windows.bad; // 전체 축 범위: -half ~ +half(ms)
+
+        // 캔버스 해상도를 실제 표시 크기 × devicePixelRatio에 맞춰 선명하게 그린다.
+        const dpr = window.devicePixelRatio || 1;
+        const cssWidth = canvas.clientWidth || container.clientWidth || 300;
+        const cssHeight = canvas.height || 56;
+        canvas.width = Math.max(1, Math.round(cssWidth * dpr));
+        canvas.height = Math.max(1, Math.round(cssHeight * dpr));
+        canvas.style.width = '100%';
+        canvas.style.height = cssHeight + 'px';
+
+        const ctx = canvas.getContext('2d');
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, cssWidth, cssHeight);
+
+        // ms 값(-half ~ +half) → x좌표(px) 변환
+        const msToX = (ms) => ((ms + half) / (half * 2)) * cssWidth;
+
+        // 배경 구간: 노랑-파랑-보라-파랑-노랑
+        const COLOR_BAD = '#eab308';
+        const COLOR_GOOD = '#3b82f6';
+        const COLOR_PERFECT = '#a855f7';
+        const bands = [
+            { from: -half, to: -windows.good, color: COLOR_BAD },
+            { from: -windows.good, to: -windows.perfect, color: COLOR_GOOD },
+            { from: -windows.perfect, to: windows.perfect, color: COLOR_PERFECT },
+            { from: windows.perfect, to: windows.good, color: COLOR_GOOD },
+            { from: windows.good, to: half, color: COLOR_BAD }
+        ];
+        bands.forEach(band => {
+            const x1 = msToX(band.from);
+            const x2 = msToX(band.to);
+            ctx.fillStyle = band.color;
+            ctx.globalAlpha = 0.55;
+            ctx.fillRect(x1, 0, Math.max(1, x2 - x1), cssHeight);
+        });
+
+        // 0ms 기준선(밝게)
+        ctx.globalAlpha = 0.9;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1;
+        const zeroX = msToX(0);
+        ctx.beginPath();
+        ctx.moveTo(zeroX + 0.5, 0);
+        ctx.lineTo(zeroX + 0.5, cssHeight);
+        ctx.stroke();
+
+        // 각 판정 타이밍 세로선 — 겹칠수록 밝아지도록 additive 블렌딩 사용
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.strokeStyle = '#ffffff';
+        ctx.globalAlpha = 0.45;
+        ctx.lineWidth = 1.5;
+        hits.forEach(signedDiffMs => {
+            const displayMs = Math.max(-half, Math.min(half, -signedDiffMs));
+            const x = msToX(displayMs);
+            ctx.beginPath();
+            ctx.moveTo(x, 2);
+            ctx.lineTo(x, cssHeight - 2);
+            ctx.stroke();
+        });
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.globalAlpha = 1;
     },
     // Game.state.laneStats({ [lane]: {total, miss} })를 레인 순서대로 미니 바 차트로 그린다.
     // 판정 UI에서만 쓰는 결과 화면 전용 렌더러 — 레인 수는 settings.lanes 기준으로 처음부터 끝까지 채운다
