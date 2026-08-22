@@ -469,6 +469,10 @@ const Editor = {
             this.seekToClientY(clientY);
 
             const onMove = (moveEvt) => {
+                // touchmove를 non-passive로 등록해놓고 정작 preventDefault를 안 부르고
+                // 있었음 — 세로로 드래그하면 시크바 조작과 동시에 페이지 스크롤도
+                // 같이 일어날 수 있었던 버그. 여기서 막아야 의도대로 시크만 된다.
+                if (moveEvt.cancelable) moveEvt.preventDefault();
                 const y = moveEvt.touches ? moveEvt.touches[0].clientY : moveEvt.clientY;
                 this.seekToClientY(y);
             };
@@ -482,7 +486,7 @@ const Editor = {
             document.addEventListener('mousemove', onMove);
             document.addEventListener('mouseup', onUp);
             document.addEventListener('touchmove', onMove, { passive: false });
-            document.addEventListener('touchend', onUp);
+            document.addEventListener('touchend', onUp, { passive: true });
         } catch (err) {
             Debugger.logError(err, 'Editor.handleSeekPointerDown');
         }

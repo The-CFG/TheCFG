@@ -49,8 +49,8 @@ const Debugger = {
         this.boundDragEnd = () => this.dragEnd();
         window.addEventListener('mousemove', this.boundDragMove);
         window.addEventListener('mouseup', this.boundDragEnd);
-        window.addEventListener('touchmove', this.boundDragMove);
-        window.addEventListener('touchend', this.boundDragEnd);
+        window.addEventListener('touchmove', this.boundDragMove, { passive: true });
+        window.addEventListener('touchend', this.boundDragEnd, { passive: true });
         e.preventDefault();
     },
 

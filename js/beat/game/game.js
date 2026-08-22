@@ -1138,11 +1138,17 @@ const Game = {
             DOM.settings.iconPlaying.classList.remove('hidden');
             // 자동 숨김 설정과 무관하게, 일시정지 중에는 우측 패널을 잠깐 다시 보여준다.
             UI.setPanelCollapsed(false);
+            // 모바일(1024px 이하)에서는 ui-area가 게임 중 기본적으로 숨겨져 있으므로,
+            // 일시정지되면 오버레이로 같이 띄워줘야 실제로 메뉴가 보인다.
+            UI.setMobilePanelOpen(true);
         } else {
             DOM.pauseGameBtn.classList.remove('hidden');
             DOM.resumeGameBtn.classList.add('hidden');
             DOM.playingStatusLabel.textContent = '플레이 중';
             DOM.settings.iconPlaying.classList.add('hidden');
+            // 카운트다운이 게임 화면(game-area) 위에서 보이도록, 재개 누르는 즉시(카운트다운
+            // 끝나길 기다리지 않고) 모바일 오버레이부터 닫는다.
+            UI.setMobilePanelOpen(false);
             this.runCountdown(() => {
                 this.state.totalPausedTime += performance.now() - this.state.pauseStartTime;
                 if (this.state.settings.mode === 'music') DOM.musicPlayer.play();
@@ -1195,8 +1201,10 @@ const Game = {
             lane.addEventListener('mousedown',  (e) => { e.preventDefault(); this.handleInputDown(i, false); });
             lane.addEventListener('mouseup',    (e) => { e.preventDefault(); this.handleInputUp(i, false); });
             lane.addEventListener('mouseleave', (e) => { if (this.state.activeLanes[i]) this.handleInputUp(i, false); });
-            lane.addEventListener('touchstart', (e) => { e.preventDefault(); this.handleInputDown(i, true); });
-            lane.addEventListener('touchend',   (e) => { e.preventDefault(); this.handleInputUp(i, true); });
+            // 터치 입력은 preventDefault로 스크롤/확대 등 브라우저 기본 동작을 실제로
+            // 막아야 하므로 passive:false를 명시한다(안 그러면 판정 씹힘/오탭 유발).
+            lane.addEventListener('touchstart', (e) => { e.preventDefault(); this.handleInputDown(i, true); }, { passive: false });
+            lane.addEventListener('touchend',   (e) => { e.preventDefault(); this.handleInputUp(i, true); }, { passive: false });
             DOM.lanesContainer.appendChild(lane);
         }
     },
