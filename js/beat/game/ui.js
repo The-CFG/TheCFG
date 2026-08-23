@@ -247,7 +247,7 @@ const UI = {
         // 캔버스 해상도를 실제 표시 크기 × devicePixelRatio에 맞춰 선명하게 그린다.
         const dpr = window.devicePixelRatio || 1;
         const cssWidth = canvas.clientWidth || container.clientWidth || 300;
-        const cssHeight = canvas.height || 56;
+        const cssHeight = 72;
         canvas.width = Math.max(1, Math.round(cssWidth * dpr));
         canvas.height = Math.max(1, Math.round(cssHeight * dpr));
         canvas.style.width = '100%';
@@ -271,38 +271,67 @@ const UI = {
             { from: windows.perfect, to: windows.good, color: COLOR_GOOD },
             { from: windows.good, to: half, color: COLOR_BAD }
         ];
+        // 배경은 살짝 어둡게 눌러서(0.55→0.4) 그 위에 찍히는 판정선이 더 도드라지게 한다.
         bands.forEach(band => {
             const x1 = msToX(band.from);
             const x2 = msToX(band.to);
             ctx.fillStyle = band.color;
-            ctx.globalAlpha = 0.55;
+            ctx.globalAlpha = 0.4;
             ctx.fillRect(x1, 0, Math.max(1, x2 - x1), cssHeight);
         });
 
-        // 0ms 기준선(밝게)
-        ctx.globalAlpha = 0.9;
+        // 구간 경계선(±perfect, ±good) — 옅은 흰 점선으로 표시해 판정 기준을 눈으로 바로 확인 가능하게
+        ctx.globalAlpha = 0.35;
         ctx.strokeStyle = '#ffffff';
         ctx.lineWidth = 1;
+        ctx.setLineDash([2, 3]);
+        [-windows.good, -windows.perfect, windows.perfect, windows.good].forEach(ms => {
+            const x = msToX(ms);
+            ctx.beginPath();
+            ctx.moveTo(x + 0.5, 0);
+            ctx.lineTo(x + 0.5, cssHeight);
+            ctx.stroke();
+        });
+        ctx.setLineDash([]);
+
+        // 0ms 기준선(밝게, 실선)
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.5;
         const zeroX = msToX(0);
         ctx.beginPath();
         ctx.moveTo(zeroX + 0.5, 0);
         ctx.lineTo(zeroX + 0.5, cssHeight);
         ctx.stroke();
 
-        // 각 판정 타이밍 세로선 — 겹칠수록 밝아지도록 additive 블렌딩 사용
-        ctx.globalCompositeOperation = 'lighter';
-        ctx.strokeStyle = '#ffffff';
-        ctx.globalAlpha = 0.45;
-        ctx.lineWidth = 1.5;
-        hits.forEach(signedDiffMs => {
+        // 각 판정 타이밍 세로선 — 흰색 halo(굵고 옅게) + 짙은 남색 core(가늘고 진하게) 2겹으로 그려서
+        // 배경이 노랑이든 파랑이든 보라든 항상 도드라지게 한다. 겹칠수록 core가 진해져 밀집도도 보인다.
+        const tickXs = hits.map(signedDiffMs => {
             const displayMs = Math.max(-half, Math.min(half, -signedDiffMs));
-            const x = msToX(displayMs);
+            return msToX(displayMs);
+        });
+
+        ctx.lineCap = 'round';
+        ctx.globalAlpha = 0.3;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 3.5;
+        tickXs.forEach(x => {
             ctx.beginPath();
-            ctx.moveTo(x, 2);
-            ctx.lineTo(x, cssHeight - 2);
+            ctx.moveTo(x, 3);
+            ctx.lineTo(x, cssHeight - 3);
             ctx.stroke();
         });
-        ctx.globalCompositeOperation = 'source-over';
+
+        ctx.globalAlpha = 0.75;
+        ctx.strokeStyle = '#0f172a';
+        ctx.lineWidth = 1.5;
+        tickXs.forEach(x => {
+            ctx.beginPath();
+            ctx.moveTo(x, 4);
+            ctx.lineTo(x, cssHeight - 4);
+            ctx.stroke();
+        });
+
         ctx.globalAlpha = 1;
     },
     // Game.state.laneStats({ [lane]: {total, miss} })를 레인 순서대로 미니 바 차트로 그린다.
