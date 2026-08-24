@@ -29,7 +29,7 @@ const SongPreview = {
 
     // ── 오디오만 미리듣기 (난이도 선택 = 노래 상세 화면) ────────────────────
     async playAudio(audioUrl, previewStartMs = 0) {
-        this.stop();
+        this._resetPlayback();
         if (!audioUrl) return;
         const token = ++this._loadToken;
         try { await AudioEngine.resumeContext(); } catch (e) { /* 제스처 없이 호출된 경우 무시 */ }
@@ -48,7 +48,7 @@ const SongPreview = {
     // ── 오디오 + 좌측 게임 화면 노트 낙하 미리보기 (플레이 전 = 난이도 상세 화면) ──
     // opts: { chartData: {bpm, laneCount, notes, triggers}, audioUrl, previewStartMs, laneCount }
     async start(opts) {
-        this.stop();
+        this._resetPlayback();
         const token = ++this._loadToken;
         const { chartData, audioUrl, previewStartMs = 0 } = opts || {};
         const laneCount = (opts && opts.laneCount) || chartData?.laneCount || 4;
@@ -186,7 +186,14 @@ const SongPreview = {
         try { DOM.musicPlayer.pause(); } catch (e) { /* 무시 */ }
     },
 
-    stop() {
+    // 오디오/애니메이션/게임 화면 정리만 담당 — 로딩 오버레이는 건드리지 않는다.
+    // start()/playAudio()가 매번 첫 줄에서 "이전 재생을 리셋"하는 용도로 이걸 쓴다.
+    // (예전엔 이 리셋을 공개 stop()으로 했는데, stop()이 'preview' 로딩 오버레이를
+    // 같이 꺼버려서, 새 미리보기를 시작하자마자 — 실제 오디오를 아직 받아오지도
+    // 않았는데 — 오버레이가 바로 사라지고 몇 초 뒤에야 진짜 재생/노트가 나타나는
+    // 문제가 있었다. "재생을 리셋하는 것"과 "미리듣기 화면을 완전히 떠나는 것"은
+    // 다른 동작이므로 분리한다.)
+    _resetPlayback() {
         this._loadToken++; // 진행 중이던 playAudio()/start() 호출을 전부 무효화
         this._active = false;
         if (this._animId) {
@@ -201,8 +208,13 @@ const SongPreview = {
         this._noteMode = false;
         this._notes = [];
         this._triggers = [];
-        // 플레이 전 화면(_startDetailPreview)이 좌측 오버레이에 띄워둔 "미리보기 불러오는 중…"
-        // / "노래 미리듣기만 재생 중입니다" 표시도 미리듣기가 끝나는 시점에 항상 같이 정리한다.
+    },
+
+    // 온라인 화면을 완전히 벗어날 때 호출하는 공개 종료 함수. 재생 상태 정리는 물론,
+    // 플레이 전 화면(_startDetailPreview)이 좌측 오버레이에 띄워둔 "미리보기 불러오는
+    // 중…" / "노래 미리듣기만 재생 중입니다" 표시도 함께 정리한다.
+    stop() {
+        this._resetPlayback();
         UI.hideAreaLoading('preview');
     },
 };
