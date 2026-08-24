@@ -93,6 +93,11 @@
         <div id="game-area-loading" class="hidden absolute inset-0 flex flex-col items-center justify-center gap-3 text-white text-sm text-center px-4" style="z-index:4;background:rgba(0,0,0,0.45);">
             <span id="game-area-loading-spinner" class="inline-block w-8 h-8 border-2 border-teal-400 border-t-transparent rounded-full animate-spin flex-shrink-0"></span>
             <div id="game-area-loading-text"></div>
+            <!-- 여러 개가 동시에 로딩 중일 때, 무엇이 몇 개나 진행 중인지 바로 보이도록
+                 각 항목마다 라벨(좌상단)+진행률 바를 하나씩 쌓아서 보여준다.
+                 실제 진행률(byte 단위 등)을 모르는 대부분의 경우엔 계속 움직이는
+                 불확정(indeterminate) 바로 표시된다. (UI.showAreaLoading/_renderAreaLoading) -->
+            <div id="game-area-loading-bars" class="hidden game-area-progress-list"></div>
         </div>
         <!-- Canvas: 노트/판정선/레인 경계선 렌더링 전담 -->
         <div id="lanes-container" class="h-full flex relative" style="z-index:2;">

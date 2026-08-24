@@ -114,27 +114,75 @@ const UI = {
     // (예: 미리보기 로딩이 끝나고 "노래 미리듣기만 재생 중입니다" 같은 확정된 안내는
     // 아직도 뭔가 불러오는 중인 것처럼 보이면 안 되므로 스피너를 끈다.)
     // 여러 키가 동시에 떠 있으면, 그 중 하나라도 스피너를 원하면 스피너를 보여준다.
+    // opts.progress: { current, total }을 넘기면 그 비율만큼 채워진 확정 진행률 바를,
+    // 안 넘기면(대부분의 경우 — 다운로드 진행률을 알 수 없음) 계속 움직이는 불확정 진행률
+    // 바를 문구 아래 프로그레스 바 오버레이에 그린다. opts.label로 바 좌상단 라벨을 직접
+    // 지정할 수 있고, 안 주면 text에서 "~불러오는 중…" → "~불러오기" 식으로 자동 추출한다.
     showAreaLoading(key, text = '불러오는 중…', opts = {}) {
-        this._areaLoads[key] = { text, spinner: opts.spinner !== false };
+        this._areaLoads[key] = {
+            text,
+            spinner: opts.spinner !== false,
+            label: opts.label || this._deriveBarLabel(text),
+            progress: opts.progress || null,
+        };
+        this._renderAreaLoading();
+    },
+    // 텍스트/스피너/라벨은 그대로 둔 채 진행률만 갱신할 때 쓴다.
+    // (예: 파일을 여러 개 나눠 받아오면서 루프마다 현재 개수만 갱신)
+    updateAreaLoadingProgress(key, current, total) {
+        const entry = this._areaLoads[key];
+        if (!entry) return;
+        entry.progress = { current, total };
         this._renderAreaLoading();
     },
     hideAreaLoading(key) {
         delete this._areaLoads[key];
         this._renderAreaLoading();
     },
+    _deriveBarLabel(text) {
+        if (!text) return '';
+        const trimmed = text.replace(/[.…]+$/, '').trim();
+        if (trimmed.endsWith('불러오는 중')) return `${trimmed.slice(0, -'불러오는 중'.length).trim()} 불러오기`;
+        if (trimmed.endsWith('만드는 중')) return `${trimmed.slice(0, -'만드는 중'.length).trim()} 만들기`;
+        return trimmed;
+    },
     _renderAreaLoading() {
         const el = document.getElementById('game-area-loading');
         const spinnerEl = document.getElementById('game-area-loading-spinner');
         const textEl = document.getElementById('game-area-loading-text');
+        const barsEl = document.getElementById('game-area-loading-bars');
         if (!el || !textEl) return;
         const entries = Object.values(this._areaLoads);
         if (entries.length === 0) {
             el.classList.add('hidden');
             textEl.innerHTML = '';
+            if (barsEl) barsEl.innerHTML = '';
             return;
         }
         textEl.innerHTML = entries.map(e => `<div>${e.text}</div>`).join('');
         if (spinnerEl) spinnerEl.classList.toggle('hidden', !entries.some(e => e.spinner));
+        // 프로그레스 바는 실제로 "진행 중"인 항목(spinner가 켜진 항목)에만 그린다.
+        // 여러 개가 동시에 떠 있으면 각자 라벨을 단 바를 세로로 쌓아서 어떤 작업이
+        // 몇 개나 진행 중인지 한눈에 보이게 한다.
+        if (barsEl) {
+            const activeLoads = entries.filter(e => e.spinner);
+            barsEl.innerHTML = activeLoads.map(e => {
+                if (e.progress && e.progress.total > 0) {
+                    const pct = Math.max(0, Math.min(100, (e.progress.current / e.progress.total) * 100));
+                    return `
+                    <div class="game-area-progress-item">
+                        <div class="game-area-progress-label">${e.label}</div>
+                        <div class="game-area-progress-track"><div class="game-area-progress-fill" style="width:${pct}%"></div></div>
+                    </div>`;
+                }
+                return `
+                <div class="game-area-progress-item">
+                    <div class="game-area-progress-label">${e.label}</div>
+                    <div class="game-area-progress-track"><div class="game-area-progress-fill indeterminate"></div></div>
+                </div>`;
+            }).join('');
+            barsEl.classList.toggle('hidden', activeLoads.length === 0);
+        }
         el.classList.remove('hidden');
     },
     updateScoreboard() {

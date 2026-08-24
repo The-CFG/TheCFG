@@ -30,6 +30,47 @@ body {
 #game-area-loading-text > div + div {
     margin-top: 4px;
 }
+/* 문구 아래 진행률 바 오버레이 — 동시에 여러 개가 로딩 중이면 각각 라벨+바로 쌓인다. */
+.game-area-progress-list {
+    width: 100%;
+    max-width: 260px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.game-area-progress-label {
+    font-size: 11px;
+    color: #cbd5e0;
+    text-align: left;
+    margin-bottom: 3px;
+}
+.game-area-progress-track {
+    width: 100%;
+    height: 6px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.15);
+    overflow: hidden;
+}
+.game-area-progress-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: #2dd4bf;
+    transition: width 0.2s ease;
+}
+/* 실제 진행률을 알 수 없는 대부분의 로딩 — 바 안에서 하이라이트가 계속 왕복하며
+   "작업이 진행 중"임을 보여준다 (퍼센트 표시는 하지 않음). */
+.game-area-progress-fill.indeterminate {
+    width: 40%;
+    transition: none;
+    animation: tb-progress-indeterminate 1.2s ease-in-out infinite;
+}
+@keyframes tb-progress-indeterminate {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(350%); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .game-area-progress-fill.indeterminate { animation: none; }
+}
 #panel-toggle-btn {
     position: absolute;
     top: 50%;
