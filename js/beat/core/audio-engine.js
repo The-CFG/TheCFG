@@ -84,14 +84,6 @@ const AudioEngine = {
                 const res = await fetch(url);
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const total = Number(res.headers.get('content-length')) || 0;
-                // TODO(임시 진단용): 프로그레스 바가 실제 퍼센티지로 안 뜨는 문제 원인 파악 후 이 줄은 지운다.
-                console.log('[AudioEngine] content-length 진단:', {
-                    url,
-                    'raw content-length 헤더': res.headers.get('content-length'),
-                    total,
-                    'body.getReader 지원 여부': !!(res.body && res.body.getReader),
-                    'fromCache 추정(Network탭에서 확인)': '이 로그와 함께 Network 탭의 Status Code도 같이 확인해주세요',
-                });
                 if (total > 0 && res.body && res.body.getReader) {
                     // Content-Length를 알 때만 실제 퍼센티지 진행률을 계산할 수 있다 —
                     // 스트림을 직접 읽으며 받은 바이트 수를 누적하고 'progress' 이벤트로 알린다.
