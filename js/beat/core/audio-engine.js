@@ -28,6 +28,10 @@ const AudioEngine = {
     _loadToken: 0,
     _loadPromise: null,
     _listeners: {},
+    // 오디오 다운로드 진행률(바이트 단위). Content-Length를 알 수 없는 응답(압축 전송 등)이면
+    // total이 0으로 남아있고, 이 경우 호출부는 진행률 바 대신 불확정(움직이는) 바를 계속 쓰면 된다.
+    _downloadLoaded: 0,
+    _downloadTotal: 0,
 
     error: null,
     onloadedmetadata: null,
@@ -51,6 +55,11 @@ const AudioEngine = {
     get src() {
         return this._src;
     },
+    // 지금 진행 중인(혹은 마지막) 다운로드의 { loaded, total } 바이트 수.
+    // total이 0이면 서버가 Content-Length를 안 줬다는 뜻 — 실제 퍼센티지를 낼 수 없는 경우다.
+    get downloadProgress() {
+        return { loaded: this._downloadLoaded, total: this._downloadTotal };
+    },
     set src(url) {
         this._src = url || '';
         this._stopSourceNode();
@@ -59,6 +68,8 @@ const AudioEngine = {
         this._duration = 0;
         this._buffer = null;
         this.error = null;
+        this._downloadLoaded = 0;
+        this._downloadTotal = 0;
 
         if (!url) {
             this._loadPromise = null;
@@ -72,7 +83,37 @@ const AudioEngine = {
             try {
                 const res = await fetch(url);
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                arrayBuffer = await res.arrayBuffer();
+                const total = Number(res.headers.get('content-length')) || 0;
+                if (total > 0 && res.body && res.body.getReader) {
+                    // Content-Length를 알 때만 실제 퍼센티지 진행률을 계산할 수 있다 —
+                    // 스트림을 직접 읽으며 받은 바이트 수를 누적하고 'progress' 이벤트로 알린다.
+                    const reader = res.body.getReader();
+                    const chunks = [];
+                    let loaded = 0;
+                    let lastEmitAt = 0;
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (token !== this._loadToken) { reader.cancel().catch(() => {}); return; } // 그 사이 src가 바뀜
+                        if (done) break;
+                        chunks.push(value);
+                        loaded += value.byteLength;
+                        // 매 청크마다 리렌더하면 잦은 재그리기로 버벅일 수 있어 한 프레임(~16ms)에 한 번만 쏜다.
+                        const now = performance.now();
+                        if (now - lastEmitAt > 16 || loaded >= total) {
+                            lastEmitAt = now;
+                            this._downloadLoaded = loaded;
+                            this._downloadTotal = total;
+                            this._emit('progress');
+                        }
+                    }
+                    const merged = new Uint8Array(loaded);
+                    let offset = 0;
+                    for (const chunk of chunks) { merged.set(chunk, offset); offset += chunk.byteLength; }
+                    arrayBuffer = merged.buffer;
+                } else {
+                    // Content-Length 없음 → 진행률을 알 수 없으니 그냥 통째로 받는다.
+                    arrayBuffer = await res.arrayBuffer();
+                }
             } catch (err) {
                 if (token !== this._loadToken) return;
                 this.error = { code: 2, message: err.message || String(err) }; // MEDIA_ERR_NETWORK 상당

@@ -238,12 +238,28 @@ const Editor = {
             cancelAnimationFrame(this.state.animationFrameId);
 
             UI.showAreaLoading('audio', '음악 불러오는 중…');
+            // 실제 다운로드 바이트 진행률을 프로그레스 바에 그대로 반영 (AudioEngine이 지원하면).
+            const stopTracking = UI.trackAudioDownloadProgress('audio');
+            let settled = false;
+            const onAudioError = () => {
+                if (settled) return;
+                settled = true;
+                stopTracking();
+                DOM.musicPlayer.removeEventListener('error', onAudioError);
+                UI.hideAreaLoading('audio');
+            };
+            DOM.musicPlayer.addEventListener('error', onAudioError);
+
             DOM.musicPlayer.src = url;
             DOM.musicPlayer.load();
 
             this.state.audioFileName = fileName;
             DOM.editor.audioFileNameEl.textContent = fileName;
             DOM.musicPlayer.onloadedmetadata = () => {
+                if (settled) return;
+                settled = true;
+                stopTracking();
+                DOM.musicPlayer.removeEventListener('error', onAudioError);
                 UI.hideAreaLoading('audio');
                 this.drawGrid();
             };

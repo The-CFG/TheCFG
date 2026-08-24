@@ -543,10 +543,13 @@ const Online = {
     async _startDetailPreview(c) {
         const seq = this._loadSeq; // _showDetail이 이미 발급해 둔 토큰을 그대로 이어받는다
         UI.showAreaLoading('preview', '미리보기 불러오는 중…');
+        // SongPreview.start()/playAudio() 둘 다 결국 DOM.musicPlayer.src = audioUrl로 오디오를
+        // 받아오므로, 여기서 실제 다운로드 진행률을 프로그레스 바에 연결해둔다.
+        const stopTracking = UI.trackAudioDownloadProgress('preview');
         try {
             const { data: chartData, error } = await CloudCharts.downloadChartData(c.chart_storage_path);
             // 그 사이 다른 난이도/화면으로 이동했으면 무시 (currentChartId + 전역 토큰 이중 확인)
-            if (this._currentChartId !== c.id || seq !== this._loadSeq) return;
+            if (this._currentChartId !== c.id || seq !== this._loadSeq) { stopTracking(); return; }
             if (error) throw error;
             await SongPreview.start({
                 chartData,
@@ -557,10 +560,12 @@ const Online = {
                 previewStartMs: 0,
                 laneCount: c.lane_count || chartData.laneCount || 4,
             });
+            stopTracking();
             if (this._currentChartId !== c.id || seq !== this._loadSeq) { SongPreview.stop(); return; }
             // 준비 완료 — 좌측 game-area에서 노트 미리보기가 직접 재생되므로 오버레이는 그냥 내린다.
             UI.hideAreaLoading('preview');
         } catch (err) {
+            stopTracking();
             // 노트 미리보기 실패 시에도 오디오 미리듣기는 시도한다.
             if (this._currentChartId !== c.id || seq !== this._loadSeq) { UI.hideAreaLoading('preview'); return; }
             SongPreview.playAudio(CloudCharts.getAudioUrl(c.audio_storage_path), c.preview_start_ms || 0);
@@ -625,8 +630,10 @@ const Online = {
             // 상태에서만 "플레이"가 시작되게 한다(예전엔 오디오는 카운트다운 4초 동안 몰래
             // 디코딩되길 기대했는데, 느린 회선/큰 파일이면 그 안에 안 끝날 수 있었다).
             UI.showAreaLoading('startPlay', '노래 불러오는 중…');
+            const stopTracking = UI.trackAudioDownloadProgress('startPlay');
             DOM.musicPlayer.src = audioUrl;
             const audioReady = await DOM.musicPlayer.whenReady();
+            stopTracking();
             UI.hideAreaLoading('startPlay');
             if (!audioReady) throw new Error('노래를 불러오지 못했습니다.');
 

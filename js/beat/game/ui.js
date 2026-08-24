@@ -103,6 +103,25 @@ const UI = {
             </div>
         </div>`;
     },
+    // DOM.musicPlayer(AudioEngine)가 오디오를 다운로드하는 동안 실제 바이트 진행률을
+    // 좌측 로딩 오버레이(key)에 그대로 반영한다. src를 설정하기 직전에 호출해서 리스너를
+    // 걸어두고, 로딩이 끝나면(성공/실패 무관) 반환된 cleanup()을 호출해 정리한다.
+    // AudioEngine이 'error'를 쏘면 cleanup 자체도 자동으로 한 번 실행된다(중복 호출 안전).
+    trackAudioDownloadProgress(key) {
+        const onProgress = () => {
+            const { loaded, total } = DOM.musicPlayer.downloadProgress || {};
+            // Content-Length를 모르는 응답이면 total이 0으로 남는다 — 이 경우엔 실제
+            // 퍼센티지를 낼 수 없으므로 건드리지 않고 _renderAreaLoading()의 불확정 바에 맡긴다.
+            if (total > 0) UI.updateAreaLoadingProgress(key, loaded, total);
+        };
+        const cleanup = () => {
+            DOM.musicPlayer.removeEventListener('progress', onProgress);
+            DOM.musicPlayer.removeEventListener('error', cleanup);
+        };
+        DOM.musicPlayer.addEventListener('progress', onProgress);
+        DOM.musicPlayer.addEventListener('error', cleanup);
+        return cleanup;
+    },
     // ── 좌측 game-area 로딩 오버레이 ──────────────────────────────────
     // 예전엔 "불러오는 중" 류 문구를 우측 ui-area의 작은 토스트(showMessage)로만
     // 띄워서 로딩 중인지 알아채기 어려웠다. 훨씬 눈에 잘 띄는 좌측 game-area
@@ -171,7 +190,7 @@ const UI = {
                     const pct = Math.max(0, Math.min(100, (e.progress.current / e.progress.total) * 100));
                     return `
                     <div class="game-area-progress-item">
-                        <div class="game-area-progress-label">${e.label}</div>
+                        <div class="game-area-progress-label">${e.label} · ${Math.round(pct)}%</div>
                         <div class="game-area-progress-track"><div class="game-area-progress-fill" style="width:${pct}%"></div></div>
                     </div>`;
                 }
