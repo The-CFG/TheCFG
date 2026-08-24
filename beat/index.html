@@ -91,7 +91,7 @@
              띄는 좌측 game-area로 옮기고, 무엇을 불러오는 중인지 구체적으로 표시한다.
              UI.showAreaLoading(key, text) / UI.hideAreaLoading(key)로 제어. -->
         <div id="game-area-loading" class="hidden absolute inset-0 flex flex-col items-center justify-center gap-3 text-white text-sm text-center px-4" style="z-index:4;background:rgba(0,0,0,0.45);">
-            <span class="inline-block w-8 h-8 border-2 border-teal-400 border-t-transparent rounded-full animate-spin flex-shrink-0"></span>
+            <span id="game-area-loading-spinner" class="inline-block w-8 h-8 border-2 border-teal-400 border-t-transparent rounded-full animate-spin flex-shrink-0"></span>
             <div id="game-area-loading-text"></div>
         </div>
         <!-- Canvas: 노트/판정선/레인 경계선 렌더링 전담 -->

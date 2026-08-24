@@ -201,5 +201,8 @@ const SongPreview = {
         this._noteMode = false;
         this._notes = [];
         this._triggers = [];
+        // 플레이 전 화면(_startDetailPreview)이 좌측 오버레이에 띄워둔 "미리보기 불러오는 중…"
+        // / "노래 미리듣기만 재생 중입니다" 표시도 미리듣기가 끝나는 시점에 항상 같이 정리한다.
+        UI.hideAreaLoading('preview');
     },
 };

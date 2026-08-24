@@ -110,8 +110,12 @@ const UI = {
     // key로 여러 로딩을 동시에 추적한다 (예: 사진+음악이 한꺼번에 로딩 중이어도
     // 하나가 먼저 끝났다고 표시가 통째로 사라지지 않도록).
     _areaLoads: {},
-    showAreaLoading(key, text = '불러오는 중…') {
-        this._areaLoads[key] = text;
+    // opts.spinner === false로 넘기면 이 항목은 회전 스피너 없이 문구만 표시한다.
+    // (예: 미리보기 로딩이 끝나고 "노래 미리듣기만 재생 중입니다" 같은 확정된 안내는
+    // 아직도 뭔가 불러오는 중인 것처럼 보이면 안 되므로 스피너를 끈다.)
+    // 여러 키가 동시에 떠 있으면, 그 중 하나라도 스피너를 원하면 스피너를 보여준다.
+    showAreaLoading(key, text = '불러오는 중…', opts = {}) {
+        this._areaLoads[key] = { text, spinner: opts.spinner !== false };
         this._renderAreaLoading();
     },
     hideAreaLoading(key) {
@@ -120,15 +124,17 @@ const UI = {
     },
     _renderAreaLoading() {
         const el = document.getElementById('game-area-loading');
+        const spinnerEl = document.getElementById('game-area-loading-spinner');
         const textEl = document.getElementById('game-area-loading-text');
         if (!el || !textEl) return;
-        const texts = Object.values(this._areaLoads);
-        if (texts.length === 0) {
+        const entries = Object.values(this._areaLoads);
+        if (entries.length === 0) {
             el.classList.add('hidden');
             textEl.innerHTML = '';
             return;
         }
-        textEl.innerHTML = texts.map(t => `<div>${t}</div>`).join('');
+        textEl.innerHTML = entries.map(e => `<div>${e.text}</div>`).join('');
+        if (spinnerEl) spinnerEl.classList.toggle('hidden', !entries.some(e => e.spinner));
         el.classList.remove('hidden');
     },
     updateScoreboard() {

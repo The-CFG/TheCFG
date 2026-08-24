@@ -508,9 +508,6 @@ const Online = {
             ${like.likedByMe ? 'bg-pink-700 hover:bg-pink-600 text-white' : 'bg-gray-700 hover:bg-gray-600 text-gray-200'}">
             <span id="detail-like-icon">${like.likedByMe ? '♥' : '♡'}</span> 좋아요 <span id="detail-like-count">${like.count}</span>
         </button>
-        <div id="online-preview-hint" class="mb-4 p-3 bg-gray-800 rounded-lg text-center text-xs text-gray-400">
-            ${UI.loadingInlineHtml()}
-        </div>
         <button id="detail-play-btn" class="w-full py-3 mb-4 rounded-lg font-bold transition text-lg
             ${this._pickMode === 'queue' ? 'bg-teal-600 hover:bg-teal-500' : (this._pickMode ? 'bg-purple-600 hover:bg-purple-500' : 'bg-blue-600 hover:bg-blue-500')}">
             ${this._pickMode === 'queue' ? '➕ 대기열에 추가' : (this._pickMode ? '🎮 이 채보로 방 만들기' : '▶ 플레이')}
@@ -536,14 +533,16 @@ const Online = {
         document.getElementById('detail-like-btn').addEventListener('click', () => this._toggleLike(c.id));
 
         // 플레이 전 미리보기 — 노래(오디오) + 에디터와 동일한 방식의 노트 낙하 미리보기를
-        // 실제 플레이 화면 크기로 크게 보여준다. 차트 데이터 다운로드가 실패해도
-        // 오디오만이라도 재생되도록 별도 try/catch로 감싼다.
+        // 실제 플레이 화면 크기로 크게 보여준다. 로딩 상태는 좌측 game-area 오버레이
+        // (UI.showAreaLoading/'preview')로 통일해서 표시하고, 준비가 끝나면 오버레이를 내려
+        // 좌측에서 재생 중인 미리보기 자체가 결과를 보여주게 한다. 차트 데이터 다운로드가
+        // 실패해도 오디오만이라도 재생되도록 별도 try/catch로 감싼다.
         this._startDetailPreview(c);
     },
 
     async _startDetailPreview(c) {
-        const hintEl = document.getElementById('online-preview-hint');
         const seq = this._loadSeq; // _showDetail이 이미 발급해 둔 토큰을 그대로 이어받는다
+        UI.showAreaLoading('preview', '미리보기 불러오는 중…');
         try {
             const { data: chartData, error } = await CloudCharts.downloadChartData(c.chart_storage_path);
             // 그 사이 다른 난이도/화면으로 이동했으면 무시 (currentChartId + 전역 토큰 이중 확인)
@@ -559,12 +558,15 @@ const Online = {
                 laneCount: c.lane_count || chartData.laneCount || 4,
             });
             if (this._currentChartId !== c.id || seq !== this._loadSeq) { SongPreview.stop(); return; }
-            if (hintEl) hintEl.textContent = '◀ 왼쪽 게임 화면에서 미리보기가 재생됩니다.';
+            // 준비 완료 — 좌측 game-area에서 노트 미리보기가 직접 재생되므로 오버레이는 그냥 내린다.
+            UI.hideAreaLoading('preview');
         } catch (err) {
             // 노트 미리보기 실패 시에도 오디오 미리듣기는 시도한다.
-            if (this._currentChartId !== c.id || seq !== this._loadSeq) return;
+            if (this._currentChartId !== c.id || seq !== this._loadSeq) { UI.hideAreaLoading('preview'); return; }
             SongPreview.playAudio(CloudCharts.getAudioUrl(c.audio_storage_path), c.preview_start_ms || 0);
-            if (hintEl) hintEl.textContent = '🎵 노래 미리듣기만 재생 중입니다.';
+            // 이 경우엔 좌측 화면에 노트 미리보기 없이 오디오만 재생되므로, 오버레이에
+            // 안내를 계속 남겨둔다 — 다만 로딩이 끝난 확정 상태이므로 스피너는 끈다.
+            UI.showAreaLoading('preview', '🎵 노래 미리듣기만 재생 중입니다.', { spinner: false });
         }
     },
 
