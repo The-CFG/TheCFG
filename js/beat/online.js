@@ -619,7 +619,16 @@ const Online = {
             Game.state.settings.mode = 'music';
             Game.state.settings.musicSrc = audioUrl;
             Game.state.settings.songStartOffset = (c.start_offset_ms || 0) / 1000;
+
+            // 노래(오디오) 디코딩이 실제로 끝날 때까지 기다린 뒤에야 카운트다운/플레이 화면으로
+            // 넘어간다 — 채보 JSON은 이미 위에서 기다렸으니, 이제 노래까지 확실히 준비된
+            // 상태에서만 "플레이"가 시작되게 한다(예전엔 오디오는 카운트다운 4초 동안 몰래
+            // 디코딩되길 기대했는데, 느린 회선/큰 파일이면 그 안에 안 끝날 수 있었다).
+            UI.showAreaLoading('startPlay', '노래 불러오는 중…');
             DOM.musicPlayer.src = audioUrl;
+            const audioReady = await DOM.musicPlayer.whenReady();
+            UI.hideAreaLoading('startPlay');
+            if (!audioReady) throw new Error('노래를 불러오지 못했습니다.');
 
             UI.showScreen('menu');
             setTimeout(() => {
@@ -628,6 +637,7 @@ const Online = {
                 Game.state.gameState = 'playing';
             }, 100);
         } catch (err) {
+            UI.hideAreaLoading('startPlay');
             alert('플레이 오류: ' + err.message);
             btn.disabled = false;
             btn.textContent = '▶ 플레이';

@@ -163,6 +163,16 @@ const AudioEngine = {
         this._startSourceNode(when);
     },
 
+    // src 할당 시점에 시작된 fetch+decode가 끝날 때까지 기다린다. play()가 내부적으로도
+    // 이 로드를 기다리긴 하지만, "재생을 실제로 시작하기 전에 노래가 다 준비됐는지"를
+    // 미리 확인하고 싶은 호출부(플레이 시작 버튼, 멀티플레이 대기실의 준비/시작 버튼 등)를
+    // 위해 별도로 노출해둔다. 로드가 끝난 뒤 실제로 재생 가능한 버퍼가 있으면 true,
+    // 네트워크 오류나 디코딩 실패로 재생할 수 없으면 false를 반환한다.
+    async whenReady() {
+        if (this._loadPromise) await this._loadPromise;
+        return !!this._buffer;
+    },
+
     pause() {
         if (!this._isPlaying) return;
         this._pausedAt = this.currentTime;

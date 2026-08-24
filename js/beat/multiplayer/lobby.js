@@ -426,6 +426,10 @@ const MultiplayerLobby = {
 
     // 채보 데이터 다운로드 + 오디오 디코딩을 미리 시작해둔다. 여러 번 불려도 한 번만 실행됨.
     // 진행 중에는 _preloading을 켜서 대기실 화면이 준비/시작 버튼을 막고 로딩 표시를 보여주게 한다.
+    // 오디오는 fetch만 걸어두고 끝난 걸로 치지 않는다 — whenReady()로 디코딩까지 실제로
+    // 끝날 때까지 기다린 뒤에야 _preloading을 내린다. 그래야 "노래+채보 둘 다 준비됨" 상태에서만
+    // 준비/시작 버튼이 눌리게 된다 (예전엔 채보 JSON만 기다리고 오디오 디코딩은 안 기다려서,
+    // 느린 회선에서 아직 디코딩 중인데도 시작이 가능했다).
     _preloadChart() {
         if (this._preload || this._preloadPromise) return this._preloadPromise || Promise.resolve(true);
         this._preloading = true;
@@ -435,8 +439,10 @@ const MultiplayerLobby = {
                 const { data: chartData, error } = await CloudCharts.downloadChartData(this._chart.chart_storage_path);
                 if (error) throw error;
                 const audioUrl = CloudCharts.getAudioUrl(this._chart.audio_storage_path);
-                // 오디오 fetch+decode를 지금 미리 시작해둔다(실제 재생은 나중에 when으로 예약).
+                // 오디오 fetch+decode를 시작해두고, 실제로 재생 가능한 버퍼가 준비될 때까지 기다린다.
                 DOM.musicPlayer.src = audioUrl;
+                const audioReady = await DOM.musicPlayer.whenReady();
+                if (!audioReady) throw new Error('오디오를 불러오지 못했습니다.');
                 this._preload = { chartData, audioUrl };
                 return true;
             } catch (err) {
