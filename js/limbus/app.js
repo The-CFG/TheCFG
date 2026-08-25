@@ -285,6 +285,7 @@
 
     const btnRow = document.createElement("div");
     btnRow.style.display = "flex";
+    btnRow.style.flexWrap = "wrap";
     btnRow.style.gap = "8px";
     btnRow.style.marginTop = "4px";
 
@@ -311,8 +312,99 @@
     });
     btnRow.appendChild(pasteBtn);
 
+    btnRow.appendChild(buildDefInsertWidget((line) => {
+      state.lines.push(line);
+      renderLineEditor(container, state);
+    }));
+
     container.appendChild(btnRow);
     container._linesState = state; // for refreshAllPreviews
+  }
+
+  // ---- 트리거/효과 함수 검색·삽입 위젯 (HOI4Editor의 _makeAddBtn 패턴 이식) ----
+  // onInsert({trigger, text}) 콜백으로 완성된 줄 하나를 넘겨준다.
+  function buildDefInsertWidget(onInsert) {
+    const wrap = document.createElement("div");
+    wrap.className = "lb-add-wrap";
+
+    const searchInput = document.createElement("input");
+    searchInput.type = "text";
+    searchInput.className = "lb-search";
+    searchInput.placeholder = "＋ 함수 검색 (트리거/효과)...";
+
+    const dropdown = document.createElement("div");
+    dropdown.className = "lb-dropdown autocomplete-dropdown";
+
+    let selIdx = -1;
+
+    const _refresh = () => {
+      const q = searchInput.value.trim();
+      selIdx = -1;
+      const results = limbusSearchDefs(q, ["trigger", "effect"], 30);
+      if (!results.length) { dropdown.classList.remove("active"); return; }
+      dropdown.innerHTML = results.map((d, i) =>
+        `<div class="autocomplete-item" data-key="${escapeHtml(d.key)}" data-kind="${d._kind}" data-index="${i}">
+           <span class="autocomplete-item-id">${escapeHtml(d.key)}</span>
+           ${d.category ? `<span class="autocomplete-item-name">${escapeHtml(d.category)}</span>` : ""}
+           <span class="lb-kind-badge lb-kind-${d._kind}">${d._kind === "trigger" ? "트리거" : "효과"}</span>
+         </div>`
+      ).join("");
+      dropdown.classList.add("active");
+      dropdown.querySelectorAll(".autocomplete-item").forEach((item) => {
+        item.addEventListener("mousedown", (e) => {
+          e.preventDefault();
+          _pick(item.dataset.key, item.dataset.kind);
+        });
+      });
+    };
+
+    const _pick = (key, kind) => {
+      const def = limbusGetDef(key, kind);
+      if (!def) return;
+      searchInput.value = "";
+      dropdown.classList.remove("active");
+
+      if (kind === "trigger") {
+        onInsert({ trigger: def.key, text: "" });
+        return;
+      }
+
+      // 효과 함수: 파라미터를 prompt()로 하나씩 입력받아 템플릿을 채운다
+      const usedKeywords = [];
+      const text = limbusApplyTemplate(def, (p) => {
+        const msg = `${def.label || def.key}\n\n"${p.name}" 값을 입력하세요.`;
+        const raw = prompt(msg, p.default !== undefined ? String(p.default) : "");
+        if (raw === null) return null; // 취소
+        if (p.type === "keyword" && raw.trim()) usedKeywords.push(raw.trim());
+        return raw;
+      });
+      if (text === null) return; // 사용자가 취소함
+      onInsert({ trigger: "", text });
+      // 새로 쓰인 키워드는 용어사전(하이라이트 목록)에도 자동 등록
+      usedKeywords.forEach((kw) => addVocab("keywords", kw));
+    };
+
+    searchInput.addEventListener("input", _refresh);
+    searchInput.addEventListener("focus", _refresh);
+    searchInput.addEventListener("keydown", (e) => {
+      const items = [...dropdown.querySelectorAll(".autocomplete-item")];
+      if (e.key === "ArrowDown") { e.preventDefault(); selIdx = Math.min(selIdx + 1, items.length - 1); }
+      if (e.key === "ArrowUp") { e.preventDefault(); selIdx = Math.max(selIdx - 1, 0); }
+      items.forEach((it, i) => it.classList.toggle("selected", i === selIdx));
+      if (e.key === "Enter") {
+        e.preventDefault();
+        if (selIdx >= 0) _pick(items[selIdx].dataset.key, items[selIdx].dataset.kind);
+        else dropdown.classList.remove("active");
+      }
+      if (e.key === "Escape") dropdown.classList.remove("active");
+    });
+    document.addEventListener("click", (e) => {
+      if (!wrap.contains(e.target)) dropdown.classList.remove("active");
+    });
+
+    wrap.appendChild(searchInput);
+    wrap.appendChild(dropdown);
+    return wrap;
   }
 
   function renderLineRow(line, index, state, container) {

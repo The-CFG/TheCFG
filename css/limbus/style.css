@@ -261,6 +261,40 @@ body{
 
 .line-add-btn{margin-top:2px;}
 
+/* ---------- 트리거/효과 함수 검색·삽입 위젯 ---------- */
+.lb-add-wrap{position:relative;flex:1;min-width:180px;}
+.lb-search{
+  width:100%;background:var(--bg);border:1px solid var(--line);color:var(--text);
+  padding:7px 9px;border-radius:var(--radius);font-size:12.5px;
+}
+.lb-search:focus{border-color:var(--gold-dim);outline:none;}
+.autocomplete-dropdown{
+  position:absolute;top:calc(100% + 4px);left:0;right:0;
+  background:var(--panel-2);border:1px solid var(--line);
+  max-height:240px;overflow-y:auto;z-index:200;display:none;
+  box-shadow:0 6px 20px rgba(0,0,0,.5);border-radius:var(--radius);
+}
+.autocomplete-dropdown.active{display:block;}
+.autocomplete-item{
+  padding:7px 10px;cursor:pointer;border-bottom:1px solid var(--line-soft);
+  display:flex;align-items:center;gap:8px;font-size:12.5px;
+}
+.autocomplete-item:last-child{border-bottom:none;}
+.autocomplete-item:hover,
+.autocomplete-item.selected{background:var(--gold-dim);color:var(--bg);}
+.autocomplete-item-id{font-family:var(--mono);font-weight:600;color:var(--gold);}
+.autocomplete-item:hover .autocomplete-item-id,
+.autocomplete-item.selected .autocomplete-item-id{color:var(--bg);}
+.autocomplete-item-name{font-size:.86em;color:var(--text-faint);flex:1;}
+.autocomplete-item:hover .autocomplete-item-name,
+.autocomplete-item.selected .autocomplete-item-name{color:rgba(20,17,14,.75);}
+.lb-kind-badge{
+  font-size:10px;padding:2px 6px;border-radius:8px;white-space:nowrap;
+  background:var(--panel);color:var(--text-dim);border:1px solid var(--line);
+}
+.lb-kind-trigger{background:rgba(168,64,79,.25);color:#e8a3ac;border-color:var(--crimson-dim);}
+.lb-kind-effect{background:rgba(201,162,75,.22);color:var(--gold);border-color:var(--gold-dim);}
+
 mark.mk-keyword{background:rgba(201,162,75,0.22);color:var(--gold);padding:0 2px;border-radius:2px;}
 mark.mk-name{background:rgba(168,64,79,0.25);color:#e8a3ac;padding:0 2px;border-radius:2px;}
 
