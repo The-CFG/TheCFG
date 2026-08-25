@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="TheCFG · 림버스컴퍼니 인격 편찬기 — 인격 데이터를 직접 작성하고 JSON으로 내보낼 수 있는 편집 도구입니다.">
+<link rel="icon" href="/css/favicon.png" type="image/png">
+<title>TheCFG · 인격 편찬기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@400;500;600;700&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/limbus/style.css">
+</head>
+<body>
+
+<div class="app">
+
+  <header class="topbar">
+    <div class="brand">
+      <a href="/" class="brand-mark-link" title="TheCFG 홈으로">
+        <span class="brand-mark">Ⅶ</span>
+      </a>
+      <div class="brand-text">
+        <div class="brand-title">TheCFG</div>
+        <div class="brand-sub">인격 편찬기 · Identity Dossier Editor</div>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <span id="save-status" class="save-status"></span>
+      <button id="btn-vocab" class="btn btn-ghost" title="트리거/키워드 사전 관리">용어 사전</button>
+      <button id="btn-export" class="btn btn-ghost" title="현재 인격 JSON 다운로드">JSON 내보내기</button>
+      <button id="btn-save" class="btn btn-primary">저장</button>
+    </div>
+  </header>
+
+  <datalist id="trigger-options"></datalist>
+
+  <div id="vocab-modal" class="modal-backdrop hidden">
+    <div class="modal">
+      <div class="modal-head">
+        <div class="modal-title">용어 사전</div>
+        <button id="vocab-close" class="btn-remove" title="닫기">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="vocab-col">
+          <div class="section-label small">트리거 (고정 목록 — 각 줄 입력란에서 선택/자동완성용)</div>
+          <div id="vocab-triggers" class="vocab-tags"></div>
+        </div>
+        <div class="vocab-col">
+          <div class="section-label small">키워드 (예: 호흡, 파열, 카르마)</div>
+          <div id="vocab-keywords" class="vocab-tags"></div>
+          <div class="vocab-add-row">
+            <input id="vocab-keyword-input" type="text" placeholder="새 키워드 입력">
+            <button id="vocab-keyword-add" class="btn btn-add small">추가</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="body">
+
+    <aside class="sidebar">
+      <div class="sidebar-head">
+        <input id="search" class="search" type="text" placeholder="인격 검색…">
+        <button id="btn-new" class="btn btn-new" title="새 인격 생성">＋ 새 인격</button>
+        <button id="btn-bulk-import" class="btn btn-new" title="json 파일을 한 번에 가져오기">⇪ 일괄 가져오기 (JSON)</button>
+        <input id="bulk-import-input" type="file" accept="application/json,.json" multiple hidden>
+      </div>
+      <div id="import-progress" class="import-progress hidden"></div>
+      <div id="identity-list" class="identity-list"></div>
+    </aside>
+
+    <main class="editor">
+
+      <div class="editor-name-row">
+        <input id="f-name" class="name-input" type="text" placeholder="[ 등급 ] 이름  ―  예) [ 가주 후보 ] 이스마엘">
+        <div class="rank-badge" id="rank-badge">―</div>
+      </div>
+
+      <nav class="tabs" id="tabs">
+        <button class="tab active" data-tab="basic">기초정보</button>
+        <button class="tab" data-tab="stats">스탯 · 내성</button>
+        <button class="tab" data-tab="images">사진</button>
+        <button class="tab" data-tab="synchro">동기화</button>
+        <button class="tab" data-tab="skills">스킬</button>
+        <button class="tab" data-tab="passives">패시브</button>
+        <button class="tab" data-tab="mind">패닉 · 정신력</button>
+      </nav>
+
+      <section class="panel active" id="panel-basic">
+        <div class="field-grid two">
+          <label class="field"><span>죄인</span>
+            <input type="text" data-path="sinner" placeholder="예) 이스마엘"></label>
+          <label class="field"><span>시즌</span>
+            <input type="text" data-path="season" placeholder="예) 6"></label>
+          <label class="field"><span>등급</span>
+            <input type="text" data-path="rank" placeholder="예)  (3성"></label>
+          <label class="field"><span>출시일</span>
+            <input type="text" data-path="release" placeholder="예) 2025.06.05"></label>
+        </div>
+        <label class="field"><span>획득 방법</span>
+          <input type="text" data-path="howtoget" placeholder="예) 추출 (시즌 6 이후)"></label>
+        <label class="field"><span>대사(티켓)</span>
+          <input type="text" data-path="ticket" placeholder="예) \"[봄] 한 번… 짧기도 하지…\""></label>
+        <div class="field-grid two">
+          <label class="field"><span>획득 대사</span>
+            <textarea data-path="get_script" rows="3"></textarea></label>
+          <label class="field"><span>동기화 대사</span>
+            <textarea data-path="synchro_script" rows="3"></textarea></label>
+        </div>
+        <label class="field"><span>키워드 (Enter로 추가)</span>
+          <div id="keyword-tags" class="tag-input"></div>
+        </label>
+      </section>
+
+      <section class="panel" id="panel-stats">
+        <div class="field-grid three">
+          <label class="field"><span>HP</span><input type="text" data-path="hp"></label>
+          <label class="field"><span>속도</span><input type="text" data-path="speed" placeholder="예) 3 - 7"></label>
+          <label class="field"><span>방어</span><input type="text" data-path="defense" placeholder="예) 60(0)"></label>
+        </div>
+        <div class="section-label">내성 배율</div>
+        <div class="field-grid three">
+          <label class="field"><span>참격</span><input type="text" data-path="slash"></label>
+          <label class="field"><span>관통</span><input type="text" data-path="pierce"></label>
+          <label class="field"><span>타격</span><input type="text" data-path="blunt"></label>
+        </div>
+        <div class="section-label">흐트러짐 임계치 (1 / 2 / 3단계)</div>
+        <div class="field-grid three">
+          <label class="field"><span>1단계</span><input type="text" data-path="staggers.0" placeholder="예) 15%"></label>
+          <label class="field"><span>2단계</span><input type="text" data-path="staggers.1" placeholder="예) 40%"></label>
+          <label class="field"><span>3단계</span><input type="text" data-path="staggers.2" placeholder="예) 70%"></label>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-images">
+        <div class="section-label">사진 슬롯</div>
+        <p class="hint">동기화 전/후 SD, 풀아트 등 원하는 만큼 추가하세요.</p>
+        <div id="image-list" class="image-list"></div>
+        <button id="btn-add-image" class="btn btn-add">＋ 사진 슬롯 추가</button>
+      </section>
+
+      <section class="panel" id="panel-synchro">
+        <label class="field-label">동기화 1단계</label>
+        <div id="synchro1-editor" class="line-editor"></div>
+        <label class="field-label" style="margin-top:20px">동기화 2단계</label>
+        <div id="synchro2-editor" class="line-editor"></div>
+        <label class="field-label" style="margin-top:20px">동기화 3단계</label>
+        <div id="synchro3-editor" class="line-editor"></div>
+      </section>
+
+      <section class="panel" id="panel-skills">
+        <div id="skill-list" class="block-list"></div>
+        <button id="btn-add-skill" class="btn btn-add">＋ 스킬 추가</button>
+      </section>
+
+      <section class="panel" id="panel-passives">
+        <div class="section-label">패시브</div>
+        <div id="passive-list" class="block-list"></div>
+        <button id="btn-add-passive" class="btn btn-add">＋ 패시브 추가</button>
+
+        <div class="section-label" style="margin-top:28px">서폿 패시브</div>
+        <div id="sppassive-list" class="block-list"></div>
+        <button id="btn-add-sppassive" class="btn btn-add">＋ 서폿 패시브 추가</button>
+      </section>
+
+      <section class="panel" id="panel-mind">
+        <div class="field-grid two">
+          <label class="field"><span>패닉 분류</span>
+            <input type="text" data-path="panic_category" placeholder="예) 패닉"></label>
+        </div>
+        <label class="field"><span>패닉 설명</span>
+          <textarea data-path="panic_script" rows="3"></textarea></label>
+        <label class="field"><span>정신력 증가 조건</span>
+          <textarea data-path="sanity_increase" rows="3"></textarea></label>
+        <label class="field"><span>정신력 감소 조건</span>
+          <textarea data-path="sanity_decrease" rows="3"></textarea></label>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<template id="tpl-skill">
+  <div class="block skill-block" data-index="">
+    <div class="block-head">
+      <input type="text" class="block-key" data-field="key" placeholder="키 (skill1 / skill2 / skill3 / skillDefense / skill1-1)">
+      <input type="text" class="block-title" data-field="name" placeholder="스킬 이름">
+      <button class="btn-remove" data-action="remove-skill" title="스킬 삭제">✕</button>
+    </div>
+    <div class="field-grid four">
+      <label class="field mini"><span>코인 개수</span><input type="number" min="0" data-field="coins"></label>
+      <label class="field mini"><span>공격력</span><input type="text" data-field="attack" placeholder="예) 61(+1)"></label>
+      <label class="field mini"><span>타입</span><input type="text" data-field="type" placeholder="타격/참격/관통/방어/회피"></label>
+      <label class="field mini"><span>속성(죄)</span><input type="text" data-field="sin" placeholder="분노/색욕/나태/우울…"></label>
+    </div>
+    <div class="field-grid four">
+      <label class="field mini"><span>공격 횟수</span><input type="text" data-field="amount"></label>
+      <label class="field mini"><span>합 위력</span><input type="text" data-field="power"></label>
+      <label class="field mini"><span>코인 위력</span><input type="text" data-field="coin_power"></label>
+      <label class="field mini"><span>가중치</span><input type="text" data-field="weight"></label>
+    </div>
+    <label class="field-label">스킬 설명(효과)</label>
+    <div class="line-editor" data-role="script-editor"></div>
+
+    <div class="section-label small">코인별 효과</div>
+    <div class="coin-effect-list" data-list="coineffects"></div>
+    <button class="btn btn-add small" data-action="add-coineffect">＋ 코인 효과 추가</button>
+
+    <div class="section-label small">스킬 이미지</div>
+    <div class="image-upload" data-role="skill-image"></div>
+  </div>
+</template>
+
+<template id="tpl-coineffect">
+  <div class="coin-effect-block">
+    <div class="coin-effect-head">
+      <input type="text" class="coin-key" data-field="coin" placeholder="coin1">
+      <button class="btn-remove" data-action="remove-coineffect" title="삭제">✕</button>
+    </div>
+    <div class="line-editor" data-role="coin-line-editor"></div>
+  </div>
+</template>
+
+<template id="tpl-passive">
+  <div class="block passive-block" data-index="">
+    <div class="block-head">
+      <input type="text" class="block-title" data-field="name" placeholder="패시브 이름">
+      <button class="btn-remove" data-action="remove-passive" title="삭제">✕</button>
+    </div>
+    <label class="field"><span>설명</span><textarea data-field="content" rows="3"></textarea></label>
+    <div class="section-label small">자원 소모/조건 (선택)</div>
+    <div class="resource-list" data-list="resources"></div>
+    <button class="btn btn-add small" data-action="add-resource">＋ 자원 추가</button>
+  </div>
+</template>
+
+<template id="tpl-resource">
+  <div class="resource-row">
+    <input type="text" class="res-key" data-field="key" placeholder="속성(예: 탐식)">
+    <input type="text" class="res-val" data-field="val" placeholder="수치">
+    <button class="btn-remove" data-action="remove-resource" title="삭제">✕</button>
+  </div>
+</template>
+
+<template id="tpl-effect-line">
+  <div class="effect-line">
+    <input type="text" class="trigger-input" list="trigger-options" placeholder="트리거 (선택)">
+    <input type="text" class="effect-text" placeholder="효과 내용 …">
+    <div class="line-btns">
+      <button class="btn-remove" data-action="line-up" title="위로">↑</button>
+      <button class="btn-remove" data-action="line-down" title="아래로">↓</button>
+      <button class="btn-remove" data-action="line-remove" title="삭제">✕</button>
+    </div>
+    <div class="effect-preview"></div>
+  </div>
+</template>
+
+<template id="tpl-bullet-line">
+  <div class="bullet-line">
+    <span class="bullet-dot">·</span>
+    <input type="text" class="effect-text" placeholder="내용 …">
+    <div class="line-btns">
+      <button class="btn-remove" data-action="line-up" title="위로">↑</button>
+      <button class="btn-remove" data-action="line-down" title="아래로">↓</button>
+      <button class="btn-remove" data-action="line-remove" title="삭제">✕</button>
+    </div>
+    <div class="effect-preview"></div>
+  </div>
+</template>
+
+<template id="tpl-image-slot">
+  <div class="image-slot" data-index="">
+    <input type="text" class="image-label" data-field="label" placeholder="슬롯 이름 (예: 동기화 전 SD)">
+    <div class="image-upload" data-role="slot-image"></div>
+    <button class="btn-remove" data-action="remove-image" title="삭제">✕</button>
+  </div>
+</template>
+
+<script src="/js/limbus/app.js"></script>
+</body>
+</html>

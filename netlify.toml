@@ -15,6 +15,12 @@
   force = true
 
 [[redirects]]
+  from = "/limbus.html"
+  to = "/limbus"
+  status = 301
+  force = true
+
+[[redirects]]
   from = "/accounts.html"
   to = "/accounts"
   status = 301

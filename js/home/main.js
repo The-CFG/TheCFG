@@ -20,6 +20,14 @@ const TOOLS = [
         status: 'live',
     },
     {
+        path: '/limbus',
+        title: '인격 편찬기',
+        version: 'v1.0',
+        desc: '림버스컴퍼니 인격 데이터를 스탯/동기화/스킬/패시브까지 항목별로 정리해 JSON으로 내보내는 편집 도구입니다.',
+        href: '/limbus',
+        status: 'live',
+    },
+    {
         path: '/???',
         title: '다음 도구',
         version: '',
