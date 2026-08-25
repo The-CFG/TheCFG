@@ -236,51 +236,95 @@
   }
 
   // ---------- line-block script model ----------
-  // A "script field" is {lines: [{trigger, text}]}. trigger === "" means a free-text line.
+  // 2025-xx 개편: 하나의 트리거에 여러 효과 줄이 병존할 수 있도록,
+  // "줄" 대신 "트리거 그룹"을 기본 단위로 삼는다.
+  // state.lines: [{ trigger:"", texts:["효과1","효과2",...] }, ...]
+  // (trigger === "" 인 그룹은 "트리거 없음" 그룹 — 나무위키 원문의 트리거 앞부분 등)
   function linesToPlainText(state) {
-    return state.lines.map(l => (l.trigger ? `[${l.trigger}] ${l.text}` : l.text)).join("\n");
+    return state.lines.map(g => {
+      const texts = g.texts.length ? g.texts : [""];
+      return texts.map((t, i) => (i === 0 && g.trigger) ? `[${g.trigger}] ${t}` : t).join("\n");
+    }).join("\n");
   }
   function linesToBlocks(state) {
-    return state.lines.map(l => ({ trigger: l.trigger || "", segments: matchKeywordSegments(l.text) }));
+    return state.lines.map(g => ({
+      trigger: g.trigger || "",
+      texts: g.texts.map(t => matchKeywordSegments(t)),
+    }));
   }
+  // 원문(나무위키 등) 붙여넣기 자동 분해: [트리거] 다음에 이어지는 여러 줄은
+  // 전부 같은 트리거 그룹의 효과 줄들로 묶인다.
   function autoParseLines(text) {
     if (!text) return [];
     const matches = [...text.matchAll(/\[([^\[\]]{1,24})\]/g)];
     if (!matches.length) {
-      return text.split(/\n+/).map(s => s.trim()).filter(Boolean).map(t => ({ trigger: "", text: t }));
+      const texts = text.split(/\n+/).map(s => s.trim()).filter(Boolean);
+      return texts.length ? [{ trigger: "", texts }] : [];
     }
     const out = [];
     const firstIdx = matches[0].index;
     if (firstIdx > 0) {
       const pre = text.slice(0, firstIdx).trim();
-      if (pre) pre.split(/\n+/).map(s => s.trim()).filter(Boolean).forEach(t => out.push({ trigger: "", text: t }));
+      const preTexts = pre.split(/\n+/).map(s => s.trim()).filter(Boolean);
+      if (preTexts.length) out.push({ trigger: "", texts: preTexts });
     }
     for (let i = 0; i < matches.length; i++) {
       const trigger = matches[i][1].trim();
       const start = matches[i].index + matches[i][0].length;
       const end = i + 1 < matches.length ? matches[i + 1].index : text.length;
-      out.push({ trigger, text: text.slice(start, end).trim() });
+      const chunk = text.slice(start, end).trim();
+      const texts = chunk.split(/\n+/).map(s => s.trim()).filter(Boolean);
+      out.push({ trigger, texts: texts.length ? texts : [""] });
     }
     return out;
   }
   function blocksToLines(blocks) {
     return (blocks || []).map(b => ({
       trigger: b.trigger || "",
-      text: (b.segments || []).map(s => s.value).join(""),
+      texts: (b.texts || []).map(segs => (segs || []).map(s => s.value).join("")),
     }));
+  }
+  // 구버전(줄 단위 flat) blocks 포맷 호환: trigger가 있는 블록마다 새 그룹을
+  // 시작하고, trigger가 빈 블록은 직전 그룹의 추가 효과 줄로 합쳐 승격한다.
+  function upgradeLegacyBlocks(blocksData) {
+    const groups = [];
+    blocksData.forEach((b, i) => {
+      const text = (b.segments || []).map(s => s.value).join("");
+      if (i === 0 || b.trigger) {
+        groups.push({ trigger: b.trigger || "", texts: [text] });
+      } else {
+        groups[groups.length - 1].texts.push(text);
+      }
+    });
+    return groups;
   }
   // load a script field, preferring saved structured blocks over re-parsing plain text
   function loadScriptField(plainText, blocksData) {
-    if (Array.isArray(blocksData) && blocksData.length) return { lines: blocksToLines(blocksData) };
+    if (Array.isArray(blocksData) && blocksData.length) {
+      if (blocksData[0].texts !== undefined) return { lines: blocksToLines(blocksData) };
+      return { lines: upgradeLegacyBlocks(blocksData) }; // 구버전 데이터 자동 승격
+    }
     return { lines: autoParseLines(plainText || "") };
   }
 
+  // ---- 작은 아이콘 버튼 (↑/↓/✕ 등, 기존 .btn-remove 스타일 재사용) ----
+  function _iconBtn(label, title, onClick) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "btn-remove";
+    btn.title = title;
+    btn.textContent = label;
+    btn.addEventListener("click", onClick);
+    return btn;
+  }
+
   // ---- line editor component (reused for synchro / skill script / coin effects) ----
+  // state.lines는 이제 "트리거 그룹" 배열이다. 그룹마다 트리거 하나 + 효과 줄 여러 개.
   function renderLineEditor(container, state) {
     container.innerHTML = "";
     const list = document.createElement("div");
     list.className = "line-editor";
-    state.lines.forEach((line, i) => list.appendChild(renderLineRow(line, i, state, container)));
+    state.lines.forEach((group, gi) => list.appendChild(renderTriggerGroup(group, gi, state, container)));
     container.appendChild(list);
 
     const btnRow = document.createElement("div");
@@ -292,9 +336,9 @@
     const addBtn = document.createElement("button");
     addBtn.type = "button";
     addBtn.className = "btn btn-add small";
-    addBtn.textContent = "＋ 줄 추가";
+    addBtn.textContent = "＋ 트리거 그룹 추가";
     addBtn.addEventListener("click", () => {
-      state.lines.push({ trigger: "", text: "" });
+      state.lines.push({ trigger: "", texts: [""] });
       renderLineEditor(container, state);
     });
     btnRow.appendChild(addBtn);
@@ -304,7 +348,7 @@
     pasteBtn.className = "btn btn-ghost small";
     pasteBtn.textContent = "원문 붙여넣어 자동 분해";
     pasteBtn.addEventListener("click", () => {
-      const raw = prompt("나무위키 등에서 복사한 원문을 붙여넣으세요. 기존 줄 뒤에 추가됩니다.");
+      const raw = prompt("나무위키 등에서 복사한 원문을 붙여넣으세요. 기존 그룹 뒤에 추가됩니다.\n(같은 트리거 아래 이어지는 여러 줄은 하나의 그룹으로 자동 병합됩니다.)");
       if (raw && raw.trim()) {
         state.lines.push(...autoParseLines(raw));
         renderLineEditor(container, state);
@@ -312,25 +356,140 @@
     });
     btnRow.appendChild(pasteBtn);
 
-    btnRow.appendChild(buildDefInsertWidget((line) => {
-      state.lines.push(line);
+    btnRow.appendChild(buildDefInsertWidget((kind, def, text) => {
+      if (kind === "trigger") {
+        state.lines.push({ trigger: def.key, texts: [""] });
+      } else if (state.lines.length) {
+        // 마지막 그룹에 효과 줄로 추가 (트리거 하나에 여러 효과 병존)
+        state.lines[state.lines.length - 1].texts.push(text);
+      } else {
+        state.lines.push({ trigger: "", texts: [text] });
+      }
       renderLineEditor(container, state);
-    }));
+    }, ["trigger", "effect"]));
 
     container.appendChild(btnRow);
     container._linesState = state; // for refreshAllPreviews
   }
 
+  // ── 트리거 그룹 하나 렌더링 (트리거 입력 + 그 아래 병존하는 효과 줄들) ──
+  function renderTriggerGroup(group, gi, state, container) {
+    const wrap = document.createElement("div");
+    wrap.className = "lb-trigger-group";
+
+    const head = document.createElement("div");
+    head.className = "lb-group-head";
+
+    const triggerInput = document.createElement("input");
+    triggerInput.type = "text";
+    triggerInput.className = "trigger-input";
+    triggerInput.setAttribute("list", "trigger-options");
+    triggerInput.placeholder = "트리거 (선택, 비워두면 트리거 없음)";
+    triggerInput.value = group.trigger || "";
+    triggerInput.addEventListener("input", () => (group.trigger = triggerInput.value));
+    head.appendChild(triggerInput);
+
+    const groupBtns = document.createElement("div");
+    groupBtns.className = "line-btns";
+    groupBtns.appendChild(_iconBtn("↑", "그룹 전체 위로", () => {
+      if (gi === 0) return;
+      [state.lines[gi - 1], state.lines[gi]] = [state.lines[gi], state.lines[gi - 1]];
+      renderLineEditor(container, state);
+    }));
+    groupBtns.appendChild(_iconBtn("↓", "그룹 전체 아래로", () => {
+      if (gi === state.lines.length - 1) return;
+      [state.lines[gi + 1], state.lines[gi]] = [state.lines[gi], state.lines[gi + 1]];
+      renderLineEditor(container, state);
+    }));
+    groupBtns.appendChild(_iconBtn("✕", "트리거 그룹 전체 삭제", () => {
+      state.lines.splice(gi, 1);
+      renderLineEditor(container, state);
+    }));
+    head.appendChild(groupBtns);
+    wrap.appendChild(head);
+
+    const effectsWrap = document.createElement("div");
+    effectsWrap.className = "lb-group-effects";
+    group.texts.forEach((_, ti) => effectsWrap.appendChild(renderEffectTextRow(group, ti, state, container)));
+    wrap.appendChild(effectsWrap);
+
+    const groupFoot = document.createElement("div");
+    groupFoot.className = "lb-group-foot";
+    const addTextBtn = document.createElement("button");
+    addTextBtn.type = "button";
+    addTextBtn.className = "btn btn-add small";
+    addTextBtn.textContent = "＋ 효과 줄 추가";
+    addTextBtn.addEventListener("click", () => {
+      group.texts.push("");
+      renderLineEditor(container, state);
+    });
+    groupFoot.appendChild(addTextBtn);
+    groupFoot.appendChild(buildDefInsertWidget((kind, def, text) => {
+      if (kind !== "effect") return;
+      group.texts.push(text);
+      renderLineEditor(container, state);
+    }, ["effect"]));
+    wrap.appendChild(groupFoot);
+
+    return wrap;
+  }
+
+  // ── 그룹 안의 효과 줄 하나 (같은 트리거 아래 병존) ──
+  function renderEffectTextRow(group, ti, state, container) {
+    const row = document.createElement("div");
+    row.className = "lb-effect-row";
+
+    const textInput = document.createElement("input");
+    textInput.type = "text";
+    textInput.className = "effect-text";
+    textInput.placeholder = "효과 내용 …";
+    textInput.value = group.texts[ti] || "";
+
+    const preview = document.createElement("div");
+    preview.className = "effect-preview";
+    preview.innerHTML = renderPreviewHtml(group.texts[ti]);
+
+    textInput.addEventListener("input", () => {
+      group.texts[ti] = textInput.value;
+      preview.innerHTML = renderPreviewHtml(group.texts[ti]);
+    });
+
+    const btns = document.createElement("div");
+    btns.className = "line-btns";
+    btns.appendChild(_iconBtn("↑", "위로", () => {
+      if (ti === 0) return;
+      [group.texts[ti - 1], group.texts[ti]] = [group.texts[ti], group.texts[ti - 1]];
+      renderLineEditor(container, state);
+    }));
+    btns.appendChild(_iconBtn("↓", "아래로", () => {
+      if (ti === group.texts.length - 1) return;
+      [group.texts[ti + 1], group.texts[ti]] = [group.texts[ti], group.texts[ti + 1]];
+      renderLineEditor(container, state);
+    }));
+    btns.appendChild(_iconBtn("✕", "이 효과 줄 삭제", () => {
+      group.texts.splice(ti, 1);
+      if (!group.texts.length) group.texts.push(""); // 그룹은 최소 1줄 유지 — 완전 제거는 그룹 삭제로
+      renderLineEditor(container, state);
+    }));
+
+    row.appendChild(textInput);
+    row.appendChild(btns);
+    row.appendChild(preview);
+    return row;
+  }
+
   // ---- 트리거/효과 함수 검색·삽입 위젯 (HOI4Editor의 _makeAddBtn 패턴 이식) ----
-  // onInsert({trigger, text}) 콜백으로 완성된 줄 하나를 넘겨준다.
-  function buildDefInsertWidget(onInsert) {
+  // onPick(kind, def, filledText) 콜백: kind가 'trigger'면 def만 쓰고 text는 null,
+  // 'effect'면 template에 값이 채워진 filledText를 함께 넘겨준다.
+  // kinds로 검색 대상을 제한할 수 있다 (그룹 안에서는 'effect'만 노출).
+  function buildDefInsertWidget(onPick, kinds = ["trigger", "effect"]) {
     const wrap = document.createElement("div");
     wrap.className = "lb-add-wrap";
 
     const searchInput = document.createElement("input");
     searchInput.type = "text";
     searchInput.className = "lb-search";
-    searchInput.placeholder = "＋ 함수 검색 (트리거/효과)...";
+    searchInput.placeholder = kinds.length > 1 ? "＋ 함수 검색 (트리거/효과)..." : "＋ 효과 함수 검색...";
 
     const dropdown = document.createElement("div");
     dropdown.className = "lb-dropdown autocomplete-dropdown";
@@ -340,7 +499,7 @@
     const _refresh = () => {
       const q = searchInput.value.trim();
       selIdx = -1;
-      const results = limbusSearchDefs(q, ["trigger", "effect"], 30);
+      const results = limbusSearchDefs(q, kinds, 30);
       if (!results.length) { dropdown.classList.remove("active"); return; }
       dropdown.innerHTML = results.map((d, i) =>
         `<div class="autocomplete-item" data-key="${escapeHtml(d.key)}" data-kind="${d._kind}" data-index="${i}">
@@ -365,7 +524,7 @@
       dropdown.classList.remove("active");
 
       if (kind === "trigger") {
-        onInsert({ trigger: def.key, text: "" });
+        onPick("trigger", def, null);
         return;
       }
 
@@ -379,7 +538,7 @@
         return raw;
       });
       if (text === null) return; // 사용자가 취소함
-      onInsert({ trigger: "", text });
+      onPick("effect", def, text);
       // 새로 쓰인 키워드는 용어사전(하이라이트 목록)에도 자동 등록
       usedKeywords.forEach((kw) => addVocab("keywords", kw));
     };
@@ -405,43 +564,6 @@
     wrap.appendChild(searchInput);
     wrap.appendChild(dropdown);
     return wrap;
-  }
-
-  function renderLineRow(line, index, state, container) {
-    const isBullet = false; // unified: trigger field left empty = free-text line
-    const tpl = document.getElementById("tpl-effect-line");
-    const node = tpl.content.cloneNode(true);
-    const row = node.querySelector(".effect-line");
-
-    const triggerInput = node.querySelector(".trigger-input");
-    triggerInput.value = line.trigger || "";
-    triggerInput.addEventListener("input", () => (line.trigger = triggerInput.value));
-
-    const textInput = node.querySelector(".effect-text");
-    textInput.value = line.text || "";
-    const preview = node.querySelector(".effect-preview");
-    preview.innerHTML = renderPreviewHtml(line.text);
-    textInput.addEventListener("input", () => {
-      line.text = textInput.value;
-      preview.innerHTML = renderPreviewHtml(line.text);
-    });
-
-    node.querySelector('[data-action="line-remove"]').addEventListener("click", () => {
-      state.lines.splice(index, 1);
-      renderLineEditor(container, state);
-    });
-    node.querySelector('[data-action="line-up"]').addEventListener("click", () => {
-      if (index === 0) return;
-      [state.lines[index - 1], state.lines[index]] = [state.lines[index], state.lines[index - 1]];
-      renderLineEditor(container, state);
-    });
-    node.querySelector('[data-action="line-down"]').addEventListener("click", () => {
-      if (index === state.lines.length - 1) return;
-      [state.lines[index + 1], state.lines[index]] = [state.lines[index], state.lines[index + 1]];
-      renderLineEditor(container, state);
-    });
-
-    return row;
   }
 
   function refreshAllPreviews() {
