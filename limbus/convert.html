@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="TheCFG · 림버스컴퍼니 인격 데이터 구조화 컨버터 — identities.json을 Block 스키마로 변환합니다.">
+<link rel="icon" href="/css/favicon.png" type="image/png">
+<title>TheCFG · 구조화 컨버터</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@400;500;600;700&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/limbus/style.css">
+<style>
+  /* convert.html 전용 — 기존 style.css에 없는 최소한의 추가 스타일만 여기 둠 */
+  .conv-wrap{max-width:960px;margin:0 auto;padding:28px 22px 60px;}
+  .conv-actions{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0 26px;}
+  .conv-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:26px;}
+  .stat-card{background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;}
+  .stat-card .num{font-family:var(--mono);font-size:22px;color:var(--gold);}
+  .stat-card .label{font-size:12px;color:var(--text-faint);margin-top:4px;}
+  .conv-log{background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius);
+    padding:14px 16px;font-family:var(--mono);font-size:12.5px;color:var(--text-dim);
+    white-space:pre-wrap;max-height:420px;overflow:auto;}
+  .conv-note{font-size:12.5px;color:var(--text-faint);line-height:1.6;margin:10px 0 22px;}
+  .file-input-wrap{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:12.5px;color:var(--text-faint);}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <header class="topbar">
+    <div class="brand">
+      <a href="/" class="brand-mark-link" title="TheCFG 홈으로">
+        <span class="brand-mark">Ⅶ</span>
+      </a>
+      <div class="brand-text">
+        <div class="brand-title">TheCFG</div>
+        <div class="brand-sub">구조화 컨버터 · Block Schema Converter</div>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <a href="/limbus/" class="btn btn-ghost">편찬기로 돌아가기</a>
+    </div>
+  </header>
+
+  <div class="conv-wrap">
+    <p class="conv-note">
+      <code>identities.json</code>(자유 텍스트 인격 데이터)을 <code>limbus-structured-schema.md</code>
+      20절 파이프라인(Stage 0~4)으로 Block 스키마 JSON으로 변환합니다. 이 페이지는 데이터를 서버로
+      전송하지 않고 전부 브라우저 안에서 처리하며, 원본 <code>identities.json</code>도 건드리지
+      않습니다 — 변환 결과는 다운로드 버튼으로만 받을 수 있습니다.
+    </p>
+
+    <div class="file-input-wrap">
+      기본은 <code>/js/limbus/data/identities.json</code>을 자동으로 불러옵니다.
+      다른 파일로 바꾸려면: <input type="file" id="file-input" accept=".json">
+    </div>
+
+    <div class="conv-actions">
+      <button id="btn-run" class="btn btn-primary">변환 실행</button>
+      <button id="btn-dl-structured" class="btn btn-ghost" disabled>identities.structured.json 다운로드</button>
+      <button id="btn-dl-report" class="btn btn-ghost" disabled>report.json 다운로드</button>
+    </div>
+
+    <div id="stats" class="conv-stats" style="display:none;">
+      <div class="stat-card"><div class="num" id="stat-total">–</div><div class="label">총 노드 수</div></div>
+      <div class="stat-card"><div class="num" id="stat-raw">–</div><div class="label">raw 폴백 비율</div></div>
+      <div class="stat-card"><div class="num" id="stat-low">–</div><div class="label">저신뢰(low/none) 비율</div></div>
+      <div class="stat-card"><div class="num" id="stat-triggers">–</div><div class="label">목록 밖 트리거 후보</div></div>
+    </div>
+
+    <div id="log" class="conv-log">변환 실행 버튼을 누르면 여기에 진행 상황과 결과 요약이 표시됩니다.</div>
+  </div>
+
+</div>
+
+<script src="/js/limbus/data/limbus-defs.js"></script>
+<script src="/js/limbus/scripts/limbus-converter-core.js"></script>
+<script src="/js/limbus/convert-ui.js"></script>
+</body>
+</html>
