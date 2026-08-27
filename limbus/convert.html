@@ -49,25 +49,38 @@
       <code>identities.json</code>(자유 텍스트 인격 데이터)을 <code>limbus-structured-schema.md</code>
       20절 파이프라인(Stage 0~4)으로 Block 스키마 JSON으로 변환합니다. 이 페이지는 데이터를 서버로
       전송하지 않고 전부 브라우저 안에서 처리하며, 원본 <code>identities.json</code>도 건드리지
-      않습니다 — 변환 결과는 다운로드 버튼으로만 받을 수 있습니다.
+      않습니다.
+    </p>
+    <p class="conv-note">
+      <b>자동 병합</b>: 변환 실행 시 사이트에 이미 있는 <code>identities.structured.json</code>(현재
+      홈페이지 데이터)을 먼저 불러온 뒤, 이번에 새로 변환한 인격들을 그 위에 합쳐서(같은 이름은 덮어씀)
+      다운로드 파일을 만듭니다. 즉 다운로드받은 파일로 사이트의 <code>identities.structured.json</code>을
+      그대로 교체하면 기존 인격 + 새로 변환한 인격이 자동으로 합쳐진 상태가 됩니다 — 직접 두 JSON을
+      손으로 병합할 필요가 없습니다. (다만 실제 배포 서버에 자동으로 올라가는 건 아니고, 교체는
+      여전히 수동입니다.)
     </p>
 
     <div class="file-input-wrap">
-      기본은 <code>/js/limbus/data/identities.json</code>을 자동으로 불러옵니다.
-      다른 파일로 바꾸려면: <input type="file" id="file-input" accept=".json">
+      기본은 <code>/js/limbus/data/identities.json</code>(전체 46종)을 자동으로 불러옵니다.
+      편찬기에서 <b>개별 인격 JSON</b>을 여러 개 내보냈다면, 그 파일들을 한꺼번에 선택하세요
+      (여러 개 선택 시 그 파일들만 변환 대상이 됩니다):
+      <input type="file" id="file-input" accept=".json" multiple>
     </div>
+    <div id="file-list" class="conv-note" style="display:none;"></div>
 
     <div class="conv-actions">
       <button id="btn-run" class="btn btn-primary">변환 실행</button>
-      <button id="btn-dl-structured" class="btn btn-ghost" disabled>identities.structured.json 다운로드</button>
-      <button id="btn-dl-report" class="btn btn-ghost" disabled>report.json 다운로드</button>
+      <button id="btn-dl-structured" class="btn btn-ghost" disabled>identities.structured.json 다운로드 (기존+신규 병합)</button>
+      <button id="btn-dl-report" class="btn btn-ghost" disabled>이번 변환분 report.json 다운로드</button>
     </div>
 
     <div id="stats" class="conv-stats" style="display:none;">
-      <div class="stat-card"><div class="num" id="stat-total">–</div><div class="label">총 노드 수</div></div>
+      <div class="stat-card"><div class="num" id="stat-count">–</div><div class="label">이번에 변환한 인격 수</div></div>
+      <div class="stat-card"><div class="num" id="stat-total">–</div><div class="label">총 노드 수 (이번 변환분)</div></div>
       <div class="stat-card"><div class="num" id="stat-raw">–</div><div class="label">raw 폴백 비율</div></div>
       <div class="stat-card"><div class="num" id="stat-low">–</div><div class="label">저신뢰(low/none) 비율</div></div>
       <div class="stat-card"><div class="num" id="stat-triggers">–</div><div class="label">목록 밖 트리거 후보</div></div>
+      <div class="stat-card"><div class="num" id="stat-merged">–</div><div class="label">병합 후 전체 인격 수</div></div>
     </div>
 
     <div id="log" class="conv-log">변환 실행 버튼을 누르면 여기에 진행 상황과 결과 요약이 표시됩니다.</div>
