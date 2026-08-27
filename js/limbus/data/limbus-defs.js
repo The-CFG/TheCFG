@@ -189,3 +189,16 @@ function limbusApplyTemplate(def, getParamValue) {
     }
     return text;
 }
+
+// Node.js(컨버터 스크립트 등)에서 require로 재사용 가능하도록 export.
+// 브라우저 <script> 태그로 로딩될 때는 typeof module이 undefined라 아무 영향 없음.
+if (typeof module !== "undefined" && module.exports) {
+    module.exports = {
+        LIMBUS_EFFECTS,
+        LIMBUS_TRIGGERS,
+        LIMBUS_DEF_MAP,
+        limbusGetDef,
+        limbusSearchDefs,
+        limbusApplyTemplate,
+    };
+}
