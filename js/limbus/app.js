@@ -250,6 +250,8 @@
     return state.lines.map(g => ({
       trigger: g.trigger || "",
       texts: g.texts.map(t => matchKeywordSegments(t)),
+      // 20절 구조화 스키마 수동 지정값(있는 줄만) — 없으면 자동 파싱 결과를 그대로 신뢰
+      struct: (g.struct || []).map(s => s || null),
     }));
   }
   // 원문(나무위키 등) 붙여넣기 자동 분해: [트리거] 다음에 이어지는 여러 줄은
@@ -282,6 +284,7 @@
     return (blocks || []).map(b => ({
       trigger: b.trigger || "",
       texts: (b.texts || []).map(segs => (segs || []).map(s => s.value).join("")),
+      struct: (b.struct || []).map(s => s || undefined),
     }));
   }
   // 구버전(줄 단위 flat) blocks 포맷 호환: trigger가 있는 블록마다 새 그룹을
@@ -291,9 +294,10 @@
     blocksData.forEach((b, i) => {
       const text = (b.segments || []).map(s => s.value).join("");
       if (i === 0 || b.trigger) {
-        groups.push({ trigger: b.trigger || "", texts: [text] });
+        groups.push({ trigger: b.trigger || "", texts: [text], struct: [undefined] });
       } else {
         groups[groups.length - 1].texts.push(text);
+        groups[groups.length - 1].struct.push(undefined);
       }
     });
     return groups;
@@ -372,8 +376,17 @@
     container._linesState = state; // for refreshAllPreviews
   }
 
+  // group.texts와 길이/순서를 맞춰 group.struct(수동 구조화 지정값, 없으면 undefined)를 보정.
+  // texts가 push/splice/swap될 때마다 매번 손대는 대신, 렌더 직전에 한 번만 맞춰준다.
+  function ensureStruct(group) {
+    if (!Array.isArray(group.struct)) group.struct = [];
+    while (group.struct.length < group.texts.length) group.struct.push(undefined);
+    group.struct.length = group.texts.length;
+  }
+
   // ── 트리거 그룹 하나 렌더링 (트리거 입력 + 그 아래 병존하는 효과 줄들) ──
   function renderTriggerGroup(group, gi, state, container) {
+    ensureStruct(group);
     const wrap = document.createElement("div");
     wrap.className = "lb-trigger-group";
 
@@ -438,6 +451,7 @@
   function renderEffectTextRow(group, ti, state, container) {
     const row = document.createElement("div");
     row.className = "lb-effect-row";
+    row.style.flexWrap = "wrap";
 
     const textInput = document.createElement("input");
     textInput.type = "text";
@@ -449,9 +463,109 @@
     preview.className = "effect-preview";
     preview.innerHTML = renderPreviewHtml(group.texts[ti]);
 
+    // ── 구조화 미리보기/수동 지정 (limbus-converter-core.js 공유 로직, convert.html과 동일) ──
+    const structWrap = document.createElement("div");
+    structWrap.style.cssText = "flex-basis:100%;display:flex;align-items:center;gap:8px;margin-top:4px;";
+    const structBadge = document.createElement("span");
+    structBadge.style.cssText = "font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);";
+    const structEditBtn = document.createElement("button");
+    structEditBtn.type = "button";
+    structEditBtn.className = "btn btn-ghost small";
+    structEditBtn.style.fontSize = "11px";
+    const structForm = document.createElement("div");
+    structForm.style.cssText = "flex-basis:100%;display:none;gap:6px;align-items:center;margin-top:4px;flex-wrap:wrap;";
+
+    function autoNodeFor(text) {
+      if (typeof LimbusConverterCore === "undefined") return { kind: "raw", raw: text, _confidence: "none" };
+      return LimbusConverterCore.matchClauseToNode(text || "");
+    }
+
+    function refreshStruct() {
+      const text = group.texts[ti] || "";
+      const override = group.struct[ti];
+      const auto = autoNodeFor(text);
+      const effective = override || auto;
+
+      let label, color;
+      if (override) {
+        label = `✓ 수동 확정: ${override.params.keyword || ""} ${override.params.amount ?? ""} ${override.params.op}`.trim();
+        color = "var(--gold)";
+      } else if (auto.kind === "entry") {
+        label = `자동 인식: ${auto.params.keyword} ${auto.params.amount ?? ""} ${auto.params.op}`.trim();
+        color = "#6fbf73";
+      } else if (auto.kind === "if" || auto.kind === "chance") {
+        label = `자동 인식(${auto.kind === "if" ? "조건부" : "확률"}) — 안쪽 절 검수 필요`;
+        color = "#d9a441";
+      } else {
+        label = "구조화 안 됨 (raw) — 계산기가 이 줄을 못 읽습니다";
+        color = "var(--text-faint)";
+      }
+      structBadge.textContent = label;
+      structBadge.style.color = color;
+      structBadge.style.borderColor = color;
+      structEditBtn.textContent = override ? "수동 지정 해제" : "수동으로 구조화";
+
+      structForm.innerHTML = "";
+      const seed = override ? override.params : (auto.kind === "entry" ? auto.params : {});
+      const kwInput = document.createElement("input");
+      kwInput.type = "text";
+      kwInput.placeholder = "키워드/자원 이름";
+      kwInput.value = seed.keyword || "";
+      kwInput.style.cssText = "width:140px;";
+      const opSelect = document.createElement("select");
+      ["부여", "증가", "감소", "획득", "회복", "해제", "소모"].forEach((op) => {
+        const opt = document.createElement("option");
+        opt.value = op; opt.textContent = op;
+        if ((seed.op || "부여") === op) opt.selected = true;
+        opSelect.appendChild(opt);
+      });
+      const amtInput = document.createElement("input");
+      amtInput.type = "number";
+      amtInput.placeholder = "수치";
+      amtInput.value = seed.amount ?? "";
+      amtInput.style.cssText = "width:70px;";
+      const applyBtn = document.createElement("button");
+      applyBtn.type = "button";
+      applyBtn.className = "btn btn-add small";
+      applyBtn.textContent = "적용";
+      applyBtn.addEventListener("click", () => {
+        group.struct[ti] = {
+          kind: "entry",
+          target: "keyword",
+          params: {
+            keyword: kwInput.value.trim(),
+            amount: amtInput.value === "" ? undefined : Number(amtInput.value),
+            op: opSelect.value,
+          },
+        };
+        structForm.style.display = "none";
+        refreshStruct();
+      });
+      structForm.appendChild(kwInput);
+      structForm.appendChild(opSelect);
+      structForm.appendChild(amtInput);
+      structForm.appendChild(applyBtn);
+    }
+
+    structEditBtn.addEventListener("click", () => {
+      if (group.struct[ti]) {
+        group.struct[ti] = undefined;
+        structForm.style.display = "none";
+        refreshStruct();
+      } else {
+        structForm.style.display = structForm.style.display === "none" ? "flex" : "none";
+      }
+    });
+
+    refreshStruct();
+    structWrap.appendChild(structBadge);
+    structWrap.appendChild(structEditBtn);
+    structWrap.appendChild(structForm);
+
     textInput.addEventListener("input", () => {
       group.texts[ti] = textInput.value;
       preview.innerHTML = renderPreviewHtml(group.texts[ti]);
+      if (!group.struct[ti]) refreshStruct(); // 수동 확정 전까지는 텍스트 바뀔 때마다 자동 재인식
     });
 
     const btns = document.createElement("div");
@@ -459,22 +573,26 @@
     btns.appendChild(_iconBtn("↑", "위로", () => {
       if (ti === 0) return;
       [group.texts[ti - 1], group.texts[ti]] = [group.texts[ti], group.texts[ti - 1]];
+      [group.struct[ti - 1], group.struct[ti]] = [group.struct[ti], group.struct[ti - 1]];
       renderLineEditor(container, state);
     }));
     btns.appendChild(_iconBtn("↓", "아래로", () => {
       if (ti === group.texts.length - 1) return;
       [group.texts[ti + 1], group.texts[ti]] = [group.texts[ti], group.texts[ti + 1]];
+      [group.struct[ti + 1], group.struct[ti]] = [group.struct[ti], group.struct[ti + 1]];
       renderLineEditor(container, state);
     }));
     btns.appendChild(_iconBtn("✕", "이 효과 줄 삭제", () => {
       group.texts.splice(ti, 1);
-      if (!group.texts.length) group.texts.push(""); // 그룹은 최소 1줄 유지 — 완전 제거는 그룹 삭제로
+      group.struct.splice(ti, 1);
+      if (!group.texts.length) { group.texts.push(""); group.struct.push(undefined); } // 그룹은 최소 1줄 유지
       renderLineEditor(container, state);
     }));
 
     row.appendChild(textInput);
     row.appendChild(btns);
     row.appendChild(preview);
+    row.appendChild(structWrap);
     return row;
   }
 
