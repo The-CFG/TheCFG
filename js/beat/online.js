@@ -355,9 +355,21 @@ const Online = {
         document.querySelectorAll('.beatmap-card-btn').forEach(btn =>
             btn.addEventListener('click', () => this.show('detail', btn.dataset.id)));
 
-        // 노래 미리듣기 — 화면 진입 시 자동 재생, 오디오가 없으면 조용히 무시
+        // 노래 미리듣기 — 화면 진입 시 자동 재생, 오디오가 없으면 조용히 무시.
+        // 위의 "노래 정보 불러오는 중…" 오버레이는 노래/난이도 메타데이터(JSON)만 커버할 뿐,
+        // 실제 오디오 파일 다운로드+디코딩은 이 시점부터 시작된다. 그동안 아무 표시도 없으면
+        // "다 불러와진 줄 알았는데 몇 초 동안 조용하다"처럼 보이므로, 오디오가 실제로
+        // 재생 가능해질 때까지 좌측 오버레이를 이어서 띄운다(플레이 전 화면의 미리보기
+        // 로딩과 동일한 'preview' 키 재사용 — 화면이 바뀌면 show()가 SongPreview.stop()으로
+        // 항상 정리해주므로 겹칠 일이 없다).
         if (song.audio_storage_path) {
-            SongPreview.playAudio(CloudCharts.getAudioUrl(song.audio_storage_path), song.preview_start_ms || 0);
+            UI.showAreaLoading('preview', '노래 불러오는 중…');
+            const stopTracking = UI.trackAudioDownloadProgress('preview');
+            SongPreview.playAudio(CloudCharts.getAudioUrl(song.audio_storage_path), song.preview_start_ms || 0)
+                .finally(() => {
+                    stopTracking();
+                    if (seq === this._loadSeq) UI.hideAreaLoading('preview'); // 그 사이 다른 화면으로 이동했으면 냅둠(SongPreview.stop()이 이미 정리함)
+                });
         }
     },
 
