@@ -30,6 +30,7 @@ const MenuFeatured = {
 
     onLeave() {
         SongPreview.stop();
+        GameBackground.clear();
     },
 
     async reroll() {
@@ -105,6 +106,7 @@ const MenuFeatured = {
         if (!el) return;
         el.classList.add('hidden');
         el.innerHTML = '';
+        GameBackground.clear();
     },
 
     _renderCard() {
@@ -114,6 +116,7 @@ const MenuFeatured = {
 
         const coverUrl = CloudCharts.getCoverUrl(chart.cover_storage_path);
         const coverStyle = coverUrl ? `background-image:url('${coverUrl}');` : '';
+        GameBackground.set(coverUrl); // 좌측 게임 화면(game-area)에도 같은 커버를 반투명 배경으로
         const creatorName = chart.owner_nickname
             ? _esc(chart.owner_nickname)
             : (chart.owner_id ? `${_esc(chart.owner_id.slice(0, 8))}…` : '알 수 없음');
