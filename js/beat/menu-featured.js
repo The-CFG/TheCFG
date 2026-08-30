@@ -51,6 +51,7 @@ const MenuFeatured = {
         SongPreview.stop();
         AudioEngine.setMuffled(false);
         GameBackground.clear();
+        UI.hideAreaLoading('preview');
     },
 
     async reroll() {
@@ -82,12 +83,23 @@ const MenuFeatured = {
     _playPreview() {
         const chart = this._current;
         if (!chart || !chart.audio_storage_path) return;
+        const seq = this._loadSeq;
+        // online.js의 미리듣기 로딩과 동일하게 'preview' 키를 재사용해 좌측 game-area에
+        // "노래 불러오는 중…" 오버레이 + 실제 다운로드 진행률 바를 띄운다(진행률을 알 수
+        // 없으면 불확정 바로 자동 대체됨). 재생 가능해지거나 자동재생이 막혀 실패해도
+        // 항상 정리한다.
+        UI.showAreaLoading('preview', '노래 불러오는 중…');
+        const stopTracking = UI.trackAudioDownloadProgress('preview');
         SongPreview.playAudio(CloudCharts.getAudioUrl(chart.audio_storage_path), chart.preview_start_ms || 0)
             .then(() => this._hideTapOverlay())
             .catch(() => {
                 // 제스처 없이 자동재생이 막힌 경우 — 카드를 탭하면 재생되도록 오버레이 표시
                 Debugger?.logError?.(new Error('featured preview autoplay blocked'), 'MenuFeatured._playPreview');
                 this._showTapOverlay();
+            })
+            .finally(() => {
+                stopTracking();
+                if (seq === this._loadSeq) UI.hideAreaLoading('preview'); // 그 사이 재추첨/재진입이 겹쳤으면 최신 쪽이 이미 정리함
             });
     },
 
