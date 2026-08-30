@@ -8,6 +8,13 @@ const UI = {
         DOM.screens[screenName].classList.remove('hidden');
         this.currentScreen = screenName;
 
+        // 메인 메뉴 "추천 비트맵" 카드: 메뉴 화면에 들어올 때만 로드/재생, 나갈 때 정리.
+        // showScreen()이 화면 전환의 유일한 관문이라 다른 호출부를 건드릴 필요가 없다.
+        if (typeof MenuFeatured !== 'undefined') {
+            if (screenName === 'menu') MenuFeatured.onEnter();
+            else MenuFeatured.onLeave();
+        }
+
         // 접기 핸들은 게임플레이 화면(#playing-screen)에서만 노출.
         // 플레이 화면을 벗어나면 접힌 패널도 항상 다시 펼쳐 다른 화면이 가려지지 않게 한다.
         const appShell = document.getElementById('app-shell');

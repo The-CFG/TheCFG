@@ -91,12 +91,8 @@ const Online = {
     // 별점(difficulty_score) → 10점 만점 난이도 수치 배지.
     // 산정 난이도(채보 지표 기반)이며 플레이 통계와 무관함을 시각적으로도 분리해서 보여준다.
     _starRatingHtml(difficultyScore, sizeCls = 'text-xs') {
-        const rating = Difficulty.toRating(difficultyScore);
-        const color = this._ratingColorRgb(rating);
-        return `
-        <span class="inline-flex items-center gap-1 ${sizeCls} flex-shrink-0" title="산정 난이도 (채보 지표 기반, 플레이 기록과 무관)">
-            <span class="font-mono font-bold px-1.5 py-0.5 rounded" style="background:${this._rgba(color, 0.13)};color:${this._rgba(color, 1)};border:1px solid ${this._rgba(color, 0.4)};">★ ${rating.toFixed(2)}</span>
-        </span>`;
+        // 색상 스펙트럼/뱃지 마크업은 Difficulty.starRatingHtml로 이관됨 (menu-featured.js와 공용).
+        return Difficulty.starRatingHtml(difficultyScore, sizeCls);
     },
 
     // 노래 카드용: 그 노래가 가진 공개 난이도들의 [최저-최고] 별점 범위 배지.

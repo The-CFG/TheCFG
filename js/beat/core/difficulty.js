@@ -268,6 +268,41 @@ const Difficulty = {
         const score = typeof difficultyScore === 'number' ? difficultyScore : 0;
         return Math.round((score / 10) * 100) / 100;
     },
+
+    // ── 난이도 수치(0~10) → 표시용 색상/뱃지 HTML ──────────────────────────
+    // Online._starRatingHtml 등 여러 화면(온라인 브라우즈, 메뉴 추천 카드)에서 공용으로 쓰는
+    // 색상 스펙트럼 + 뱃지 마크업. 원래 online.js에만 있던 로직을 여기로 옮기고
+    // online.js는 이 함수들을 호출하도록 위임한다 (중복 제거).
+    ratingColorRgb(rating) {
+        const stops = [
+            { at: 0, color: [99, 179, 237] },   // 매우 쉬움 (파랑) #63b3ed
+            { at: 2, color: [104, 211, 145] },  // 쉬움 (초록) #68d391
+            { at: 4, color: [255, 215, 0] },    // 보통 (금색/노랑) #ffd700
+            { at: 6, color: [246, 173, 85] },   // 어려움 (주황) #f6ad55
+            { at: 8, color: [252, 129, 129] },  // 매우 어려움 (빨강) #fc8181
+        ];
+        const r = Math.max(0, Math.min(10, rating));
+        let lo = stops[0], hi = stops[stops.length - 1];
+        for (let i = 0; i < stops.length - 1; i++) {
+            if (r >= stops[i].at && r <= stops[i + 1].at) { lo = stops[i]; hi = stops[i + 1]; break; }
+        }
+        const span = hi.at - lo.at || 1;
+        const t = Math.max(0, Math.min(1, (r - lo.at) / span));
+        const mix = (a, b) => Math.round(a + (b - a) * t);
+        return [mix(lo.color[0], hi.color[0]), mix(lo.color[1], hi.color[1]), mix(lo.color[2], hi.color[2])];
+    },
+
+    rgba(rgb, alpha) { return `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha})`; },
+
+    // difficulty_score(0~100) → "★ X.XX" 뱃지 HTML (색상 tier 적용)
+    starRatingHtml(difficultyScore, sizeCls = 'text-xs') {
+        const rating = this.toRating(difficultyScore);
+        const color = this.ratingColorRgb(rating);
+        return `
+        <span class="inline-flex items-center gap-1 ${sizeCls} flex-shrink-0" title="산정 난이도 (채보 지표 기반, 플레이 기록과 무관)">
+            <span class="font-mono font-bold px-1.5 py-0.5 rounded" style="background:${this.rgba(color, 0.13)};color:${this.rgba(color, 1)};border:1px solid ${this.rgba(color, 0.4)};">★ ${rating.toFixed(2)}</span>
+        </span>`;
+    },
 };
 
 // 브라우저에서는 무시되고, Node.js(백필 스크립트 등)에서만 require로 사용됨.

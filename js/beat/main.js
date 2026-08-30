@@ -1654,6 +1654,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 _lastPlaySettingsAppliedUserId = null;
             }
         });
+
+        // 메뉴 화면은 HTML 기본 상태로 이미 보이고 있어(hidden 클래스 없음) 별도 showScreen()
+        // 호출이 없었다 — MenuFeatured.onEnter() 훅(game/ui.js)을 타도록 여기서 한 번 명시 호출.
+        // 이미 currentScreen === 'menu'이므로 다른 화면 상태에는 영향 없다.
+        UI.showScreen('menu');
     }
 
     initialize();

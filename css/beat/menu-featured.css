@@ -1,0 +1,71 @@
+/* ══════════════════════════════════════════════════════════════════════
+   메인 메뉴 "추천 비트맵" 카드 (js/beat/menu-featured.js)
+   ══════════════════════════════════════════════════════════════════════ */
+
+#menu-featured-beatmap {
+    /* 로딩 전/공개 채보 없음일 때는 menu-featured.js가 hidden 클래스로 감춤 */
+}
+
+.menu-featured-card {
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.menu-featured-cover {
+    background-color: var(--tb-gray-700);
+    overflow: hidden;
+}
+
+/* 좌측 커버가 정보 영역보다 살짝 더 강조되도록 폭 비율을 카드 안에서 왼쪽으로 치우치게 배치 */
+.menu-featured-card {
+    align-items: stretch;
+}
+
+.menu-featured-playing-dot {
+    width: 0.65rem;
+    height: 0.65rem;
+    border-radius: 9999px;
+    background: #22c55e;
+    box-shadow: 0 0 0 2px rgba(17, 24, 39, 0.9);
+}
+
+.menu-featured-tap-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    font-size: 0.65rem;
+    line-height: 1.2;
+    padding: 0.25rem;
+    cursor: pointer;
+}
+
+.menu-featured-reroll-btn {
+    background: rgba(0, 0, 0, 0.4);
+}
+.menu-featured-reroll-btn:hover { background: rgba(0, 0, 0, 0.6); }
+
+.menu-featured-play-btn {
+    background: linear-gradient(90deg, #14b8a6, #0ea5e9);
+}
+.menu-featured-play-btn:hover { filter: brightness(1.08); }
+.menu-featured-play-btn:active { filter: brightness(0.95); }
+
+.menu-featured-skeleton {
+    background: linear-gradient(90deg,
+        rgba(255, 255, 255, 0.04) 25%,
+        rgba(255, 255, 255, 0.09) 37%,
+        rgba(255, 255, 255, 0.04) 63%);
+    background-size: 400% 100%;
+    animation: menu-featured-shimmer 1.4s ease infinite;
+}
+@keyframes menu-featured-shimmer {
+    0%   { background-position: 100% 50%; }
+    100% { background-position: 0 50%; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .menu-featured-skeleton { animation: none; }
+}

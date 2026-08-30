@@ -341,4 +341,43 @@ const CloudBrowse = {
         }));
         return { data: merged, error: null };
     },
+
+    // ── 메인 메뉴 "추천 비트맵" 카드용 ────────────────────────────────────
+    // 공개 채보 중 하나를 무작위로 골라 카드에 필요한 전부(커버/오디오/메타/채보자 닉네임)를
+    // 합쳐서 반환한다. RLS가 is_public=true는 비로그인도 조회 가능하게 되어 있어 로그인 여부와
+    // 무관하게 동작한다.
+    //
+    // 1) id만 가벼운 쿼리로 모아서 클라이언트에서 랜덤 pick (Supabase에서 진짜 random() 정렬은
+    //    풀 스캔이라 비쌈 — 대신 count만 알아내서 랜덤 offset 하나만 찍어 가져온다)
+    // 2) 그 채보 1건만 상세 조회 + song 메타 조합 (getBeatmapDetail과 동일한 모양)
+    // 3) 채보자(chart.owner_id) 닉네임 별도 조회
+    //
+    // 반환: { id, difficulty_label, lane_count, difficulty_score, owner_id, owner_nickname,
+    //         song_id, title, artist, audio_storage_path, audio_mime, cover_storage_path,
+    //         preview_start_ms } | null (공개 채보가 하나도 없으면 null)
+    async getFeaturedBeatmap() {
+        const { count, error: countErr } = await _supabase
+            .from('beat_charts')
+            .select('id', { count: 'exact', head: true })
+            .eq('is_public', true);
+        if (countErr || !count) return { data: null, error: countErr || null };
+
+        const randomOffset = Math.floor(Math.random() * count);
+        const { data: picked, error: pickErr } = await _supabase
+            .from('beat_charts')
+            .select('id')
+            .eq('is_public', true)
+            .range(randomOffset, randomOffset);
+        if (pickErr || !picked || !picked.length) return { data: null, error: pickErr || null };
+
+        // 상세 조합은 기존 getBeatmapDetail과 동일 로직 재사용
+        const { data: detail, error: detailErr } = await this.getBeatmapDetail(picked[0].id);
+        if (detailErr || !detail) return { data: null, error: detailErr || null };
+
+        const nickMap = await CloudAuth._fetchNicknameMap([detail.owner_id]);
+        return {
+            data: { ...detail, owner_nickname: nickMap[detail.owner_id] || null },
+            error: null,
+        };
+    },
 };

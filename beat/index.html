@@ -18,6 +18,7 @@
     <link rel="stylesheet" href="/css/beat/help.css">
     <link rel="stylesheet" href="/css/beat/theme.css">
     <link rel="stylesheet" href="/css/beat/collab.css"><!-- 공동 작업 모달 (openSongCollabModal) 스타일 -->
+    <link rel="stylesheet" href="/css/beat/menu-featured.css"><!-- 메인 메뉴 추천 비트맵 카드 (menu-featured.js) -->
     <style>
         /* 터치 디바이스 레이아웃 - 좁은 화면(1024px 이하)에서만 세로 배치 */
         /* [수정] 기존에는 'body > div'로 잡아서 업로드/로그인/트리거/디버그 모달도
@@ -146,6 +147,9 @@
                         </div>
                     </div>
                     <div id="menu-message" class="hidden p-3 mb-4 text-center text-white bg-red-500 rounded-lg"></div>
+                    <!-- 추천 비트맵 카드: js/beat/menu-featured.js가 채움. 공개 채보가 하나도 없거나
+                         로딩 실패면 hidden 상태 그대로 유지된다. -->
+                    <div id="menu-featured-beatmap" class="hidden"></div>
                     <div class="space-y-4 mt-4" style="padding-bottom: var(--safe-bottom, 80px);">
                         <button id="online-btn" class="menu-btn w-full py-6 flex flex-col items-center justify-center rounded-xl transition" style="--menu-accent:#3b82f6;--menu-accent-soft:rgba(59,130,246,0.22);">
                             <span class="menu-btn-icon text-3xl mb-1">🎵</span>
@@ -1705,6 +1709,7 @@
         <script defer src="/js/beat/multiplayer/rooms.js"></script>
         <script defer src="/js/beat/multiplayer/realtime.js"></script>
         <script defer src="/js/beat/online.js"></script>
+        <script defer src="/js/beat/menu-featured.js"></script><!-- 메인 메뉴 추천 비트맵 카드: MenuFeatured (online.js의 _esc 재사용) -->
         <script defer src="/js/beat/multiplayer/lobby.js"></script>
         <script defer src="/js/beat/main.js"></script>
     </body>
