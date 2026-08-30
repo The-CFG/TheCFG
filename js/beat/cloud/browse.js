@@ -81,7 +81,7 @@ const CloudBrowse = {
         const pageSongs = ranked.slice(page * pageSize, (page + 1) * pageSize);
         const data = pageSongs.map(s => ({
             ...s,
-            ...(summaryBySongId[s.id] || { beatmapCount: 0, laneCountMin: null, laneCountMax: null, totalPlayCount: 0, totalLikeCount: 0, minDifficultyScore: null, maxDifficultyScore: null }),
+            ...(summaryBySongId[s.id] || { beatmapCount: 0, laneCountMin: null, laneCountMax: null, totalPlayCount: 0, totalLikeCount: 0, minDifficultyScore: null, maxDifficultyScore: null, difficultyScores: [] }),
         }));
 
         return { data, error: null, count };
@@ -121,7 +121,7 @@ const CloudBrowse = {
         const pageSongs = ranked.slice(page * pageSize, (page + 1) * pageSize);
         const data = pageSongs.map(s => ({
             ...s,
-            ...(summaryBySongId[s.id] || { beatmapCount: 0, laneCountMin: null, laneCountMax: null, totalPlayCount: 0, totalLikeCount: 0, minDifficultyScore: null, maxDifficultyScore: null }),
+            ...(summaryBySongId[s.id] || { beatmapCount: 0, laneCountMin: null, laneCountMax: null, totalPlayCount: 0, totalLikeCount: 0, minDifficultyScore: null, maxDifficultyScore: null, difficultyScores: [] }),
         }));
 
         return { data, error: null, count };
@@ -163,7 +163,7 @@ const CloudBrowse = {
         const pageSongs = ranked.slice(page * pageSize, (page + 1) * pageSize);
         const data = pageSongs.map(s => ({
             ...s,
-            ...(summaryBySongId[s.id] || { beatmapCount: 0, laneCountMin: null, laneCountMax: null, totalPlayCount: 0, totalLikeCount: 0, minDifficultyScore: null, maxDifficultyScore: null }),
+            ...(summaryBySongId[s.id] || { beatmapCount: 0, laneCountMin: null, laneCountMax: null, totalPlayCount: 0, totalLikeCount: 0, minDifficultyScore: null, maxDifficultyScore: null, difficultyScores: [] }),
         }));
 
         return { data, error: null, count };
@@ -176,13 +176,13 @@ const CloudBrowse = {
             .select('id, song_id, lane_count, play_count, difficulty_score')
             .eq('is_public', true)
             .in('song_id', songs.map(s => s.id));
-        if (chartsErr) return songs.map(s => ({ ...s, beatmapCount: 0, laneCountMin: null, laneCountMax: null, totalPlayCount: 0, totalLikeCount: 0, maxDifficultyScore: null }));
+        if (chartsErr) return songs.map(s => ({ ...s, beatmapCount: 0, laneCountMin: null, laneCountMax: null, totalPlayCount: 0, totalLikeCount: 0, maxDifficultyScore: null, difficultyScores: [] }));
 
         const likeCountByChartId = await this._fetchLikeCounts((charts || []).map(c => c.id));
         const summaryBySongId = this._buildSummary(charts || [], likeCountByChartId);
         return songs.map(s => ({
             ...s,
-            ...(summaryBySongId[s.id] || { beatmapCount: 0, laneCountMin: null, laneCountMax: null, totalPlayCount: 0, totalLikeCount: 0, minDifficultyScore: null, maxDifficultyScore: null }),
+            ...(summaryBySongId[s.id] || { beatmapCount: 0, laneCountMin: null, laneCountMax: null, totalPlayCount: 0, totalLikeCount: 0, minDifficultyScore: null, maxDifficultyScore: null, difficultyScores: [] }),
         }));
     },
 
@@ -202,11 +202,11 @@ const CloudBrowse = {
         return counts;
     },
 
-    // beat_charts 행 배열(+좋아요 개수 맵) → song_id별 { beatmapCount, laneCountMin, laneCountMax, totalPlayCount, totalLikeCount }
+    // beat_charts 행 배열(+좋아요 개수 맵) → song_id별 { beatmapCount, laneCountMin, laneCountMax, totalPlayCount, totalLikeCount, difficultyScores }
     _buildSummary(charts, likeCountByChartId = {}) {
         const bySongId = {};
         charts.forEach(c => {
-            const cur = bySongId[c.song_id] || { beatmapCount: 0, laneCountMin: null, laneCountMax: null, totalPlayCount: 0, totalLikeCount: 0, minDifficultyScore: null, maxDifficultyScore: null };
+            const cur = bySongId[c.song_id] || { beatmapCount: 0, laneCountMin: null, laneCountMax: null, totalPlayCount: 0, totalLikeCount: 0, minDifficultyScore: null, maxDifficultyScore: null, difficultyScores: [] };
             cur.beatmapCount += 1;
             cur.totalPlayCount += c.play_count || 0;
             cur.totalLikeCount += likeCountByChartId[c.id] || 0;
@@ -217,6 +217,8 @@ const CloudBrowse = {
                 cur.maxDifficultyScore = cur.maxDifficultyScore === null
                     ? c.difficulty_score
                     : Math.max(cur.maxDifficultyScore, c.difficulty_score);
+                // 라이브러리 카드에 난이도별 큐브를 낮은순으로 그리기 위한 원본 점수 목록.
+                cur.difficultyScores.push(c.difficulty_score);
             }
             if (typeof c.lane_count === 'number') {
                 cur.laneCountMin = cur.laneCountMin === null ? c.lane_count : Math.min(cur.laneCountMin, c.lane_count);
@@ -224,6 +226,7 @@ const CloudBrowse = {
             }
             bySongId[c.song_id] = cur;
         });
+        Object.values(bySongId).forEach(s => s.difficultyScores.sort((a, b) => a - b));
         return bySongId;
     },
 
