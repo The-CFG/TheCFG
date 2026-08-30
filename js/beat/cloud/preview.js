@@ -48,14 +48,22 @@ const SongPreview = {
             // 진행되고, 나중에 실제로 탭하면 이미 받아둔 버퍼로 바로 이어서 재생된다.
             await Promise.race([
                 AudioEngine.resumeContext(),
-                new Promise((_, reject) => setTimeout(() => reject(new Error('오디오 재생 제스처 대기 시간 초과')), 1500)),
+                new Promise((_, reject) => {
+                    const timeoutErr = new Error('오디오 재생 제스처 대기 시간 초과');
+                    timeoutErr.isGestureTimeout = true; // 진짜 예외와 구분해서 로그 여부를 가르는 데 사용
+                    setTimeout(() => reject(timeoutErr), 1500);
+                }),
             ]);
             if (token !== this._loadToken) return;
             await DOM.musicPlayer.play();
             if (token !== this._loadToken) { DOM.musicPlayer.pause(); return; }
             this._active = true;
         } catch (err) {
-            Debugger?.logError?.(err, 'SongPreview.playAudio');
+            // 제스처 대기 타임아웃은 페이지에 아직 클릭 등 상호작용이 없었던 첫 진입마다
+            // 브라우저 자동재생 정책 때문에 항상 발생하는 정상적인 상황이라, 에러로
+            // 찍으면 콘솔이 매번 시끄러워진다 — 실제 네트워크/디코딩 실패 등 진짜
+            // 예외일 때만 로그를 남긴다.
+            if (!err.isGestureTimeout) Debugger?.logError?.(err, 'SongPreview.playAudio');
             throw err; // 호출부(MenuFeatured의 탭-재생 오버레이 등)가 실패를 알고 대응할 수 있도록 전달
         }
     },
@@ -111,12 +119,17 @@ const SongPreview = {
             // resumeContext() 대기도 타임아웃을 걸어 무한 pending을 방지한다.
             await Promise.race([
                 AudioEngine.resumeContext(),
-                new Promise((_, reject) => setTimeout(() => reject(new Error('오디오 재생 제스처 대기 시간 초과')), 1500)),
+                new Promise((_, reject) => {
+                    const timeoutErr = new Error('오디오 재생 제스처 대기 시간 초과');
+                    timeoutErr.isGestureTimeout = true;
+                    setTimeout(() => reject(timeoutErr), 1500);
+                }),
             ]);
             if (token !== this._loadToken) return; // 그 사이 다른 곡 요청이 들어옴 — 이 호출은 폐기
             if (audioUrl) await DOM.musicPlayer.play();
         } catch (err) {
-            Debugger?.logError?.(err, 'SongPreview.start');
+            // 제스처 타임아웃은 정상 상황이므로 로그하지 않는다 (playAudio()와 동일한 처리)
+            if (!err.isGestureTimeout) Debugger?.logError?.(err, 'SongPreview.start');
         }
         if (token !== this._loadToken) { DOM.musicPlayer.pause(); return; }
 

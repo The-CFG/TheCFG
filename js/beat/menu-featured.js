@@ -93,8 +93,9 @@ const MenuFeatured = {
         SongPreview.playAudio(CloudCharts.getAudioUrl(chart.audio_storage_path), chart.preview_start_ms || 0)
             .then(() => this._hideTapOverlay())
             .catch(() => {
-                // 제스처 없이 자동재생이 막힌 경우 — 카드를 탭하면 재생되도록 오버레이 표시
-                Debugger?.logError?.(new Error('featured preview autoplay blocked'), 'MenuFeatured._playPreview');
+                // 제스처 없이 자동재생이 막힌 경우 — 페이지 첫 진입마다 항상 있을 수 있는
+                // 정상적인 상황이라 에러로 찍지 않는다(preview.js에서 진짜 예외는 이미
+                // 로그로 남김). 카드를 탭하면 재생되도록 오버레이만 표시한다.
                 this._showTapOverlay();
             })
             .finally(() => {
