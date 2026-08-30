@@ -483,3 +483,14 @@ body {
 .calibration-tap-zone.tap-flash {
     border-color: #facc15;
 }
+/* 라이브러리 카드 호버 애니메이션 — 살짝 떠오르며 그림자가 생김.
+   버튼에 이미 붙어있는 .transition 클래스(transform/box-shadow 포함, 0.15s ease)가
+   그대로 애니메이션을 태워주므로 여기선 hover/active 상태값만 정의하면 된다. */
+.browse-card-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 20px -6px rgba(0, 0, 0, 0.45);
+}
+.browse-card-btn:active {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px -4px rgba(0, 0, 0, 0.4);
+}
