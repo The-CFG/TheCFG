@@ -266,27 +266,34 @@ const Online = {
         return result;
     },
 
-    // 노래 카드용: 그 노래가 가진 공개 난이도들을 낮은 별점순으로 작은 정사각형(큐브)
-    // UI로 나열한다. 큐브 배경색은 별점 그라디언트(_ratingColorRgb)를 그대로 쓰고,
-    // 안에는 그 난이도 별점의 정수 부분만(반올림) 검정 글씨로 적어서 "난이도가 몇 개고
-    // 각각 대략 어느 정도인지"를 한 번에 보여준다. (기존 "난이도 N개" 텍스트 배지를 대체)
-    _difficultyCubesHtml(difficultyScores) {
-        if (!difficultyScores || difficultyScores.length === 0) return '';
-        const cubes = difficultyScores.map(score => {
+    // 노래 카드용: 그 노래가 가진 공개 난이도들을 "[X키] [난이도][난이도] [Y키] [난이도]…"
+    // 형태로 나열한다. 한 노래 안에 서로 다른 키(레인 수)의 난이도가 섞여 있을 수 있어서,
+    // 레인 수가 바뀔 때마다 회색 "N키" 라벨 큐브를 하나 앞에 두고 그 레인의 난이도들을
+    // (낮은 별점순) 이어붙인다. beatmaps는 browse.js _buildSummary()에서 이미
+    // 레인 수 오름차순 → 그 안에서 별점 오름차순으로 정렬해서 내려온다.
+    // 난이도 큐브 배경색은 별점 그라디언트(_ratingColorRgb)를 그대로 쓰고, 안에는 그
+    // 난이도 별점의 정수 부분만(반올림) 검정 글씨로 적는다.
+    _difficultyCubesHtml(beatmaps) {
+        if (!beatmaps || beatmaps.length === 0) return '';
+        const cubeStyle = 'display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;padding:3px;box-sizing:border-box;font-size:10px;line-height:1;border-radius:0.25rem;';
+        let html = '';
+        let lastLaneCount = null;
+        beatmaps.forEach(({ laneCount, score }) => {
+            if (laneCount !== lastLaneCount) {
+                html += `<span class="font-mono font-bold" style="${cubeStyle}background:#4b5563;color:#e5e7eb;" title="${laneCount}키">${laneCount}키</span>`;
+                lastLaneCount = laneCount;
+            }
             const rating = Difficulty.toRating(score);
             const color = this._ratingColorRgb(rating);
             const intRating = Math.round(rating);
-            return `<span class="inline-flex items-center justify-center rounded font-mono font-bold" style="width:18px;height:18px;padding:3px;box-sizing:border-box;font-size:10px;line-height:1;background:${this._rgba(color, 1)};color:#000;" title="★ ${rating.toFixed(2)}">${intRating}</span>`;
-        }).join('');
-        return `<span class="inline-flex flex-wrap justify-end gap-0.5 max-w-[152px]" title="공개 난이도 목록 (낮은순, 채보 지표 기반 별점)">${cubes}</span>`;
+            html += `<span class="font-mono font-bold" style="${cubeStyle}background:${this._rgba(color, 1)};color:#000;" title="★ ${rating.toFixed(2)}">${intRating}</span>`;
+        });
+        return `<span class="inline-flex flex-wrap justify-end items-center gap-0.5 max-w-[152px]" title="공개 난이도 목록 (레인 수별, 낮은 별점순)">${html}</span>`;
     },
 
     // 노래 카드: 난이도 개수 / 레인 수 범위 / 총 플레이 수 요약만 보여준다.
     // 실제 난이도 선택은 song 상세 화면(_showSongDetail)에서 한다.
     _chartCard(s) {
-        const laneRange = s.laneCountMin == null
-            ? '—'
-            : (s.laneCountMin === s.laneCountMax ? `${s.laneCountMin}키` : `${s.laneCountMin}~${s.laneCountMax}키`);
         const dateLine = _formatDateLine(s.created_at, s.updated_at);
 
         // 커버 사진이 있으면 카드 오른쪽에 은은하게 걸리도록 배경으로 깐다.
@@ -312,8 +319,7 @@ const Online = {
                     ${dateLine ? `<p class="text-xs text-gray-500 mt-1">${dateLine}</p>` : ''}
                 </div>
                 <div class="flex flex-col items-end space-y-1 ml-2 flex-shrink-0${statsWrapClass}">
-                    ${this._difficultyCubesHtml(s.difficultyScores)}
-                    <span class="text-xs text-gray-400">${laneRange}</span>
+                    ${this._difficultyCubesHtml(s.beatmaps)}
                     <span class="text-xs text-gray-500">▶ ${s.totalPlayCount} · ♥ ${s.totalLikeCount || 0}</span>
                 </div>
             </div>
