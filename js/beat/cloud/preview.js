@@ -32,16 +32,31 @@ const SongPreview = {
         this._resetPlayback();
         if (!audioUrl) return;
         const token = ++this._loadToken;
-        try { await AudioEngine.resumeContext(); } catch (e) { /* 제스처 없이 호출된 경우 무시 */ }
-        if (token !== this._loadToken) return; // 그 사이 다른 곡 요청이 들어옴 — 이 호출은 폐기
+        // 오디오 소스 지정(= 다운로드+디코딩 시작)을 AudioContext 상태와 무관하게 가장 먼저
+        // 해둔다. 예전엔 resumeContext()부터 기다렸는데, 페이지에 들어와서 아직 한 번도
+        // 클릭 같은 제스처가 없었던 시점(예: 메인 메뉴 첫 진입)엔 AudioContext.resume()의
+        // Promise가 reject되지 않고 실제 제스처가 생길 때까지 그냥 무한정 pending으로
+        // 남는 브라우저가 있다. 그 대기가 끝나기 전엔 아래 코드가 아예 실행되지 않아
+        // 다운로드 자체가 시작을 못 했고, 그래서 진행률 바가 0%에서 영원히 사라지지
+        // 않는 문제가 있었다.
+        DOM.musicPlayer.src = audioUrl;
+        DOM.musicPlayer.currentTime = Math.max(0, (previewStartMs || 0) / 1000);
         try {
-            DOM.musicPlayer.src = audioUrl;
-            DOM.musicPlayer.currentTime = Math.max(0, (previewStartMs || 0) / 1000);
+            // resumeContext()도 같은 이유로 하염없이 pending일 수 있으므로, 일정 시간 안에
+            // 끝나지 않으면 "아직 제스처가 없다"고 보고 타임아웃시켜 catch로 넘긴다.
+            // 다운로드/디코딩 자체는 위에서 이미 시작해뒀으므로 백그라운드에서 계속
+            // 진행되고, 나중에 실제로 탭하면 이미 받아둔 버퍼로 바로 이어서 재생된다.
+            await Promise.race([
+                AudioEngine.resumeContext(),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('오디오 재생 제스처 대기 시간 초과')), 1500)),
+            ]);
+            if (token !== this._loadToken) return;
             await DOM.musicPlayer.play();
             if (token !== this._loadToken) { DOM.musicPlayer.pause(); return; }
             this._active = true;
         } catch (err) {
             Debugger?.logError?.(err, 'SongPreview.playAudio');
+            throw err; // 호출부(MenuFeatured의 탭-재생 오버레이 등)가 실패를 알고 대응할 수 있도록 전달
         }
     },
 
@@ -54,8 +69,8 @@ const SongPreview = {
         const laneCount = (opts && opts.laneCount) || chartData?.laneCount || 4;
         const laneIds = CONFIG.LANE_KEY_MAPPING_ORDER[laneCount];
         if (!laneIds) {
-            // 알 수 없는 레인 수면 노트 미리보기 없이 오디오만이라도 재생
-            await this.playAudio(audioUrl, previewStartMs);
+            // 알 수 없는 레인 수면 노트 미리보기 없이 오디오만이라도 재생 (실패해도 무시)
+            await this.playAudio(audioUrl, previewStartMs).catch(() => {});
             return;
         }
 
@@ -86,14 +101,20 @@ const SongPreview = {
         Game.canvas.init();
         Game.canvas.resize(laneCount);
 
-        try { await AudioEngine.resumeContext(); } catch (e) { /* 무시 */ }
-        if (token !== this._loadToken) return; // 그 사이 다른 곡 요청이 들어옴 — 이 호출은 폐기
+        // playAudio()와 동일한 이유로 src 지정(다운로드 시작)을 resumeContext()보다 먼저 해둔다 —
+        // 제스처 없이 resume()이 하염없이 pending인 브라우저에서도 다운로드는 진행되게 하기 위함.
+        if (audioUrl) {
+            DOM.musicPlayer.src = audioUrl;
+            DOM.musicPlayer.currentTime = Math.max(0, (previewStartMs || 0) / 1000);
+        }
         try {
-            if (audioUrl) {
-                DOM.musicPlayer.src = audioUrl;
-                DOM.musicPlayer.currentTime = Math.max(0, (previewStartMs || 0) / 1000);
-                await DOM.musicPlayer.play();
-            }
+            // resumeContext() 대기도 타임아웃을 걸어 무한 pending을 방지한다.
+            await Promise.race([
+                AudioEngine.resumeContext(),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('오디오 재생 제스처 대기 시간 초과')), 1500)),
+            ]);
+            if (token !== this._loadToken) return; // 그 사이 다른 곡 요청이 들어옴 — 이 호출은 폐기
+            if (audioUrl) await DOM.musicPlayer.play();
         } catch (err) {
             Debugger?.logError?.(err, 'SongPreview.start');
         }

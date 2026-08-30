@@ -386,6 +386,7 @@ const Online = {
             UI.showAreaLoading('preview', '노래 불러오는 중…');
             const stopTracking = UI.trackAudioDownloadProgress('preview');
             SongPreview.playAudio(CloudCharts.getAudioUrl(song.audio_storage_path), song.preview_start_ms || 0)
+                .catch(() => {}) // 실패(제스처 대기 타임아웃 등)해도 아래 정리는 항상 수행 — 여기선 결과를 따로 다루지 않음
                 .finally(() => {
                     stopTracking();
                     if (seq === this._loadSeq) UI.hideAreaLoading('preview'); // 그 사이 다른 화면으로 이동했으면 냅둠(SongPreview.stop()이 이미 정리함)
@@ -600,7 +601,7 @@ const Online = {
             stopTracking();
             // 노트 미리보기 실패 시에도 오디오 미리듣기는 시도한다.
             if (this._currentChartId !== c.id || seq !== this._loadSeq) { UI.hideAreaLoading('preview'); return; }
-            SongPreview.playAudio(CloudCharts.getAudioUrl(c.audio_storage_path), c.preview_start_ms || 0);
+            SongPreview.playAudio(CloudCharts.getAudioUrl(c.audio_storage_path), c.preview_start_ms || 0).catch(() => {});
             // 이 경우엔 좌측 화면에 노트 미리보기 없이 오디오만 재생되므로, 오버레이에
             // 안내를 계속 남겨둔다 — 다만 로딩이 끝난 확정 상태이므로 스피너는 끈다.
             UI.showAreaLoading('preview', '🎵 노래 미리듣기만 재생 중입니다.', { spinner: false });
