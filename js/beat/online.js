@@ -276,7 +276,7 @@ const Online = {
             const rating = Difficulty.toRating(score);
             const color = this._ratingColorRgb(rating);
             const intRating = Math.round(rating);
-            return `<span class="inline-flex items-center justify-center rounded font-mono font-bold" style="width:18px;height:18px;font-size:10px;line-height:1;background:${this._rgba(color, 1)};color:#000;" title="★ ${rating.toFixed(2)}">${intRating}</span>`;
+            return `<span class="inline-flex items-center justify-center rounded font-mono font-bold" style="width:18px;height:18px;padding:3px;box-sizing:content-box;font-size:10px;line-height:1;background:${this._rgba(color, 1)};color:#000;" title="★ ${rating.toFixed(2)}">${intRating}</span>`;
         }).join('');
         return `<span class="inline-flex flex-wrap justify-end gap-0.5 max-w-[152px]" title="공개 난이도 목록 (낮은순, 채보 지표 기반 별점)">${cubes}</span>`;
     },
