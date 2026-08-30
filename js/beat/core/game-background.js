@@ -78,6 +78,21 @@ const GameBackground = {
     reapply() {
         if (this._lastRequestedUrl) this.set(this._lastRequestedUrl);
     },
+
+    // 배경/오디오를 끄지 않은 채로 블러 처리만 켜고 끈다 (예: 메인 메뉴 → 환경설정처럼
+    // 잠깐 다른 화면을 보는 동안 재생 중인 곡을 배경으로 계속 들려주고 싶을 때).
+    // 오디오 쪽 뭉갬 효과는 AudioEngine.setMuffled()가 짝을 이룬다.
+    setBlurred(active) {
+        const bg = document.getElementById('game-area-bg');
+        const dim = document.getElementById('game-area-bg-dim');
+        if (!bg) return;
+        bg.style.transition = 'filter 0.35s ease, opacity 0.3s ease';
+        bg.style.filter = active ? 'blur(16px) brightness(0.65) saturate(0.9)' : '';
+        if (dim) {
+            dim.style.transition = 'opacity 0.35s ease';
+            dim.style.opacity = active ? '0.7' : '0.55';
+        }
+    },
 };
 
 // 초기 상태: 배경 없음 (opacity 0에서 시작)

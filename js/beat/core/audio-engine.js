@@ -24,6 +24,8 @@ const AudioEngine = {
     _pausedAt: 0,
     _isPlaying: false,
     _duration: 0,
+    _muffleFilter: null,
+    _muffled: false,
     _src: '',
     _loadToken: 0,
     _loadPromise: null,
@@ -41,7 +43,16 @@ const AudioEngine = {
         const Ctx = window.AudioContext || window.webkitAudioContext;
         this._ctx = new Ctx();
         this._gainNode = this._ctx.createGain();
-        this._gainNode.connect(this._ctx.destination);
+        // 뭉갬(muffle) 효과용 로우패스 필터. 기본은 사실상 무영향(귀에 안 들리는 초고역대)
+        // 값으로 열어두고, setMuffled(true)일 때만 컷오프를 확 낮춰 먹먹하게 만든다.
+        // gainNode → muffleFilter → destination 순으로 상시 연결해두고 파라미터만 조절한다.
+        this._muffleFilter = this._ctx.createBiquadFilter();
+        this._muffleFilter.type = 'lowpass';
+        this._muffleFilter.frequency.value = 22000;
+        this._muffleFilter.Q.value = 0.7;
+        this._gainNode.connect(this._muffleFilter);
+        this._muffleFilter.connect(this._ctx.destination);
+        this._muffled = false;
     },
 
     // 사용자 제스처(재생 버튼 클릭 등) 안에서 한 번 호출해 AudioContext를 활성화한다.
@@ -190,6 +201,24 @@ const AudioEngine = {
     set volume(value) {
         this._ensureContext();
         this._gainNode.gain.value = value;
+    },
+
+    // 재생을 멈추지 않은 채로 "뭉개는" 효과만 켜고 끈다 — 설정 화면처럼 배경으로만
+    // 계속 들려주고 싶을 때 사용. 로우패스 컷오프 + 살짝의 볼륨 감쇠를 부드럽게(0.35초)
+    // 전환한다. play()/pause()나 currentTime 흐름과는 무관하게 필터 파라미터만 건드리므로
+    // 판정 타이밍(게임플레이 중 currentTime 계산)에는 영향을 주지 않는다.
+    setMuffled(active) {
+        if (!active && !this._ctx) return; // 아직 컨텍스트도 없는데 끄기 요청 — 할 일 없음
+        this._ensureContext();
+        if (this._muffled === active) return;
+        this._muffled = active;
+        const now = this._ctx.currentTime;
+        const rampTime = 0.35;
+        this._muffleFilter.frequency.cancelScheduledValues(now);
+        this._muffleFilter.frequency.setTargetAtTime(active ? 500 : 22000, now, rampTime / 3);
+    },
+    get muffled() {
+        return !!this._muffled;
     },
 
     // when: 지금부터 몇 초 뒤에 재생을 시작할지 (기본 0 = 즉시).

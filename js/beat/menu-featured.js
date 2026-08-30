@@ -13,10 +13,20 @@ const MenuFeatured = {
     _loaded: false,       // 세션 중 한 번이라도 성공적으로 뽑았는지
     _loading: false,
     _loadSeq: 0,          // 재추첨/화면 재진입이 겹칠 때 오래된 응답 무시용
+    _muffled: false,      // 환경설정 화면 등에서 "끄지 않고 뭉개기"만 한 상태인지
 
     async onEnter() {
         const el = document.getElementById('menu-featured-beatmap');
         if (!el) return;
+
+        if (this._muffled) {
+            // 설정 화면 등에서 뭉개기만 해뒀던 경우 — 재생은 계속되고 있었으므로
+            // 다시 로드/재생하지 않고 블러/필터만 원상복구한다 (끊김 없이 이어짐).
+            this._muffled = false;
+            GameBackground.setBlurred(false);
+            AudioEngine.setMuffled(false);
+            return;
+        }
 
         if (this._loading) return; // 이미 로딩 중이면 중복 요청 안 함
         if (this._loaded && this._current) {
@@ -28,8 +38,18 @@ const MenuFeatured = {
         await this._load();
     },
 
-    onLeave() {
+    // screenName: 어떤 화면으로 나가는지. 'settings'는 끄지 않고 블러+뭉갬만 적용,
+    // 그 외에는 기존처럼 완전히 정지/정리한다.
+    onLeave(screenName) {
+        if (screenName === 'settings' && this._loaded && this._current) {
+            this._muffled = true;
+            GameBackground.setBlurred(true);
+            AudioEngine.setMuffled(true);
+            return;
+        }
+        this._muffled = false;
         SongPreview.stop();
+        AudioEngine.setMuffled(false);
         GameBackground.clear();
     },
 

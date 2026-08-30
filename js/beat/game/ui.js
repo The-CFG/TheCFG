@@ -9,10 +9,11 @@ const UI = {
         this.currentScreen = screenName;
 
         // 메인 메뉴 "추천 비트맵" 카드: 메뉴 화면에 들어올 때만 로드/재생, 나갈 때 정리.
+        // 단, 환경설정 화면으로 갈 때는 끄지 않고 블러+뭉갬 효과만 준다 (MenuFeatured가 판단).
         // showScreen()이 화면 전환의 유일한 관문이라 다른 호출부를 건드릴 필요가 없다.
         if (typeof MenuFeatured !== 'undefined') {
             if (screenName === 'menu') MenuFeatured.onEnter();
-            else MenuFeatured.onLeave();
+            else MenuFeatured.onLeave(screenName);
         }
 
         // 접기 핸들은 게임플레이 화면(#playing-screen)에서만 노출.
