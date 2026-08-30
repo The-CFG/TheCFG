@@ -1348,7 +1348,10 @@ const Game = {
 
         this._setupMultiplayerSpectate(userId, opponents, roomId, hostId, selfNickname);
 
-        UI.showScreen('menu');
+        // start()가 내부에서 UI.showScreen('playing')을 호출하므로 여기서 별도로 'menu'
+        // 화면을 먼저 거칠 필요가 없다 — _playOnlineChart()와 동일한 이유로, 그 단계가
+        // MenuFeatured.onEnter()/onLeave()를 오발동시켜 추천 곡 배경이 잠깐 떴다가
+        // 실제 플레이할 곡 배경이 까맣게 지워지는 원인이었다.
         await this.start({ syncStartPerfTime: targetPerfTime });
         UI.showScreen('playing');
         this.state.gameState = 'playing';

@@ -670,7 +670,12 @@ const Online = {
             UI.hideAreaLoading('startPlay');
             if (!audioReady) throw new Error('노래를 불러오지 못했습니다.');
 
-            UI.showScreen('menu');
+            // Game.start()가 내부에서 UI.showScreen('playing')을 호출하므로 별도 화면 전환은
+            // 필요 없다. 예전엔 여기서 UI.showScreen('menu')를 먼저 거쳤는데, showScreen()이
+            // MenuFeatured.onEnter()/onLeave()를 호출하는 관문이 된 뒤로는 그게 "추천 비트맵"
+            // 카드의 배경/미리듣기를 순간적으로 띄웠다가(onEnter) 곧바로 'playing'으로 넘어가며
+            // 지워버려서(onLeave) 실제로 플레이할 곡의 배경 대신 추천 곡 배경이 잠깐 떴다가
+            // 까맣게 사라지는 원인이 됐다.
             setTimeout(() => {
                 Game.start();
                 UI.showScreen('playing');
