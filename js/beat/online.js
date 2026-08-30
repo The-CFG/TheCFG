@@ -54,12 +54,23 @@ const Online = {
                 <button id="online-back-btn" class="py-2 px-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm flex-shrink-0">
                     ${this._pickMode === 'queue' ? '← 대기실' : (this._pickMode ? '← 멀티플레이' : '← 메뉴')}
                 </button>
+                <button id="settings-icon-online" type="button"
+                    class="p-2 rounded-full hover:bg-gray-600 transition flex-shrink-0" title="환경설정" aria-label="환경설정">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                </button>
             </div>
             <div id="online-content" class="flex-1 min-h-0 overflow-y-auto"></div>
         </div>`;
 
         document.getElementById('online-tab-browse').addEventListener('click', () => this.show('browse'));
         document.getElementById('online-tab-my')?.addEventListener('click', () => this.show('my'));
+        // 메인 메뉴의 환경설정 아이콘(settings-icon-menu)과 같은 함수를 그대로 재사용 — main.js가
+        // window에 노출해준다. 닫을 때는 UI.currentScreen('online')을 기억해뒀다가 그대로 복원되므로
+        // 여기 별도 처리는 필요 없다.
+        document.getElementById('settings-icon-online').addEventListener('click', () => window.showSettingsScreen());
         document.getElementById('online-back-btn').addEventListener('click', () => {
             this._loadSeq++; // 이 시점에 아직 안 끝난 로딩(오디오 미리듣기 포함)은 전부 무효화
             SongPreview.stop();

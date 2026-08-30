@@ -248,6 +248,8 @@ document.addEventListener('DOMContentLoaded', () => {
         DOM.resumeGameBtn.addEventListener('click', () => Game.togglePause());
         DOM.settings.iconMenu.addEventListener('click', showSettingsScreen);
         DOM.settings.iconPlaying.addEventListener('click', showSettingsScreen);
+        // online.js 등 main.js 클로저 밖의 다른 화면에서도 같은 설정 진입 함수를 재사용할 수 있도록 노출.
+        window.showSettingsScreen = showSettingsScreen;
 
         DOM.settings.backBtn.addEventListener('click', () => {
             cancelKeyBinding();

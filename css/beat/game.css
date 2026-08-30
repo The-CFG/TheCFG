@@ -24,6 +24,15 @@ body {
 #game-area {
     transition: width 0.25s ease;
 }
+/* GameBackground.setBlurred()가 이 요소에 filter:blur()를 거는데(환경설정 화면 등),
+   CSS filter는 기본적으로 요소 자신의 박스 경계를 넘어 시각적으로 번진다 — 그대로 두면
+   #game-area 우측 경계 너머 #ui-area 좌측 끝부분까지 블러가 침범해 보인다.
+   #game-area 자체에 overflow:hidden을 걸면 경계 밖으로 살짝 튀어나오게 배치된
+   #panel-toggle-btn(패널 접기 핸들)이 함께 잘리므로, 그 대신 블러가 걸리는 배경 요소
+   자신을 clip-path로 자기 박스 안으로만 한정해 번짐만 막는다. */
+#game-area-bg {
+    clip-path: inset(0);
+}
 
 /* ── 좌측 game-area 로딩 오버레이 ── 사진/음악/채보 데이터 등 동시에 여러 개가
    로딩 중일 수 있어 문구를 줄바꿈으로 쌓아 보여준다 (UI.showAreaLoading 참고). */
