@@ -276,11 +276,15 @@ const Online = {
     _difficultyCubesHtml(beatmaps) {
         if (!beatmaps || beatmaps.length === 0) return '';
         const cubeStyle = 'display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;padding:3px;box-sizing:border-box;font-size:10px;line-height:1;border-radius:0.25rem;';
+        // "N키" 라벨은 숫자 큐브와 같은 18px 폭으로는 글자가 다 안 들어가서 줄바꿈되던
+        // 문제가 있었다 — 폭은 내용에 맞게(min-width만 18px) 늘어나게 하고, 글자도
+        // 더 작게(8px) + 줄바꿈 금지로 한 줄에 딱 붙게 한다.
+        const labelStyle = 'display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:3px;box-sizing:border-box;font-size:8px;line-height:1;white-space:nowrap;border-radius:0.25rem;';
         let html = '';
         let lastLaneCount = null;
         beatmaps.forEach(({ laneCount, score }) => {
             if (laneCount !== lastLaneCount) {
-                html += `<span class="font-mono font-bold" style="${cubeStyle}background:#4b5563;color:#e5e7eb;" title="${laneCount}키">${laneCount}키</span>`;
+                html += `<span class="font-mono font-bold" style="${labelStyle}background:#4b5563;color:#e5e7eb;" title="${laneCount}키">${laneCount}키</span>`;
                 lastLaneCount = laneCount;
             }
             const rating = Difficulty.toRating(score);
@@ -320,7 +324,7 @@ const Online = {
                 </div>
                 <div class="flex flex-col items-end space-y-1 ml-2 flex-shrink-0${statsWrapClass}">
                     ${this._difficultyCubesHtml(s.beatmaps)}
-                    <span class="text-xs text-gray-500">▶ ${s.totalPlayCount} · ♥ ${s.totalLikeCount || 0}</span>
+                    <span class="text-xs" style="color:#FFF;">▶ ${s.totalPlayCount} · ♥ ${s.totalLikeCount || 0}</span>
                 </div>
             </div>
         </button>`;
