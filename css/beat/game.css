@@ -494,3 +494,53 @@ body {
     transform: translateY(-1px);
     box-shadow: 0 4px 10px -4px rgba(0, 0, 0, 0.4);
 }
+
+/* ── 메인 화면 버튼(플레이/멀티/연습/에디터) — 심심해 보여서 색 구분 + 진입 애니메이션 추가 ──
+   각 버튼은 style="--menu-accent:#hex;--menu-accent-soft:rgba(...)" 로 자기 색을 들고 온다. */
+.menu-btn {
+    position: relative;
+    overflow: hidden;
+    background: var(--tb-gray-700);
+    border: 1px solid transparent;
+    transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.15s ease, box-shadow 0.15s ease;
+    /* 화면에 나타날 때(메뉴 진입 시마다 — display:none↔block 전환마다 재생됨) 아래에서
+       살짝 올라오며 페이드인. 버튼 4개가 순서대로 조금씩 늦게 나오도록 nth-of-type로 딜레이. */
+    animation: tb-menu-btn-in 0.4s ease both;
+}
+.menu-btn:nth-of-type(1) { animation-delay: 0s; }
+.menu-btn:nth-of-type(2) { animation-delay: 0.06s; }
+.menu-btn:nth-of-type(3) { animation-delay: 0.12s; }
+.menu-btn:nth-of-type(4) { animation-delay: 0.18s; }
+@keyframes tb-menu-btn-in {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+/* 버튼 자기 색이 은은하게 배어나오는 그라디언트 — 평소엔 옅게, 호버 시 진해짐 */
+.menu-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 25% 15%, var(--menu-accent-soft), transparent 65%);
+    opacity: 0.7;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+}
+.menu-btn:hover {
+    background: var(--tb-gray-600);
+    border-color: var(--menu-accent);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 18px -6px var(--menu-accent-soft);
+}
+.menu-btn:hover::before { opacity: 1; }
+.menu-btn:active { transform: translateY(0); }
+.menu-btn-icon {
+    display: inline-block;
+    transition: transform 0.2s ease;
+}
+.menu-btn:hover .menu-btn-icon {
+    transform: scale(1.15) rotate(-4deg);
+}
+@media (prefers-reduced-motion: reduce) {
+    .menu-btn { animation: none; }
+    .menu-btn:hover .menu-btn-icon { transform: none; }
+}
