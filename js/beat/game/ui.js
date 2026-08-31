@@ -10,18 +10,20 @@ const UI = {
         this.currentScreen = screenName;
 
         // 메인 메뉴 "추천 비트맵" 카드: 메뉴 화면에 들어올 때만 로드/재생, 나갈 때 정리.
-        // 메뉴 → 환경설정은 카드 자신의 재생 상태를 아는 MenuFeatured가 직접 판단해서
-        // 끄지 않고 블러+뭉갬만 건다. 그 외에 설정 화면으로 가거나(메뉴가 아닌 화면에서)
-        // 설정에서 돌아오는 경우는 MenuFeatured와 무관한 화면(라이브러리/곡 상세 등)일 수
-        // 있으므로 여기서 완전 정지(onLeave)를 호출하지 않고, 아래 공통 블러 처리에 맡긴다
-        // — 안 그러면 그 화면의 배경/오디오가 설정을 열자마자 꺼져버리는 문제가 있었다.
+        // 핵심은 "메뉴 화면을 실제로 벗어날 때만" MenuFeatured.onLeave()를 부르는 것 —
+        // previousScreen === 'menu'인지로 판단한다. (메뉴 → 환경설정도 이 안에서 처리되며,
+        // onLeave 내부에서 screenName === 'settings'일 때만 끄지 않고 블러+뭉갬만 건다.)
+        // 예전엔 여기 조건이 `previousScreen !== 'settings'`였는데, 이러면 previousScreen이
+        // 'menu'가 아닌 다른 화면(예: 곡 상세 'detail')일 때도 걸려버려서, 그 화면 자신이
+        // GameBackground.set()으로 띄워둔 배경/미리듣기(MenuFeatured와 무관함)까지
+        // MenuFeatured.onLeave()가 GameBackground.clear()로 꺼버리는 버그가 있었다 — 곡
+        // 상세에서 "시작"을 눌러 실제 플레이 화면으로 넘어갈 때, 배경이 잠깐 보이다가
+        // 갑자기 까맣게 사라지는 증상으로 나타났다.
         // showScreen()이 화면 전환의 유일한 관문이라 다른 호출부를 건드릴 필요가 없다.
         if (typeof MenuFeatured !== 'undefined') {
             if (screenName === 'menu') {
                 MenuFeatured.onEnter();
-            } else if (screenName === 'settings') {
-                if (previousScreen === 'menu') MenuFeatured.onLeave(screenName);
-            } else if (previousScreen !== 'settings') {
+            } else if (previousScreen === 'menu') {
                 MenuFeatured.onLeave(screenName);
             }
         }
