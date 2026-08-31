@@ -380,6 +380,11 @@ const Appearance = {
     saveSettings() {
         try {
             localStorage.setItem('theBeat_appearance', JSON.stringify(this.settings));
+            // BeatSkin(스킨 시스템)에도 지금 값을 캡처해 IndexedDB에 반영한다.
+            // BeatSkin이 아직 초기화 전이거나(로드 순서 문제) 없는 페이지일 수 있어 존재 체크.
+            if (typeof BeatSkin !== 'undefined' && BeatSkin.captureFromAppearance) {
+                BeatSkin.captureFromAppearance();
+            }
         } catch (err) {
             this._logError(err, 'Appearance.saveSettings');
         }
