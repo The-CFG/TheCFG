@@ -33,20 +33,11 @@ body {
 #game-area-bg {
     clip-path: inset(0);
 }
-
-/* GameBackground.setBlurred()가 토글하는 오버레이 — #game-canvas(SongPreview 채보
-   미리보기 + 실제 게임플레이 노트 렌더러) 위를 backdrop-filter로 덮어 블러를 낸다.
-   opacity로 여닫으므로 꺼져 있을 때(opacity:0)는 자신의 backdrop-filter 결과 자체가
-   같이 보이지 않게 되어 평소엔 완전히 투명하다. #game-canvas 자신에는 어떤 style도
-   건드리지 않는다 — 캔버스에 직접 filter를 걸면 실제 플레이 중 매 프레임 다시
-   그려지는 것과 겹쳐 일부 브라우저에서 화면이 까맣게 깨지는 문제가 있었다.
-   brightness/saturate는 넣지 않고 blur만 준다 — 이 오버레이는 #game-area-bg 위에
-   겹쳐지므로, #game-area-bg 자신의 filter(brightness(0.65) saturate(0.9))가 이미
-   어둡게 만들어둔 화면을 여기서 또 한 번 어둡게 하면 원래 의도보다 훨씬 새까매진다. */
-#game-area-blur-overlay {
-    transition: opacity 0.35s ease;
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+/* GameBackground.setBlurred()가 채보 미리보기(SongPreview)가 그려지는 이 캔버스에도
+   같은 filter:blur()를 거는데, 위 #game-area-bg와 같은 이유로 자기 박스 밖으로 번지는
+   것을 막아야 한다. */
+#game-canvas {
+    clip-path: inset(0);
 }
 
 /* 판정 텍스트(퍼펙트/굿 등)·콤보·카운트다운은 원래 z-index가 없어(auto) 레인 구분선

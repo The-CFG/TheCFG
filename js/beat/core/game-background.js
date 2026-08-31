@@ -82,19 +82,15 @@ const GameBackground = {
     // 배경/오디오를 끄지 않은 채로 블러 처리만 켜고 끈다 (예: 메인 메뉴 → 환경설정처럼
     // 잠깐 다른 화면을 보는 동안 재생 중인 곡을 배경으로 계속 들려주고 싶을 때).
     // 오디오 쪽 뭉갬 효과는 AudioEngine.setMuffled()가 짝을 이룬다.
-    //
-    // #game-canvas(=SongPreview의 채보 미리보기이자 실제 게임플레이 노트 렌더러) 위는
-    // #game-area-blur-overlay(backdrop-filter)로 덮어서 블러를 낸다 — 한때 #game-canvas
-    // 자체에 직접 filter:blur()를 걸어봤는데, 이 캔버스는 실제 플레이 중에도 매 프레임
-    // requestAnimationFrame으로 다시 그려지는 바로 그 캔버스라서, 거기에 CSS filter를
-    // 얹으면 일부 브라우저/GPU 조합에서 게임플레이 진입 시 화면이 까맣게 깨지는 렌더링
-    // 버그가 났다. <canvas> 엘리먼트에 직접 filter를 거는 대신, 그 위에 별도의 투명
-    // 오버레이를 두고 오버레이 쪽에 backdrop-filter를 걸면 캔버스 자체는 전혀 건드리지
-    // 않으면서 시각적으로는 동일하게 블러/어둡게 보인다.
+    // #game-canvas도 함께 블러 처리한다 — SongPreview.start()(라이브러리/곡 상세 화면의
+    // 채보 미리보기)가 여기에 노트를 그리는데, 이걸 빼두면 배경 커버 이미지만 블러되고
+    // 그 위에 겹쳐진 채보 미리보기(낙하 노트)는 선명하게 그대로 보이는 문제가 있었다.
+    // 캔버스는 매 프레임 다시 그려지지만 CSS filter는 렌더링 결과에만 적용되는
+    // 후처리라 애니메이션이 계속돼도 블러가 끊기거나 깜빡이지 않는다.
     setBlurred(active) {
         const bg = document.getElementById('game-area-bg');
         const dim = document.getElementById('game-area-bg-dim');
-        const overlay = document.getElementById('game-area-blur-overlay');
+        const canvas = document.getElementById('game-canvas');
         if (!bg) return;
         bg.style.transition = 'filter 0.35s ease, opacity 0.3s ease';
         bg.style.filter = active ? 'blur(16px) brightness(0.65) saturate(0.9)' : '';
@@ -102,8 +98,9 @@ const GameBackground = {
             dim.style.transition = 'opacity 0.35s ease';
             dim.style.opacity = active ? '0.7' : '0.55';
         }
-        if (overlay) {
-            overlay.style.opacity = active ? '1' : '0';
+        if (canvas) {
+            canvas.style.transition = 'filter 0.35s ease';
+            canvas.style.filter = active ? 'blur(16px) brightness(0.65) saturate(0.9)' : '';
         }
     },
 };
