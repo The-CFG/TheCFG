@@ -202,7 +202,9 @@ const Game = {
                 }
             }
 
-            // 판정선
+            // 판정선 — 커스터마이징 계획 2단계: Appearance.settings.judgementLineColor를
+            // 기준으로 그라데이션/발광 색을 계산한다(기본값은 기존과 동일한 흰색).
+            const lineColor = Appearance.settings.judgementLineColor || '#ffffff';
             if (isCircle) {
                 // 원형 노트: 레인마다 원형 판정선
                 for (let i = 0; i < laneCount; i++) {
@@ -210,16 +212,16 @@ const Game = {
                     const cy = jY - this.NOTE_CIRCLE_D / 2;
                     const r = this.NOTE_CIRCLE_D / 2;
                     const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-                    grad.addColorStop(0, 'rgba(255,255,255,0.8)');
-                    grad.addColorStop(0.5, 'rgba(255,255,255,0.4)');
-                    grad.addColorStop(1, 'rgba(255,255,255,0.1)');
+                    grad.addColorStop(0, Appearance.hexToRgba(lineColor, 0.8));
+                    grad.addColorStop(0.5, Appearance.hexToRgba(lineColor, 0.4));
+                    grad.addColorStop(1, Appearance.hexToRgba(lineColor, 0.1));
                     ctx.fillStyle = grad;
                     ctx.beginPath();
                     ctx.arc(cx, cy, r, 0, Math.PI * 2);
                     ctx.fill();
                     // 테두리 — 채워진 그라데이션만으로는 원 가장자리가 흐릿하게 퍼져
                     // 경계가 잘 안 보여서, 얇은 테두리선을 하나 둘러 판정 위치를 명확히 한다.
-                    ctx.strokeStyle = 'rgba(255,255,255,1)';
+                    ctx.strokeStyle = Appearance.hexToRgba(lineColor, 1);
                     ctx.lineWidth = 2;
                     ctx.stroke();
                 }
@@ -227,11 +229,11 @@ const Game = {
                 // 바 노트: 전체 너비 가로선
                 const totalW = laneCount * laneW;
                 const grad = ctx.createLinearGradient(0, 0, totalW, 0);
-                grad.addColorStop(0,   'rgba(255,255,255,0.2)');
-                grad.addColorStop(0.5, 'rgba(255,255,255,0.8)');
-                grad.addColorStop(1,   'rgba(255,255,255,0.2)');
+                grad.addColorStop(0,   Appearance.hexToRgba(lineColor, 0.2));
+                grad.addColorStop(0.5, Appearance.hexToRgba(lineColor, 0.8));
+                grad.addColorStop(1,   Appearance.hexToRgba(lineColor, 0.2));
                 ctx.fillStyle = grad;
-                ctx.shadowColor = '#fff';
+                ctx.shadowColor = lineColor;
                 ctx.shadowBlur  = 10;
                 ctx.fillRect(0, jY, totalW, this.JUDGEMENT_LINE_H);
                 ctx.shadowBlur = 0;

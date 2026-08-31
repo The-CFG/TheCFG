@@ -212,9 +212,11 @@ body {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    font-size: 4rem;
+    /* 커스터마이징 계획 2단계: 색상/크기는 CSS 변수로 주입(Appearance.updateJudgementCssVariables 참고).
+       위치(top/left)는 아직 조절 UI가 없어 기본값 그대로 둔다. */
+    font-size: var(--judgement-font-size, 4rem);
     font-weight: bold;
-    color: white;
+    color: var(--judgement-color, white);
     opacity: 0;
     transition: all 0.3s ease-out;
     text-shadow: 0 0 15px rgba(0,0,0,0.5);
@@ -229,9 +231,9 @@ body {
     top: 60%;
     left: 50%;
     transform: translate(-50%, -50%);
-    font-size: 2.5rem;
+    font-size: var(--combo-font-size, 2.5rem);
     font-weight: bold;
-    color: #f6e05e;
+    color: var(--combo-color, #f6e05e);
     opacity: 0;
     transition: all 0.3s ease-out;
     text-shadow: 0 0 10px rgba(0,0,0,0.5);
@@ -374,9 +376,10 @@ body {
     top: 40%;
     left: 50%;
     transform: translate(-50%, -50%) scale(1.5);
-    font-size: 8rem;
+    /* 커스터마이징 계획 2단계: 색상/크기는 CSS 변수로 주입(Appearance.updateJudgementCssVariables 참고). */
+    font-size: var(--countdown-font-size, 8rem);
     font-weight: bold;
-    color: white;
+    color: var(--countdown-color, white);
     opacity: 0;
     transition: all 0.3s ease-out;
     text-shadow: 0 0 20px rgba(0, 0, 0, 0.5);

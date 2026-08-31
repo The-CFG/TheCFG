@@ -146,6 +146,38 @@ const Appearance = {
                 }
             });
 
+            // 판정선 색상 (Canvas 드로잉 — CSS 변수가 아니라 game.js가 설정값을 직접 참조)
+            const judgementLineInput = document.getElementById('color-judgement-line');
+            if (judgementLineInput) {
+                judgementLineInput.addEventListener('input', (e) => {
+                    this.settings.judgementLineColor = e.target.value;
+                });
+            }
+
+            // 판정 텍스트 / 콤보 텍스트 / 카운트다운 (색상 + 크기, CSS 변수로 주입)
+            [
+                { colorId: 'color-judgement-text', sizeId: 'judgement-text-size', labelId: 'judgement-text-size-value', colorKey: 'judgementTextColor', sizeKey: 'judgementTextSize' },
+                { colorId: 'color-combo-text',      sizeId: 'combo-text-size',      labelId: 'combo-text-size-value',      colorKey: 'comboTextColor',      sizeKey: 'comboTextSize' },
+                { colorId: 'color-countdown-text',  sizeId: 'countdown-text-size',  labelId: 'countdown-text-size-value',  colorKey: 'countdownTextColor',  sizeKey: 'countdownTextSize' }
+            ].forEach(({ colorId, sizeId, labelId, colorKey, sizeKey }) => {
+                const colorInput = document.getElementById(colorId);
+                if (colorInput) {
+                    colorInput.addEventListener('input', (e) => {
+                        this.settings[colorKey] = e.target.value;
+                        this.updateJudgementCssVariables();
+                    });
+                }
+                const sizeInput = document.getElementById(sizeId);
+                if (sizeInput) {
+                    sizeInput.addEventListener('input', (e) => {
+                        this.settings[sizeKey] = parseFloat(e.target.value);
+                        const label = document.getElementById(labelId);
+                        if (label) label.textContent = `${this.settings[sizeKey]}rem`;
+                        this.updateJudgementCssVariables();
+                    });
+                }
+            });
+
             // 색상 모드 선택
             const colorModeSelector = document.getElementById('color-mode-selector');
             if (colorModeSelector) {
@@ -305,9 +337,23 @@ const Appearance = {
             document.documentElement.style.setProperty('--note-long-gradient-start', gradientStart);
             
             document.documentElement.style.setProperty('--note-false-color', this.settings.colors.false);
+
+            this.updateJudgementCssVariables();
         } catch (err) {
             this._logError(err, 'Appearance.updateCSSVariables');
         }
+    },
+
+    // 판정 텍스트/콤보/카운트다운(DOM 기반, css/beat/game.css)에 쓰이는 CSS 변수를
+    // 주입한다. updateCSSVariables()/applySettings() 양쪽에서 공용으로 호출.
+    updateJudgementCssVariables() {
+        const root = document.documentElement.style;
+        root.setProperty('--judgement-color', this.settings.judgementTextColor);
+        root.setProperty('--judgement-font-size', `${this.settings.judgementTextSize}rem`);
+        root.setProperty('--combo-color', this.settings.comboTextColor);
+        root.setProperty('--combo-font-size', `${this.settings.comboTextSize}rem`);
+        root.setProperty('--countdown-color', this.settings.countdownTextColor);
+        root.setProperty('--countdown-font-size', `${this.settings.countdownTextSize}rem`);
     },
 
     applySettings() {
@@ -321,6 +367,8 @@ const Appearance = {
             document.documentElement.style.setProperty('--note-long-gradient-start', gradientStart);
             
             document.documentElement.style.setProperty('--note-false-color', this.settings.colors.false);
+
+            this.updateJudgementCssVariables();
 
             // 색상 모드에 따라 body 클래스 설정
             if (this.settings.colorMode === 'lane') {
@@ -386,6 +434,31 @@ const Appearance = {
                     input.value = this.settings.laneColors[lane];
                 }
             });
+
+            // 판정선/판정 텍스트/콤보/카운트다운 입력 업데이트
+            const jLineInput = document.getElementById('color-judgement-line');
+            if (jLineInput) jLineInput.value = this.settings.judgementLineColor;
+
+            const jTextColorInput = document.getElementById('color-judgement-text');
+            if (jTextColorInput) jTextColorInput.value = this.settings.judgementTextColor;
+            const jTextSizeInput = document.getElementById('judgement-text-size');
+            if (jTextSizeInput) jTextSizeInput.value = this.settings.judgementTextSize;
+            const jTextSizeLabel = document.getElementById('judgement-text-size-value');
+            if (jTextSizeLabel) jTextSizeLabel.textContent = `${this.settings.judgementTextSize}rem`;
+
+            const comboColorInput = document.getElementById('color-combo-text');
+            if (comboColorInput) comboColorInput.value = this.settings.comboTextColor;
+            const comboSizeInput = document.getElementById('combo-text-size');
+            if (comboSizeInput) comboSizeInput.value = this.settings.comboTextSize;
+            const comboSizeLabel = document.getElementById('combo-text-size-value');
+            if (comboSizeLabel) comboSizeLabel.textContent = `${this.settings.comboTextSize}rem`;
+
+            const countdownColorInput = document.getElementById('color-countdown-text');
+            if (countdownColorInput) countdownColorInput.value = this.settings.countdownTextColor;
+            const countdownSizeInput = document.getElementById('countdown-text-size');
+            if (countdownSizeInput) countdownSizeInput.value = this.settings.countdownTextSize;
+            const countdownSizeLabel = document.getElementById('countdown-text-size-value');
+            if (countdownSizeLabel) countdownSizeLabel.textContent = `${this.settings.countdownTextSize}rem`;
         } catch (err) {
             this._logError(err, 'Appearance.updateColorInputs');
         }
@@ -438,7 +511,14 @@ const Appearance = {
                     R2: '#8b5cf6',
                     R3: '#a855f7',
                     R4: '#ec4899'
-                }
+                },
+                judgementLineColor: '#ffffff',
+                judgementTextColor: '#ffffff',
+                judgementTextSize: 4,
+                comboTextColor: '#f6e05e',
+                comboTextSize: 2.5,
+                countdownTextColor: '#ffffff',
+                countdownTextSize: 8
             };
             this.updateColorInputs();
             this.updateShapeUI();
@@ -458,6 +538,16 @@ const Appearance = {
         const g = Math.max(0, Math.min(255, parseInt(hex.substring(2, 4), 16) + amount));
         const b = Math.max(0, Math.min(255, parseInt(hex.substring(4, 6), 16) + amount));
         return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+    },
+
+    // HEX 색상 → "rgba(r, g, b, alpha)" 문자열. 판정선(Canvas 드로잉)처럼 CSS 변수를
+    // 못 쓰는 곳에서 사용자가 고른 색으로 그라데이션/투명도를 직접 계산할 때 쓴다.
+    hexToRgba(color, alpha) {
+        const hex = (color || '#ffffff').replace('#', '');
+        const r = parseInt(hex.substring(0, 2), 16) || 0;
+        const g = parseInt(hex.substring(2, 4), 16) || 0;
+        const b = parseInt(hex.substring(4, 6), 16) || 0;
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
     },
 
     forceUpdateNotes() {
