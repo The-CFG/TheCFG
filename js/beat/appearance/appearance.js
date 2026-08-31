@@ -19,7 +19,21 @@ const Appearance = {
             R2: '#8b5cf6',
             R3: '#a855f7',
             R4: '#ec4899'
-        }
+        },
+        // ── 커스터마이징 계획 2단계: 판정선/판정 텍스트/콤보/카운트다운 ──
+        // 판정선(Canvas 드로잉)은 game.js drawLaneBackground()가 이 색을 기준으로
+        // 그라데이션 rgba를 직접 계산해서 쓴다(hexToRgba 참고).
+        judgementLineColor: '#ffffff',
+        // 판정 텍스트/콤보/카운트다운(DOM 기반)은 CSS 변수(--judgement-*, --combo-*,
+        // --countdown-*)로 css/beat/game.css의 .judgement-text 등에 주입된다
+        // (applySettings() 참고). 위치(top/left)는 아직 UI가 없어 CSS 쪽 기본값을 그대로
+        // 쓰고, 폰트(--judgement-font-family 등)는 1-B단계(BeatFonts)에서 연결 예정.
+        judgementTextColor: '#ffffff',
+        judgementTextSize: 4, // rem
+        comboTextColor: '#f6e05e',
+        comboTextSize: 2.5, // rem
+        countdownTextColor: '#ffffff',
+        countdownTextSize: 8 // rem
     },
     
     presets: {
