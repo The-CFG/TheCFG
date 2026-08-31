@@ -115,6 +115,10 @@
              MultiplayerLobby가 시작 시 넘겨준 상대 목록으로 Game.js가 채우고, MultiplayerRealtime의
              'progress' 브로드캐스트를 받을 때마다 갱신한다. 상대가 없는(싱글) 플레이에서는 숨김. -->
         <div id="mp-spectate-hud" class="hidden"></div>
+        <!-- 환경설정 등에서 게임 화면 전체(커버 이미지 + 채보 미리보기/게임플레이 캔버스)를
+             뭉개는 블러 오버레이. GameBackground.setBlurred()가 opacity로 여닫는다.
+             DOM 마지막에 둬서 이 안의 다른 레이어들보다 항상 위에 그려지게 한다. -->
+        <div id="game-area-blur-overlay" class="absolute inset-0 pointer-events-none" style="z-index:6;opacity:0;"></div>
     </div>
             <!-- UI Area -->
             <div id="ui-area" class="w-full lg:w-2/5 flex-1 lg:h-full p-2 lg:p-4 xl:p-8 flex flex-col justify-start bg-[#2d3748] overflow-y-auto overflow-x-hidden touch-auto" style="-webkit-overflow-scrolling: touch; overscroll-behavior: contain;">
