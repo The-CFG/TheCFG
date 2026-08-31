@@ -388,7 +388,8 @@ body {
 }
 
 .btn-group button.active {
-    background-color: #4299e1;
+    /* 테마 시스템 accent 토큰 참조(css/beat/theme.css) */
+    background-color: var(--tb-accent, #4299e1);
     color: white;
 }
 

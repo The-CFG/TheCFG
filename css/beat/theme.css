@@ -2,12 +2,146 @@
    css/beat/theme.css — TheBeat 테마 시스템
    Blue(기본) / Dark / Light
    의존: css/beat/styles.css (먼저 로드)
+
+   ── 토큰화(커스터마이징 계획 1-A단계 선행 작업) ──────────────────────────
+   기존에는 "[data-theme="dark"] .bg-gray-700 { ... !important }" 식으로
+   Tailwind 유틸리티 클래스마다 테마별 값을 직접 하드코딩했다. 이제 아래
+   :root / [data-theme="dark"|"light"] 블록에서 의미 단위 CSS 변수(--tb-*)
+   값만 선언하고, 실제 색상 적용은 각 컴포넌트 규칙(css/beat/utilities.css의
+   .bg-gray-700 등, editor.css의 .keybind-box/.tab-btn.active, game.css의
+   .btn-group button.active)이 그 변수를 참조하는 방식으로 바꿨다.
+   → 나중에 "커스텀" 모드를 추가할 때 [data-theme="custom"] 블록(또는 JS의
+   documentElement.style.setProperty)으로 같은 변수만 채우면 이 아래 컴포넌트
+   규칙은 전혀 손대지 않아도 된다.
+
+   값은 리팩터링 전과 100% 동일하게 유지했다(시각적 회귀 없음). 다만 원본
+   문서(customization-plan-concrete.md)가 "--tb-bg-surface-soft(.bg-gray-600/500)"
+   처럼 실제로는 값이 다른 두 클래스를 토큰 하나로 묶어 표기한 곳이 있어,
+   여기서는 값이 서로 다른 경우 토큰을 하나 더 늘려 분리했다(주석 참고).
+   유일하게 실제로 값이 겹치는 hover:bg-gray-600 / hover:bg-gray-500는 원본
+   그대로 --tb-hover-surface 하나로 유지했다(우연이 아니라 기존 dark/light
+   오버라이드 값이 이미 동일했음).
 ════════════════════════════════════════════════ */
 
-/* ── 테마 액센트 변수 ────────────────────────── */
-:root                  { --tb-accent: #4299e1; }
-[data-theme="dark"]    { --tb-accent: #3b82f6; }
-[data-theme="light"]   { --tb-accent: #374151; }
+/* ── 테마 토큰 — Blue(기본) ────────────────────── */
+:root {
+    --tb-accent: #4299e1;
+
+    /* 전역 배경/텍스트 (body, #ui-area) */
+    --tb-bg-primary:   #2d3748; /* game.css body 기존 배경과 동일 */
+    --tb-text-primary: #e2e8f0; /* game.css body 기존 텍스트와 동일 */
+
+    /* 서피스(카드/패널 등 배경) */
+    --tb-bg-surface:        #374151; /* 기존 .bg-gray-700 기본값(--tb-gray-700) */
+    --tb-bg-surface-alt:    #1f2937; /* 기존 .bg-gray-800 기본값(--tb-gray-800) */
+    --tb-bg-surface-soft:   #4b5563; /* 기존 .bg-gray-600 기본값(--tb-gray-600) */
+    --tb-bg-surface-softer: #6b7280; /* 기존 .bg-gray-500 기본값(--tb-gray-500) — 계획 문서엔
+                                         surface-soft에 뭉뚱그려 있으나 실제 값이 달라 분리 */
+
+    /* 텍스트(보조) */
+    --tb-text-secondary: #d1d5db; /* 기존 .text-gray-300 기본값 */
+    --tb-text-tertiary:  #9ca3af; /* 기존 .text-gray-400 기본값 — 위와 같은 이유로 분리 */
+
+    /* 테두리 */
+    --tb-border:        #374151; /* 기존 .border-gray-700 기본값 */
+    --tb-border-strong:  #4b5563; /* 기존 .border-gray-600 기본값 — 위와 같은 이유로 분리 */
+
+    /* 호버 서피스 — hover:bg-gray-600/500는 원본에서 이미 같은 값을 썼으므로 하나로 통합.
+       700/400은 값이 달라 별도 토큰(-alt/-strong)으로 분리. */
+    --tb-hover-surface:        #4b5563; /* hover:bg-gray-600, hover:bg-gray-500 */
+    --tb-hover-surface-alt:    #374151; /* hover:bg-gray-700 */
+    --tb-hover-surface-strong: #9ca3af; /* hover:bg-gray-400 */
+
+    /* 탭 활성 상태 — border는 항상 accent와 같은 값이라 별도 토큰 없이 var(--tb-accent) 재사용 */
+    --tb-tab-active-text: #ffffff;
+
+    /* 키 바인드 박스 (editor.css .keybind-box) */
+    --tb-keybind-bg:              #4a5568;
+    --tb-keybind-hover-bg:        #718096;
+    --tb-keybind-border:          transparent;
+    --tb-keybind-text:            var(--tb-text-primary);
+    --tb-keybind-listening-bg:    #2d3748;
+    --tb-keybind-listening-border:#f6e05e;
+
+    /* 인풋/셀렉트 텍스트는 항상 --tb-text-primary와 같은 값이라 별도 토큰 없이 재사용 */
+}
+
+/* ── 테마 토큰 — Dark ──────────────────────────── */
+[data-theme="dark"] {
+    --tb-accent: #3b82f6;
+
+    --tb-bg-primary:   #161a1d;
+    --tb-text-primary: #cdd3d8;
+
+    --tb-bg-surface:        #1e2326;
+    --tb-bg-surface-alt:    #111416;
+    --tb-bg-surface-soft:   #242a2e;
+    --tb-bg-surface-softer: #2a2f33;
+
+    --tb-text-secondary: #cdd3d8;
+    --tb-text-tertiary:  #5a6470;
+
+    --tb-border:        #1e2326;
+    --tb-border-strong:  #2a2f33;
+
+    --tb-hover-surface:        #2a2f33;
+    --tb-hover-surface-alt:    #1e2326;
+    --tb-hover-surface-strong: #35393e;
+
+    --tb-tab-active-text: #ffffff;
+
+    --tb-keybind-bg:              #242a2e;
+    --tb-keybind-hover-bg:        #2a2f33;
+    --tb-keybind-border:          #2a2f33;
+    --tb-keybind-text:            #cdd3d8;
+    --tb-keybind-listening-bg:    #161a1d;
+    --tb-keybind-listening-border:#f6e05e;
+}
+
+/* ── 테마 토큰 — Light ─────────────────────────── */
+[data-theme="light"] {
+    --tb-accent: #374151;
+
+    --tb-bg-primary:   #e8eaed;
+    --tb-text-primary: #1f2937;
+
+    --tb-bg-surface:        #ffffff;
+    --tb-bg-surface-alt:    #f3f4f6;
+    --tb-bg-surface-soft:   #e5e7eb;
+    --tb-bg-surface-softer: #d1d5db;
+
+    --tb-text-secondary: #374151;
+    --tb-text-tertiary:  #6b7280;
+
+    --tb-border:        #e5e7eb;
+    --tb-border-strong:  #d1d5db;
+
+    --tb-hover-surface:        #d1d5db;
+    --tb-hover-surface-alt:    #f3f4f6;
+    --tb-hover-surface-strong: #e5e7eb;
+
+    --tb-tab-active-text: #111827;
+
+    --tb-keybind-bg:              #f3f4f6;
+    --tb-keybind-hover-bg:        #e5e7eb;
+    --tb-keybind-border:          #d1d5db;
+    --tb-keybind-text:            #374151;
+    --tb-keybind-listening-bg:    #ffffff;
+    --tb-keybind-listening-border:#d97706;
+}
+
+/* ── 전역 배경/텍스트 적용 (테마 무관 공통 규칙, 값은 위 토큰이 결정) ── */
+body, #ui-area {
+    background-color: var(--tb-bg-primary) !important;
+    color: var(--tb-text-primary);
+}
+
+/* 인풋/셀렉트 텍스트 — --tb-text-primary와 동일 값이라 토큰 재사용 */
+input[type="number"],
+input[type="text"],
+select {
+    color: var(--tb-text-primary) !important;
+}
 
 
 /* ════════════════════════════════════════════════
@@ -74,68 +208,14 @@
 
 
 /* ════════════════════════════════════════════════
-   다크 테마  (data-theme="dark")
-   HOI4 에디터의 딥 다크 팔레트를 이식
+   라이트 테마 — 세부 보정 (색상 팔레트/컬러 버튼 등)
+   아래는 위의 서피스/텍스트/테두리 토큰 목록에 없는 "세부 요소"라
+   계획 문서의 범위 제한 원칙에 따라 토큰화하지 않고 기존 방식(테마별
+   개별 오버라이드) 그대로 둔다 — 대상은 색상 액션 버튼(파랑/초록/빨강 등
+   자체 브랜드 색을 유지해야 하는 버튼)과 그 흰 글씨 대비 유지, 상태 레이블,
+   에디터 헤더 가독성 보정.
 ════════════════════════════════════════════════ */
 
-/* ── 배경 ─ */
-[data-theme="dark"] body,
-[data-theme="dark"] #ui-area  { background-color: #161a1d !important; color: #cdd3d8; }
-
-/* ── 서피스 ─ */
-[data-theme="dark"] .bg-gray-700 { background-color: #1e2326 !important; }
-[data-theme="dark"] .bg-gray-800 { background-color: #111416 !important; }
-[data-theme="dark"] .bg-gray-600 { background-color: #242a2e !important; }
-[data-theme="dark"] .bg-gray-500 { background-color: #2a2f33 !important; }
-
-/* ── 텍스트 ─ */
-[data-theme="dark"] .text-gray-300 { color: #cdd3d8 !important; }
-[data-theme="dark"] .text-gray-400 { color: #5a6470  !important; }
-
-/* ── 테두리 ─ */
-[data-theme="dark"] .border-gray-600 { border-color: #2a2f33 !important; }
-[data-theme="dark"] .border-gray-700 { border-color: #1e2326 !important; }
-
-/* ── 호버 ─ */
-[data-theme="dark"] .hover\:bg-gray-600:hover { background-color: #2a2f33 !important; }
-[data-theme="dark"] .hover\:bg-gray-700:hover { background-color: #1e2326 !important; }
-[data-theme="dark"] .hover\:bg-gray-500:hover { background-color: #2a2f33 !important; }
-[data-theme="dark"] .hover\:bg-gray-400:hover { background-color: #35393e !important; }
-
-/* ── 탭 / 버튼 그룹 액센트 ─ */
-[data-theme="dark"] .tab-btn.active        { color: #fff; border-bottom-color: #3b82f6 !important; }
-[data-theme="dark"] .btn-group button.active { background-color: #3b82f6 !important; color: #fff !important; }
-
-/* ── 키 바인드 박스 ─ */
-[data-theme="dark"] .keybind-box           { background-color: #242a2e; border-color: #2a2f33; color: #cdd3d8; }
-[data-theme="dark"] .keybind-box:hover     { background-color: #2a2f33; }
-[data-theme="dark"] .keybind-box.listening { border-color: #f6e05e; background-color: #161a1d; }
-
-/* ── 인풋 / 셀렉트 ─ */
-[data-theme="dark"] input[type="number"],
-[data-theme="dark"] input[type="text"],
-[data-theme="dark"] select { color: #cdd3d8 !important; }
-
-
-/* ════════════════════════════════════════════════
-   라이트 테마  (data-theme="light")
-   HOI4 에디터의 라이트 팔레트를 이식
-════════════════════════════════════════════════ */
-
-/* ── 배경 ─ */
-[data-theme="light"] body,
-[data-theme="light"] #ui-area { background-color: #e8eaed !important; color: #1f2937; }
-
-/* ── 서피스 ─ */
-[data-theme="light"] .bg-gray-700 { background-color: #ffffff !important; }
-[data-theme="light"] .bg-gray-800 { background-color: #f3f4f6 !important; }
-[data-theme="light"] .bg-gray-600 { background-color: #e5e7eb !important; }
-[data-theme="light"] .bg-gray-500 { background-color: #d1d5db !important; }
-
-/* ── 텍스트 ─ */
-[data-theme="light"] .text-white   { color: #1f2937 !important; }
-[data-theme="light"] .text-gray-300 { color: #374151 !important; }
-[data-theme="light"] .text-gray-400 { color: #6b7280 !important; }
 /* 상태 레이블 (#rank, 에디터 dirty 등) 가독성 유지 */
 [data-theme="light"] .text-yellow-400 { color: #d97706 !important; }
 
@@ -157,29 +237,10 @@
 /* 에디터 노트 타입 컬러 버튼 */
 [data-theme="light"] #editor-note-type-selector button { color: #ffffff !important; }
 
-/* ── 테두리 ─ */
-[data-theme="light"] .border-gray-600 { border-color: #d1d5db !important; }
-[data-theme="light"] .border-gray-700 { border-color: #e5e7eb !important; }
+/* 라이트 모드에서 #text-white가 흰 배경 위에 묻히는 문제 보정 —
+   .text-white는 사이트 전역에서 매우 광범위하게 쓰이는 유틸리티라 이번
+   토큰화 범위(서피스/텍스트/테두리) 밖으로 남겨두고 기존처럼 개별 오버라이드. */
+[data-theme="light"] .text-white   { color: #1f2937 !important; }
 
-/* ── 호버 ─ */
-[data-theme="light"] .hover\:bg-gray-600:hover { background-color: #d1d5db !important; }
-[data-theme="light"] .hover\:bg-gray-700:hover { background-color: #f3f4f6 !important; }
-[data-theme="light"] .hover\:bg-gray-500:hover { background-color: #d1d5db !important; }
-[data-theme="light"] .hover\:bg-gray-400:hover { background-color: #e5e7eb !important; }
-
-/* ── 탭 / 버튼 그룹 액센트 ─ */
-[data-theme="light"] .tab-btn.active        { color: #111827 !important; border-bottom-color: #374151 !important; }
-[data-theme="light"] .btn-group button.active { background-color: #374151 !important; color: #ffffff !important; }
-
-/* ── 키 바인드 박스 ─ */
-[data-theme="light"] .keybind-box           { background-color: #f3f4f6; border-color: #d1d5db; color: #374151; }
-[data-theme="light"] .keybind-box:hover     { background-color: #e5e7eb; }
-[data-theme="light"] .keybind-box.listening { border-color: #d97706; background-color: #ffffff; }
-
-/* ── 인풋 / 셀렉트 ─ */
-[data-theme="light"] input[type="number"],
-[data-theme="light"] input[type="text"],
-[data-theme="light"] select { color: #1f2937 !important; }
-
-/* ── 에디터 헤더 (border-b border-gray-600) 가독성 ─ */
+/* 에디터 헤더 (border-b border-gray-600) 가독성 ─ */
 [data-theme="light"] #editor-screen h3.border-b { color: #1f2937 !important; }

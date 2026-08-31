@@ -1640,6 +1640,13 @@ document.addEventListener('DOMContentLoaded', () => {
         loadLastPracticeSettings();
         refreshCustomPresetSelect();
         Appearance.init();
+        // BeatSkin(커스터마이징 계획 1단계): Appearance.init()이 끝나 legacy
+        // localStorage 값이 Appearance.settings에 이미 로드된 뒤에 호출해야 한다
+        // (최초 마이그레이션 시 이 값을 "기본" 스킨으로 캡처하므로). IndexedDB 비동기
+        // 조회라 이 시점엔 await하지 않고 완료되는 대로 활성 스킨을 적용한다.
+        if (typeof BeatSkin !== 'undefined' && BeatSkin.init) {
+            BeatSkin.init();
+        }
         Calibration.init();
         UI.initPanelToggle();
         UI.initMobilePanelToggle();
