@@ -93,14 +93,14 @@ const GameBackground = {
         const canvas = document.getElementById('game-canvas');
         if (!bg) return;
         bg.style.transition = 'filter 0.35s ease, opacity 0.3s ease';
-        bg.style.filter = active ? 'blur(16px) brightness(0.65) saturate(0.9)' : '';
+        bg.style.filter = active ? 'blur(16px) brightness(0.85) saturate(0.95)' : '';
         if (dim) {
             dim.style.transition = 'opacity 0.35s ease';
-            dim.style.opacity = active ? '0.7' : '0.55';
+            dim.style.opacity = active ? '0.6' : '0.55';
         }
         if (canvas) {
             canvas.style.transition = 'filter 0.35s ease';
-            canvas.style.filter = active ? 'blur(16px) brightness(0.65) saturate(0.9)' : '';
+            canvas.style.filter = active ? 'blur(16px) brightness(0.85) saturate(0.95)' : '';
         }
     },
 };
