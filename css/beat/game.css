@@ -33,6 +33,12 @@ body {
 #game-area-bg {
     clip-path: inset(0);
 }
+/* GameBackground.setBlurred()가 채보 미리보기(SongPreview)가 그려지는 이 캔버스에도
+   같은 filter:blur()를 거는데, 위 #game-area-bg와 같은 이유로 자기 박스 밖으로 번지는
+   것을 막아야 한다. */
+#game-canvas {
+    clip-path: inset(0);
+}
 
 /* ── 좌측 game-area 로딩 오버레이 ── 사진/음악/채보 데이터 등 동시에 여러 개가
    로딩 중일 수 있어 문구를 줄바꿈으로 쌓아 보여준다 (UI.showAreaLoading 참고). */

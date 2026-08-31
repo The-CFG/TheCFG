@@ -82,15 +82,25 @@ const GameBackground = {
     // 배경/오디오를 끄지 않은 채로 블러 처리만 켜고 끈다 (예: 메인 메뉴 → 환경설정처럼
     // 잠깐 다른 화면을 보는 동안 재생 중인 곡을 배경으로 계속 들려주고 싶을 때).
     // 오디오 쪽 뭉갬 효과는 AudioEngine.setMuffled()가 짝을 이룬다.
+    // #game-canvas도 함께 블러 처리한다 — SongPreview.start()(라이브러리/곡 상세 화면의
+    // 채보 미리보기)가 여기에 노트를 그리는데, 이걸 빼두면 배경 커버 이미지만 블러되고
+    // 그 위에 겹쳐진 채보 미리보기(낙하 노트)는 선명하게 그대로 보이는 문제가 있었다.
+    // 캔버스는 매 프레임 다시 그려지지만 CSS filter는 렌더링 결과에만 적용되는
+    // 후처리라 애니메이션이 계속돼도 블러가 끊기거나 깜빡이지 않는다.
     setBlurred(active) {
         const bg = document.getElementById('game-area-bg');
         const dim = document.getElementById('game-area-bg-dim');
+        const canvas = document.getElementById('game-canvas');
         if (!bg) return;
         bg.style.transition = 'filter 0.35s ease, opacity 0.3s ease';
         bg.style.filter = active ? 'blur(16px) brightness(0.65) saturate(0.9)' : '';
         if (dim) {
             dim.style.transition = 'opacity 0.35s ease';
             dim.style.opacity = active ? '0.7' : '0.55';
+        }
+        if (canvas) {
+            canvas.style.transition = 'filter 0.35s ease';
+            canvas.style.filter = active ? 'blur(16px) brightness(0.65) saturate(0.9)' : '';
         }
     },
 };
