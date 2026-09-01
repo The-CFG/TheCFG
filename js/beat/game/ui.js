@@ -245,8 +245,21 @@ const UI = {
         document.getElementById('miss-count').textContent = Game.state.judgements.miss;
     },
     showJudgementFeedback(judgement, currentCombo) {
-        DOM.judgementTextEl.textContent = judgement;
+        // 커스터마이징 계획 2단계: 판정 문구(퍼펙트/굿/배드/미스) 이미지 스킨.
+        // BeatSkinImages에 해당 슬롯 이미지가 없으면(기본) 기존처럼 텍스트를 그대로 쓴다.
+        const imgUrl = (typeof BeatSkinImages !== 'undefined' && BeatSkinImages.getURL)
+            ? BeatSkinImages.getURL(`judgement-${judgement.toLowerCase()}`)
+            : null;
         DOM.judgementTextEl.className = 'judgement-text';
+        if (imgUrl) {
+            DOM.judgementTextEl.textContent = '';
+            const img = document.createElement('img');
+            img.src = imgUrl;
+            img.alt = judgement;
+            DOM.judgementTextEl.appendChild(img);
+        } else {
+            DOM.judgementTextEl.textContent = judgement;
+        }
         void DOM.judgementTextEl.offsetWidth;
         DOM.judgementTextEl.classList.add('show');
         setTimeout(() => DOM.judgementTextEl.classList.remove('show'), CONFIG.JUDGEMENT_ANIMATION_MS);
@@ -257,6 +270,23 @@ const UI = {
             void DOM.comboTextEl.offsetWidth;
             DOM.comboTextEl.classList.add('show');
             setTimeout(() => DOM.comboTextEl.classList.remove('show'), CONFIG.JUDGEMENT_ANIMATION_MS);
+        }
+    },
+    // 등급(S/A/B/C) 표시 공용 헬퍼 — 결과 화면(DOM.rankEl)/인게임 예상 등급(DOM.hudRankEl)
+    // 둘 다 여기를 거친다. BeatSkinImages에 해당 등급 이미지가 없으면 기존처럼 문자만 쓴다.
+    renderRank(el, rank) {
+        if (!el) return;
+        const imgUrl = (typeof BeatSkinImages !== 'undefined' && BeatSkinImages.getURL)
+            ? BeatSkinImages.getURL(`rank-${rank}`)
+            : null;
+        if (imgUrl) {
+            el.textContent = '';
+            const img = document.createElement('img');
+            img.src = imgUrl;
+            img.alt = rank;
+            el.appendChild(img);
+        } else {
+            el.textContent = rank;
         }
     },
     // 정확도(%) → 랭크(S/A/B/C) 계산. calculateRank와 HUD 예상 등급에서 공용으로 쓴다.
@@ -297,7 +327,7 @@ const UI = {
     updateResultScreen() {
         DOM.finalScoreEl.textContent = Game.state.score;
         const j = Game.state.judgements;
-        DOM.rankEl.textContent = this.rankFromJudgements(j.perfect, j.good, j.bad, j.miss);
+        this.renderRank(DOM.rankEl, this.rankFromJudgements(j.perfect, j.good, j.bad, j.miss));
         DOM.finalPerfectEl.textContent = Game.state.judgements.perfect;
         DOM.finalGoodEl.textContent = Game.state.judgements.good;
         DOM.finalBadEl.textContent = Game.state.judgements.bad;
@@ -487,7 +517,7 @@ const UI = {
         if (DOM.hudRankEl) {
             // 현재까지의 정확도(판정 가중 평균)를 그대로 유지한다고 가정했을 때의 예상 등급.
             const expectedRank = this.rankFromPercentage(accuracyPercent);
-            DOM.hudRankEl.textContent = expectedRank;
+            this.renderRank(DOM.hudRankEl, expectedRank);
             DOM.hudRankEl.classList.remove('rank-S', 'rank-A', 'rank-B', 'rank-C');
             DOM.hudRankEl.classList.add(`rank-${expectedRank}`);
         }

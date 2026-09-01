@@ -1652,6 +1652,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         }
+        // BeatSkinImages(커스터마이징 계획 2단계): 노트 캔버스 드로잉이 첫 프레임부터
+        // 업로드된 이미지를 참조할 수 있도록 게임 시작 전에 미리 로드해 둔다. BeatFonts와
+        // 마찬가지로 IndexedDB 조회는 비동기라 완료를 기다리지 않고 진행한다 — 이미지가
+        // 없으면 즉시 완료되고, 있는 경우에만 아주 짧게 기본 렌더링이 먼저 보일 수 있다.
+        if (typeof BeatSkinImages !== 'undefined' && BeatSkinImages.init) {
+            BeatSkinImages.init();
+        }
         Appearance.init();
         // BeatSkin(커스터마이징 계획 1단계): Appearance.init()이 끝나 legacy
         // localStorage 값이 Appearance.settings에 이미 로드된 뒤에 호출해야 한다
@@ -1665,6 +1672,13 @@ document.addEventListener('DOMContentLoaded', () => {
         // BeatFonts.init()의 폰트 목록이 채워진 뒤에 실행한다.
         if (typeof BeatFonts !== 'undefined' && BeatFonts.initUI) {
             _beatFontsReady.then(() => BeatFonts.initUI());
+        }
+        // 설정 화면의 이미지 스킨 업로드 UI 배선(2단계). 슬롯 15개 각각의 <input type=file>에
+        // 이벤트만 걸면 되므로 BeatSkinImages.init() 완료를 기다리지 않고 바로 실행해도 된다
+        // (초기 상태 텍스트는 initUI 내부에서 이미 등록된 것만 반영하고, 이후 업로드는
+        // change 이벤트로 처리되므로 순서 문제 없음).
+        if (typeof BeatSkinImages !== 'undefined' && BeatSkinImages.initUI) {
+            BeatSkinImages.initUI();
         }
         Calibration.init();
         UI.initPanelToggle();

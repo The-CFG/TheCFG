@@ -312,6 +312,26 @@ body {
     color: #cbd5e0;
 }
 
+/* 커스터마이징 계획 2단계: 판정 텍스트/카운트다운/등급에 이미지 스킨이 적용된 경우
+   (UI.showJudgementFeedback / Game.renderCountdownFrame / UI.renderRank가 textContent
+   대신 <img>를 넣는다) — 글자 크기 CSS 변수(em 단위)에 비례해 자연스럽게 커지도록
+   height를 상대 단위로 준다. */
+.judgement-text img,
+.combo-text img,
+.countdown-text img {
+    display: block;
+    height: 1.2em;
+    width: auto;
+    max-width: 90vw;
+}
+#rank img,
+#game-hud-rank img {
+    display: inline-block;
+    height: 1em;
+    width: auto;
+    vertical-align: middle;
+}
+
 /* 멀티플레이 관전 HUD: 상대 닉네임 + 점수/콤보. #game-hud(우측 상단)와 대칭으로 좌측 상단에 표시.
    #game-hud와 마찬가지로 in-play일 때만 노출 대상이며, 상대가 없으면(.hidden) 완전히 감춘다. */
 #mp-spectate-hud {

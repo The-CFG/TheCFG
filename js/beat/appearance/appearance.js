@@ -38,7 +38,13 @@ const Appearance = {
         // 폰트의 id. null이면 CSS 기본값(inherit → 전역 UI 폰트)을 그대로 쓴다.
         judgementFontId: null,
         comboFontId: null,
-        countdownFontId: null
+        countdownFontId: null,
+        // ── 커스터마이징 계획 2단계: 노트 크기/애니메이션 ──
+        // 실제 이미지 스킨 등록소는 BeatSkinImages(js/beat/appearance/skin-images.js)가
+        // 별도로 관리한다(폰트와 마찬가지로 "몇 번째 노트가 어떤 이미지를 쓰는지"가 아니라
+        // 슬롯 3개 고정이라 Appearance.settings에는 크기/애니메이션 값만 둔다).
+        noteSize: 1,       // 배율(0.5~2). 1이면 기존 NOTE_BAR_H/NOTE_CIRCLE_D와 동일.
+        noteAnimation: 'none' // 'none' | 'fade' | 'scale' — 노트가 화면에 나타날 때 인 애니메이션.
     },
     
     presets: {
@@ -68,6 +74,7 @@ const Appearance = {
             this.updateScrollDirectionUI();
             this.updateJudgementPositionUI();
             this.updatePresetSlotsUI();
+            this.updateNoteSizeAnimationUI();
             
             // 미리보기 요소가 있을 때만 업데이트
             if (document.getElementById('preview-tap-note')) {
@@ -121,6 +128,30 @@ const Appearance = {
                         } else {
                             document.body.classList.remove('circle-notes');
                         }
+                    }
+                });
+            }
+
+            // 노트 크기(커스터마이징 계획 2단계) — 실시간 반영(게임 캔버스는 Appearance.settings를
+            // 매 프레임 직접 읽으므로 별도 setProperty 없이 값만 바꾸면 된다).
+            const noteSizeInput = document.getElementById('note-size-slider');
+            if (noteSizeInput) {
+                noteSizeInput.addEventListener('input', (e) => {
+                    this.settings.noteSize = parseFloat(e.target.value);
+                    const label = document.getElementById('note-size-value');
+                    if (label) label.textContent = `${this.settings.noteSize.toFixed(2)}x`;
+                });
+            }
+
+            // 노트 애니메이션(커스터마이징 계획 2단계)
+            const noteAnimSelector = document.getElementById('note-animation-selector');
+            if (noteAnimSelector) {
+                noteAnimSelector.addEventListener('click', (e) => {
+                    if (e.target.tagName === 'BUTTON') {
+                        this.settings.noteAnimation = e.target.dataset.animation;
+                        noteAnimSelector.querySelectorAll('button').forEach(btn => {
+                            btn.classList.toggle('active', btn.dataset.animation === this.settings.noteAnimation);
+                        });
                     }
                 });
             }
@@ -259,6 +290,23 @@ const Appearance = {
         buttons.forEach(btn => {
             btn.classList.toggle('active', btn.dataset.shape === this.settings.noteShape);
         });
+    },
+
+    // 노트 크기 슬라이더 값 + 애니메이션 선택 버튼(커스터마이징 계획 2단계) 초기/갱신 반영.
+    updateNoteSizeAnimationUI() {
+        try {
+            const sizeInput = document.getElementById('note-size-slider');
+            if (sizeInput) sizeInput.value = this.settings.noteSize;
+            const sizeLabel = document.getElementById('note-size-value');
+            if (sizeLabel) sizeLabel.textContent = `${this.settings.noteSize.toFixed(2)}x`;
+
+            const animButtons = document.querySelectorAll('#note-animation-selector button');
+            animButtons.forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.animation === this.settings.noteAnimation);
+            });
+        } catch (err) {
+            this._logError(err, 'Appearance.updateNoteSizeAnimationUI');
+        }
     },
 
     updatePreview() {
@@ -403,6 +451,7 @@ const Appearance = {
             this.updateColorModeUI();
             this.updateScrollDirectionUI();
             this.updateJudgementPositionUI();
+            this.updateNoteSizeAnimationUI();
         } catch (err) {
             this._logError(err, 'Appearance.applySettings');
         }
@@ -534,7 +583,9 @@ const Appearance = {
                 countdownTextSize: 8,
                 judgementFontId: null,
                 comboFontId: null,
-                countdownFontId: null
+                countdownFontId: null,
+                noteSize: 1,
+                noteAnimation: 'none'
             };
             this.updateColorInputs();
             this.updateShapeUI();

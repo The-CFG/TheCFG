@@ -207,10 +207,14 @@ const Game = {
             const lineColor = Appearance.settings.judgementLineColor || '#ffffff';
             if (isCircle) {
                 // 원형 노트: 레인마다 원형 판정선
+                // 커스터마이징 계획 2단계: 노트 크기 배율을 판정선 원 크기에도 반영해
+                // 노트와 시각적으로 어긋나지 않게 한다.
+                const sizeMul = Appearance.settings.noteSize || 1;
+                const scaledCircleD = this.NOTE_CIRCLE_D * sizeMul;
                 for (let i = 0; i < laneCount; i++) {
                     const cx = i * laneW + laneW / 2;
-                    const cy = jY - this.NOTE_CIRCLE_D / 2;
-                    const r = this.NOTE_CIRCLE_D / 2;
+                    const cy = jY - scaledCircleD / 2;
+                    const r = scaledCircleD / 2;
                     const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
                     grad.addColorStop(0, Appearance.hexToRgba(lineColor, 0.8));
                     grad.addColorStop(0.5, Appearance.hexToRgba(lineColor, 0.4));
@@ -240,6 +244,26 @@ const Game = {
             }
         },
 
+        // 노트 애니메이션(페이드/스케일) 진행도 계산. 0~1, 1이면 원래 크기/불투명도.
+        // note._spawnedAt(최초로 화면에 들어온 시각, updateNotes()에서 기록)이 없으면
+        // (예: 게임 재시작 직후 이미 화면 안에 있는 노트) 애니메이션 없이 바로 1을 반환.
+        _noteAnimationProgress(note, elapsedTime) {
+            const anim = Appearance.settings.noteAnimation;
+            if (!anim || anim === 'none' || note._spawnedAt === undefined) return 1;
+            const ANIM_DURATION_MS = 220;
+            const age = elapsedTime - note._spawnedAt;
+            if (age >= ANIM_DURATION_MS) return 1;
+            return Math.max(0, Math.min(1, age / ANIM_DURATION_MS));
+        },
+
+        // 노트 이미지 스킨(Appearance.settings.noteImages가 아니라 BeatSkinImages 슬롯을
+        // 직접 참조 — 폰트와 마찬가지로 이미지는 별도 모듈이 등록소 역할을 한다)
+        _noteImage(noteType) {
+            if (typeof BeatSkinImages === 'undefined' || !BeatSkinImages.getImage) return null;
+            const slot = noteType === 'long_head' ? 'note-long' : (noteType === 'false' ? 'note-false' : 'note-tap');
+            return BeatSkinImages.getImage(slot);
+        },
+
         // 노트 한 개 그리기
         // elapsedTime, noteSpeed를 받아 위치를 직접 계산 → _drawH/_drawTop 불일치 버그 원천 제거
         drawNote(note, laneIdMapping, elapsedTime, noteSpeed) {
@@ -255,8 +279,11 @@ const Game = {
             const color = this._noteColor(note.type, laneId, note.type === 'long_head');
             const darkerColor = Appearance.adjustColor(color, -20);
 
-            const noteBarH   = this.NOTE_BAR_H;
-            const noteCircleD = this.NOTE_CIRCLE_D;
+            // 커스터마이징 계획 2단계: 노트 크기 배율(Appearance.settings.noteSize).
+            // 기본값 1일 때 기존 NOTE_BAR_H/NOTE_CIRCLE_D와 완전히 동일하게 렌더링된다.
+            const sizeMul = Appearance.settings.noteSize || 1;
+            const noteBarH   = this.NOTE_BAR_H * sizeMul;
+            const noteCircleD = this.NOTE_CIRCLE_D * sizeMul;
             const minH = isCircle ? noteCircleD : noteBarH;
 
             // 위치/높이 계산
@@ -284,10 +311,48 @@ const Game = {
                 topY  = noteBottomY - bodyH;
             }
 
+            // 애니메이션(페이드/스케일) 적용 준비 — 이미지/도형 드로잉 공통으로 감싼다.
+            const animMode = Appearance.settings.noteAnimation;
+            const animProgress = this._noteAnimationProgress(note, elapsedTime);
+            const cxCommon = laneIndex * laneW + laneW / 2;
+
+            ctx.save();
+            if (animMode === 'fade' && animProgress < 1) {
+                ctx.globalAlpha = animProgress;
+            }
+            if (animMode === 'scale' && animProgress < 1 && animProgress > 0) {
+                const scaleCx = cxCommon;
+                const scaleCy = topY + bodyH / 2;
+                ctx.translate(scaleCx, scaleCy);
+                ctx.scale(animProgress, animProgress);
+                ctx.translate(-scaleCx, -scaleCy);
+            } else if (animMode === 'scale' && animProgress <= 0) {
+                ctx.restore();
+                return; // 스케일 0이면 그리지 않음(음수 크기 drawImage 에러 방지)
+            }
+
+            const img = this._noteImage(note.type);
+
+            if (img && note.type !== 'long_tail') {
+                // 이미지 스킨: 캔버스 도형 대신 사용자가 업로드한 이미지를 노트 판정 박스에
+                // 맞춰 그린다. 원형/바 모드 모두 (topY, bodyH)로 계산된 같은 박스를 쓴다.
+                if (isCircle) {
+                    const D = noteCircleD;
+                    const R = D / 2;
+                    ctx.drawImage(img, cxCommon - R, topY, D, bodyH);
+                } else {
+                    const x = laneIndex * laneW + 1;
+                    const w = laneW - 2;
+                    ctx.drawImage(img, x, topY, w, bodyH);
+                }
+                ctx.restore();
+                return;
+            }
+
             if (isCircle) {
                 const D = noteCircleD;
                 const R = D / 2;
-                const cx = laneIndex * laneW + laneW / 2;
+                const cx = cxCommon;
 
                 if (note.type === 'long_head') {
                     const grad = ctx.createLinearGradient(cx - R, topY + bodyH, cx - R, topY);
@@ -322,7 +387,7 @@ const Game = {
                     grad.addColorStop(0, darkerColor);
                     grad.addColorStop(1, color);
                     ctx.fillStyle  = grad;
-                    ctx.globalAlpha = 0.9;
+                    ctx.globalAlpha = (animMode === 'fade' && animProgress < 1) ? ctx.globalAlpha * 0.9 : 0.9;
                     this._roundRect(ctx, x, topY, w, bodyH, this.NOTE_RADIUS);
                     ctx.fill();
                     ctx.globalAlpha = 1;
@@ -337,6 +402,7 @@ const Game = {
                     ctx.shadowBlur = 0;
                 }
             }
+            ctx.restore();
         },
 
         // 둥근 사각형 path 헬퍼 (Path2D 미지원 구형 브라우저 대응)
@@ -439,6 +505,23 @@ const Game = {
         this.state.audioReady = false;
     },
 
+    // 커스터마이징 계획 2단계: 카운트다운 숫자(3/2/1/START) 이미지 스킨. runCountdown()/
+    // runSyncedCountdown() 둘 다 여기를 거친다. num: 3/2/1 또는 0(=START). BeatSkinImages에
+    // 해당 슬롯 이미지가 없으면 기존처럼 텍스트를 그대로 쓴다.
+    renderCountdownFrame(countdownEl, num) {
+        const slotId = num > 0 ? `countdown-${num}` : 'countdown-start';
+        const imgUrl = (typeof BeatSkinImages !== 'undefined' && BeatSkinImages.getURL) ? BeatSkinImages.getURL(slotId) : null;
+        if (imgUrl) {
+            countdownEl.textContent = '';
+            const img = document.createElement('img');
+            img.src = imgUrl;
+            img.alt = num > 0 ? String(num) : 'START';
+            countdownEl.appendChild(img);
+        } else {
+            countdownEl.textContent = num > 0 ? String(num) : 'START!';
+        }
+    },
+
     runCountdown(onComplete) {
         this.cancelCountdown();
         let count = 3;
@@ -447,11 +530,10 @@ const Game = {
             countdownEl.classList.remove('show');
             void countdownEl.offsetWidth;
             if (count >= 0) {
+                this.renderCountdownFrame(countdownEl, count);
                 if (count > 0) {
-                    countdownEl.textContent = count;
                     Audio.playCountdownTick();
                 } else {
-                    countdownEl.textContent = 'START!';
                     Audio.playCountdownStart();
                 }
                 countdownEl.classList.add('show');
@@ -477,11 +559,10 @@ const Game = {
         const showTick = (num) => {
             countdownEl.classList.remove('show');
             void countdownEl.offsetWidth;
+            this.renderCountdownFrame(countdownEl, num);
             if (num > 0) {
-                countdownEl.textContent = num;
                 Audio.playCountdownTick();
             } else {
-                countdownEl.textContent = 'START!';
                 Audio.playCountdownStart();
             }
             countdownEl.classList.add('show');
@@ -839,7 +920,11 @@ const Game = {
             if (gameHeight === 0) return;
 
             const isCircle = document.body.classList.contains('circle-notes');
-            const noteH    = isCircle ? this.canvas.NOTE_CIRCLE_D : this.canvas.NOTE_BAR_H;
+            // 커스터마이징 계획 2단계: drawNote()가 실제로 그리는 크기(NOTE_*_배율)와
+            // 화면 진입/이탈(가시성) 판정 기준 크기가 어긋나면 노트가 잘려 보이거나
+            // 화면 밖에서 미리 나타나므로, 여기서도 같은 배율을 적용한다.
+            const sizeMul = Appearance.settings.noteSize || 1;
+            const noteH    = (isCircle ? this.canvas.NOTE_CIRCLE_D : this.canvas.NOTE_BAR_H) * sizeMul;
             const jY       = this.canvas.judgementLineY(); // 판정선 top Y
 
             for (let i = this.state.unprocessedNoteIndex; i < this.state.notes.length; i++) {
@@ -875,7 +960,7 @@ const Game = {
                 // 롱노트 높이 계산
                 let drawH;
                 if (note.type === 'long_head') {
-                    const minH = isCircle ? this.canvas.NOTE_CIRCLE_D : this.canvas.NOTE_BAR_H;
+                    const minH = (isCircle ? this.canvas.NOTE_CIRCLE_D : this.canvas.NOTE_BAR_H) * sizeMul;
                     drawH = Math.max((note.duration / 10) * this.state.settings.noteSpeed, minH);
                 } else {
                     drawH = noteH;
@@ -887,11 +972,12 @@ const Game = {
                 const inView = noteBottomY > -noteH && noteTopY < gameHeight;
 
                 if (!note.processed && (note.type === 'tap' || note.type === 'long_head' || note.type === 'false')) {
-                    if (inView) {
-                        note._visible = true;
-                    } else {
-                        note._visible = false;
+                    // 커스터마이징 계획 2단계(노트 애니메이션): 화면에 처음 들어온 시각을
+                    // 기록해 drawNote()의 페이드/스케일 인 애니메이션 기준점으로 쓴다.
+                    if (inView && !note._visible) {
+                        note._spawnedAt = elapsedTime;
                     }
+                    note._visible = inView;
                 }
 
                 // 롱노트 수축 처리: _visible만 관리 (위치/높이는 drawNote에서 직접 계산)

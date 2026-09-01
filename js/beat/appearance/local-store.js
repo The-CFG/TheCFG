@@ -1,15 +1,16 @@
 // ════════════════════════════════════════════════
 //  js/beat/appearance/local-store.js — BeatLocalStore
-//  커스터마이징(스킨/UI 테마 프리셋/폰트) 로컬 저장을 위한 IndexedDB 공용 래퍼.
+//  커스터마이징(스킨/UI 테마 프리셋/폰트/이미지) 로컬 저장을 위한 IndexedDB 공용 래퍼.
 //  localStorage(용량 5~10MB, 동기 API)를 대체하기 위해 신설.
-//  의존: 없음. BeatSkin/BeatTheme/BeatFonts가 이 모듈을 통해서만 로컬에 저장한다.
+//  의존: 없음. BeatSkin/BeatTheme/BeatFonts/BeatSkinImages가 이 모듈을 통해서만 로컬에 저장한다.
 // ════════════════════════════════════════════════
 
 const BeatLocalStore = {
     DB_NAME: 'theBeatCustomization',
-    DB_VERSION: 1,
+    // v2: 'images' 스토어 추가(커스터마이징 계획 2단계 — 노트/판정/카운트다운/등급 이미지 스킨).
+    DB_VERSION: 2,
     // 스토어 목록. 새 커스터마이징 항목이 늘어나면 여기 추가하고 DB_VERSION을 올린다.
-    STORES: ['skins', 'uiThemePresets', 'fonts', 'misc'],
+    STORES: ['skins', 'uiThemePresets', 'fonts', 'misc', 'images'],
 
     _dbPromise: null,
 

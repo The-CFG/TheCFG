@@ -570,6 +570,25 @@
                                         <button data-shape="circle" class="flex-1 py-2 px-4 bg-gray-700 hover:bg-gray-600 rounded-lg transition" data-i18n="circle_shape">원형</button>
                                     </div>
                                 </div>
+
+                                <!-- 노트 크기/애니메이션 (커스터마이징 계획 2단계) -->
+                                <div>
+                                    <h3 class="text-lg font-semibold mb-3 text-white">노트 크기 · 애니메이션</h3>
+                                    <div class="space-y-3">
+                                        <div class="flex items-center justify-between">
+                                            <label class="text-gray-300">노트 크기 (<span id="note-size-value">1.00x</span>)</label>
+                                            <input type="range" id="note-size-slider" min="0.5" max="2" step="0.05" value="1" class="w-32">
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <label class="text-gray-300">등장 애니메이션</label>
+                                            <div class="flex space-x-2 btn-group" id="note-animation-selector">
+                                                <button data-animation="none" class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded-lg transition active text-sm">없음</button>
+                                                <button data-animation="fade" class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded-lg transition text-sm">페이드</button>
+                                                <button data-animation="scale" class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded-lg transition text-sm">스케일</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                                 
                                 <!-- 색상 모드 선택 -->
                                 <div>
@@ -685,6 +704,161 @@
                                         <div class="flex items-center justify-between">
                                             <label class="text-gray-300">카운트다운 크기 (<span id="countdown-text-size-value">8rem</span>)</label>
                                             <input type="range" id="countdown-text-size" min="4" max="14" step="0.5" value="8" class="w-32">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 폰트 (커스터마이징 계획 1-B단계) -->
+                                <div>
+                                    <h3 class="text-lg font-semibold mb-3 text-white">폰트</h3>
+                                    <div class="space-y-3">
+                                        <div class="flex items-center gap-2">
+                                            <input type="text" id="font-upload-name" placeholder="폰트 이름 (선택, 비우면 파일명)" class="flex-1 min-w-0 bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-sm text-gray-200">
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <input type="file" id="font-upload-input" accept=".ttf,.otf,.woff,.woff2" class="flex-1 min-w-0 text-sm text-gray-300">
+                                            <button id="font-upload-btn" type="button" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded text-sm text-white shrink-0">추가</button>
+                                        </div>
+                                        <p id="font-upload-status" class="text-xs text-gray-400 min-h-[1em]"></p>
+
+                                        <div class="flex items-center justify-between">
+                                            <label class="text-gray-300">전체 UI 폰트</label>
+                                            <select id="font-select-ui" class="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-gray-200"></select>
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <label class="text-gray-300">판정 텍스트 폰트</label>
+                                            <select id="font-select-judgement" class="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-gray-200"></select>
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <label class="text-gray-300">콤보 텍스트 폰트</label>
+                                            <select id="font-select-combo" class="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-gray-200"></select>
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <label class="text-gray-300">카운트다운 폰트</label>
+                                            <select id="font-select-countdown" class="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-gray-200"></select>
+                                        </div>
+
+                                        <div id="font-uploaded-list" class="space-y-1 pt-1"></div>
+                                    </div>
+                                </div>
+
+                                <!-- 이미지 스킨 (커스터마이징 계획 2단계: 노트/판정/카운트다운/등급) -->
+                                <div>
+                                    <h3 class="text-lg font-semibold mb-3 text-white">이미지 스킨</h3>
+                                    <p class="text-xs text-gray-500 mb-3">이미지를 올리면 해당 노트/문구/숫자/등급이 그 이미지로 표시됩니다. 올리지 않은 항목은 기존 그대로 표시됩니다.</p>
+                                    <div class="space-y-4">
+                                        <div>
+                                            <h4 class="text-sm font-semibold mb-2 text-gray-300">노트</h4>
+                                            <div class="space-y-2">
+                                                <div class="flex items-center gap-2">
+                                                    <label class="text-gray-300 w-20 shrink-0 text-sm">탭 노트</label>
+                                                    <input type="file" id="img-upload-note-tap" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml" class="flex-1 min-w-0 text-xs text-gray-300">
+                                                    <span id="img-status-note-tap" class="text-xs text-gray-500 shrink-0">기본</span>
+                                                    <button id="img-delete-note-tap" type="button" class="hidden text-red-400 hover:text-red-300 text-xs shrink-0">삭제</button>
+                                                </div>
+                                                <div class="flex items-center gap-2">
+                                                    <label class="text-gray-300 w-20 shrink-0 text-sm">롱 노트</label>
+                                                    <input type="file" id="img-upload-note-long" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml" class="flex-1 min-w-0 text-xs text-gray-300">
+                                                    <span id="img-status-note-long" class="text-xs text-gray-500 shrink-0">기본</span>
+                                                    <button id="img-delete-note-long" type="button" class="hidden text-red-400 hover:text-red-300 text-xs shrink-0">삭제</button>
+                                                </div>
+                                                <div class="flex items-center gap-2">
+                                                    <label class="text-gray-300 w-20 shrink-0 text-sm">가짜 노트</label>
+                                                    <input type="file" id="img-upload-note-false" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml" class="flex-1 min-w-0 text-xs text-gray-300">
+                                                    <span id="img-status-note-false" class="text-xs text-gray-500 shrink-0">기본</span>
+                                                    <button id="img-delete-note-false" type="button" class="hidden text-red-400 hover:text-red-300 text-xs shrink-0">삭제</button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <h4 class="text-sm font-semibold mb-2 text-gray-300">판정 문구</h4>
+                                            <div class="space-y-2">
+                                                <div class="flex items-center gap-2">
+                                                    <label class="text-gray-300 w-20 shrink-0 text-sm">PERFECT</label>
+                                                    <input type="file" id="img-upload-judgement-perfect" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml" class="flex-1 min-w-0 text-xs text-gray-300">
+                                                    <span id="img-status-judgement-perfect" class="text-xs text-gray-500 shrink-0">기본</span>
+                                                    <button id="img-delete-judgement-perfect" type="button" class="hidden text-red-400 hover:text-red-300 text-xs shrink-0">삭제</button>
+                                                </div>
+                                                <div class="flex items-center gap-2">
+                                                    <label class="text-gray-300 w-20 shrink-0 text-sm">GOOD</label>
+                                                    <input type="file" id="img-upload-judgement-good" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml" class="flex-1 min-w-0 text-xs text-gray-300">
+                                                    <span id="img-status-judgement-good" class="text-xs text-gray-500 shrink-0">기본</span>
+                                                    <button id="img-delete-judgement-good" type="button" class="hidden text-red-400 hover:text-red-300 text-xs shrink-0">삭제</button>
+                                                </div>
+                                                <div class="flex items-center gap-2">
+                                                    <label class="text-gray-300 w-20 shrink-0 text-sm">BAD</label>
+                                                    <input type="file" id="img-upload-judgement-bad" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml" class="flex-1 min-w-0 text-xs text-gray-300">
+                                                    <span id="img-status-judgement-bad" class="text-xs text-gray-500 shrink-0">기본</span>
+                                                    <button id="img-delete-judgement-bad" type="button" class="hidden text-red-400 hover:text-red-300 text-xs shrink-0">삭제</button>
+                                                </div>
+                                                <div class="flex items-center gap-2">
+                                                    <label class="text-gray-300 w-20 shrink-0 text-sm">MISS</label>
+                                                    <input type="file" id="img-upload-judgement-miss" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml" class="flex-1 min-w-0 text-xs text-gray-300">
+                                                    <span id="img-status-judgement-miss" class="text-xs text-gray-500 shrink-0">기본</span>
+                                                    <button id="img-delete-judgement-miss" type="button" class="hidden text-red-400 hover:text-red-300 text-xs shrink-0">삭제</button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <h4 class="text-sm font-semibold mb-2 text-gray-300">카운트다운</h4>
+                                            <div class="space-y-2">
+                                                <div class="flex items-center gap-2">
+                                                    <label class="text-gray-300 w-20 shrink-0 text-sm">3</label>
+                                                    <input type="file" id="img-upload-countdown-3" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml" class="flex-1 min-w-0 text-xs text-gray-300">
+                                                    <span id="img-status-countdown-3" class="text-xs text-gray-500 shrink-0">기본</span>
+                                                    <button id="img-delete-countdown-3" type="button" class="hidden text-red-400 hover:text-red-300 text-xs shrink-0">삭제</button>
+                                                </div>
+                                                <div class="flex items-center gap-2">
+                                                    <label class="text-gray-300 w-20 shrink-0 text-sm">2</label>
+                                                    <input type="file" id="img-upload-countdown-2" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml" class="flex-1 min-w-0 text-xs text-gray-300">
+                                                    <span id="img-status-countdown-2" class="text-xs text-gray-500 shrink-0">기본</span>
+                                                    <button id="img-delete-countdown-2" type="button" class="hidden text-red-400 hover:text-red-300 text-xs shrink-0">삭제</button>
+                                                </div>
+                                                <div class="flex items-center gap-2">
+                                                    <label class="text-gray-300 w-20 shrink-0 text-sm">1</label>
+                                                    <input type="file" id="img-upload-countdown-1" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml" class="flex-1 min-w-0 text-xs text-gray-300">
+                                                    <span id="img-status-countdown-1" class="text-xs text-gray-500 shrink-0">기본</span>
+                                                    <button id="img-delete-countdown-1" type="button" class="hidden text-red-400 hover:text-red-300 text-xs shrink-0">삭제</button>
+                                                </div>
+                                                <div class="flex items-center gap-2">
+                                                    <label class="text-gray-300 w-20 shrink-0 text-sm">START</label>
+                                                    <input type="file" id="img-upload-countdown-start" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml" class="flex-1 min-w-0 text-xs text-gray-300">
+                                                    <span id="img-status-countdown-start" class="text-xs text-gray-500 shrink-0">기본</span>
+                                                    <button id="img-delete-countdown-start" type="button" class="hidden text-red-400 hover:text-red-300 text-xs shrink-0">삭제</button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <h4 class="text-sm font-semibold mb-2 text-gray-300">결과 등급</h4>
+                                            <div class="space-y-2">
+                                                <div class="flex items-center gap-2">
+                                                    <label class="text-gray-300 w-20 shrink-0 text-sm">S</label>
+                                                    <input type="file" id="img-upload-rank-S" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml" class="flex-1 min-w-0 text-xs text-gray-300">
+                                                    <span id="img-status-rank-S" class="text-xs text-gray-500 shrink-0">기본</span>
+                                                    <button id="img-delete-rank-S" type="button" class="hidden text-red-400 hover:text-red-300 text-xs shrink-0">삭제</button>
+                                                </div>
+                                                <div class="flex items-center gap-2">
+                                                    <label class="text-gray-300 w-20 shrink-0 text-sm">A</label>
+                                                    <input type="file" id="img-upload-rank-A" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml" class="flex-1 min-w-0 text-xs text-gray-300">
+                                                    <span id="img-status-rank-A" class="text-xs text-gray-500 shrink-0">기본</span>
+                                                    <button id="img-delete-rank-A" type="button" class="hidden text-red-400 hover:text-red-300 text-xs shrink-0">삭제</button>
+                                                </div>
+                                                <div class="flex items-center gap-2">
+                                                    <label class="text-gray-300 w-20 shrink-0 text-sm">B</label>
+                                                    <input type="file" id="img-upload-rank-B" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml" class="flex-1 min-w-0 text-xs text-gray-300">
+                                                    <span id="img-status-rank-B" class="text-xs text-gray-500 shrink-0">기본</span>
+                                                    <button id="img-delete-rank-B" type="button" class="hidden text-red-400 hover:text-red-300 text-xs shrink-0">삭제</button>
+                                                </div>
+                                                <div class="flex items-center gap-2">
+                                                    <label class="text-gray-300 w-20 shrink-0 text-sm">C</label>
+                                                    <input type="file" id="img-upload-rank-C" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml" class="flex-1 min-w-0 text-xs text-gray-300">
+                                                    <span id="img-status-rank-C" class="text-xs text-gray-500 shrink-0">기본</span>
+                                                    <button id="img-delete-rank-C" type="button" class="hidden text-red-400 hover:text-red-300 text-xs shrink-0">삭제</button>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -1718,6 +1892,8 @@
         <script defer src="/js/beat/core/game-background.js"></script>
         <script defer src="/js/beat/core/i18n.js"></script>
         <script defer src="/js/beat/appearance/local-store.js"></script><!-- BeatLocalStore: 커스터마이징 IndexedDB 공용 래퍼 -->
+        <script defer src="/js/beat/appearance/fonts.js"></script><!-- BeatFonts(1-B단계): 폰트 업로드/등록. appearance.js가 참조하므로 그 앞에 로드 -->
+        <script defer src="/js/beat/appearance/skin-images.js"></script><!-- BeatSkinImages(2단계): 노트/판정/카운트다운/등급 이미지 스킨. game.js/ui.js가 참조하므로 그 앞에 로드 -->
         <script defer src="/js/beat/appearance/appearance.js"></script>
         <script defer src="/js/beat/appearance/skin.js"></script><!-- BeatSkin: Appearance.settings를 스킨 단위로 저장/전환 -->
         <script defer src="/js/beat/appearance/theme.js"></script>
