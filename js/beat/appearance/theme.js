@@ -55,6 +55,10 @@ const BeatTheme = {
             const card = e.target.closest('.beat-theme-card');
             if (!card) return;
             this.apply(card.dataset.themeVal);
+            // 사용자가 직접 고른 경우에만 클라우드로 올린다(BeatCustomizationSync.pullAll()이
+            // 클라우드 값 반영을 위해 apply()를 호출할 때는 다시 올릴 필요가 없으므로 apply()
+            // 내부가 아니라 여기 클릭 핸들러에서만 호출).
+            if (typeof BeatCustomizationSync !== 'undefined') BeatCustomizationSync.schedulePush();
         });
 
         // 현재 테마 반영

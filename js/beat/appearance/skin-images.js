@@ -215,6 +215,23 @@ const BeatSkinImages = {
     },
 
     // <img> src나 CSS에 쓸 object URL. 없으면 null — 호출부가 기존 렌더링으로 폴백해야 한다.
+    // 클라우드에서 받아온 스킨 이미지 맵({ slotId: storagePath })을 로컬(IndexedDB)에
+    // 내려받는다. 이미 로컬에 있는 슬롯(이 기기에서 업로드했거나 이전에 받은 경우)은
+    // 건드리지 않는다. BeatCustomizationSync.pullAll()에서만 호출.
+    async downloadSkinImages(skinId, imagesMap) {
+        if (!imagesMap) return;
+        for (const [slotId, path] of Object.entries(imagesMap)) {
+            if (!this.isValidSlot(slotId)) continue;
+            const localKey = this._key(skinId, slotId);
+            const existing = await BeatLocalStore.get(this.STORE_NAME, localKey);
+            if (existing) continue;
+            const blob = await CloudAuth.downloadCustomizationFile(path);
+            if (!blob) continue;
+            const name = path.split('/').pop();
+            await BeatLocalStore.set(this.STORE_NAME, localKey, { name, blob });
+        }
+    },
+
     getURL(slotId) {
         const entry = this._entries[slotId];
         return entry ? entry.url : null;
@@ -273,6 +290,7 @@ const BeatSkinImages = {
                         if (typeof UI !== 'undefined' && UI.showMessage) {
                             UI.showMessage('settings', `${slot.label} 이미지를 적용했습니다.`);
                         }
+                        if (typeof BeatCustomizationSync !== 'undefined') BeatCustomizationSync.schedulePush();
                     });
                 }
 
@@ -280,6 +298,7 @@ const BeatSkinImages = {
                     deleteBtn.addEventListener('click', async () => {
                         await this.deleteImage(slot.id);
                         refreshStatus();
+                        if (typeof BeatCustomizationSync !== 'undefined') BeatCustomizationSync.schedulePush();
                     });
                 }
 

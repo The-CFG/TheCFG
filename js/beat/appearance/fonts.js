@@ -149,6 +149,26 @@ const BeatFonts = {
         return await BeatLocalStore.delete(this.STORE_NAME, id);
     },
 
+    // 클라우드에서 받아온 폰트를 로컬에 등록한다(업로드 검증·새 id 발급 없이 원래 id를
+    // 그대로 사용 — 기기 간에 Appearance.settings.judgementFontId 등이 같은 id를 참조하므로
+    // 이 id를 유지해야 한다). BeatCustomizationSync.pullAll()에서만 호출.
+    async registerDownloaded(id, name, format, blob) {
+        if (this.fonts[id]) {
+            return { ok: true, id, name: this.fonts[id].name, familyName: this.FONT_FAMILY_PREFIX + id };
+        }
+        const familyName = await this._registerFace(id, blob);
+        if (!familyName) return { ok: false, error: '폰트를 등록하지 못했습니다.' };
+
+        const saved = await BeatLocalStore.set(this.STORE_NAME, id, { name, format, blob });
+        if (!saved) {
+            document.fonts.delete(this._faces[id]);
+            delete this._faces[id];
+            return { ok: false, error: '폰트를 저장하지 못했습니다.' };
+        }
+        this.fonts[id] = { name, format };
+        return { ok: true, id, name, familyName };
+    },
+
     listFonts() {
         return Object.entries(this.fonts).map(([id, f]) => ({ id, name: f.name, format: f.format }));
     },
@@ -252,6 +272,7 @@ const BeatFonts = {
                                 await this.deleteFont(f.id);
                                 await refreshSelects();
                                 setStatus(`"${f.name}" 폰트를 삭제했습니다.`, false);
+                                if (typeof BeatCustomizationSync !== 'undefined') BeatCustomizationSync.schedulePush();
                             });
                             row.appendChild(label);
                             row.appendChild(delBtn);
@@ -283,15 +304,20 @@ const BeatFonts = {
                     if (nameInput) nameInput.value = '';
                     setStatus(`"${result.name}" 폰트를 추가했습니다.`, false);
                     await refreshSelects();
+                    if (typeof BeatCustomizationSync !== 'undefined') BeatCustomizationSync.schedulePush();
                 });
             }
 
             if (selects.ui) {
                 selects.ui.addEventListener('change', async (e) => {
                     await this.setUiFont(e.target.value || null);
+                    if (typeof BeatCustomizationSync !== 'undefined') BeatCustomizationSync.schedulePush();
                 });
             }
 
+            // judgement/combo/countdown 폰트는 스킨의 일부(Appearance.settings)이므로
+            // 여기서는 값만 바꾸고, 실제 저장·클라우드 반영은 "적용" 버튼(saveSettings ->
+            // BeatSkin.captureFromAppearance -> schedulePush)에서 이뤄진다.
             ['judgementFontId', 'comboFontId', 'countdownFontId'].forEach(key => {
                 const select = selects[key];
                 if (!select) return;

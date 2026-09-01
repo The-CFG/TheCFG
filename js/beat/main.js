@@ -1626,6 +1626,17 @@ document.addEventListener('DOMContentLoaded', () => {
         refreshPlaySettingsUI();
     }
 
+    // 로그인 시 계정에 저장된 스킨/폰트/UI테마를 불러와 적용한다(커스터마이징 계획
+    // 4단계, BeatCustomizationSync). applyAccountPlaySettings와 같은 가드 패턴.
+    let _lastCustomizationAppliedUserId = null;
+    async function applyAccountCustomization(user) {
+        if (!user || user.id === _lastCustomizationAppliedUserId) return;
+        _lastCustomizationAppliedUserId = user.id;
+        if (typeof BeatCustomizationSync !== 'undefined' && BeatCustomizationSync.pullAll) {
+            await BeatCustomizationSync.pullAll(user);
+        }
+    }
+
     function initialize() {
         setupEventListeners();
         document.querySelector('#difficulty-selector button[data-difficulty="normal"]').classList.add('active');
@@ -1704,9 +1715,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (session?.user) {
                 applyAccountVolume(session.user);
                 applyAccountPlaySettings(session.user);
+                applyAccountCustomization(session.user);
             } else {
                 _lastVolumeAppliedUserId = null;
                 _lastPlaySettingsAppliedUserId = null;
+                _lastCustomizationAppliedUserId = null;
             }
         });
 

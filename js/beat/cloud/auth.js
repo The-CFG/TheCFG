@@ -100,12 +100,13 @@ const CloudAuth = {
         if (error) console.warn('saveVolumeSettings 오류:', error.message);
     },
 
-    // ── 플레이 탭 설정 (계정별 저장) ──────────────────────────
-    // user_profiles.beat_settings (jsonb) 컬럼 사용 — 게임플레이 이미지 표시,
-    // 레인 배경, 하이라이트, 판정 보정 등을 하나의 객체로 묶어서 저장한다.
-    // 설정 항목이 앞으로 늘어나도 매번 새 컬럼을 추가하지 않도록 jsonb로 통일.
-    // HOI4Editor가 쓰는 settings jsonb 컬럼과는 별개 (같은 프로젝트 공유이므로 충돌 방지).
-    async getPlaySettings() {
+    // ── 플레이 탭 설정 + 커스터마이징(스킨/UI테마/폰트) 계정 동기화 (계획 4단계) ──
+    // user_profiles.beat_settings(jsonb) 컬럼 하나에 { play, skins, uiTheme, customFonts }
+    // 중첩 구조로 묶어서 저장한다. 기존 계정은 이 재구성 이전에 flat 구조(현재
+    // PLAY_SETTINGS_KEYS 8개가 최상위 키)로 저장돼 있으므로, 읽을 때 하위 호환 처리한다
+    // (_isLegacyFlatPlaySettings). HOI4Editor가 쓰는 settings jsonb 컬럼과는 별개
+    // (같은 프로젝트 공유이므로 충돌 방지).
+    async _getFullBeatSettings() {
         const user = await this.getUser();
         if (!user) return null;
         const { data, error } = await _supabase
@@ -114,23 +115,105 @@ const CloudAuth = {
             .eq('user_id', user.id)
             .maybeSingle();
         if (error) {
-            console.warn('getPlaySettings 오류:', error.message);
+            console.warn('_getFullBeatSettings 오류:', error.message);
             return null;
         }
         return data?.beat_settings || null;
     },
 
-    async savePlaySettings(settings) {
+    // 신규 구조는 항상 play/skins/uiTheme/customFonts 중 하나 이상을 최상위 키로 가진다.
+    // 이 중 아무것도 없으면(=예전 방식으로 저장된 계정) flat play 설정으로 취급한다.
+    _isLegacyFlatPlaySettings(raw) {
+        if (!raw || typeof raw !== 'object') return false;
+        return !('play' in raw) && !('skins' in raw) && !('uiTheme' in raw) && !('customFonts' in raw);
+    },
+
+    // beat_settings의 특정 최상위 키(play/skins/uiTheme/customFonts)만 갱신하고 나머지는
+    // 그대로 둔다. jsonb 컬럼 전체를 덮어써야 하는 upsert 특성상 read-modify-write로 처리.
+    async _patchBeatSettings(key, value) {
         const user = await this.getUser();
         if (!user) return;
+        const current = await this._getFullBeatSettings() || {};
+        const base = this._isLegacyFlatPlaySettings(current) ? { play: current } : current;
+        const next = { ...base, [key]: value };
         const { error } = await _supabase
             .from('user_profiles')
             .upsert({
                 user_id: user.id,
-                beat_settings: settings,
+                beat_settings: next,
                 updated_at: new Date().toISOString(),
             }, { onConflict: 'user_id' });
-        if (error) console.warn('savePlaySettings 오류:', error.message);
+        if (error) console.warn(`_patchBeatSettings(${key}) 오류:`, error.message);
+    },
+
+    async getPlaySettings() {
+        const raw = await this._getFullBeatSettings();
+        if (!raw) return null;
+        return this._isLegacyFlatPlaySettings(raw) ? raw : (raw.play || null);
+    },
+
+    async savePlaySettings(settings) {
+        await this._patchBeatSettings('play', settings);
+    },
+
+    // BeatSkin.state({ activeId, skins: { [id]: { name, settings, images } } }) 전체를 저장.
+    async getSkinsSettings() {
+        const raw = await this._getFullBeatSettings();
+        return (raw && !this._isLegacyFlatPlaySettings(raw)) ? (raw.skins || null) : null;
+    },
+    async saveSkinsSettings(skinsState) {
+        await this._patchBeatSettings('skins', skinsState);
+    },
+
+    // BeatTheme 활성 프리셋({ activeId }) — 1-A단계(커스텀 색상 프리셋)는 아직 미구현이라
+    // 지금은 activeId(dark/blue/light)만 동기화한다.
+    async getUiThemeSettings() {
+        const raw = await this._getFullBeatSettings();
+        return (raw && !this._isLegacyFlatPlaySettings(raw)) ? (raw.uiTheme || null) : null;
+    },
+    async saveUiThemeSettings(themeState) {
+        await this._patchBeatSettings('uiTheme', themeState);
+    },
+
+    // BeatFonts 업로드 폰트 메타데이터 목록([{ id, name, format, storagePath }]).
+    async getCustomFonts() {
+        const raw = await this._getFullBeatSettings();
+        return (raw && !this._isLegacyFlatPlaySettings(raw)) ? (raw.customFonts || null) : null;
+    },
+    async saveCustomFonts(fontsList) {
+        await this._patchBeatSettings('customFonts', fontsList);
+    },
+
+    // ── 커스터마이징 파일 스토리지 (beat-files 버킷 재사용) ──────────────────
+    // 경로는 항상 `${user.id}/...`로 시작해야 beat_files_owner_* RLS 정책(폴더명 1단계
+    // = auth.uid())을 통과한다. 호출부는 user.id를 뺀 상대 경로만 넘긴다.
+    // 예: uploadCustomizationFile('skins/s_abc/note-tap.png', file)
+    //     -> 실제 경로 `${user.id}/skins/s_abc/note-tap.png`
+    async uploadCustomizationFile(relativePath, fileOrBlob) {
+        const user = await this.getUser();
+        if (!user) return { ok: false, error: '로그인이 필요합니다.' };
+        const path = `${user.id}/${relativePath}`;
+        const { error } = await _supabase.storage.from('beat-files')
+            .upload(path, fileOrBlob, { upsert: true });
+        if (error) return { ok: false, error: error.message };
+        return { ok: true, path };
+    },
+
+    async removeCustomizationFiles(paths) {
+        if (!paths || !paths.length) return;
+        const { error } = await _supabase.storage.from('beat-files').remove(paths);
+        if (error) console.warn('removeCustomizationFiles 오류:', error.message);
+    },
+
+    // 다운로드는 저장 시 반환받은 전체 경로(이미 user.id 포함)를 그대로 사용한다.
+    async downloadCustomizationFile(fullPath) {
+        if (!fullPath) return null;
+        const { data, error } = await _supabase.storage.from('beat-files').download(fullPath);
+        if (error) {
+            console.warn('downloadCustomizationFile 오류:', error.message);
+            return null;
+        }
+        return data; // Blob
     },
 };
 

@@ -266,6 +266,9 @@ const Appearance = {
                     this.saveSettings();
                     this.applySettings();
                     UI.showMessage('settings', '모양 설정이 적용되었습니다.');
+                    // 지금 활성 스킨(색상/모양/판정 텍스트/폰트 참조 등)이 바뀐 것이므로
+                    // 클라우드 동기화 대상(계획 4단계)이다.
+                    if (typeof BeatCustomizationSync !== 'undefined') BeatCustomizationSync.schedulePush();
                 });
             }
 

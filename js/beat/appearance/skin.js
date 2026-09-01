@@ -220,6 +220,7 @@ const BeatSkin = {
                     const name = this.state.skins[select.value] ? this.state.skins[select.value].name : select.value;
                     await this.switchTo(select.value);
                     setStatus(`"${name}" 스킨으로 전환했습니다.`, false);
+                    if (typeof BeatCustomizationSync !== 'undefined') BeatCustomizationSync.schedulePush();
                 });
             }
 
@@ -231,6 +232,7 @@ const BeatSkin = {
                     if (!result.ok) { setStatus(result.error, true); return; }
                     this._refreshSelect();
                     setStatus(`"${name}" 스킨을 만들고 전환했습니다.`, false);
+                    if (typeof BeatCustomizationSync !== 'undefined') BeatCustomizationSync.schedulePush();
                 });
             }
 
@@ -244,6 +246,7 @@ const BeatSkin = {
                     if (!result.ok) { setStatus(result.error, true); return; }
                     this._refreshSelect();
                     setStatus('스킨 이름을 변경했습니다.', false);
+                    if (typeof BeatCustomizationSync !== 'undefined') BeatCustomizationSync.schedulePush();
                 });
             }
 
@@ -256,6 +259,7 @@ const BeatSkin = {
                     if (!result.ok) { setStatus(result.error, true); return; }
                     this._refreshSelect();
                     setStatus('스킨을 삭제했습니다.', false);
+                    if (typeof BeatCustomizationSync !== 'undefined') BeatCustomizationSync.schedulePush();
                 });
             }
 
