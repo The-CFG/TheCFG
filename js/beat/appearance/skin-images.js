@@ -1,16 +1,23 @@
 // ════════════════════════════════════════════════
 //  js/beat/appearance/skin-images.js — BeatSkinImages (커스터마이징 계획 2단계)
-//  노트(tap/long/false) · 판정 텍스트(perfect/good/bad/miss) · 카운트다운(3/2/1/start) ·
-//  결과 등급(S/A/B/C) 자리에 사용자가 업로드한 이미지를 쓸 수 있게 해주는 모듈.
+//  노트(tap/long/false, 종류별 기본값 + 레인별 오버라이드) · 판정 텍스트(perfect/good/bad/miss) ·
+//  카운트다운(3/2/1/start) · 결과 등급(S/A/B/C) 자리에 사용자가 업로드한 이미지를 쓸 수
+//  있게 해주는 모듈.
 //
-//  저장 범위: BeatFonts(1-B단계)와 동일하게 이번 단계는 로컬 저장(IndexedDB)까지만
-//  구현한다. 클라우드 업로드(beat-files 버킷, beat_settings.customSkinImages)는 권장
-//  착수 순서 8번(4단계 클라우드 동기화)에서 계정 동기화 작업과 함께 처리한다.
+//  노트 이미지는 두 층으로 구성된다: ①종류별 기본값(note-tap/long/false, 레인 상관없이
+//  적용) ②레인별 오버라이드(note-tap@L2 형식, 9개 레인 x 3종류 = 27개, laneSlotId() 참고).
+//  렌더링(game.js의 _noteImage)은 레인별 오버라이드가 있으면 그걸, 없으면 종류별 기본값을,
+//  그것도 없으면 null(기존 도형/색상 렌더링으로 폴백)을 쓴다. 27개를 전부 개별 <input>으로
+//  두면 화면이 너무 길어져서, 설정 화면에서는 "종류 선택 + 레인 선택 + 업로드 1개" 조합으로
+//  고르게 하고(_initLaneUI), 이미 설정된 조합은 목록에서 바로 삭제할 수 있게 한다.
 //
-//  저장 구조: BeatLocalStore의 'images' 스토어에 `${skinId}:${slotId}`(SLOT_IDS 참고)를
+//  저장 범위: BeatFonts(1-B단계)와 동일하게 로컬 저장(IndexedDB) + 클라우드 동기화(4단계,
+//  BeatCustomizationSync — 스킨(BeatSkin.state)에 얹혀서 함께 push/pull된다)까지 구현.
+//
+//  저장 구조: BeatLocalStore의 'images' 스토어에 `${skinId}:${slotId}`(SLOTS 참고)를
 //  키로 { name, blob } 저장. 스킨(BeatSkin)마다 독립적인 이미지 세트를 가지며, 현재
 //  로드/편집 대상은 _activeSkinId(기본값은 BeatSkin.DEFAULT_ID)로 추적한다. 슬롯은
-//  최대 15개로 개수가 고정돼 있어(스킨처럼 사용자가 개수를 늘리는 구조가 아님) 폰트처럼
+//  최대 42개로 개수가 고정돼 있어(스킨처럼 사용자가 개수를 늘리는 구조가 아님) 폰트처럼
 //  별도 id 발급 없이 슬롯 id를 키의 일부로 그대로 쓴다.
 //
 //  마이그레이션: 스킨별 구조 도입 이전에는 키가 슬롯 id 하나(콜론 없음)였다. init()이
@@ -35,24 +42,71 @@ const BeatSkinImages = {
     ALLOWED_EXTENSIONS: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'],
     MAX_SIZE_BYTES: 1.5 * 1024 * 1024, // 1.5MB — 폰트보다 개수가 많아(최대 15개) 더 낮게 제한
 
-    // 슬롯 id 목록. group은 UI에서 섹션을 나눌 때, label은 목록/버튼 표시용.
-    SLOTS: [
-        { id: 'note-tap',   group: 'note',      label: '탭 노트' },
-        { id: 'note-long',  group: 'note',      label: '롱 노트' },
-        { id: 'note-false', group: 'note',      label: '가짜 노트' },
-        { id: 'judgement-perfect', group: 'judgement', label: 'PERFECT' },
-        { id: 'judgement-good',    group: 'judgement', label: 'GOOD' },
-        { id: 'judgement-bad',     group: 'judgement', label: 'BAD' },
-        { id: 'judgement-miss',    group: 'judgement', label: 'MISS' },
-        { id: 'countdown-3',     group: 'countdown', label: '3' },
-        { id: 'countdown-2',     group: 'countdown', label: '2' },
-        { id: 'countdown-1',     group: 'countdown', label: '1' },
-        { id: 'countdown-start', group: 'countdown', label: 'START' },
-        { id: 'rank-S', group: 'rank', label: 'S' },
-        { id: 'rank-A', group: 'rank', label: 'A' },
-        { id: 'rank-B', group: 'rank', label: 'B' },
-        { id: 'rank-C', group: 'rank', label: 'C' },
+    // 레인별 노트 이미지 오버라이드(사용자 요청) — 좌우 대칭 9칸(L4~R4)은 4/5/6/7/8키 전부를
+    // 포괄하는 CONFIG.LANE_KEY_MAPPING_ORDER의 합집합과 동일하다(appearance.js의 레인별
+    // 색상 미리보기가 쓰는 라벨 집합과도 동일하게 맞춤).
+    LANE_IDS: ['L4', 'L3', 'L2', 'L1', 'C1', 'R1', 'R2', 'R3', 'R4'],
+    LANE_LABELS: {
+        L4: '왼쪽 4', L3: '왼쪽 3', L2: '왼쪽 2', L1: '왼쪽 1',
+        C1: '가운데',
+        R1: '오른쪽 1', R2: '오른쪽 2', R3: '오른쪽 3', R4: '오른쪽 4',
+    },
+    NOTE_TYPE_BASES: [
+        { id: 'note-tap',   label: '탭 노트' },
+        { id: 'note-long',  label: '롱 노트' },
+        { id: 'note-false', label: '가짜 노트' },
     ],
+
+    // 레인별 오버라이드 슬롯 id를 만든다("note-tap@L2" 형식). 렌더링(game.js)이 노트를
+    // 그릴 때 이 id로 먼저 찾아보고, 없으면 종류별 기본 슬롯(note-tap 등)으로 폴백한다.
+    laneSlotId(base, laneId) {
+        return `${base}@${laneId}`;
+    },
+
+    // slotId -> { id, group, label } 목록. group은 UI에서 섹션을 나눌 때, label은 목록/버튼
+    // 표시용. note-tap/long/false(종류별 기본값, 레인 상관없이 적용) + 레인별 오버라이드
+    // 27개(3종류 × 9레인) + 판정 텍스트 4 + 카운트다운 4 + 결과 등급 4 = 총 42개.
+    SLOTS: (function() {
+        const noteBases = [
+            { id: 'note-tap',   group: 'note', label: '탭 노트' },
+            { id: 'note-long',  group: 'note', label: '롱 노트' },
+            { id: 'note-false', group: 'note', label: '가짜 노트' },
+        ];
+        const laneIds = ['L4', 'L3', 'L2', 'L1', 'C1', 'R1', 'R2', 'R3', 'R4'];
+        const laneLabels = {
+            L4: '왼쪽 4', L3: '왼쪽 3', L2: '왼쪽 2', L1: '왼쪽 1',
+            C1: '가운데',
+            R1: '오른쪽 1', R2: '오른쪽 2', R3: '오른쪽 3', R4: '오른쪽 4',
+        };
+        const laneSlots = [];
+        noteBases.forEach(base => {
+            laneIds.forEach(laneId => {
+                laneSlots.push({
+                    id: `${base.id}@${laneId}`,
+                    group: 'note-lane',
+                    label: `${base.label} · ${laneLabels[laneId]}`,
+                    base: base.id,
+                    laneId,
+                });
+            });
+        });
+        return [
+            ...noteBases,
+            ...laneSlots,
+            { id: 'judgement-perfect', group: 'judgement', label: 'PERFECT' },
+            { id: 'judgement-good',    group: 'judgement', label: 'GOOD' },
+            { id: 'judgement-bad',     group: 'judgement', label: 'BAD' },
+            { id: 'judgement-miss',    group: 'judgement', label: 'MISS' },
+            { id: 'countdown-3',     group: 'countdown', label: '3' },
+            { id: 'countdown-2',     group: 'countdown', label: '2' },
+            { id: 'countdown-1',     group: 'countdown', label: '1' },
+            { id: 'countdown-start', group: 'countdown', label: 'START' },
+            { id: 'rank-S', group: 'rank', label: 'S' },
+            { id: 'rank-A', group: 'rank', label: 'A' },
+            { id: 'rank-B', group: 'rank', label: 'B' },
+            { id: 'rank-C', group: 'rank', label: 'C' },
+        ];
+    })(),
 
     // slotId -> { name, url, img } — url은 URL.createObjectURL() 결과(<img> src용),
     // img는 캔버스 drawImage용으로 미리 로드해 둔 HTMLImageElement.
@@ -252,8 +306,10 @@ const BeatSkinImages = {
     },
 
     // ── 설정 화면 UI 배선 ──────────────────────────
-    // slotId별 <input type=file>(id: img-upload-<slotId>)과 삭제 버튼(id: img-delete-<slotId>),
-    // 상태 뱃지(id: img-status-<slotId>)가 이미 마크업에 있다고 가정하고 이벤트만 건다.
+    // 종류별 고정 15슬롯: slotId별 <input type=file>(id: img-upload-<slotId>)과 삭제
+    // 버튼(id: img-delete-<slotId>), 상태 뱃지(id: img-status-<slotId>)가 이미 마크업에
+    // 있다고 가정하고 이벤트만 건다. 레인별 27슬롯은 개별 DOM이 없고 _initLaneUI()가
+    // 별도로 처리한다.
     initUI() {
         try {
             // 스킨 전환 후에도 상태 뱃지를 다시 갱신할 수 있도록 슬롯별 refreshStatus를
@@ -261,7 +317,7 @@ const BeatSkinImages = {
             // 참조로 덮어써지므로 안전하다.
             this._refreshFns = {};
 
-            this.SLOTS.forEach(slot => {
+            this.SLOTS.filter(slot => slot.group !== 'note-lane').forEach(slot => {
                 const fileInput = document.getElementById(`img-upload-${slot.id}`);
                 const deleteBtn = document.getElementById(`img-delete-${slot.id}`);
                 const statusEl  = document.getElementById(`img-status-${slot.id}`);
@@ -304,16 +360,129 @@ const BeatSkinImages = {
 
                 refreshStatus();
             });
+
+            this._initLaneUI();
         } catch (err) {
             this._logError(err, 'BeatSkinImages.initUI');
         }
     },
 
+    // 레인별 노트 이미지 오버라이드 UI. "종류(탭/롱/가짜) 선택 + 레인(9개) 선택 + 업로드
+    // 1개" 조합으로 원하는 슬롯(note-tap@L2 등)을 고르게 하고, 이미 설정된 조합은
+    // 목록(#img-lane-list)에서 바로 확인·삭제할 수 있게 한다. 마크업이 없는 페이지에서는
+    // (typeSelector/laneSelector 부재) 조용히 무시한다.
+    _initLaneUI() {
+        const typeSelector = document.getElementById('img-lane-type-selector');
+        const laneSelector = document.getElementById('img-lane-selector');
+        const fileInput    = document.getElementById('img-lane-upload-input');
+        const deleteBtn    = document.getElementById('img-lane-delete-btn');
+        const statusEl     = document.getElementById('img-lane-status');
+        const listEl       = document.getElementById('img-lane-list');
+        if (!typeSelector || !laneSelector) return;
+
+        let selectedBase = this.NOTE_TYPE_BASES[0].id;
+        let selectedLane = this.LANE_IDS[0];
+        const currentSlotId = () => this.laneSlotId(selectedBase, selectedLane);
+
+        const refreshStatus = () => {
+            const entry = this._entries[currentSlotId()];
+            if (statusEl) {
+                statusEl.textContent = entry ? entry.name : '기본(종류별 이미지 또는 색상 사용)';
+                statusEl.classList.toggle('text-blue-400', !!entry);
+                statusEl.classList.toggle('text-gray-500', !entry);
+            }
+            if (deleteBtn) deleteBtn.classList.toggle('hidden', !entry);
+        };
+
+        const refreshList = () => {
+            if (!listEl) return;
+            const overrides = this.SLOTS.filter(s => s.group === 'note-lane' && this._entries[s.id]);
+            listEl.innerHTML = '';
+            if (overrides.length === 0) {
+                listEl.innerHTML = '<p class="text-xs text-gray-500">설정된 레인별 이미지가 없습니다.</p>';
+                return;
+            }
+            overrides.forEach(s => {
+                const row = document.createElement('div');
+                row.className = 'flex items-center justify-between text-xs text-gray-300 py-1';
+                const label = document.createElement('span');
+                label.className = 'truncate';
+                label.textContent = `${s.label}: ${this._entries[s.id].name}`;
+                const del = document.createElement('button');
+                del.type = 'button';
+                del.className = 'text-red-400 hover:text-red-300 ml-2 flex-shrink-0';
+                del.textContent = '삭제';
+                del.addEventListener('click', async () => {
+                    await this.deleteImage(s.id);
+                    refreshStatus();
+                    refreshList();
+                    if (typeof BeatCustomizationSync !== 'undefined') BeatCustomizationSync.schedulePush();
+                });
+                row.appendChild(label);
+                row.appendChild(del);
+                listEl.appendChild(row);
+            });
+        };
+
+        // 스킨 전환 시(refreshUI()) 상태 뱃지 + 목록도 함께 다시 그릴 수 있도록 보관.
+        this._refreshLaneStatus = refreshStatus;
+        this._refreshLaneList = refreshList;
+
+        typeSelector.addEventListener('click', (e) => {
+            const btn = e.target.closest('button[data-type]');
+            if (!btn) return;
+            selectedBase = btn.dataset.type;
+            typeSelector.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
+            refreshStatus();
+        });
+
+        laneSelector.addEventListener('click', (e) => {
+            const btn = e.target.closest('button[data-lane]');
+            if (!btn) return;
+            selectedLane = btn.dataset.lane;
+            laneSelector.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
+            refreshStatus();
+        });
+
+        if (fileInput) {
+            fileInput.addEventListener('change', async (e) => {
+                const file = e.target.files && e.target.files[0];
+                if (!file) return;
+                const result = await this.uploadImage(currentSlotId(), file);
+                fileInput.value = '';
+                if (!result.ok) {
+                    if (typeof UI !== 'undefined' && UI.showMessage) UI.showMessage('settings', result.error);
+                    return;
+                }
+                refreshStatus();
+                refreshList();
+                if (typeof UI !== 'undefined' && UI.showMessage) {
+                    UI.showMessage('settings', '레인별 이미지를 적용했습니다.');
+                }
+                if (typeof BeatCustomizationSync !== 'undefined') BeatCustomizationSync.schedulePush();
+            });
+        }
+
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', async () => {
+                await this.deleteImage(currentSlotId());
+                refreshStatus();
+                refreshList();
+                if (typeof BeatCustomizationSync !== 'undefined') BeatCustomizationSync.schedulePush();
+            });
+        }
+
+        refreshStatus();
+        refreshList();
+    },
+
     // 설정 화면이 이미 배선된 뒤(initUI() 실행 후) 스킨 전환 등으로 _entries가
-    // 통째로 바뀌었을 때 상태 뱃지 15개를 한 번에 다시 그린다. initUI()가 아직
-    // 호출되지 않은 페이지에서는 조용히 무시한다.
+    // 통째로 바뀌었을 때 상태 뱃지 15개 + 레인별 오버라이드 UI를 한 번에 다시 그린다.
+    // initUI()가 아직 호출되지 않은 페이지에서는 조용히 무시한다.
     refreshUI() {
         if (!this._refreshFns) return;
         Object.values(this._refreshFns).forEach(fn => fn());
+        if (this._refreshLaneStatus) this._refreshLaneStatus();
+        if (this._refreshLaneList) this._refreshLaneList();
     },
 };

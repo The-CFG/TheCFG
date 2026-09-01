@@ -783,6 +783,33 @@
                                         </div>
                                     </div>
 
+                                    <p class="text-sm font-semibold text-gray-400 mb-2">레인별 노트 이미지 (선택)</p>
+                                    <div class="mb-4 p-3 bg-gray-800 rounded-lg" id="img-group-note-lane">
+                                        <p class="text-xs text-gray-500 mb-2">특정 레인에만 다른 이미지를 쓰고 싶을 때 사용합니다. 설정하지 않은 레인은 위 종류별 이미지(또는 기본 도형·색상)를 그대로 사용합니다.</p>
+                                        <div class="flex gap-2 mb-2 btn-group" id="img-lane-type-selector">
+                                            <button type="button" data-type="note-tap" class="flex-1 py-1.5 px-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs transition active">탭</button>
+                                            <button type="button" data-type="note-long" class="flex-1 py-1.5 px-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs transition">롱</button>
+                                            <button type="button" data-type="note-false" class="flex-1 py-1.5 px-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs transition">가짜</button>
+                                        </div>
+                                        <div class="flex flex-wrap gap-1 mb-2 btn-group" id="img-lane-selector">
+                                            <button type="button" data-lane="L4" class="flex-1 py-1.5 px-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition active">L4</button>
+                                            <button type="button" data-lane="L3" class="flex-1 py-1.5 px-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition">L3</button>
+                                            <button type="button" data-lane="L2" class="flex-1 py-1.5 px-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition">L2</button>
+                                            <button type="button" data-lane="L1" class="flex-1 py-1.5 px-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition">L1</button>
+                                            <button type="button" data-lane="C1" class="flex-1 py-1.5 px-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition">C</button>
+                                            <button type="button" data-lane="R1" class="flex-1 py-1.5 px-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition">R1</button>
+                                            <button type="button" data-lane="R2" class="flex-1 py-1.5 px-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition">R2</button>
+                                            <button type="button" data-lane="R3" class="flex-1 py-1.5 px-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition">R3</button>
+                                            <button type="button" data-lane="R4" class="flex-1 py-1.5 px-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition">R4</button>
+                                        </div>
+                                        <div class="flex items-center justify-between gap-2 mb-1">
+                                            <input id="img-lane-upload-input" type="file" accept=".png,.jpg,.jpeg,.gif,.webp,.svg" class="flex-1 min-w-0 text-xs text-gray-300">
+                                            <button id="img-lane-delete-btn" type="button" class="hidden flex-shrink-0 text-red-400 hover:text-red-300 text-xs">삭제</button>
+                                        </div>
+                                        <p id="img-lane-status" class="text-xs text-gray-500">기본(종류별 이미지 또는 색상 사용)</p>
+                                        <div id="img-lane-list" class="mt-2 border-t border-gray-700 pt-2"></div>
+                                    </div>
+
                                     <p class="text-sm font-semibold text-gray-400 mb-2">판정 텍스트</p>
                                     <div class="space-y-2 mb-4" id="img-group-judgement">
                                         <div class="flex items-center justify-between gap-2">

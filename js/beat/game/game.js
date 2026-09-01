@@ -257,11 +257,16 @@ const Game = {
         },
 
         // 노트 이미지 스킨(Appearance.settings.noteImages가 아니라 BeatSkinImages 슬롯을
-        // 직접 참조 — 폰트와 마찬가지로 이미지는 별도 모듈이 등록소 역할을 한다)
-        _noteImage(noteType) {
+        // 직접 참조 — 폰트와 마찬가지로 이미지는 별도 모듈이 등록소 역할을 한다).
+        // 레인별 오버라이드(note-tap@L2 등)가 있으면 그걸, 없으면 종류별 기본값을 쓴다.
+        _noteImage(noteType, laneId) {
             if (typeof BeatSkinImages === 'undefined' || !BeatSkinImages.getImage) return null;
-            const slot = noteType === 'long_head' ? 'note-long' : (noteType === 'false' ? 'note-false' : 'note-tap');
-            return BeatSkinImages.getImage(slot);
+            const base = noteType === 'long_head' ? 'note-long' : (noteType === 'false' ? 'note-false' : 'note-tap');
+            if (laneId && BeatSkinImages.laneSlotId) {
+                const laneImg = BeatSkinImages.getImage(BeatSkinImages.laneSlotId(base, laneId));
+                if (laneImg) return laneImg;
+            }
+            return BeatSkinImages.getImage(base);
         },
 
         // 노트 한 개 그리기
@@ -331,7 +336,7 @@ const Game = {
                 return; // 스케일 0이면 그리지 않음(음수 크기 drawImage 에러 방지)
             }
 
-            const img = this._noteImage(note.type);
+            const img = this._noteImage(note.type, laneId);
 
             if (img && note.type !== 'long_tail') {
                 // 이미지 스킨: 캔버스 도형 대신 사용자가 업로드한 이미지를 노트 판정 박스에
