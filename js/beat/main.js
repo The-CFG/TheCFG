@@ -1652,26 +1652,39 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         }
-        // BeatSkinImages(커스터마이징 계획 2단계): 노트 캔버스 드로잉이 첫 프레임부터
-        // 업로드된 이미지를 참조할 수 있도록 게임 시작 전에 미리 로드해 둔다. BeatFonts와
-        // 마찬가지로 IndexedDB 조회는 비동기라 완료를 기다리지 않고 진행한다 — 이미지가
-        // 없으면 즉시 완료되고, 있는 경우에만 아주 짧게 기본 렌더링이 먼저 보일 수 있다.
-        if (typeof BeatSkinImages !== 'undefined' && BeatSkinImages.init) {
-            BeatSkinImages.init();
-        }
         Appearance.init();
         // BeatSkin(커스터마이징 계획 1단계): Appearance.init()이 끝나 legacy
         // localStorage 값이 Appearance.settings에 이미 로드된 뒤에 호출해야 한다
         // (최초 마이그레이션 시 이 값을 "기본" 스킨으로 캡처하므로). IndexedDB 비동기
-        // 조회라 이 시점엔 await하지 않고 완료되는 대로 활성 스킨을 적용한다.
+        // 조회라 이 시점엔 await하지 않지만, Promise는 잡아 두고 BeatSkinImages가
+        // activeId 확정 이후에 로드되도록 체이닝한다(아래).
+        let _beatSkinReady = Promise.resolve();
         if (typeof BeatSkin !== 'undefined' && BeatSkin.init) {
-            BeatSkin.init();
+            _beatSkinReady = BeatSkin.init();
+        }
+        // BeatSkinImages(커스터마이징 계획 2단계, 이제 스킨별로 종속): 노트 캔버스
+        // 드로잉이 첫 프레임부터 업로드된 이미지를 참조할 수 있도록 게임 시작 전에
+        // 미리 로드해 둔다. 이미지가 어느 스킨 소속인지는 BeatSkin.state.activeId로
+        // 정해지므로 BeatSkin.init()이 activeId를 확정한 뒤에 로드해야 한다. BeatFonts와
+        // 마찬가지로 완료를 기다리지 않고 진행한다 — 이미지가 없으면 즉시 완료되고,
+        // 있는 경우에만 아주 짧게 기본 렌더링이 먼저 보일 수 있다.
+        if (typeof BeatSkinImages !== 'undefined' && BeatSkinImages.init) {
+            // 로드가 끝나면 설정 화면 상태 뱃지도 갱신 — initUI()가 로드 완료 전에
+            // 먼저 실행돼 "기본"으로 표시돼 있었을 수 있으므로.
+            _beatSkinReady.then(() => BeatSkinImages.init()).then(() => {
+                if (BeatSkinImages.refreshUI) BeatSkinImages.refreshUI();
+            });
         }
         // 설정 화면의 폰트 업로드/선택 UI 배선(1-B단계). Appearance.settings의 현재
         // judgementFontId 등을 select 초기값으로 반영해야 하므로 Appearance.init() 이후,
         // BeatFonts.init()의 폰트 목록이 채워진 뒤에 실행한다.
         if (typeof BeatFonts !== 'undefined' && BeatFonts.initUI) {
             _beatFontsReady.then(() => BeatFonts.initUI());
+        }
+        // 설정 화면의 스킨 프리셋 UI 배선(3단계). select 목록이 BeatSkin.state를 읽으므로
+        // BeatSkin.init()이 activeId/스킨 목록을 확정한 뒤에 실행한다.
+        if (typeof BeatSkin !== 'undefined' && BeatSkin.initUI) {
+            _beatSkinReady.then(() => BeatSkin.initUI());
         }
         // 설정 화면의 이미지 스킨 업로드 UI 배선(2단계). 슬롯 15개 각각의 <input type=file>에
         // 이벤트만 걸면 되므로 BeatSkinImages.init() 완료를 기다리지 않고 바로 실행해도 된다

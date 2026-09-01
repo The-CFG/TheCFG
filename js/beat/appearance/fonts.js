@@ -201,7 +201,6 @@ const BeatFonts = {
                 comboFontId: document.getElementById('font-select-combo'),
                 countdownFontId: document.getElementById('font-select-countdown'),
             };
-
             const setStatus = (msg, isError) => {
                 if (!statusEl) return;
                 statusEl.textContent = msg || '';
@@ -261,6 +260,9 @@ const BeatFonts = {
                     }
                 }
             };
+            // BeatSkin.switchTo() 등 외부에서 스킨 전환 후 select들을 다시 그릴 수 있도록
+            // 참조를 보관(refreshUI() 참고).
+            this._refreshSelects = refreshSelects;
 
             if (uploadBtn && fileInput) {
                 uploadBtn.addEventListener('click', async () => {
@@ -305,5 +307,13 @@ const BeatFonts = {
         } catch (err) {
             this._logError(err, 'BeatFonts.initUI');
         }
+    },
+
+    // 설정 화면이 이미 배선된 뒤(initUI() 실행 후) 스킨 전환 등으로 Appearance.settings의
+    // judgementFontId/comboFontId/countdownFontId가 통째로 바뀌었을 때 select 값들을
+    // 다시 그린다(BeatSkin.switchTo()에서 호출). initUI()가 아직 호출되지 않은 페이지에서는
+    // 조용히 무시한다.
+    async refreshUI() {
+        if (this._refreshSelects) await this._refreshSelects();
     },
 };
