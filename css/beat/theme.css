@@ -27,6 +27,12 @@
 :root {
     --tb-accent: #4299e1;
 
+    /* 전역 UI 폰트 (커스터마이징 계획 1-B단계, js/beat/appearance/fonts.js의 BeatFonts가 관리).
+       색 테마(dark/blue/light)와 달리 다크·라이트를 오가도 값이 바뀌지 않는 축이라
+       [data-theme=...] 블록에는 넣지 않고 :root에만 한 번 선언한다. 사용자가 폰트를
+       업로드/선택하면 BeatFonts.applyUiFont()가 documentElement에 이 변수를 덮어쓴다. */
+    --tb-font-family: 'Inter', sans-serif;
+
     /* 전역 배경/텍스트 (body, #ui-area) */
     --tb-bg-primary:   #2d3748; /* game.css body 기존 배경과 동일 */
     --tb-text-primary: #e2e8f0; /* game.css body 기존 텍스트와 동일 */

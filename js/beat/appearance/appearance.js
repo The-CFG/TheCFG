@@ -33,7 +33,12 @@ const Appearance = {
         comboTextColor: '#f6e05e',
         comboTextSize: 2.5, // rem
         countdownTextColor: '#ffffff',
-        countdownTextSize: 8 // rem
+        countdownTextSize: 8, // rem
+        // 커스터마이징 계획 1-B단계: BeatFonts(js/beat/appearance/fonts.js)에 업로드된
+        // 폰트의 id. null이면 CSS 기본값(inherit → 전역 UI 폰트)을 그대로 쓴다.
+        judgementFontId: null,
+        comboFontId: null,
+        countdownFontId: null
     },
     
     presets: {
@@ -354,6 +359,14 @@ const Appearance = {
         root.setProperty('--combo-font-size', `${this.settings.comboTextSize}rem`);
         root.setProperty('--countdown-color', this.settings.countdownTextColor);
         root.setProperty('--countdown-font-size', `${this.settings.countdownTextSize}rem`);
+
+        // 폰트(1-B단계): BeatFonts가 아직 로드/초기화되지 않았을 수 있어 존재 체크 후 폴백.
+        const fontCss = (id) => (typeof BeatFonts !== 'undefined' && BeatFonts.getFontFamilyCss)
+            ? BeatFonts.getFontFamilyCss(id, 'inherit')
+            : 'inherit';
+        root.setProperty('--judgement-font-family', fontCss(this.settings.judgementFontId));
+        root.setProperty('--combo-font-family', fontCss(this.settings.comboFontId));
+        root.setProperty('--countdown-font-family', fontCss(this.settings.countdownFontId));
     },
 
     applySettings() {
@@ -518,7 +531,10 @@ const Appearance = {
                 comboTextColor: '#f6e05e',
                 comboTextSize: 2.5,
                 countdownTextColor: '#ffffff',
-                countdownTextSize: 8
+                countdownTextSize: 8,
+                judgementFontId: null,
+                comboFontId: null,
+                countdownFontId: null
             };
             this.updateColorInputs();
             this.updateShapeUI();

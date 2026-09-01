@@ -10,7 +10,10 @@ body > div {
 }
 
 body {
-    font-family: 'Inter', sans-serif;
+    /* 커스터마이징 계획 1-B단계: 업로드 폰트를 전역 UI 폰트로 쓸 수 있도록 CSS 변수화.
+       변수는 css/beat/theme.css :root의 --tb-font-family 기본값을 쓰다가, BeatFonts에
+       사용자가 커스텀 폰트를 선택하면 documentElement에 덮어써진다. */
+    font-family: var(--tb-font-family, 'Inter', sans-serif);
     background-color: #2d3748; /* UI 영역 배경색과 통일 */
     color: #e2e8f0;
     overscroll-behavior: none;
@@ -213,8 +216,10 @@ body {
     left: 50%;
     transform: translate(-50%, -50%);
     /* 커스터마이징 계획 2단계: 색상/크기는 CSS 변수로 주입(Appearance.updateJudgementCssVariables 참고).
-       위치(top/left)는 아직 조절 UI가 없어 기본값 그대로 둔다. */
+       위치(top/left)는 아직 조절 UI가 없어 기본값 그대로 둔다.
+       폰트(1-B단계): --judgement-font-family가 없으면 body에서 상속(기본/전역 UI 폰트). */
     font-size: var(--judgement-font-size, 4rem);
+    font-family: var(--judgement-font-family, inherit);
     font-weight: bold;
     color: var(--judgement-color, white);
     opacity: 0;
@@ -232,6 +237,7 @@ body {
     left: 50%;
     transform: translate(-50%, -50%);
     font-size: var(--combo-font-size, 2.5rem);
+    font-family: var(--combo-font-family, inherit);
     font-weight: bold;
     color: var(--combo-color, #f6e05e);
     opacity: 0;
@@ -376,8 +382,10 @@ body {
     top: 40%;
     left: 50%;
     transform: translate(-50%, -50%) scale(1.5);
-    /* 커스터마이징 계획 2단계: 색상/크기는 CSS 변수로 주입(Appearance.updateJudgementCssVariables 참고). */
+    /* 커스터마이징 계획 2단계: 색상/크기는 CSS 변수로 주입(Appearance.updateJudgementCssVariables 참고).
+       폰트(1-B단계): --countdown-font-family가 없으면 body에서 상속. */
     font-size: var(--countdown-font-size, 8rem);
+    font-family: var(--countdown-font-family, inherit);
     font-weight: bold;
     color: var(--countdown-color, white);
     opacity: 0;

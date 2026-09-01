@@ -1639,6 +1639,19 @@ document.addEventListener('DOMContentLoaded', () => {
         // "내 프리셋" 목록도 여기서 채운다 — I18n.init() 이후라야 플레이스홀더가 올바른 언어로 나온다.
         loadLastPracticeSettings();
         refreshCustomPresetSelect();
+        // BeatFonts(커스터마이징 계획 1-B단계): Appearance.init()보다 먼저 시작해야
+        // 판정/콤보/카운트다운 CSS 변수가 처음부터 사용자가 저장해둔 폰트를 참조할 수 있다.
+        // IndexedDB 조회가 비동기라 완료 전에 Appearance.init()이 먼저 끝날 수 있으므로,
+        // 로드가 끝나는 대로 CSS 변수를 다시 채워 넣는다(폰트가 없으면 즉시 완료되어
+        // 사실상 지연이 없고, 커스텀 폰트가 있을 때만 짧게 한 번 갱신된다).
+        let _beatFontsReady = Promise.resolve();
+        if (typeof BeatFonts !== 'undefined' && BeatFonts.init) {
+            _beatFontsReady = BeatFonts.init().then(() => {
+                if (typeof Appearance !== 'undefined' && Appearance.updateJudgementCssVariables) {
+                    Appearance.updateJudgementCssVariables();
+                }
+            });
+        }
         Appearance.init();
         // BeatSkin(커스터마이징 계획 1단계): Appearance.init()이 끝나 legacy
         // localStorage 값이 Appearance.settings에 이미 로드된 뒤에 호출해야 한다
@@ -1646,6 +1659,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // 조회라 이 시점엔 await하지 않고 완료되는 대로 활성 스킨을 적용한다.
         if (typeof BeatSkin !== 'undefined' && BeatSkin.init) {
             BeatSkin.init();
+        }
+        // 설정 화면의 폰트 업로드/선택 UI 배선(1-B단계). Appearance.settings의 현재
+        // judgementFontId 등을 select 초기값으로 반영해야 하므로 Appearance.init() 이후,
+        // BeatFonts.init()의 폰트 목록이 채워진 뒤에 실행한다.
+        if (typeof BeatFonts !== 'undefined' && BeatFonts.initUI) {
+            _beatFontsReady.then(() => BeatFonts.initUI());
         }
         Calibration.init();
         UI.initPanelToggle();
