@@ -25,8 +25,64 @@ const BeatSkin = {
     DEFAULT_ID: 'default',
     DEFAULT_NAME: '기본',
 
-    // { activeId, skins: { [id]: { name, settings } } }
+    // { activeId, skins: { [id]: { name, settings } }, builtinsSeeded }
     state: null,
+
+    // ── 커스터마이징 계획 3단계: 기본 제공 스킨 2종 ──
+    // 신규 유저가 "기본" 스킨 하나만 보는 문제를 없애기 위해 큐레이션된 프리셋을 미리
+    // 목록에 넣어둔다("적용"까지 하지는 않음 — activeId는 그대로 두고 선택지로만 추가).
+    // Object.assign(applyActive 참고)이 지정한 키만 덮어쓰므로, 여기 없는 키(폰트 선택,
+    // 판정선 위치 등)는 전환 시점의 값을 그대로 물려받는다 — 사용자가 만드는 스킨(항상
+    // Appearance.settings 전체를 캡처)과 달리 built-in은 "색/모양/텍스트/노트" 계열만
+    // 큐레이션한 부분 프리셋이다.
+    BUILTIN_SKINS: [
+        {
+            id: 'builtin_minimal',
+            name: '미니멀',
+            settings: {
+                noteShape: 'circle',
+                colorMode: 'note-type',
+                colors: { tap: '#e2e8f0', long: '#94a3b8', false: '#64748b' },
+                laneColors: {
+                    L4: '#94a3b8', L3: '#a1a9b8', L2: '#adb5c4', L1: '#b9c1cf',
+                    C1: '#e2e8f0',
+                    R1: '#b9c1cf', R2: '#adb5c4', R3: '#a1a9b8', R4: '#94a3b8',
+                },
+                judgementLineColor: '#e2e8f0',
+                judgementTextColor: '#e2e8f0',
+                judgementTextSize: 3,
+                comboTextColor: '#cbd5e1',
+                comboTextSize: 2,
+                countdownTextColor: '#e2e8f0',
+                countdownTextSize: 6,
+                noteSize: 0.85,
+                noteAnimation: 'fade',
+            },
+        },
+        {
+            id: 'builtin_neon',
+            name: '네온',
+            settings: {
+                noteShape: 'bar',
+                colorMode: 'note-type',
+                colors: { tap: '#22d3ee', long: '#f472b6', false: '#f87171' },
+                laneColors: {
+                    L4: '#f87171', L3: '#fb923c', L2: '#facc15', L1: '#a3e635',
+                    C1: '#22d3ee',
+                    R1: '#38bdf8', R2: '#818cf8', R3: '#c084fc', R4: '#f472b6',
+                },
+                judgementLineColor: '#22d3ee',
+                judgementTextColor: '#f472b6',
+                judgementTextSize: 5,
+                comboTextColor: '#facc15',
+                comboTextSize: 3,
+                countdownTextColor: '#22d3ee',
+                countdownTextSize: 9,
+                noteSize: 1.15,
+                noteAnimation: 'scale',
+            },
+        },
+    ],
 
     _logError(err, context) {
         if (typeof Debugger !== 'undefined' && Debugger.logError) {
@@ -46,6 +102,9 @@ const BeatSkin = {
                 // 시각 항목을 함께 옮기지 않았을 수 있다 — 흡수를 시도한다.
                 await this._absorbLegacyPlayVisualKeys(state);
             }
+            // 기본 제공 스킨(BUILTIN_SKINS)을 목록에 추가한다 — 신규/기존 유저 모두
+            // 대상이며, 1회만 추가되도록 가드한다(_seedBuiltinSkins 참고).
+            await this._seedBuiltinSkins(state);
             // "로컬 저장소 정책" 정리: 위 두 경로 중 어느 쪽이든 필요한 값은 이미
             // IndexedDB로 옮겨졌으므로, 남아있는 레거시 localStorage 키를 지운다.
             // 매번 호출해도 안전(idempotent) — 이미 지워졌으면 그냥 아무 일도 안 함.
@@ -54,6 +113,26 @@ const BeatSkin = {
             this.applyActive();
         } catch (err) {
             this._logError(err, 'BeatSkin.init');
+        }
+    },
+
+    // BUILTIN_SKINS를 state.skins에 채워 넣는다. activeId/현재 적용된 값은 건드리지
+    // 않는다(전환은 사용자가 스킨 선택 화면에서 직접 골라야 함). state.builtinsSeeded
+    // 플래그로 1회만 실행되게 한다 — 사용자가 마음에 안 들어 삭제한 built-in 스킨이
+    // 다음 접속 때 다시 살아나는 것을 방지하기 위함(deleteSkin()은 일반 스킨과 동일하게
+    // built-in도 지울 수 있게 둔다).
+    async _seedBuiltinSkins(state) {
+        try {
+            if (state.builtinsSeeded) return;
+            for (const builtin of this.BUILTIN_SKINS) {
+                if (!state.skins[builtin.id]) {
+                    state.skins[builtin.id] = { name: builtin.name, settings: { ...builtin.settings } };
+                }
+            }
+            state.builtinsSeeded = true;
+            await BeatLocalStore.set(this.STORE_NAME, this.STATE_KEY, state);
+        } catch (err) {
+            this._logError(err, 'BeatSkin._seedBuiltinSkins');
         }
     },
 
