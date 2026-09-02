@@ -361,37 +361,65 @@ const BeatSkinImages = {
                 refreshStatus();
             });
 
+            this._initNoteModeSelector();
             this._initLaneUI();
         } catch (err) {
             this._logError(err, 'BeatSkinImages.initUI');
         }
     },
 
-    // 레인별 노트 이미지 오버라이드 UI. "종류(탭/롱/가짜) 선택 + 레인(9개) 선택 + 업로드
-    // 1개" 조합으로 원하는 슬롯(note-tap@L2 등)을 고르게 하고, 이미 설정된 조합은
-    // 목록(#img-lane-list)에서 바로 확인·삭제할 수 있게 한다. 마크업이 없는 페이지에서는
-    // (typeSelector/laneSelector 부재) 조용히 무시한다.
-    _initLaneUI() {
-        const typeSelector = document.getElementById('img-lane-type-selector');
-        const laneSelector = document.getElementById('img-lane-selector');
-        const fileInput    = document.getElementById('img-lane-upload-input');
-        const deleteBtn    = document.getElementById('img-lane-delete-btn');
-        const statusEl     = document.getElementById('img-lane-status');
-        const listEl       = document.getElementById('img-lane-list');
-        if (!typeSelector || !laneSelector) return;
+    // 노트 이미지 모드(종류별/레인별) 패널 토글. 값을 저장하지 않는 순수 UI 상태다 —
+    // 종류별/레인별 각각 독립적으로 이미지를 등록할 수 있으므로 "지금 어느 쪽을 보고
+    // 있냐"만 전환하면 되고, 둘 다 항상 유효하다(레인별에 없으면 종류별로 폴백, game.js 참고).
+    _initNoteModeSelector() {
+        const selector = document.getElementById('img-note-mode-selector');
+        if (!selector) return;
+        const panels = {
+            type: document.getElementById('img-note-mode-type'),
+            lane: document.getElementById('img-note-mode-lane'),
+        };
+        selector.addEventListener('click', (e) => {
+            const btn = e.target.closest('button[data-mode]');
+            if (!btn) return;
+            const mode = btn.dataset.mode;
+            selector.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
+            Object.entries(panels).forEach(([key, panel]) => {
+                if (panel) panel.classList.toggle('hidden', key !== mode);
+            });
+        });
+    },
 
-        let selectedBase = this.NOTE_TYPE_BASES[0].id;
+    // 레인별 노트 이미지 오버라이드 UI. 예전엔 "종류(탭/롱/가짜) 선택 + 레인 선택 +
+    // 업로드 1개"를 매번 반복해야 했는데(한 레인에 3종류를 다 채우려면 3번 왕복), 지금은
+    // 레인을 먼저 고르면 그 레인의 탭/롱/가짜 3개를 한 화면에서 바로 등록/변경할 수 있게
+    // 바꿨다. 마크업이 없는 페이지에서는(laneSelector 부재) 조용히 무시한다.
+    _initLaneUI() {
+        const laneSelector = document.getElementById('img-lane-selector');
+        const listEl       = document.getElementById('img-lane-list');
+        if (!laneSelector) return;
+
         let selectedLane = this.LANE_IDS[0];
-        const currentSlotId = () => this.laneSlotId(selectedBase, selectedLane);
+
+        // 종류(탭/롱/가짜)별 file input/상태뱃지/삭제버튼 참조를 미리 모아둔다.
+        const rows = this.NOTE_TYPE_BASES.map(base => ({
+            base: base.id,
+            label: base.label,
+            fileInput: document.getElementById(`img-lane-upload-${base.id}`),
+            statusEl: document.getElementById(`img-lane-status-${base.id}`),
+            deleteBtn: document.getElementById(`img-lane-delete-${base.id}`),
+        }));
 
         const refreshStatus = () => {
-            const entry = this._entries[currentSlotId()];
-            if (statusEl) {
-                statusEl.textContent = entry ? entry.name : '기본(종류별 이미지 또는 색상 사용)';
-                statusEl.classList.toggle('text-blue-400', !!entry);
-                statusEl.classList.toggle('text-gray-500', !entry);
-            }
-            if (deleteBtn) deleteBtn.classList.toggle('hidden', !entry);
+            rows.forEach(row => {
+                const slotId = this.laneSlotId(row.base, selectedLane);
+                const entry = this._entries[slotId];
+                if (row.statusEl) {
+                    row.statusEl.textContent = entry ? entry.name : '기본';
+                    row.statusEl.classList.toggle('text-blue-400', !!entry);
+                    row.statusEl.classList.toggle('text-gray-500', !entry);
+                }
+                if (row.deleteBtn) row.deleteBtn.classList.toggle('hidden', !entry);
+            });
         };
 
         const refreshList = () => {
@@ -428,14 +456,6 @@ const BeatSkinImages = {
         this._refreshLaneStatus = refreshStatus;
         this._refreshLaneList = refreshList;
 
-        typeSelector.addEventListener('click', (e) => {
-            const btn = e.target.closest('button[data-type]');
-            if (!btn) return;
-            selectedBase = btn.dataset.type;
-            typeSelector.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
-            refreshStatus();
-        });
-
         laneSelector.addEventListener('click', (e) => {
             const btn = e.target.closest('button[data-lane]');
             if (!btn) return;
@@ -444,33 +464,36 @@ const BeatSkinImages = {
             refreshStatus();
         });
 
-        if (fileInput) {
-            fileInput.addEventListener('change', async (e) => {
-                const file = e.target.files && e.target.files[0];
-                if (!file) return;
-                const result = await this.uploadImage(currentSlotId(), file);
-                fileInput.value = '';
-                if (!result.ok) {
-                    if (typeof UI !== 'undefined' && UI.showMessage) UI.showMessage('settings', result.error);
-                    return;
-                }
-                refreshStatus();
-                refreshList();
-                if (typeof UI !== 'undefined' && UI.showMessage) {
-                    UI.showMessage('settings', '레인별 이미지를 적용했습니다.');
-                }
-                if (typeof BeatCustomizationSync !== 'undefined') BeatCustomizationSync.schedulePush();
-            });
-        }
-
-        if (deleteBtn) {
-            deleteBtn.addEventListener('click', async () => {
-                await this.deleteImage(currentSlotId());
-                refreshStatus();
-                refreshList();
-                if (typeof BeatCustomizationSync !== 'undefined') BeatCustomizationSync.schedulePush();
-            });
-        }
+        rows.forEach(row => {
+            if (row.fileInput) {
+                row.fileInput.addEventListener('change', async (e) => {
+                    const file = e.target.files && e.target.files[0];
+                    if (!file) return;
+                    const slotId = this.laneSlotId(row.base, selectedLane);
+                    const result = await this.uploadImage(slotId, file);
+                    row.fileInput.value = '';
+                    if (!result.ok) {
+                        if (typeof UI !== 'undefined' && UI.showMessage) UI.showMessage('settings', result.error);
+                        return;
+                    }
+                    refreshStatus();
+                    refreshList();
+                    if (typeof UI !== 'undefined' && UI.showMessage) {
+                        UI.showMessage('settings', `${row.label} 이미지를 적용했습니다.`);
+                    }
+                    if (typeof BeatCustomizationSync !== 'undefined') BeatCustomizationSync.schedulePush();
+                });
+            }
+            if (row.deleteBtn) {
+                row.deleteBtn.addEventListener('click', async () => {
+                    const slotId = this.laneSlotId(row.base, selectedLane);
+                    await this.deleteImage(slotId);
+                    refreshStatus();
+                    refreshList();
+                    if (typeof BeatCustomizationSync !== 'undefined') BeatCustomizationSync.schedulePush();
+                });
+            }
+        });
 
         refreshStatus();
         refreshList();
