@@ -558,6 +558,39 @@
                                             </div>
                                             <span class="beat-theme-label" data-i18n="theme_light">☀️ 라이트</span>
                                         </button>
+                                        <button class="beat-theme-card" data-theme-val="custom">
+                                            <div class="beat-theme-preview">
+                                                <div class="btp-bar"     style="background:#1f2937"></div>
+                                                <div class="btp-body"    style="background:#2d3748">
+                                                    <div class="btp-surface" style="background:#374151"></div>
+                                                </div>
+                                            </div>
+                                            <span class="beat-theme-label">🎨 커스텀</span>
+                                        </button>
+                                    </div>
+                                    <div id="beat-custom-theme-panel" class="hidden mt-3 p-3 bg-gray-800 rounded-lg space-y-2">
+                                        <p class="text-xs text-gray-500 mb-1">5개 핵심 색만 고르면 나머지(호버/테두리/보조 텍스트 등)는 자동으로 어울리게 계산됩니다.</p>
+                                        <div class="flex items-center justify-between">
+                                            <label class="text-gray-300 text-sm">강조색</label>
+                                            <input type="color" id="custom-theme-accent" class="w-16 h-8 rounded cursor-pointer bg-gray-700 border-2 border-gray-600">
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <label class="text-gray-300 text-sm">배경(기본)</label>
+                                            <input type="color" id="custom-theme-bgPrimary" class="w-16 h-8 rounded cursor-pointer bg-gray-700 border-2 border-gray-600">
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <label class="text-gray-300 text-sm">글자(기본)</label>
+                                            <input type="color" id="custom-theme-textPrimary" class="w-16 h-8 rounded cursor-pointer bg-gray-700 border-2 border-gray-600">
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <label class="text-gray-300 text-sm">카드/패널 배경</label>
+                                            <input type="color" id="custom-theme-bgSurface" class="w-16 h-8 rounded cursor-pointer bg-gray-700 border-2 border-gray-600">
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <label class="text-gray-300 text-sm">카드/패널 배경(강조)</label>
+                                            <input type="color" id="custom-theme-bgSurfaceAlt" class="w-16 h-8 rounded cursor-pointer bg-gray-700 border-2 border-gray-600">
+                                        </div>
+                                        <button id="custom-theme-apply-btn" type="button" class="w-full py-2 px-4 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-semibold mt-2">커스텀 테마 적용</button>
                                     </div>
                                 </div>
                                 <!-- 노트 방향 선택 -->
@@ -699,6 +732,22 @@
                                             </div>
                                             <input id="judgement-text-size" type="range" min="1" max="10" step="0.5" value="4" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
                                             <select id="font-select-judgement" class="w-full mt-2 p-2 bg-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></select>
+                                            <select id="judgement-animation-select" class="w-full mt-2 p-2 bg-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                                <option value="pop">애니메이션: 팝(기본)</option>
+                                                <option value="fade">애니메이션: 페이드</option>
+                                                <option value="slideUp">애니메이션: 슬라이드 업</option>
+                                                <option value="bounce">애니메이션: 바운스</option>
+                                            </select>
+                                            <div class="flex justify-between items-center text-gray-300 mb-1 mt-2">
+                                                <label for="judgement-offset-x">가로 위치</label>
+                                                <span id="judgement-offset-x-value" class="font-mono">0px</span>
+                                            </div>
+                                            <input id="judgement-offset-x" type="range" min="-200" max="200" step="5" value="0" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                            <div class="flex justify-between items-center text-gray-300 mb-1 mt-2">
+                                                <label for="judgement-offset-y">세로 위치</label>
+                                                <span id="judgement-offset-y-value" class="font-mono">0px</span>
+                                            </div>
+                                            <input id="judgement-offset-y" type="range" min="-200" max="200" step="5" value="0" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
                                         </div>
                                         <div>
                                             <div class="flex items-center justify-between mb-2">
@@ -711,6 +760,22 @@
                                             </div>
                                             <input id="combo-text-size" type="range" min="1" max="8" step="0.5" value="2.5" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
                                             <select id="font-select-combo" class="w-full mt-2 p-2 bg-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></select>
+                                            <select id="combo-animation-select" class="w-full mt-2 p-2 bg-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                                <option value="pop">애니메이션: 팝(기본)</option>
+                                                <option value="fade">애니메이션: 페이드</option>
+                                                <option value="slideUp">애니메이션: 슬라이드 업</option>
+                                                <option value="bounce">애니메이션: 바운스</option>
+                                            </select>
+                                            <div class="flex justify-between items-center text-gray-300 mb-1 mt-2">
+                                                <label for="combo-offset-x">가로 위치</label>
+                                                <span id="combo-offset-x-value" class="font-mono">0px</span>
+                                            </div>
+                                            <input id="combo-offset-x" type="range" min="-200" max="200" step="5" value="0" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                            <div class="flex justify-between items-center text-gray-300 mb-1 mt-2">
+                                                <label for="combo-offset-y">세로 위치</label>
+                                                <span id="combo-offset-y-value" class="font-mono">0px</span>
+                                            </div>
+                                            <input id="combo-offset-y" type="range" min="-200" max="200" step="5" value="0" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
                                         </div>
                                         <div>
                                             <div class="flex items-center justify-between mb-2">
@@ -723,6 +788,22 @@
                                             </div>
                                             <input id="countdown-text-size" type="range" min="2" max="14" step="0.5" value="8" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
                                             <select id="font-select-countdown" class="w-full mt-2 p-2 bg-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></select>
+                                            <select id="countdown-animation-select" class="w-full mt-2 p-2 bg-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                                <option value="pop">애니메이션: 팝(기본)</option>
+                                                <option value="fade">애니메이션: 페이드</option>
+                                                <option value="slideUp">애니메이션: 슬라이드 업</option>
+                                                <option value="bounce">애니메이션: 바운스</option>
+                                            </select>
+                                            <div class="flex justify-between items-center text-gray-300 mb-1 mt-2">
+                                                <label for="countdown-offset-x">가로 위치</label>
+                                                <span id="countdown-offset-x-value" class="font-mono">0px</span>
+                                            </div>
+                                            <input id="countdown-offset-x" type="range" min="-200" max="200" step="5" value="0" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                            <div class="flex justify-between items-center text-gray-300 mb-1 mt-2">
+                                                <label for="countdown-offset-y">세로 위치</label>
+                                                <span id="countdown-offset-y-value" class="font-mono">0px</span>
+                                            </div>
+                                            <input id="countdown-offset-y" type="range" min="-200" max="200" step="5" value="0" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
                                         </div>
                                     </div>
                                 </div>

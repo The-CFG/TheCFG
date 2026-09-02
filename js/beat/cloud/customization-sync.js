@@ -101,7 +101,13 @@ const BeatCustomizationSync = {
             }
 
             if (typeof BeatTheme !== 'undefined') {
-                await CloudAuth.saveUiThemeSettings({ activeId: BeatTheme.current() });
+                // customColors도 함께 올려야 다른 기기에서 'custom' 활성 상태를 받았을 때
+                // 실제 색값도 같이 복원할 수 있다(활성 테마가 custom이 아니어도, 나중에
+                // 커스텀으로 돌아갈 때를 대비해 항상 같이 올린다).
+                await CloudAuth.saveUiThemeSettings({
+                    activeId: BeatTheme.current(),
+                    customColors: BeatTheme.loadCustomColors(),
+                });
             }
         } catch (err) {
             this._logError(err, 'BeatCustomizationSync.pushAll');
@@ -152,6 +158,7 @@ const BeatCustomizationSync = {
             if (typeof BeatTheme !== 'undefined') {
                 const theme = await CloudAuth.getUiThemeSettings();
                 if (theme && theme.activeId && BeatTheme.THEMES.includes(theme.activeId)) {
+                    if (theme.customColors) BeatTheme.saveCustomColors(theme.customColors);
                     BeatTheme.apply(theme.activeId);
                 }
             }

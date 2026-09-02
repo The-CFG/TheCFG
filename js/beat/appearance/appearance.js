@@ -34,6 +34,19 @@ const Appearance = {
         comboTextSize: 2.5, // rem
         countdownTextColor: '#ffffff',
         countdownTextSize: 8, // rem
+        // ── 커스터마이징 계획 2단계 후속: 판정/콤보/카운트다운 텍스트 위치·애니메이션 ──
+        // 오프셋은 기존 중앙 기준 top/left(50%/60%/40%)에서 px 단위로 더해지는 값이다
+        // (css/beat/game.css calc() 참고) — 0이면 기존과 완전히 동일한 위치.
+        // 애니메이션은 'pop'(기존 기본 동작)/'fade'/'slideUp'/'bounce' 중 하나.
+        judgementOffsetX: 0,
+        judgementOffsetY: 0,
+        judgementAnimation: 'pop',
+        comboOffsetX: 0,
+        comboOffsetY: 0,
+        comboAnimation: 'pop',
+        countdownOffsetX: 0,
+        countdownOffsetY: 0,
+        countdownAnimation: 'pop',
         // 커스터마이징 계획 1-B단계: BeatFonts(js/beat/appearance/fonts.js)에 업로드된
         // 폰트의 id. null이면 CSS 기본값(inherit → 전역 UI 폰트)을 그대로 쓴다.
         judgementFontId: null,
@@ -207,6 +220,41 @@ const Appearance = {
                         this.settings[sizeKey] = parseFloat(e.target.value);
                         const label = document.getElementById(labelId);
                         if (label) label.textContent = `${this.settings[sizeKey]}rem`;
+                        this.updateJudgementCssVariables();
+                    });
+                }
+            });
+
+            // 판정/콤보/카운트다운 위치(오프셋)·애니메이션(커스터마이징 계획 2단계 후속)
+            [
+                { prefix: 'judgement' },
+                { prefix: 'combo' },
+                { prefix: 'countdown' },
+            ].forEach(({ prefix }) => {
+                const animSelect = document.getElementById(`${prefix}-animation-select`);
+                if (animSelect) {
+                    animSelect.addEventListener('change', (e) => {
+                        this.settings[`${prefix}Animation`] = e.target.value;
+                        this.updateJudgementCssVariables();
+                    });
+                }
+                const offsetXInput = document.getElementById(`${prefix}-offset-x`);
+                if (offsetXInput) {
+                    offsetXInput.addEventListener('input', (e) => {
+                        const value = parseInt(e.target.value, 10);
+                        this.settings[`${prefix}OffsetX`] = value;
+                        const label = document.getElementById(`${prefix}-offset-x-value`);
+                        if (label) label.textContent = `${value}px`;
+                        this.updateJudgementCssVariables();
+                    });
+                }
+                const offsetYInput = document.getElementById(`${prefix}-offset-y`);
+                if (offsetYInput) {
+                    offsetYInput.addEventListener('input', (e) => {
+                        const value = parseInt(e.target.value, 10);
+                        this.settings[`${prefix}OffsetY`] = value;
+                        const label = document.getElementById(`${prefix}-offset-y-value`);
+                        if (label) label.textContent = `${value}px`;
                         this.updateJudgementCssVariables();
                     });
                 }
@@ -387,6 +435,14 @@ const Appearance = {
         root.setProperty('--countdown-color', this.settings.countdownTextColor);
         root.setProperty('--countdown-font-size', `${this.settings.countdownTextSize}rem`);
 
+        // 위치(오프셋) — 기본 top/left(50%/60%/40%)에 px로 더해진다(css/beat/game.css calc() 참고).
+        root.setProperty('--judgement-offset-x', `${this.settings.judgementOffsetX || 0}px`);
+        root.setProperty('--judgement-offset-y', `${this.settings.judgementOffsetY || 0}px`);
+        root.setProperty('--combo-offset-x', `${this.settings.comboOffsetX || 0}px`);
+        root.setProperty('--combo-offset-y', `${this.settings.comboOffsetY || 0}px`);
+        root.setProperty('--countdown-offset-x', `${this.settings.countdownOffsetX || 0}px`);
+        root.setProperty('--countdown-offset-y', `${this.settings.countdownOffsetY || 0}px`);
+
         // 폰트(1-B단계): BeatFonts가 아직 로드/초기화되지 않았을 수 있어 존재 체크 후 폴백.
         const fontCss = (id) => (typeof BeatFonts !== 'undefined' && BeatFonts.getFontFamilyCss)
             ? BeatFonts.getFontFamilyCss(id, 'inherit')
@@ -394,6 +450,18 @@ const Appearance = {
         root.setProperty('--judgement-font-family', fontCss(this.settings.judgementFontId));
         root.setProperty('--combo-font-family', fontCss(this.settings.comboFontId));
         root.setProperty('--countdown-font-family', fontCss(this.settings.countdownFontId));
+
+        // 애니메이션(pop/fade/slideUp/bounce) — 판정/콤보는 ui.js가 판정마다 className을
+        // 통째로 새로 만들면서(reflow 트릭) 그때그때 Appearance.settings를 직접 읽어 반영하므로
+        // 여기서 미리 클래스를 걸어둘 필요가 없다. 카운트다운은 game.js가 className을 갈아
+        // 끼우지 않고 'show' 클래스만 add/remove하므로, anim-* 클래스는 여기서(스킨
+        // 전환/슬라이더 변경 등 이 함수가 불리는 시점마다) 미리 심어둬야 한다.
+        if (typeof DOM !== 'undefined' && DOM.countdownTextEl) {
+            ['anim-pop', 'anim-fade', 'anim-slideUp', 'anim-bounce'].forEach(c => {
+                DOM.countdownTextEl.classList.remove(c);
+            });
+            DOM.countdownTextEl.classList.add(`anim-${this.settings.countdownAnimation || 'pop'}`);
+        }
     },
 
     // "플레이" 탭의 gameplayImageOpacity/laneBackgroundOpacity/laneHighlightOnInput UI(슬라이더/
@@ -538,6 +606,28 @@ const Appearance = {
             if (countdownSizeInput) countdownSizeInput.value = this.settings.countdownTextSize;
             const countdownSizeLabel = document.getElementById('countdown-text-size-value');
             if (countdownSizeLabel) countdownSizeLabel.textContent = `${this.settings.countdownTextSize}rem`;
+
+            // 판정/콤보/카운트다운 위치(오프셋)·애니메이션 입력값 동기화(스킨 전환 시 등)
+            [
+                { prefix: 'judgement' },
+                { prefix: 'combo' },
+                { prefix: 'countdown' },
+            ].forEach(({ prefix }) => {
+                const animSelect = document.getElementById(`${prefix}-animation-select`);
+                if (animSelect) animSelect.value = this.settings[`${prefix}Animation`] || 'pop';
+
+                const offsetX = this.settings[`${prefix}OffsetX`] || 0;
+                const offsetXInput = document.getElementById(`${prefix}-offset-x`);
+                if (offsetXInput) offsetXInput.value = offsetX;
+                const offsetXLabel = document.getElementById(`${prefix}-offset-x-value`);
+                if (offsetXLabel) offsetXLabel.textContent = `${offsetX}px`;
+
+                const offsetY = this.settings[`${prefix}OffsetY`] || 0;
+                const offsetYInput = document.getElementById(`${prefix}-offset-y`);
+                if (offsetYInput) offsetYInput.value = offsetY;
+                const offsetYLabel = document.getElementById(`${prefix}-offset-y-value`);
+                if (offsetYLabel) offsetYLabel.textContent = `${offsetY}px`;
+            });
         } catch (err) {
             this._logError(err, 'Appearance.updateColorInputs');
         }
@@ -606,6 +696,15 @@ const Appearance = {
                 comboTextSize: 2.5,
                 countdownTextColor: '#ffffff',
                 countdownTextSize: 8,
+                judgementOffsetX: 0,
+                judgementOffsetY: 0,
+                judgementAnimation: 'pop',
+                comboOffsetX: 0,
+                comboOffsetY: 0,
+                comboAnimation: 'pop',
+                countdownOffsetX: 0,
+                countdownOffsetY: 0,
+                countdownAnimation: 'pop',
                 judgementFontId: null,
                 comboFontId: null,
                 countdownFontId: null,

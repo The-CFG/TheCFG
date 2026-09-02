@@ -212,11 +212,12 @@ body {
 
 .judgement-text {
     position: absolute;
-    top: 50%;
-    left: 50%;
+    /* 커스터마이징 계획 2단계 후속: 위치(오프셋)는 기존 중앙 기준 top/left에 px를
+       더하는 방식이라, --judgement-offset-x/-y가 0이면(기본값) 기존과 완전히 동일하다. */
+    top: calc(50% + var(--judgement-offset-y, 0px));
+    left: calc(50% + var(--judgement-offset-x, 0px));
     transform: translate(-50%, -50%);
-    /* 커스터마이징 계획 2단계: 색상/크기는 CSS 변수로 주입(Appearance.updateJudgementCssVariables 참고).
-       위치(top/left)는 아직 조절 UI가 없어 기본값 그대로 둔다.
+    /* 색상/크기는 CSS 변수로 주입(Appearance.updateJudgementCssVariables 참고).
        폰트(1-B단계): --judgement-font-family가 없으면 body에서 상속(기본/전역 UI 폰트). */
     font-size: var(--judgement-font-size, 4rem);
     font-family: var(--judgement-font-family, inherit);
@@ -226,15 +227,31 @@ body {
     transition: all 0.3s ease-out;
     text-shadow: 0 0 15px rgba(0,0,0,0.5);
 }
+/* 기본(pop, .anim-pop 클래스가 없어도 이 규칙이 적용됨) — 기존 동작과 완전히 동일 */
 .judgement-text.show {
     opacity: 1;
     transform: translate(-50%, -50%) scale(1.2);
     transition: none;
 }
+.judgement-text.anim-fade.show {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+    transition: opacity 0.3s ease-out;
+}
+.judgement-text.anim-slideUp.show {
+    opacity: 1;
+    transform: translate(-50%, calc(-50% - 28px));
+    transition: all 0.3s ease-out;
+}
+.judgement-text.anim-bounce.show {
+    opacity: 1;
+    transition: none;
+    animation: tb-text-bounce-in 0.4s cubic-bezier(.34, 1.56, .64, 1) forwards;
+}
 .combo-text {
     position: absolute;
-    top: 60%;
-    left: 50%;
+    top: calc(60% + var(--combo-offset-y, 0px));
+    left: calc(50% + var(--combo-offset-x, 0px));
     transform: translate(-50%, -50%);
     font-size: var(--combo-font-size, 2.5rem);
     font-family: var(--combo-font-family, inherit);
@@ -248,6 +265,28 @@ body {
     opacity: 1;
     transform: translate(-50%, -50%) scale(1.1);
     transition: none;
+}
+.combo-text.anim-fade.show {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+    transition: opacity 0.3s ease-out;
+}
+.combo-text.anim-slideUp.show {
+    opacity: 1;
+    transform: translate(-50%, calc(-50% - 28px));
+    transition: all 0.3s ease-out;
+}
+.combo-text.anim-bounce.show {
+    opacity: 1;
+    transition: none;
+    animation: tb-text-bounce-in 0.4s cubic-bezier(.34, 1.56, .64, 1) forwards;
+}
+/* judgement-text/combo-text 공용 바운스 키프레임. translate(-50%,-50%)는 두 요소 모두
+   같은 중앙 정렬 기준을 쓰므로 공유해도 안전하다(위치 자체는 top/left calc()가 담당). */
+@keyframes tb-text-bounce-in {
+    0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.3); }
+    60%  { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+    100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
 /* 인게임 HUD (남은 시간 / 정확도 / 예상 등급): 플레이 화면일 때만, 게임 화면 우측 상단에 모아서 표시.
    우측 패널(#ui-area)이 자동 숨김되어도 항상 보이도록 #game-area 쪽에 오버레이한다. */
@@ -399,10 +438,10 @@ body {
 
 .countdown-text {
     position: absolute;
-    top: 40%;
-    left: 50%;
+    top: calc(40% + var(--countdown-offset-y, 0px));
+    left: calc(50% + var(--countdown-offset-x, 0px));
     transform: translate(-50%, -50%) scale(1.5);
-    /* 커스터마이징 계획 2단계: 색상/크기는 CSS 변수로 주입(Appearance.updateJudgementCssVariables 참고).
+    /* 색상/크기는 CSS 변수로 주입(Appearance.updateJudgementCssVariables 참고).
        폰트(1-B단계): --countdown-font-family가 없으면 body에서 상속. */
     font-size: var(--countdown-font-size, 8rem);
     font-family: var(--countdown-font-family, inherit);
@@ -416,6 +455,32 @@ body {
 .countdown-text.show {
     opacity: 1;
     transform: translate(-50%, -50%) scale(1);
+}
+/* fade는 확대/축소 없이 순수 투명도만 — idle 상태(.show 아닐 때)의 scale(1.5)도 함께
+   지워야 트랜지션 중에 튀지 않는다. */
+.countdown-text.anim-fade {
+    transform: translate(-50%, -50%) scale(1);
+}
+.countdown-text.anim-fade.show {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+    transition: opacity 0.3s ease-out;
+}
+.countdown-text.anim-slideUp {
+    transform: translate(-50%, -50%) scale(1);
+}
+.countdown-text.anim-slideUp.show {
+    opacity: 1;
+    transform: translate(-50%, calc(-50% - 28px)) scale(1);
+    transition: all 0.3s ease-out;
+}
+.countdown-text.anim-bounce {
+    transform: translate(-50%, -50%) scale(0.3);
+}
+.countdown-text.anim-bounce.show {
+    opacity: 1;
+    transition: none;
+    animation: tb-text-bounce-in 0.4s cubic-bezier(.34, 1.56, .64, 1) forwards;
 }
 
 .btn-group button.active {

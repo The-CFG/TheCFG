@@ -250,7 +250,11 @@ const UI = {
         const imgUrl = (typeof BeatSkinImages !== 'undefined' && BeatSkinImages.getURL)
             ? BeatSkinImages.getURL(`judgement-${judgement.toLowerCase()}`)
             : null;
-        DOM.judgementTextEl.className = 'judgement-text';
+        // 애니메이션(pop/fade/slideUp/bounce, 커스터마이징 계획 2단계 후속): 판정마다
+        // className을 통째로 새로 만드는(reflow 트릭) 시점에 Appearance.settings를 직접
+        // 읽어 반영한다 — 슬라이더/스킨 전환으로 바뀐 값이 다음 판정부터 바로 적용된다.
+        const judgementAnim = (typeof Appearance !== 'undefined') ? (Appearance.settings.judgementAnimation || 'pop') : 'pop';
+        DOM.judgementTextEl.className = `judgement-text anim-${judgementAnim}`;
         if (imgUrl) {
             DOM.judgementTextEl.textContent = '';
             const img = document.createElement('img');
@@ -265,8 +269,9 @@ const UI = {
         setTimeout(() => DOM.judgementTextEl.classList.remove('show'), CONFIG.JUDGEMENT_ANIMATION_MS);
 
         if (currentCombo > 2) {
+            const comboAnim = (typeof Appearance !== 'undefined') ? (Appearance.settings.comboAnimation || 'pop') : 'pop';
             DOM.comboTextEl.textContent = `${currentCombo} COMBO`;
-            DOM.comboTextEl.className = 'combo-text';
+            DOM.comboTextEl.className = `combo-text anim-${comboAnim}`;
             void DOM.comboTextEl.offsetWidth;
             DOM.comboTextEl.classList.add('show');
             setTimeout(() => DOM.comboTextEl.classList.remove('show'), CONFIG.JUDGEMENT_ANIMATION_MS);
