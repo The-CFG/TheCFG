@@ -116,8 +116,6 @@ const I18n = {
             'save': '저장',
             'reset': '초기화',
             'apply': '적용',
-            'preset_slots': '색상 프리셋',
-            'save_preset': '프리셋 저장',
             // 테마
             'theme':       '테마',
             'theme_dark':  '🌙 다크',
@@ -289,8 +287,6 @@ const I18n = {
             'save': 'Save',
             'reset': 'Reset',
             'apply': 'Apply',
-            'preset_slots': 'Color Presets',
-            'save_preset': 'Save Preset',
             // Theme
             'theme':       'Theme',
             'theme_dark':  '🌙 Dark',

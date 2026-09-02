@@ -102,9 +102,11 @@ const CloudAuth = {
 
     // ── 플레이 탭 설정 + 커스터마이징(스킨/UI테마/폰트) 계정 동기화 (계획 4단계) ──
     // user_profiles.beat_settings(jsonb) 컬럼 하나에 { play, skins, uiTheme, customFonts }
-    // 중첩 구조로 묶어서 저장한다. 기존 계정은 이 재구성 이전에 flat 구조(현재
-    // PLAY_SETTINGS_KEYS 8개가 최상위 키)로 저장돼 있으므로, 읽을 때 하위 호환 처리한다
-    // (_isLegacyFlatPlaySettings). HOI4Editor가 쓰는 settings jsonb 컬럼과는 별개
+    // 중첩 구조로 묶어서 저장한다. 기존 계정은 이 재구성 이전에 flat 구조(당시
+    // PLAY_SETTINGS_KEYS가 최상위 키. gameplayImageOpacity/laneBackgroundOpacity/
+    // laneHighlightOnInput은 1/4단계 완료로 이후 skins 쪽으로 옮겨감)로 저장돼 있으므로,
+    // 읽을 때 하위 호환 처리한다(_isLegacyFlatPlaySettings). HOI4Editor가 쓰는 settings
+    // jsonb 컬럼과는 별개
     // (같은 프로젝트 공유이므로 충돌 방지).
     async _getFullBeatSettings() {
         const user = await this.getUser();

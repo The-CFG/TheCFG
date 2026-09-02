@@ -5,12 +5,11 @@
 //  Appearance.settings.*를 그대로 읽으므로, BeatSkin은 저장소만 바꾸고 렌더링 경로에는
 //  손대지 않는다.
 //
-//  ⚠️ 범위 메모: 계획 문서의 1단계에는 Game.state.settings의 시각 항목
-//  (gameplayImageOpacity/laneBackgroundOpacity/laneHighlightOnInput)도 스킨에 포함하는
-//  것으로 돼 있으나, 이 셋은 main.js의 PLAY_SETTINGS_KEYS/CloudAuth 클라우드 동기화와
-//  얽혀 있어 지금 옮기면 그 동기화 로직까지 같이 손대야 한다. 이번 뼈대 구현에서는
-//  Appearance.settings(색상/모양 계열)만 스킨화하고, 저 3개 키의 이관은 4단계에서
-//  main.js 작업과 함께 처리한다.
+//  gameplayImageOpacity/laneBackgroundOpacity/laneHighlightOnInput(원래 main.js의
+//  PLAY_SETTINGS_KEYS/Game.state.settings에 있던 시각 항목 3개)도 이제 Appearance.settings의
+//  일부로 스킨에 포함된다(1/4단계 완료). _migrateLegacy()/_absorbLegacyPlayVisualKeys()가
+//  기존 개별 localStorage 키(theBeat_gameplayImageOpacity 등, 더 예전 체크박스 시절의
+//  theBeat_showGameplayImage 포함)를 1회성으로 흡수해 스킨 설정으로 옮긴다.
 //
 //  3단계(프리셋 관리 UI): createSkin/renameSkin/deleteSkin + initUI()로 연습모드의
 //  "내 프리셋" UI 패턴(select + 저장/불러오기/이름변경/삭제)을 재사용해 스킨 탭에도
@@ -42,12 +41,50 @@ const BeatSkin = {
             let state = await BeatLocalStore.get(this.STORE_NAME, this.STATE_KEY);
             if (!state || !state.skins || !state.skins[state.activeId]) {
                 state = await this._migrateLegacy();
+            } else {
+                // 이미 (예전 버전에서) 마이그레이션이 끝난 상태라도, 그 예전 버전은 3개
+                // 시각 항목을 함께 옮기지 않았을 수 있다 — 흡수를 시도한다.
+                await this._absorbLegacyPlayVisualKeys(state);
             }
+            // "로컬 저장소 정책" 정리: 위 두 경로 중 어느 쪽이든 필요한 값은 이미
+            // IndexedDB로 옮겨졌으므로, 남아있는 레거시 localStorage 키를 지운다.
+            // 매번 호출해도 안전(idempotent) — 이미 지워졌으면 그냥 아무 일도 안 함.
+            this._cleanupLegacyLocalStorage();
             this.state = state;
             this.applyActive();
         } catch (err) {
             this._logError(err, 'BeatSkin.init');
         }
+    },
+
+    // gameplayImageOpacity/laneBackgroundOpacity/laneHighlightOnInput은 theBeat_appearance
+    // JSON에 들어있지 않고 개별 localStorage 키로 저장돼 있었다(game.js 옛 기본값 참고).
+    // gameplayImageOpacity는 더 예전 체크박스 버전의 theBeat_showGameplayImage로도
+    // 저장돼 있을 수 있어 그것도 폴백으로 흡수한다.
+    _readLegacyPlayVisualKeys() {
+        const out = {};
+        try {
+            const opacity = localStorage.getItem('theBeat_gameplayImageOpacity');
+            if (opacity !== null) {
+                const parsed = parseInt(opacity, 10);
+                out.gameplayImageOpacity = Number.isNaN(parsed) ? 100 : Math.max(0, Math.min(100, parsed));
+            } else {
+                const legacyCheckbox = localStorage.getItem('theBeat_showGameplayImage');
+                if (legacyCheckbox !== null) out.gameplayImageOpacity = legacyCheckbox === 'false' ? 0 : 100;
+            }
+
+            const laneBg = localStorage.getItem('theBeat_laneBackgroundOpacity');
+            if (laneBg !== null) {
+                const parsed = parseInt(laneBg, 10);
+                out.laneBackgroundOpacity = Number.isNaN(parsed) ? 30 : Math.max(0, Math.min(100, parsed));
+            }
+
+            const highlight = localStorage.getItem('theBeat_laneHighlightOnInput');
+            if (highlight !== null) out.laneHighlightOnInput = highlight !== 'false';
+        } catch (err) {
+            this._logError(err, 'BeatSkin._readLegacyPlayVisualKeys');
+        }
+        return out;
     },
 
     // 레거시 localStorage(theBeat_appearance)를 1회 읽어 "기본" 스킨 하나로 변환한다.
@@ -63,9 +100,11 @@ const BeatSkin = {
             this._logError(err, 'BeatSkin._migrateLegacy(parse)');
         }
 
-        const settings = legacySettings
-            ? { ...Appearance.settings, ...legacySettings }
-            : { ...Appearance.settings };
+        const settings = {
+            ...Appearance.settings,
+            ...(legacySettings || {}),
+            ...this._readLegacyPlayVisualKeys(),
+        };
 
         const state = {
             activeId: this.DEFAULT_ID,
@@ -76,6 +115,51 @@ const BeatSkin = {
 
         await BeatLocalStore.set(this.STORE_NAME, this.STATE_KEY, state);
         return state;
+    },
+
+    // state가 이미 있던(이전 버전에서 마이그레이션이 끝난) 경우를 위한 보조 흡수 경로.
+    // 활성 스킨에 아직 이 3개 키가 없을 때만 채운다 — 사용자가 이미 새 UI로 값을 바꿔둔
+    // 경우(설정이 있음 = undefined가 아님) 덮어쓰지 않기 위한 가드.
+    async _absorbLegacyPlayVisualKeys(state) {
+        try {
+            const skin = state.skins[state.activeId];
+            if (!skin || !skin.settings) return;
+
+            const legacy = this._readLegacyPlayVisualKeys();
+            let changed = false;
+            for (const key of ['gameplayImageOpacity', 'laneBackgroundOpacity', 'laneHighlightOnInput']) {
+                if (legacy[key] !== undefined && skin.settings[key] === undefined) {
+                    skin.settings[key] = legacy[key];
+                    changed = true;
+                }
+            }
+            if (changed) {
+                await BeatLocalStore.set(this.STORE_NAME, this.STATE_KEY, state);
+            }
+        } catch (err) {
+            this._logError(err, 'BeatSkin._absorbLegacyPlayVisualKeys');
+        }
+    },
+
+    // "로컬 저장소 정책" 문서가 원래 약속했던 정리 단계: IndexedDB로 옮긴 레거시
+    // localStorage 키들을 지운다. theBeat_colorPresets(폐기된 5슬롯 색상 프리셋,
+    // 2단계 정리)도 이제 아무 코드도 참조하지 않는 고아 키라 여기서 함께 정리한다.
+    _cleanupLegacyLocalStorage() {
+        const keys = [
+            'theBeat_appearance',
+            'theBeat_colorPresets',
+            'theBeat_gameplayImageOpacity',
+            'theBeat_showGameplayImage',
+            'theBeat_laneBackgroundOpacity',
+            'theBeat_laneHighlightOnInput',
+        ];
+        for (const key of keys) {
+            try {
+                localStorage.removeItem(key);
+            } catch (err) {
+                this._logError(err, `BeatSkin._cleanupLegacyLocalStorage(${key})`);
+            }
+        }
     },
 
     _activeSkin() {

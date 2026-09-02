@@ -11,7 +11,8 @@ const GameBackground = {
     _lastRequestedUrl: null,
 
     _targetOpacity() {
-        const value = Game.state.settings.gameplayImageOpacity;
+        // 커스터마이징 계획 1/4단계 완료로 Appearance.settings(BeatSkin 소유)로 이관됨.
+        const value = Appearance.settings.gameplayImageOpacity;
         const pct = (value === undefined || value === null) ? 100 : value;
         return Math.max(0, Math.min(100, pct)) / 100;
     },

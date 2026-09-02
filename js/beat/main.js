@@ -693,10 +693,14 @@ document.addEventListener('DOMContentLoaded', () => {
             CloudAuth.saveVolumeSettings(Game.state.settings.musicVolume, Game.state.settings.sfxVolume);
         });
 
+        // gameplayImageOpacity/laneBackgroundOpacity/laneHighlightOnInput은 커스터마이징 계획
+        // 1/4단계 완료로 Appearance.settings(BeatSkin 소유)로 이관됐다 — 값 소스는
+        // Game.state.settings가 아니라 Appearance.settings이고, 저장도 (개별 localStorage 키 +
+        // CloudAuth.savePlaySettings) 대신 (BeatSkin/IndexedDB + BeatCustomizationSync)를 탄다.
         if (DOM.settings.gameplayImageOpacitySlider) {
             DOM.settings.gameplayImageOpacitySlider.addEventListener('input', (e) => {
                 const value = parseInt(e.target.value);
-                Game.state.settings.gameplayImageOpacity = value;
+                Appearance.settings.gameplayImageOpacity = value;
                 if (DOM.settings.gameplayImageOpacityValue) {
                     DOM.settings.gameplayImageOpacityValue.textContent = value;
                 }
@@ -704,32 +708,31 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             // 드래그가 끝났을 때(change)만 저장 — input마다 저장하면 요청이 너무 잦음
             DOM.settings.gameplayImageOpacitySlider.addEventListener('change', () => {
-                localStorage.setItem('theBeat_gameplayImageOpacity', Game.state.settings.gameplayImageOpacity);
-                savePlaySettingsToCloud();
+                Appearance.saveSettings();
+                if (typeof BeatCustomizationSync !== 'undefined') BeatCustomizationSync.schedulePush();
             });
         }
 
         if (DOM.settings.laneBackgroundOpacitySlider) {
             DOM.settings.laneBackgroundOpacitySlider.addEventListener('input', (e) => {
                 const value = parseInt(e.target.value);
-                Game.state.settings.laneBackgroundOpacity = value;
+                Appearance.settings.laneBackgroundOpacity = value;
                 if (DOM.settings.laneBackgroundOpacityValue) {
                     DOM.settings.laneBackgroundOpacityValue.textContent = value;
                 }
                 document.documentElement.style.setProperty('--lane-bg-opacity', value / 100);
             });
             DOM.settings.laneBackgroundOpacitySlider.addEventListener('change', () => {
-                localStorage.setItem('theBeat_laneBackgroundOpacity', Game.state.settings.laneBackgroundOpacity);
-                savePlaySettingsToCloud();
+                Appearance.saveSettings();
+                if (typeof BeatCustomizationSync !== 'undefined') BeatCustomizationSync.schedulePush();
             });
         }
 
         if (DOM.settings.laneHighlightToggle) {
             DOM.settings.laneHighlightToggle.addEventListener('change', (e) => {
-                const enabled = e.target.checked;
-                Game.state.settings.laneHighlightOnInput = enabled;
-                localStorage.setItem('theBeat_laneHighlightOnInput', enabled ? 'true' : 'false');
-                savePlaySettingsToCloud();
+                Appearance.settings.laneHighlightOnInput = e.target.checked;
+                Appearance.saveSettings();
+                if (typeof BeatCustomizationSync !== 'undefined') BeatCustomizationSync.schedulePush();
             });
         }
 
@@ -1365,24 +1368,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // showSettingsScreen()에서 설정 화면을 열 때, 그리고 계정에서 값을 불러온 직후
     // (applyAccountPlaySettings) 양쪽에서 재사용한다.
     function refreshPlaySettingsUI() {
-        if (DOM.settings.gameplayImageOpacitySlider) {
-            const opacityValue = Game.state.settings.gameplayImageOpacity;
-            DOM.settings.gameplayImageOpacitySlider.value = opacityValue;
-            if (DOM.settings.gameplayImageOpacityValue) {
-                DOM.settings.gameplayImageOpacityValue.textContent = opacityValue;
-            }
-        }
-        if (DOM.settings.laneBackgroundOpacitySlider) {
-            const laneBgValue = Game.state.settings.laneBackgroundOpacity;
-            DOM.settings.laneBackgroundOpacitySlider.value = laneBgValue;
-            if (DOM.settings.laneBackgroundOpacityValue) {
-                DOM.settings.laneBackgroundOpacityValue.textContent = laneBgValue;
-            }
-            document.documentElement.style.setProperty('--lane-bg-opacity', laneBgValue / 100);
-        }
-        if (DOM.settings.laneHighlightToggle) {
-            DOM.settings.laneHighlightToggle.checked = Game.state.settings.laneHighlightOnInput !== false;
-        }
+        // gameplayImageOpacity/laneBackgroundOpacity/laneHighlightOnInput은 이제
+        // Appearance.settings 소유라 Appearance.applyPlayVisualSettings()가 UI를 반영한다
+        // (Appearance.applySettings() 안에서 호출됨 — 최초 로드/스킨 전환/계정 값 적용 시 자동).
         if (DOM.settings.autoHideUiToggle) {
             DOM.settings.autoHideUiToggle.checked = Game.state.settings.autoHideUiOnPlay === true;
         }
@@ -1568,8 +1556,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // 다른 기기/브라우저에서 로그인했을 때도 같은 설정으로 이어서 플레이할 수 있게 한다.
     // localStorage 저장은 그대로 유지 — 로그아웃 상태(게스트)에서도 기기별로는 계속 동작해야 하고,
     // 오프라인/서버 오류 시에도 최소한 이 기기에서는 값이 남아있도록 하는 폴백이다.
+    // gameplayImageOpacity/laneBackgroundOpacity/laneHighlightOnInput은 커스터마이징 계획
+    // 1/4단계 완료로 여기서 빠졌다 — Appearance.settings(BeatSkin) 소유가 되면서 계정 동기화도
+    // CloudAuth.savePlaySettings가 아니라 BeatCustomizationSync(스킨 동기화)를 탄다.
     const PLAY_SETTINGS_KEYS = [
-        'gameplayImageOpacity', 'laneBackgroundOpacity', 'laneHighlightOnInput',
         'autoHideUiOnPlay', 'useDefaultFallSpeed', 'defaultFallSpeedValue',
         'inputOffsetMs', 'touchInputOffsetMs',
     ];
@@ -1622,7 +1612,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 Game.state.settings[key] = settings[key];
             }
         }
-        GameBackground.applyOpacity();
+        // gameplayImageOpacity/laneBackgroundOpacity/laneHighlightOnInput은 더 이상 여기서
+        // 다루지 않는다 — 계정 동기화가 필요하면 BeatCustomizationSync.pullAll()(스킨 동기화)
+        // 쪽에서 Appearance.settings까지 함께 갱신한다.
         refreshPlaySettingsUI();
     }
 
@@ -1641,9 +1633,8 @@ document.addEventListener('DOMContentLoaded', () => {
         setupEventListeners();
         document.querySelector('#difficulty-selector button[data-difficulty="normal"]').classList.add('active');
         updateDetailedSettingsUI();
-        // 저장된 레인 배경 불투명도를 CSS 변수로 반영 (레인 div는 setupLanes()에서 매번
-        // 새로 만들어지지만, CSS 변수는 documentElement에 있으므로 새 레인에도 그대로 적용된다).
-        document.documentElement.style.setProperty('--lane-bg-opacity', Game.state.settings.laneBackgroundOpacity / 100);
+        // 레인 배경 불투명도 CSS 변수는 이제 Appearance.applyPlayVisualSettings()가 설정한다
+        // (아래 Appearance.init() 참고) — Appearance.settings.laneBackgroundOpacity 소유로 이관됨.
         Debugger.init();
         I18n.init();
         // 연습 화면을 나갔다 들어와도 마지막에 쓰던 설정이 유지되도록 복원 (없으면 기본값 '보통' 유지).

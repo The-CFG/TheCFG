@@ -44,16 +44,16 @@ const Appearance = {
         // 별도로 관리한다(폰트와 마찬가지로 "몇 번째 노트가 어떤 이미지를 쓰는지"가 아니라
         // 슬롯 3개 고정이라 Appearance.settings에는 크기/애니메이션 값만 둔다).
         noteSize: 1,       // 배율(0.5~2). 1이면 기존 NOTE_BAR_H/NOTE_CIRCLE_D와 동일.
-        noteAnimation: 'none' // 'none' | 'fade' | 'scale' — 노트가 화면에 나타날 때 인 애니메이션.
+        noteAnimation: 'none', // 'none' | 'fade' | 'scale' — 노트가 화면에 나타날 때 인 애니메이션.
+        // ── 커스터마이징 계획 1/4단계: 원래 main.js PLAY_SETTINGS_KEYS/Game.state.settings에
+        // 있던 시각 항목 3개를 스킨 소유로 이관. 스킨을 바꾸면 이 값들도 함께 바뀐다.
+        // UI(슬라이더/토글)는 "플레이" 탭에 그대로 있고, applyPlayVisualSettings()가
+        // applySettings()를 통해 그 UI/CSS 변수/GameBackground에 반영한다.
+        gameplayImageOpacity: 100, // 게임플레이 중 노래 커버 이미지 배경 불투명도 (0~100)
+        laneBackgroundOpacity: 30, // 레인 영역 배경 진하기 (0~100)
+        laneHighlightOnInput: true // 입력 시 레인 하이라이트 피드백 표시 여부
     },
     
-    presets: {
-        'note-type': [{}, {}, {}, {}, {}], // 5 slots for note-type mode
-        'lane': [{}, {}, {}, {}, {}]        // 5 slots for lane mode
-    },
-    
-    currentPresetSlot: 1,
-
     _logError(err, context) {
         if (typeof Debugger !== 'undefined' && Debugger.logError) {
             Debugger.logError(err, context);
@@ -66,14 +66,12 @@ const Appearance = {
         try {
             // 로컬 스토리지에서 설정 불러오기
             this.loadSettings();
-            this.loadPresets();
             
             // 초기 UI 반영
             this.applySettings();
             this.updateColorModeUI();
             this.updateScrollDirectionUI();
             this.updateJudgementPositionUI();
-            this.updatePresetSlotsUI();
             this.updateNoteSizeAnimationUI();
             
             // 미리보기 요소가 있을 때만 업데이트
@@ -237,28 +235,6 @@ const Appearance = {
                 });
             }
             
-            // 프리셋 슬롯 선택
-            const presetSlots = document.getElementById('color-preset-slots');
-            if (presetSlots) {
-                presetSlots.addEventListener('click', (e) => {
-                    if (e.target.tagName === 'BUTTON') {
-                        const slot = parseInt(e.target.dataset.slot);
-                        this.currentPresetSlot = slot;
-                        this.loadPreset(slot);
-                        this.updatePresetSlotsUI();
-                    }
-                });
-            }
-            
-            // 프리셋 저장 버튼
-            const savePresetBtn = document.getElementById('save-preset-btn');
-            if (savePresetBtn) {
-                savePresetBtn.addEventListener('click', () => {
-                    this.savePreset(this.currentPresetSlot);
-                    UI.showMessage('settings', `프리셋 ${this.currentPresetSlot}에 저장되었습니다.`);
-                });
-            }
-
             // 적용 버튼
             const applyBtn = document.getElementById('apply-appearance-btn');
             if (applyBtn) {
@@ -420,6 +396,43 @@ const Appearance = {
         root.setProperty('--countdown-font-family', fontCss(this.settings.countdownFontId));
     },
 
+    // "플레이" 탭의 gameplayImageOpacity/laneBackgroundOpacity/laneHighlightOnInput UI(슬라이더/
+    // 토글)와 그 CSS 변수/GameBackground 반영. 커스터마이징 계획 1/4단계로 이 3개 값의 소유권이
+    // main.js/Game.state.settings에서 여기로 옮겨오면서, main.js의 옛 refreshPlaySettingsUI()가
+    // 하던 일 중 이 3개에 해당하는 부분을 흡수했다. applySettings()가 호출되는 모든 시점
+    // (최초 로드, 스킨 전환, 계정에서 커스터마이징 값을 받아온 직후)에 자동으로 함께 반영된다.
+    // DOM/GameBackground가 아직 없는 시점(초기 로드 순서)이나 없는 페이지일 수 있어 존재 체크.
+    applyPlayVisualSettings() {
+        try {
+            if (typeof DOM === 'undefined' || !DOM.settings) return;
+
+            if (DOM.settings.gameplayImageOpacitySlider) {
+                const opacityValue = this.settings.gameplayImageOpacity;
+                DOM.settings.gameplayImageOpacitySlider.value = opacityValue;
+                if (DOM.settings.gameplayImageOpacityValue) {
+                    DOM.settings.gameplayImageOpacityValue.textContent = opacityValue;
+                }
+            }
+            if (DOM.settings.laneBackgroundOpacitySlider) {
+                const laneBgValue = this.settings.laneBackgroundOpacity;
+                DOM.settings.laneBackgroundOpacitySlider.value = laneBgValue;
+                if (DOM.settings.laneBackgroundOpacityValue) {
+                    DOM.settings.laneBackgroundOpacityValue.textContent = laneBgValue;
+                }
+                document.documentElement.style.setProperty('--lane-bg-opacity', laneBgValue / 100);
+            }
+            if (DOM.settings.laneHighlightToggle) {
+                DOM.settings.laneHighlightToggle.checked = this.settings.laneHighlightOnInput !== false;
+            }
+
+            if (typeof GameBackground !== 'undefined' && GameBackground.applyOpacity) {
+                GameBackground.applyOpacity();
+            }
+        } catch (err) {
+            this._logError(err, 'Appearance.applyPlayVisualSettings');
+        }
+    },
+
     applySettings() {
         try {
             // CSS 변수로 색상 적용 (노트 타입별 색상 모드용)
@@ -433,6 +446,7 @@ const Appearance = {
             document.documentElement.style.setProperty('--note-false-color', this.settings.colors.false);
 
             this.updateJudgementCssVariables();
+            this.applyPlayVisualSettings();
 
             // 색상 모드에 따라 body 클래스 설정
             if (this.settings.colorMode === 'lane') {
@@ -529,10 +543,14 @@ const Appearance = {
         }
     },
 
+    // ── 커스터마이징 계획 "로컬 저장소 정책" 정리(3단계 후속) ──
+    // BeatSkin(IndexedDB)이 유일한 저장소다. 예전에는 여기서 localStorage.theBeat_appearance에도
+    // 매번 같이 썼는데(레거시 이관 전 남아있던 이중 저장), 지금은 IndexedDB 하나로만 저장한다.
+    // theBeat_appearance 자체는 BeatSkin.init()이 최초 1회 마이그레이션 때 읽은 뒤 지운다
+    // (skin.js _migrateLegacy/_cleanupLegacyLocalStorage 참고).
     saveSettings() {
         try {
-            localStorage.setItem('theBeat_appearance', JSON.stringify(this.settings));
-            // BeatSkin(스킨 시스템)에도 지금 값을 캡처해 IndexedDB에 반영한다.
+            // BeatSkin(스킨 시스템)에 지금 값을 캡처해 IndexedDB에 반영한다.
             // BeatSkin이 아직 초기화 전이거나(로드 순서 문제) 없는 페이지일 수 있어 존재 체크.
             if (typeof BeatSkin !== 'undefined' && BeatSkin.captureFromAppearance) {
                 BeatSkin.captureFromAppearance();
@@ -542,6 +560,10 @@ const Appearance = {
         }
     },
 
+    // 레거시 localStorage(theBeat_appearance)가 아직 지워지기 전(BeatSkin.init()이 끝나기 전)
+    // 짧은 구간에 대한 1회성 폴백 읽기다. BeatSkin.init()이 곧이어 IndexedDB 값으로 이 설정을
+    // 덮어쓰고(applyActive()), 그 시점에 legacy 키도 정리되므로 이후로는 이 읽기가 아무것도
+    // 찾지 못하는 것이 정상이다(신규 유저/이미 마이그레이션된 유저 모두).
     loadSettings() {
         try {
             const saved = localStorage.getItem('theBeat_appearance');
@@ -588,7 +610,10 @@ const Appearance = {
                 comboFontId: null,
                 countdownFontId: null,
                 noteSize: 1,
-                noteAnimation: 'none'
+                noteAnimation: 'none',
+                gameplayImageOpacity: 100,
+                laneBackgroundOpacity: 30,
+                laneHighlightOnInput: true
             };
             this.updateColorInputs();
             this.updateShapeUI();
@@ -691,84 +716,6 @@ const Appearance = {
         }
     },
     
-    updatePresetSlotsUI() {
-        try {
-            const buttons = document.querySelectorAll('.preset-slot');
-            buttons.forEach(btn => {
-                const slot = parseInt(btn.dataset.slot);
-                if (slot === this.currentPresetSlot) {
-                    btn.classList.add('active');
-                    btn.classList.add('border-blue-500');
-                } else {
-                    btn.classList.remove('active');
-                    btn.classList.remove('border-blue-500');
-                }
-            });
-        } catch (err) {
-            this._logError(err, 'Appearance.updatePresetSlotsUI');
-        }
-    },
-    
-    savePreset(slot) {
-        try {
-            const index = slot - 1;
-            const mode = this.settings.colorMode;
-            
-            if (mode === 'note-type') {
-                this.presets['note-type'][index] = {
-                    noteShape: this.settings.noteShape,
-                    colors: { ...this.settings.colors }
-                };
-            } else {
-                this.presets['lane'][index] = {
-                    noteShape: this.settings.noteShape,
-                    laneColors: { ...this.settings.laneColors }
-                };
-            }
-            
-            localStorage.setItem('theBeat_colorPresets', JSON.stringify(this.presets));
-        } catch (err) {
-            this._logError(err, 'Appearance.savePreset');
-        }
-    },
-    
-    loadPreset(slot) {
-        try {
-            const index = slot - 1;
-            const mode = this.settings.colorMode;
-            const preset = this.presets[mode][index];
-            
-            if (preset && Object.keys(preset).length > 0) {
-                if (mode === 'note-type' && preset.colors) {
-                    this.settings.colors = { ...preset.colors };
-                    if (preset.noteShape) this.settings.noteShape = preset.noteShape;
-                } else if (mode === 'lane' && preset.laneColors) {
-                    this.settings.laneColors = { ...preset.laneColors };
-                    if (preset.noteShape) this.settings.noteShape = preset.noteShape;
-                }
-                
-                this.updateColorInputs();
-                this.updateShapeUI();
-                this.updatePreview();
-                this.updateCSSVariables();
-                this.forceUpdateNotes();
-            }
-        } catch (err) {
-            this._logError(err, 'Appearance.loadPreset');
-        }
-    },
-    
-    loadPresets() {
-        try {
-            const saved = localStorage.getItem('theBeat_colorPresets');
-            if (saved) {
-                this.presets = JSON.parse(saved);
-            }
-        } catch (err) {
-            this._logError(err, 'Appearance.loadPresets');
-        }
-    },
-
     getNoteClass() {
         return this.settings.noteShape === 'circle' ? 'circle' : '';
     }
