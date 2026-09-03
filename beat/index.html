@@ -85,8 +85,13 @@
                 </svg>
             </button>
         </div>
-        <!-- 노래 커버 이미지 배경 (노래 선택~결과 화면 동안 표시). GameBackground.set()/clear()가 제어. -->
+        <!-- 노래 커버 이미지 배경 (노래 선택~결과 화면 동안 표시). GameBackground.set()/clear()가 제어.
+             backgroundMode가 'gradient'일 때도 이 요소에 linear-gradient를 그려 재사용한다. -->
         <div id="game-area-bg" class="absolute inset-0 bg-cover bg-center" style="z-index:0;"></div>
+        <!-- 배경 확장(커스터마이징 계획 2단계): backgroundMode가 'video'이고 배경 동영상이
+             업로드돼 있을 때만 표시. game-area-bg와 같은 자리, dim보다는 아래(z-index/DOM 순서
+             동일 원칙). GameBackground._renderVideo()가 제어. -->
+        <video id="game-area-bg-video" class="absolute inset-0 w-full h-full object-cover" style="z-index:0;opacity:0;" muted loop playsinline></video>
         <div id="game-area-bg-dim" class="absolute inset-0 bg-black pointer-events-none" style="z-index:0;opacity:0.55;"></div>
         <!-- 사진/음악/채보 데이터 등 비동기 로딩 상태 표시. 예전에는 우측 ui-area의 작은
              빨간 토스트(UI.showMessage)로만 떠서 눈에 잘 안 띄었다 — 훨씬 넓고 눈에 잘
@@ -476,6 +481,10 @@
                                     <div class="flex items-center justify-between text-gray-300">
                                         <label for="auto-hide-ui-toggle" data-i18n="auto_hide_ui_on_play">게임플레이 시 우측 화면 숨기기</label>
                                         <input id="auto-hide-ui-toggle" type="checkbox" class="h-5 w-5 bg-gray-700 rounded border-gray-600 text-blue-500 focus:ring-blue-500">
+                                    </div>
+                                    <div class="flex items-center justify-between text-gray-300">
+                                        <label for="show-home-recommendations-toggle" data-i18n="show_home_recommendations">홈 화면 추천 비트맵</label>
+                                        <input id="show-home-recommendations-toggle" type="checkbox" checked class="h-5 w-5 bg-gray-700 rounded border-gray-600 text-blue-500 focus:ring-blue-500">
                                     </div>
                                     <div class="flex items-center justify-between text-gray-300">
                                         <label for="player-default-fallspeed-toggle" data-i18n="use_default_fall_speed">플레이어 기본 하강 속도 지정</label>
@@ -981,6 +990,40 @@
                                             <span id="img-status-rank-C" class="text-xs text-gray-500 flex-shrink-0">기본</span>
                                             <button id="img-delete-rank-C" type="button" class="hidden flex-shrink-0 text-red-400 hover:text-red-300 text-xs">삭제</button>
                                         </div>
+                                    </div>
+
+                                    <!-- 배경 (커스터마이징 계획 2단계 배경 항목: 커버/동영상/그라디언트) -->
+                                    <p class="text-sm font-semibold text-gray-400 mb-2 mt-4">배경</p>
+                                    <div class="flex space-x-4 btn-group mb-3" id="background-mode-selector">
+                                        <button type="button" data-bgmode="cover" class="flex-1 py-2 px-4 bg-gray-700 hover:bg-gray-600 rounded-lg transition active">노래 커버</button>
+                                        <button type="button" data-bgmode="video" class="flex-1 py-2 px-4 bg-gray-700 hover:bg-gray-600 rounded-lg transition">동영상</button>
+                                        <button type="button" data-bgmode="gradient" class="flex-1 py-2 px-4 bg-gray-700 hover:bg-gray-600 rounded-lg transition">그라디언트</button>
+                                    </div>
+
+                                    <!-- 동영상 모드: 배경 동영상 업로드(BeatSkinImages 'background-video' 슬롯) -->
+                                    <div id="background-mode-video-panel" class="hidden space-y-2 mb-2">
+                                        <div class="flex items-center justify-between gap-2">
+                                            <label class="text-gray-300 text-sm w-20 flex-shrink-0">동영상</label>
+                                            <input id="img-upload-background-video" type="file" accept=".mp4,.webm,.ogg" class="flex-1 min-w-0 text-xs text-gray-300">
+                                            <span id="img-status-background-video" class="text-xs text-gray-500 flex-shrink-0">기본</span>
+                                            <button id="img-delete-background-video" type="button" class="hidden flex-shrink-0 text-red-400 hover:text-red-300 text-xs">삭제</button>
+                                        </div>
+                                        <p class="text-xs text-gray-500">MP4/WEBM/OGG, 20MB 이하. 업로드하지 않으면 노래 커버로 표시됩니다.</p>
+                                    </div>
+
+                                    <!-- 그라디언트 모드: 시작/끝 색상 + 각도 -->
+                                    <div id="background-mode-gradient-panel" class="hidden space-y-2 mb-2">
+                                        <div class="flex items-center gap-3">
+                                            <label class="text-gray-300 text-sm w-20 flex-shrink-0">시작 색상</label>
+                                            <input id="color-background-gradient-from" type="color" value="#0f172a" class="w-10 h-10 rounded border-0 bg-transparent cursor-pointer">
+                                            <label class="text-gray-300 text-sm w-20 flex-shrink-0 text-right">끝 색상</label>
+                                            <input id="color-background-gradient-to" type="color" value="#1e293b" class="w-10 h-10 rounded border-0 bg-transparent cursor-pointer">
+                                        </div>
+                                        <div class="flex justify-between items-center text-gray-300">
+                                            <label for="background-gradient-angle" class="text-sm">각도</label>
+                                            <span id="background-gradient-angle-value" class="font-mono text-sm">135°</span>
+                                        </div>
+                                        <input id="background-gradient-angle" type="range" min="0" max="359" value="135" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
                                     </div>
                                 </div>
 

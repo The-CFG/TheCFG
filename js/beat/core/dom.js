@@ -179,6 +179,7 @@ const DOM = {
         laneBackgroundOpacityValue: document.getElementById('lane-background-opacity-value'),
         laneHighlightToggle: document.getElementById('lane-highlight-toggle'),
         autoHideUiToggle: document.getElementById('auto-hide-ui-toggle'),
+        showHomeRecommendationsToggle: document.getElementById('show-home-recommendations-toggle'),
         defaultFallSpeedToggle: document.getElementById('player-default-fallspeed-toggle'),
         defaultFallSpeedContainer: document.getElementById('player-default-fallspeed-container'),
         defaultFallSpeedSlider: document.getElementById('player-default-fallspeed-slider'),

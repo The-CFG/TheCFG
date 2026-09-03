@@ -22,6 +22,10 @@ const Game = {
             // Appearance.settings.*를 직접 참조한다(아래 laneHighlightOnInput 사용처 참고).
             // 게임플레이 중 우측 메뉴/점수 패널(#ui-area)을 자동으로 접을지 여부. 기본값 false(끔).
             autoHideUiOnPlay: localStorage.getItem('theBeat_autoHideUiOnPlay') === 'true',
+            // 메인 메뉴(홈 화면)의 "추천 비트맵" 카드(MenuFeatured) 표시 여부. 기본값 true(켬) —
+            // gameplayImageOpacity 등과 달리 스킨(BeatSkin) 소유가 아니라 기기별 UI 동작
+            // 설정이라 autoHideUiOnPlay와 같은 패턴(localStorage + 계정 동기화)을 쓴다.
+            showHomeRecommendations: localStorage.getItem('theBeat_showHomeRecommendations') !== 'false',
             // 플레이어가 지정한 "기본 하강 속도"를 쓸지 여부. 켜져 있으면 비트맵 자체의 하강 속도
             // 대신 이 값을 쓴다 — 단, 비트맵이 "이 맵 전용 하강 속도 사용"으로 저장된 경우는 예외
             // (그 비트맵은 항상 자신의 하강 속도를 유지한다). Game.loadChartNotes()에서 적용.

@@ -8,6 +8,9 @@
 //
 // 추천은 세션당 1번만 뽑는다 — 메뉴를 들락날락할 때마다 다른 곡으로 바뀌면 오히려
 // 산만하다. 다른 곡을 보고 싶으면 카드의 "🔀 다른 곡" 버튼으로 수동 재추첨.
+//
+// 환경설정 "플레이" 탭의 "홈 화면 추천 비트맵" 토글로 껐다 켤 수 있다(_isEnabled()/
+// onSettingChanged() 참고) — 꺼두면 onEnter()가 로드/재생 없이 카드를 감춘 채로 끝난다.
 const MenuFeatured = {
     _current: null,      // CloudBrowse.getFeaturedBeatmap()의 data
     _loaded: false,       // 세션 중 한 번이라도 성공적으로 뽑았는지
@@ -15,9 +18,52 @@ const MenuFeatured = {
     _loadSeq: 0,          // 재추첨/화면 재진입이 겹칠 때 오래된 응답 무시용
     _muffled: false,      // 환경설정 화면 등에서 "끄지 않고 뭉개기"만 한 상태인지
 
+    // 환경설정 "플레이" 탭의 토글(#show-home-recommendations-toggle)로 켜고 끌 수 있다.
+    // Game.state.settings.showHomeRecommendations를 읽는다(localStorage는 부팅 시
+    // 초기값만 채우고, 이후로는 계정 동기화 값까지 반영된 이 쪽이 최신 값이다).
+    _isEnabled() {
+        try {
+            return typeof Game !== 'undefined' && Game.state.settings.showHomeRecommendations !== false;
+        } catch {
+            return true;
+        }
+    },
+
+    // 설정에서 꺼져 있을 때(onEnter 진입 시) 또는 방금 껐을 때(onSettingChanged) 카드/배경/
+    // 미리듣기를 전부 정리하고 감춘다. 뽑아둔 곡(_current/_loaded)은 지우지 않는다 — 다시
+    // 켜면 새로 뽑지 않고 그 곡을 그대로 이어서 보여준다("세션당 1번만 뽑는다" 원칙 유지).
+    _hideDisabled() {
+        const el = document.getElementById('menu-featured-beatmap');
+        if (this._muffled || this._loaded) {
+            SongPreview.stop();
+            AudioEngine.setMuffled(false);
+            GameBackground.clear();
+        }
+        this._muffled = false;
+        UI.hideAreaLoading('preview');
+        if (el) {
+            el.classList.add('hidden');
+            el.innerHTML = '';
+        }
+    },
+
+    // 환경설정 "플레이" 탭의 토글이 바뀔 때 main.js가 호출한다. 설정 화면은 메뉴를 완전히
+    // 떠나지 않고 "뭉개기"만 하는 화면이라(onLeave 참고), 여기서 끄면 설정 화면 뒤에서
+    // 계속 재생 중이던 카드를 곧바로 정리해야 설정을 닫고 메뉴로 돌아왔을 때 잠깐이라도
+    // 다시 보이는 일이 없다. 켤 때는 별도 처리 없이 다음 onEnter()(설정을 닫고 메뉴로
+    // 돌아올 때)가 알아서 로드/재생한다.
+    onSettingChanged(enabled) {
+        if (!enabled) this._hideDisabled();
+    },
+
     async onEnter() {
         const el = document.getElementById('menu-featured-beatmap');
         if (!el) return;
+
+        if (!this._isEnabled()) {
+            this._hideDisabled();
+            return;
+        }
 
         if (this._muffled) {
             // 설정 화면 등에서 뭉개기만 해뒀던 경우 — 재생은 계속되고 있었으므로

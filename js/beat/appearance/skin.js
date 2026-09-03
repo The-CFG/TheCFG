@@ -166,6 +166,23 @@ const BeatSkin = {
         return out;
     },
 
+    // 테마도 스킨 소유로 이관 — localStorage(theBeat_theme/theBeat_customTheme, BeatTheme가
+    // 관리)에 있던 값을 스킨 설정(themeId/themeCustomColors)으로 흡수한다. BeatTheme가 아직
+    // 로드되지 않았을 수 있는 페이지(이론상 없지만 방어적으로)를 위해 존재 체크한다.
+    _readLegacyThemeKeys() {
+        const out = {};
+        try {
+            if (typeof BeatTheme === 'undefined') return out;
+            out.themeId = BeatTheme.load();
+            if (out.themeId === 'custom') {
+                out.themeCustomColors = BeatTheme.loadCustomColors();
+            }
+        } catch (err) {
+            this._logError(err, 'BeatSkin._readLegacyThemeKeys');
+        }
+        return out;
+    },
+
     // 레거시 localStorage(theBeat_appearance)를 1회 읽어 "기본" 스킨 하나로 변환한다.
     // Appearance.init()이 이 함수보다 먼저 실행되어 이미 legacy 값을 Appearance.settings에
     // 로드해 둔 상태이므로(appearance.js loadSettings()), 저장된 적 없는 완전 신규
@@ -183,6 +200,7 @@ const BeatSkin = {
             ...Appearance.settings,
             ...(legacySettings || {}),
             ...this._readLegacyPlayVisualKeys(),
+            ...this._readLegacyThemeKeys(),
         };
 
         const state = {
@@ -197,16 +215,16 @@ const BeatSkin = {
     },
 
     // state가 이미 있던(이전 버전에서 마이그레이션이 끝난) 경우를 위한 보조 흡수 경로.
-    // 활성 스킨에 아직 이 3개 키가 없을 때만 채운다 — 사용자가 이미 새 UI로 값을 바꿔둔
+    // 활성 스킨에 아직 이 값들이 없을 때만 채운다 — 사용자가 이미 새 UI로 값을 바꿔둔
     // 경우(설정이 있음 = undefined가 아님) 덮어쓰지 않기 위한 가드.
     async _absorbLegacyPlayVisualKeys(state) {
         try {
             const skin = state.skins[state.activeId];
             if (!skin || !skin.settings) return;
 
-            const legacy = this._readLegacyPlayVisualKeys();
+            const legacy = { ...this._readLegacyPlayVisualKeys(), ...this._readLegacyThemeKeys() };
             let changed = false;
-            for (const key of ['gameplayImageOpacity', 'laneBackgroundOpacity', 'laneHighlightOnInput']) {
+            for (const key of ['gameplayImageOpacity', 'laneBackgroundOpacity', 'laneHighlightOnInput', 'themeId', 'themeCustomColors']) {
                 if (legacy[key] !== undefined && skin.settings[key] === undefined) {
                     skin.settings[key] = legacy[key];
                     changed = true;

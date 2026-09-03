@@ -64,7 +64,25 @@ const Appearance = {
         // applySettings()를 통해 그 UI/CSS 변수/GameBackground에 반영한다.
         gameplayImageOpacity: 100, // 게임플레이 중 노래 커버 이미지 배경 불투명도 (0~100)
         laneBackgroundOpacity: 30, // 레인 영역 배경 진하기 (0~100)
-        laneHighlightOnInput: true // 입력 시 레인 하이라이트 피드백 표시 여부
+        laneHighlightOnInput: true, // 입력 시 레인 하이라이트 피드백 표시 여부
+        // ── 커스터마이징 계획 2단계: 배경 확장(비디오/그라디언트) ──
+        // 'cover'(노래 커버, 기본) | 'video'(업로드한 배경 동영상 — BeatSkinImages의
+        // 'background-video' 슬롯에 스킨별로 저장, 없으면 커버로 자동 폴백) |
+        // 'gradient'(아래 backgroundGradient 색상으로 그라데이션). 파티클은 범위가 커서
+        // 이번 단계에서 제외(후순위). GameBackground.set()/applyMode()가 이 값을 읽는다.
+        backgroundMode: 'cover',
+        backgroundGradient: { from: '#0f172a', to: '#1e293b', angle: 135 },
+        // ── UI 테마도 스킨 소유로 이관 ──
+        // 원래 BeatTheme(theme.js)가 localStorage(theBeat_theme/theBeat_customTheme)에
+        // 독립적으로 저장하던 사이트 전체 색상 테마('dark'|'blue'|'light'|'custom')를
+        // 여기로 옮겨 다른 항목들과 동일하게 스킨을 바꾸면 함께 바뀌게 한다.
+        // 'custom'일 때 themeCustomColors가 null이면 BeatTheme.CUSTOM_TOKENS 기본값을 쓴다.
+        // localStorage의 두 키는 완전히 없애지 않고 "지금 활성 스킨 테마의 캐시"로 남겨둔다
+        // (theme.js 상단 즉시실행 함수가 최초 페인트 전에 동기로 읽어 깜빡임을 막는 용도라
+        // IndexedDB의 비동기 로드를 기다릴 수 없음 — applyFromSettings()가 실제 적용 때마다
+        // 이 캐시도 함께 갱신해 다음 새로고침부터는 캐시 자체가 최신 스킨 값과 일치하게 한다).
+        themeId: 'blue',
+        themeCustomColors: null
     },
     
     _logError(err, context) {
@@ -283,6 +301,48 @@ const Appearance = {
                 });
             }
             
+            // 배경 모드 선택(커버/동영상/그라디언트) — 커스터마이징 계획 2단계 배경 확장.
+            // 값 자체는 saveSettings()(적용 버튼)에서 저장되지만, 다른 색상/모양 입력과
+            // 마찬가지로 여기서는 즉시 GameBackground에 반영해 실시간 미리보기를 준다.
+            const bgModeSelector = document.getElementById('background-mode-selector');
+            if (bgModeSelector) {
+                bgModeSelector.addEventListener('click', (e) => {
+                    const btn = e.target.closest('button[data-bgmode]');
+                    if (!btn) return;
+                    this.settings.backgroundMode = btn.dataset.bgmode;
+                    this.updateBackgroundModeUI();
+                    if (typeof GameBackground !== 'undefined' && GameBackground.applyMode) {
+                        GameBackground.applyMode();
+                    }
+                });
+            }
+
+            // 그라디언트 배경 색상(시작/끝)·각도
+            const gradFromInput = document.getElementById('color-background-gradient-from');
+            if (gradFromInput) {
+                gradFromInput.addEventListener('input', (e) => {
+                    this.settings.backgroundGradient.from = e.target.value;
+                    if (typeof GameBackground !== 'undefined' && GameBackground.applyMode) GameBackground.applyMode();
+                });
+            }
+            const gradToInput = document.getElementById('color-background-gradient-to');
+            if (gradToInput) {
+                gradToInput.addEventListener('input', (e) => {
+                    this.settings.backgroundGradient.to = e.target.value;
+                    if (typeof GameBackground !== 'undefined' && GameBackground.applyMode) GameBackground.applyMode();
+                });
+            }
+            const gradAngleInput = document.getElementById('background-gradient-angle');
+            if (gradAngleInput) {
+                gradAngleInput.addEventListener('input', (e) => {
+                    const angle = parseInt(e.target.value, 10);
+                    this.settings.backgroundGradient.angle = angle;
+                    const label = document.getElementById('background-gradient-angle-value');
+                    if (label) label.textContent = `${angle}°`;
+                    if (typeof GameBackground !== 'undefined' && GameBackground.applyMode) GameBackground.applyMode();
+                });
+            }
+
             // 적용 버튼
             const applyBtn = document.getElementById('apply-appearance-btn');
             if (applyBtn) {
@@ -493,11 +553,54 @@ const Appearance = {
                 DOM.settings.laneHighlightToggle.checked = this.settings.laneHighlightOnInput !== false;
             }
 
+            this.updateBackgroundModeUI();
+
             if (typeof GameBackground !== 'undefined' && GameBackground.applyOpacity) {
                 GameBackground.applyOpacity();
             }
+            // 스킨 전환/최초 로드/계정 값 수신 등 applySettings()가 호출되는 모든 시점에
+            // backgroundMode/backgroundGradient도 함께 바뀌었을 수 있으므로 다시 그린다.
+            if (typeof GameBackground !== 'undefined' && GameBackground.applyMode) {
+                GameBackground.applyMode();
+            }
+
+            // UI 테마도 이제 스킨 소유(themeId/themeCustomColors)이므로, 같은 시점에 함께
+            // 반영한다. BeatSkin.switchTo() 한 번으로 노트 색/이미지/폰트뿐 아니라 사이트
+            // 전체 테마까지 그 스킨의 값으로 바뀌게 하려는 목적.
+            if (typeof BeatTheme !== 'undefined' && BeatTheme.applyFromSettings) {
+                BeatTheme.applyFromSettings(this.settings.themeId, this.settings.themeCustomColors);
+            }
         } catch (err) {
             this._logError(err, 'Appearance.applyPlayVisualSettings');
+        }
+    },
+
+    // 배경 모드 선택 버튼(#background-mode-selector)의 active 상태, 모드별 패널(동영상 업로드/
+    // 그라디언트 색상 선택) 표시 여부, 그라디언트 입력값을 현재 settings와 동기화한다.
+    updateBackgroundModeUI() {
+        try {
+            const selector = document.getElementById('background-mode-selector');
+            if (selector) {
+                selector.querySelectorAll('button').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.bgmode === this.settings.backgroundMode);
+                });
+            }
+            const videoPanel = document.getElementById('background-mode-video-panel');
+            if (videoPanel) videoPanel.classList.toggle('hidden', this.settings.backgroundMode !== 'video');
+            const gradientPanel = document.getElementById('background-mode-gradient-panel');
+            if (gradientPanel) gradientPanel.classList.toggle('hidden', this.settings.backgroundMode !== 'gradient');
+
+            const g = this.settings.backgroundGradient || { from: '#0f172a', to: '#1e293b', angle: 135 };
+            const fromInput = document.getElementById('color-background-gradient-from');
+            if (fromInput) fromInput.value = g.from;
+            const toInput = document.getElementById('color-background-gradient-to');
+            if (toInput) toInput.value = g.to;
+            const angleInput = document.getElementById('background-gradient-angle');
+            if (angleInput) angleInput.value = g.angle;
+            const angleLabel = document.getElementById('background-gradient-angle-value');
+            if (angleLabel) angleLabel.textContent = `${g.angle}°`;
+        } catch (err) {
+            this._logError(err, 'Appearance.updateBackgroundModeUI');
         }
     },
 
@@ -712,7 +815,11 @@ const Appearance = {
                 noteAnimation: 'none',
                 gameplayImageOpacity: 100,
                 laneBackgroundOpacity: 30,
-                laneHighlightOnInput: true
+                laneHighlightOnInput: true,
+                backgroundMode: 'cover',
+                backgroundGradient: { from: '#0f172a', to: '#1e293b', angle: 135 },
+                themeId: 'blue',
+                themeCustomColors: null
             };
             this.updateColorInputs();
             this.updateShapeUI();

@@ -749,6 +749,18 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
+        if (DOM.settings.showHomeRecommendationsToggle) {
+            DOM.settings.showHomeRecommendationsToggle.addEventListener('change', (e) => {
+                const enabled = e.target.checked;
+                Game.state.settings.showHomeRecommendations = enabled;
+                localStorage.setItem('theBeat_showHomeRecommendations', enabled ? 'true' : 'false');
+                savePlaySettingsToCloud();
+                if (typeof MenuFeatured !== 'undefined' && MenuFeatured.onSettingChanged) {
+                    MenuFeatured.onSettingChanged(enabled);
+                }
+            });
+        }
+
         if (DOM.settings.defaultFallSpeedToggle) {
             DOM.settings.defaultFallSpeedToggle.addEventListener('change', (e) => {
                 const enabled = e.target.checked;
@@ -1374,6 +1386,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (DOM.settings.autoHideUiToggle) {
             DOM.settings.autoHideUiToggle.checked = Game.state.settings.autoHideUiOnPlay === true;
         }
+        if (DOM.settings.showHomeRecommendationsToggle) {
+            DOM.settings.showHomeRecommendationsToggle.checked = Game.state.settings.showHomeRecommendations !== false;
+        }
         if (DOM.settings.defaultFallSpeedToggle) {
             const enabled = Game.state.settings.useDefaultFallSpeed === true;
             DOM.settings.defaultFallSpeedToggle.checked = enabled;
@@ -1561,7 +1576,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // CloudAuth.savePlaySettings가 아니라 BeatCustomizationSync(스킨 동기화)를 탄다.
     const PLAY_SETTINGS_KEYS = [
         'autoHideUiOnPlay', 'useDefaultFallSpeed', 'defaultFallSpeedValue',
-        'inputOffsetMs', 'touchInputOffsetMs',
+        'inputOffsetMs', 'touchInputOffsetMs', 'showHomeRecommendations',
     ];
 
     function collectPlaySettings() {

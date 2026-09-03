@@ -8,8 +8,17 @@
 //  나머지 토큰(호버/테두리/보조 텍스트 등)은 _deriveTokens()가 밝기 보정으로 계산해
 //  채운다. theme.css 상단 주석이 미리 예고해 둔 대로, documentElement.style에 같은
 //  --tb-* 변수를 직접 심는 방식이라 theme.css의 컴포넌트 규칙은 전혀 손대지 않는다.
-//  저장은 localStorage(theBeat_customTheme) + 로그인 상태면 CloudAuth.saveUiThemeSettings
-//  (uiTheme.customColors)로 계정에도 동기화한다(BeatCustomizationSync 참고).
+//
+//  ── 테마도 스킨 소유로 이관 ──────────────────────────────────────────
+//  원래는 이 파일이 localStorage(theBeat_theme/theBeat_customTheme)에 독립적으로
+//  저장/동기화(CloudAuth.saveUiThemeSettings)하는, BeatSkin과 무관한 전역 설정이었다.
+//  이제는 gameplayImageOpacity 등과 동일하게 Appearance.settings(themeId/
+//  themeCustomColors)의 일부가 되어 BeatSkin이 스킨별로 캡처/전환/클라우드 동기화한다
+//  (appearance.js의 applyPlayVisualSettings() → BeatTheme.applyFromSettings() 참고).
+//  localStorage 두 키는 없애지 않고 남겨둔다 — IndexedDB(BeatSkin) 로드는 비동기라
+//  최초 페인트 전에 읽을 수 없으므로, 이 파일 하단 즉시실행 함수(_initBeatTheme)가
+//  깜빡임 방지용으로 동기 read하는 캐시 용도로만 계속 쓰인다("진짜 값"은 이제 활성
+//  스킨 쪽이고, applyFromSettings()가 적용할 때마다 이 캐시도 최신값으로 다시 써 둔다).
 // ════════════════════════════════════════════════
 
 // 커스텀 테마가 채우는 전체 --tb-* 토큰 목록. dark/blue/light로 돌아갈 때 이 인라인
@@ -185,6 +194,44 @@ const BeatTheme = {
         this._toggleCustomPanel(theme === 'custom');
     },
 
+    // ── 테마도 스킨 소유로 이관 ──
+    // BeatSkin이 관리하는 Appearance.settings.themeId/themeCustomColors를 실제 문서에
+    // 반영한다. apply(theme)와 하는 일은 거의 같지만 두 가지가 다르다: ①색상 출처가
+    // localStorage 캐시(loadCustomColors())가 아니라 인자로 받은 값(=활성 스킨의 값)이고,
+    // ②반영한 뒤에는 그 값을 localStorage 캐시에도 다시 써서(save/saveCustomColors) 다음
+    // 새로고침의 최초 페인트(_initBeatTheme, 이 파일 상단)가 최신 스킨 값을 곧바로 보여줄
+    // 수 있게 한다 — IndexedDB(BeatSkin)는 비동기라 페인트 전에 읽을 수 없으므로, 캐시는
+    // 여전히 필요하지만 이제는 "진짜 값"이 아니라 "직전에 적용된 스킨 값의 사본"이다.
+    // BeatSkin.applyActive() → Appearance.applySettings() → Appearance.applyPlayVisualSettings()
+    // 경로로 스킨 전환/최초 로드/계정 값 수신 시점마다 호출된다.
+    applyFromSettings(themeId, customColors) {
+        const theme = this.THEMES.includes(themeId) ? themeId : 'blue';
+        document.documentElement.setAttribute('data-theme', theme);
+        if (theme === 'custom') {
+            const colors = customColors || this._defaultCustomColors();
+            this.applyCustomColors(colors);
+            this._syncPickerInputs(colors);
+            this._refreshCustomPreview(colors);
+            this.saveCustomColors(colors); // FOUC 캐시 갱신
+        } else {
+            this._clearInlineTokens();
+        }
+        this.save(theme); // FOUC 캐시 갱신
+        document.querySelectorAll('.beat-theme-card').forEach(card => {
+            card.classList.toggle('active', card.dataset.themeVal === theme);
+        });
+        this._toggleCustomPanel(theme === 'custom');
+    },
+
+    // CUSTOM_TOKENS의 코드 기본값(blue 테마 출발점)만으로 채운 색상 세트.
+    // themeCustomColors가 아직 없는 스킨(한 번도 커스텀 테마를 만져본 적 없는 스킨)에
+    // applyFromSettings()가 폴백으로 쓴다.
+    _defaultCustomColors() {
+        const colors = {};
+        this.CUSTOM_TOKENS.forEach(t => { colors[t.key] = t.default; });
+        return colors;
+    },
+
     current() {
         return document.documentElement.getAttribute('data-theme') || 'blue';
     },
@@ -242,7 +289,14 @@ const BeatTheme = {
         if (applyBtn) {
             applyBtn.addEventListener('click', () => {
                 this.saveCustomColors(staged);
-                this.apply('custom');
+                // 테마도 스킨 소유 — Appearance.settings에 반영하고 saveSettings()로
+                // 활성 스킨에 캡처해야 다른 스킨으로 전환했다가 돌아와도 이 색이 남는다.
+                if (typeof Appearance !== 'undefined') {
+                    Appearance.settings.themeId = 'custom';
+                    Appearance.settings.themeCustomColors = staged;
+                    Appearance.saveSettings();
+                }
+                this.applyFromSettings('custom', staged);
                 if (typeof UI !== 'undefined' && UI.showMessage) {
                     UI.showMessage('settings', '커스텀 테마를 적용했습니다.');
                 }
@@ -255,14 +309,30 @@ const BeatTheme = {
         const selector = document.getElementById('beat-theme-selector');
         if (!selector) return;
 
-        // 클릭 이벤트
+        // 클릭 이벤트 — 테마도 스킨 소유이므로 Appearance.settings에 반영 + saveSettings()로
+        // 활성 스킨에 캡처한다(다른 색/모양 설정의 "적용" 버튼과 달리, 카드 클릭은 원래도
+        // 즉시 반영+저장되는 단일 클릭 UX였으므로 그 흐름은 그대로 유지).
         selector.addEventListener('click', (e) => {
             const card = e.target.closest('.beat-theme-card');
             if (!card) return;
-            this.apply(card.dataset.themeVal);
-            // 사용자가 직접 고른 경우에만 클라우드로 올린다(BeatCustomizationSync.pullAll()이
-            // 클라우드 값 반영을 위해 apply()를 호출할 때는 다시 올릴 필요가 없으므로 apply()
-            // 내부가 아니라 여기 클릭 핸들러에서만 호출).
+            const theme = card.dataset.themeVal;
+            if (typeof Appearance !== 'undefined') {
+                Appearance.settings.themeId = theme;
+                // 'custom'으로 처음 전환하는데 이 스킨에 아직 커스텀 색이 없으면(한 번도
+                // 커스텀 테마를 만져본 적 없는 스킨) 캐시/기본값으로 채워 넣는다.
+                if (theme === 'custom' && !Appearance.settings.themeCustomColors) {
+                    Appearance.settings.themeCustomColors = this.loadCustomColors();
+                }
+                Appearance.saveSettings();
+                this.applyFromSettings(Appearance.settings.themeId, Appearance.settings.themeCustomColors);
+            } else {
+                // Appearance가 없는(있을 수 없지만 방어적으로) 상황을 위한 폴백 — 스킨에는
+                // 저장되지 않고 캐시에만 반영된다.
+                this.apply(theme);
+            }
+            // 사용자가 직접 고른 경우에만 클라우드로 올린다 — 계정에서 값을 받아오는 경로
+            // (BeatCustomizationSync.pullAll())는 스킨 데이터 안에 테마가 이미 포함돼 있어
+            // BeatSkin.switchTo()가 applyFromSettings()까지 함께 처리하므로 따로 push하지 않는다.
             if (typeof BeatCustomizationSync !== 'undefined') BeatCustomizationSync.schedulePush();
         });
 

@@ -1,12 +1,15 @@
 // ════════════════════════════════════════════════
 //  js/beat/cloud/customization-sync.js — BeatCustomizationSync
-//  커스터마이징(스킨/폰트/UI 테마) 계정 동기화 오케스트레이터(커스터마이징 계획 4단계,
-//  "권장 착수 순서" 8번). 각 모듈(BeatSkin/BeatFonts/BeatSkinImages/BeatTheme)은 이
+//  커스터마이징(스킨/폰트) 계정 동기화 오케스트레이터(커스터마이징 계획 4단계,
+//  "권장 착수 순서" 8번). 각 모듈(BeatSkin/BeatFonts/BeatSkinImages)은 이
 //  파일이 있는지 모른 채로 동작하고, 이 모듈이 그것들의 공개 API(state/BeatLocalStore
-//  키 구조)를 조합해 CloudAuth의 beat_settings.{skins,customFonts,uiTheme} patch API로
+//  키 구조)를 조합해 CloudAuth의 beat_settings.{skins,customFonts} patch API로
 //  올리고 내린다. 각 모듈의 UI 이벤트 핸들러(스킨 전환/새로 저장, 폰트 업로드/삭제,
-//  이미지 업로드/삭제, 테마 카드 클릭, "적용" 버튼)가 자기 작업이 끝난 뒤
-//  schedulePush()만 호출해 주면 된다.
+//  이미지 업로드/삭제, "적용" 버튼)가 자기 작업이 끝난 뒤 schedulePush()만 호출해
+//  주면 된다. UI 테마(BeatTheme)는 이제 별도 모듈이 아니라 스킨 설정의 일부
+//  (Appearance.settings.themeId/themeCustomColors)라 여기서 따로 다루지 않는다 —
+//  BeatSkin 블록에 얹혀 함께 push/pull된다(테마 카드 클릭도 saveSettings()로 활성
+//  스킨에 캡처된 뒤 schedulePush()를 호출한다).
 //
 //  스토리지 경로는 항상 `${user.id}/skins/${skinId}/${slotId}.${ext}` /
 //  `${user.id}/fonts/${fontId}.${format}`로 결정적(deterministic)이라, 업로드가 없어도
@@ -19,7 +22,7 @@
 //  클라우드에 스킨 데이터가 있으면 로컬 BeatSkin.state를 그것으로 통째로 교체한다.
 //
 //  의존: local-store.js(BeatLocalStore), auth.js(CloudAuth). BeatSkin/BeatFonts/
-//  BeatSkinImages/BeatTheme는 optional(타입 체크 후 사용) — 이 파일보다 먼저 로드되어
+//  BeatSkinImages는 optional(타입 체크 후 사용) — 이 파일보다 먼저 로드되어
 //  있어야 하지만, 없는 페이지(다른 게임 화면 등)에서도 에러 없이 조용히 넘어간다.
 // ════════════════════════════════════════════════
 
@@ -100,15 +103,10 @@ const BeatCustomizationSync = {
                 await CloudAuth.saveCustomFonts(list);
             }
 
-            if (typeof BeatTheme !== 'undefined') {
-                // customColors도 함께 올려야 다른 기기에서 'custom' 활성 상태를 받았을 때
-                // 실제 색값도 같이 복원할 수 있다(활성 테마가 custom이 아니어도, 나중에
-                // 커스텀으로 돌아갈 때를 대비해 항상 같이 올린다).
-                await CloudAuth.saveUiThemeSettings({
-                    activeId: BeatTheme.current(),
-                    customColors: BeatTheme.loadCustomColors(),
-                });
-            }
+            // UI 테마는 이제 스킨 소유(Appearance.settings.themeId/themeCustomColors)라
+            // 위 BeatSkin 블록에서 saveSkinsSettings()로 이미 함께 올라간다 — 예전처럼
+            // beat_settings.uiTheme에 따로 올리면 오히려 두 값이 어긋날 수 있어(다른
+            // 기기에서 pull할 때 어느 쪽을 믿어야 할지 애매해짐) 별도 push를 없앴다.
         } catch (err) {
             this._logError(err, 'BeatCustomizationSync.pushAll');
         }
@@ -155,13 +153,11 @@ const BeatCustomizationSync = {
                 }
             }
 
-            if (typeof BeatTheme !== 'undefined') {
-                const theme = await CloudAuth.getUiThemeSettings();
-                if (theme && theme.activeId && BeatTheme.THEMES.includes(theme.activeId)) {
-                    if (theme.customColors) BeatTheme.saveCustomColors(theme.customColors);
-                    BeatTheme.apply(theme.activeId);
-                }
-            }
+            // UI 테마는 스킨 데이터 안(Appearance.settings.themeId/themeCustomColors)에 이미
+            // 들어 있어, 위 BeatSkin 블록의 switchTo()가 applyActive() → ... →
+            // BeatTheme.applyFromSettings()까지 처리한다 — 예전처럼 beat_settings.uiTheme를
+            // 따로 받아 BeatTheme.apply()로 덮어쓰면 방금 반영한 스킨 테마를 다시 지워버리게
+            // 되므로(두 값이 다를 경우 나중에 실행되는 쪽이 이긴다) 이 블록은 제거했다.
         } catch (err) {
             this._logError(err, 'BeatCustomizationSync.pullAll');
         }
