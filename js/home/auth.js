@@ -63,6 +63,37 @@ const CloudAuth = {
         if (error) throw error;
     },
 
+    // ── 아이디 (handle) ────────────────────────────────────
+    // 본인 아이디 조회 — user_profiles.handle
+    async getHandle() {
+        const user = await this.getUser();
+        if (!user) return null;
+        const { data, error } = await _supabase
+            .from('user_profiles')
+            .select('handle')
+            .eq('user_id', user.id)
+            .single();
+        if (error) { console.warn('getHandle 오류:', error.message); return null; }
+        return data?.handle || null;
+    },
+
+    // 아이디 사용 가능 여부 확인 (본인이 이미 쓰는 아이디도 true로 처리)
+    async isHandleAvailable(handle) {
+        const [{ data, error }, current] = await Promise.all([
+            _supabase.rpc('is_handle_available', { p_handle: handle }),
+            this.getHandle(),
+        ]);
+        if (error) throw error;
+        if (current && current.toLowerCase() === handle.toLowerCase()) return true;
+        return !!data;
+    },
+
+    // 본인 아이디 설정/변경
+    async setHandle(handle) {
+        const { error } = await _supabase.rpc('set_own_handle', { p_handle: handle });
+        if (error) throw error;
+    },
+
     // ── 계정 탈퇴 ──────────────────────────────────────────
     // 주의: Supabase JS 클라이언트는 자기 계정 삭제 API를 제공하지 않으므로,
     // DB에 SECURITY DEFINER로 정의된 RPC 함수 'delete_user'가 있어야 인증 계정까지 완전히 삭제됩니다.
@@ -129,6 +160,9 @@ async function _refreshView() {
 
         const nicknameInput = document.getElementById('nickname-input');
         if (nicknameInput) nicknameInput.value = user.user_metadata?.display_name || '';
+
+        const handleInput = document.getElementById('handle-input');
+        if (handleInput) handleInput.value = await CloudAuth.getHandle() || '';
     } else {
         _show(authSection);
         _hide(profileSection);
@@ -188,6 +222,9 @@ function _setupProfileSection() {
     const logoutBtn      = document.getElementById('btn-logout');
     const nicknameForm    = document.getElementById('nickname-form');
     const nicknameStatus  = document.getElementById('nickname-status');
+    const handleForm      = document.getElementById('handle-form');
+    const handleInput     = document.getElementById('handle-input');
+    const handleStatus    = document.getElementById('handle-status');
     const pwForm          = document.getElementById('password-form');
     const pwStatus        = document.getElementById('password-status');
     const deleteBtn       = document.getElementById('btn-delete-account');
@@ -207,6 +244,50 @@ function _setupProfileSection() {
             _setStatus(nicknameStatus, '닉네임이 저장되었습니다.');
         } catch (err) {
             _setStatus(nicknameStatus, `오류: ${err.message}`, true);
+        }
+    });
+
+    const HANDLE_PATTERN = /^[A-Za-z0-9._]{4,10}$/;
+    let handleCheckTimer = null;
+
+    handleInput?.addEventListener('input', () => {
+        clearTimeout(handleCheckTimer);
+        const value = handleInput.value.trim();
+
+        if (!value) { _setStatus(handleStatus, ''); return; }
+        if (!HANDLE_PATTERN.test(value)) {
+            _setStatus(handleStatus, '4~10자, 영문/숫자/./_ 만 사용할 수 있습니다.', true);
+            return;
+        }
+
+        _setStatus(handleStatus, '확인 중...');
+        handleCheckTimer = setTimeout(async () => {
+            try {
+                const available = await CloudAuth.isHandleAvailable(value);
+                _setStatus(handleStatus, available ? '사용 가능한 아이디입니다.' : '이미 사용 중인 아이디입니다.', !available);
+            } catch (err) {
+                _setStatus(handleStatus, `오류: ${err.message}`, true);
+            }
+        }, 400);
+    });
+
+    handleForm?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const value = handleInput?.value?.trim();
+        if (!value || !HANDLE_PATTERN.test(value)) {
+            _setStatus(handleStatus, '4~10자, 영문/숫자/./_ 만 사용할 수 있습니다.', true);
+            return;
+        }
+        try {
+            await CloudAuth.setHandle(value);
+            _setStatus(handleStatus, '아이디가 저장되었습니다.');
+        } catch (err) {
+            const map = {
+                invalid_handle_format: '4~10자, 영문/숫자/./_ 만 사용할 수 있습니다.',
+                handle_taken: '이미 사용 중인 아이디입니다.',
+                profile_not_found: '프로필 정보를 찾을 수 없습니다.',
+            };
+            _setStatus(handleStatus, map[err.message] || `오류: ${err.message}`, true);
         }
     });
 

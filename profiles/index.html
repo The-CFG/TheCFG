@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <meta name="description" content="TheCFG 프로필">
+    <link rel="icon" href="/css/favicon.png" type="image/png">
+    <title>프로필 · TheCFG</title>
+    <link rel="stylesheet" href="/css/home/styles.css">
+    <link rel="stylesheet" href="/css/home/profiles.css">
+</head>
+<body>
+
+<a class="skip-link" href="#main">본문으로 바로가기</a>
+
+<header class="site-header">
+    <a href="/" class="brand"><img width="20px" src="/css/favicon.png" alt="(Logo)"> TheCFG</a>
+    <a href="https://www.youtube.com/@TheCFG_" class="connections">YouTube</a>
+    <a href="https://discord.gg/yVrDEVXEnY" class="connections">Discord</a>
+    <a href="https://github.com/The-CFG" class="connections">Github</a>
+    <a href="/accounts" class="connections">계정</a>
+</header>
+
+<main id="main">
+    <section class="profile-page">
+
+        <!-- ── 로딩 상태 ── -->
+        <div id="profile-loading" class="profile-state">
+            <p class="hero-eyebrow">&gt; ~/thecfg/profiles</p>
+            <p class="profile-state-text">불러오는 중...</p>
+        </div>
+
+        <!-- ── 대상 없음 / 아이디 미지정 ── -->
+        <div id="profile-empty" class="profile-state" style="display:none;">
+            <p class="hero-eyebrow">&gt; ~/thecfg/profiles</p>
+            <p id="profile-empty-text" class="profile-state-text">프로필을 찾을 수 없습니다.</p>
+        </div>
+
+        <!-- ── 프로필 본문 ── -->
+        <div id="profile-content" style="display:none;">
+
+            <div class="profile-header">
+                <div class="profile-avatar" aria-hidden="true"><span id="profile-avatar-initial">?</span></div>
+                <div class="profile-header-info">
+                    <div class="profile-name-row">
+                        <h1 id="profile-nickname" class="profile-nickname">-</h1>
+                        <span id="profile-handle" class="profile-handle">@-</span>
+                    </div>
+                    <p id="profile-joined" class="profile-joined">-</p>
+                </div>
+                <button id="btn-add-friend" class="btn btn-secondary" disabled title="추후 지원 예정">친구 추가</button>
+            </div>
+
+            <div class="profile-tabs" role="tablist">
+                <button class="profile-tab is-active" id="tab-beat" role="tab" aria-selected="true">TheBeat</button>
+                <button class="profile-tab" id="tab-hoi4" role="tab" aria-selected="false">HOI4Editor</button>
+            </div>
+
+            <!-- ── TheBeat 탭 ── -->
+            <div id="panel-beat" class="profile-panel" role="tabpanel">
+                <div class="profile-cards">
+                    <div class="profile-card">
+                        <h2 class="profile-card-title">최근 플레이한 난이도</h2>
+                        <div id="beat-recent" class="profile-card-body profile-card-empty">-</div>
+                    </div>
+                    <div class="profile-card">
+                        <h2 class="profile-card-title">플레이한 최고 난이도</h2>
+                        <div id="beat-highest" class="profile-card-body profile-card-empty">-</div>
+                    </div>
+                    <div class="profile-card">
+                        <h2 class="profile-card-title">이 사람이 만든 난이도</h2>
+                        <div id="beat-created" class="profile-card-body profile-card-empty">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── HOI4Editor 탭 ── -->
+            <div id="panel-hoi4" class="profile-panel" role="tabpanel" style="display:none;">
+                <div class="profile-cards">
+                    <div class="profile-card">
+                        <h2 class="profile-card-title">자신의 프로젝트</h2>
+                        <div id="hoi4-own" class="profile-card-body profile-card-empty">-</div>
+                    </div>
+                    <div class="profile-card">
+                        <h2 class="profile-card-title">공동 작업 중인 프로젝트</h2>
+                        <div id="hoi4-collab" class="profile-card-body profile-card-empty">-</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+</main>
+
+<footer class="site-footer">
+    <p>&copy; 2021–<span id="year">2026</span> TheCFG. All Rights Reserved.</p>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/js/home/profile.js"></script>
+<script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+</body>
+</html>
