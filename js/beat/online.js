@@ -532,14 +532,13 @@ const Online = {
         this._setContent(`
         <button id="detail-back-btn" class="mb-3 text-sm text-gray-400 hover:text-white transition">← 난이도 선택으로</button>
         <div class="p-4 bg-gray-800 rounded-lg mb-3">
-            <h2 class="text-xl font-bold text-white truncate">${_esc(c.title)}</h2>
+            <h2 class="text-xl font-bold text-white truncate">${_esc(c.title)}${c.difficulty_label ? ` - ${_esc(c.difficulty_label)}` : ''}</h2>
             <p class="text-gray-400 truncate">${_esc(c.artist || '—')}</p>
             <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-gray-400">
                 ${this._starRatingHtml(c.difficulty_score, 'text-sm')}
                 ${c.bpm             ? `<span>BPM ${c.bpm}</span>` : ''}
                 ${this._formatDuration(c.duration_seconds) ? `<span>${this._formatDuration(c.duration_seconds)}</span>` : ''}
                 <span>${c.lane_count}키</span>
-                ${c.difficulty_label ? `<span>${_esc(c.difficulty_label)}</span>` : ''}
                 <span>${c.note_count}노트</span>
                 <span>▶ ${c.play_count}회</span>
                 ${creatorName ? `<span>제작자: ${creatorName}</span>` : ''}
