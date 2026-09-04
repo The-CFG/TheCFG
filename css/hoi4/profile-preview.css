@@ -87,6 +87,15 @@
     margin-bottom: 8px;
 }
 
+.profile-preview-bio {
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text);
+    margin: 0 0 8px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
 .profile-preview-nohandle {
     font-size: 11px;
     color: var(--text-muted);

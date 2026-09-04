@@ -94,6 +94,30 @@ const CloudAuth = {
         if (error) throw error;
     },
 
+    // ── 소개(bio) ──────────────────────────────────────────
+    // user_profiles.bio — RLS(own_profile 정책)로 본인 행만 직접 update 가능하므로 RPC 불필요.
+    async getBio() {
+        const user = await this.getUser();
+        if (!user) return null;
+        const { data, error } = await _supabase
+            .from('user_profiles')
+            .select('bio')
+            .eq('user_id', user.id)
+            .single();
+        if (error) { console.warn('getBio 오류:', error.message); return null; }
+        return data?.bio || null;
+    },
+
+    async updateBio(bio) {
+        const user = await this.getUser();
+        if (!user) throw new Error('로그인 상태가 아닙니다.');
+        const { error } = await _supabase
+            .from('user_profiles')
+            .update({ bio })
+            .eq('user_id', user.id);
+        if (error) throw error;
+    },
+
     // ── 계정 탈퇴 ──────────────────────────────────────────
     // 주의: Supabase JS 클라이언트는 자기 계정 삭제 API를 제공하지 않으므로,
     // DB에 SECURITY DEFINER로 정의된 RPC 함수 'delete_user'가 있어야 인증 계정까지 완전히 삭제됩니다.
@@ -145,6 +169,13 @@ function _setStatus(el, message, isError = false) {
     el.classList.toggle('is-ok', !isError);
 }
 
+function _updateBioCount() {
+    const bioInput = document.getElementById('bio-input');
+    const bioCount = document.getElementById('bio-count');
+    if (!bioInput || !bioCount) return;
+    bioCount.textContent = `${bioInput.value.length}/200`;
+}
+
 async function _refreshView() {
     const user = await CloudAuth.getUser();
 
@@ -163,6 +194,10 @@ async function _refreshView() {
 
         const handleInput = document.getElementById('handle-input');
         if (handleInput) handleInput.value = await CloudAuth.getHandle() || '';
+
+        const bioInput = document.getElementById('bio-input');
+        if (bioInput) bioInput.value = await CloudAuth.getBio() || '';
+        _updateBioCount();
     } else {
         _show(authSection);
         _hide(profileSection);
@@ -225,6 +260,9 @@ function _setupProfileSection() {
     const handleForm      = document.getElementById('handle-form');
     const handleInput     = document.getElementById('handle-input');
     const handleStatus    = document.getElementById('handle-status');
+    const bioForm         = document.getElementById('bio-form');
+    const bioInput        = document.getElementById('bio-input');
+    const bioStatus       = document.getElementById('bio-status');
     const pwForm          = document.getElementById('password-form');
     const pwStatus        = document.getElementById('password-status');
     const deleteBtn       = document.getElementById('btn-delete-account');
@@ -288,6 +326,20 @@ function _setupProfileSection() {
                 profile_not_found: '프로필 정보를 찾을 수 없습니다.',
             };
             _setStatus(handleStatus, map[err.message] || `오류: ${err.message}`, true);
+        }
+    });
+
+    bioInput?.addEventListener('input', _updateBioCount);
+
+    bioForm?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const bio = bioInput?.value?.trim() || '';
+        if (bio.length > 200) { _setStatus(bioStatus, '소개는 200자 이내로 작성해주세요.', true); return; }
+        try {
+            await CloudAuth.updateBio(bio);
+            _setStatus(bioStatus, '소개가 저장되었습니다.');
+        } catch (err) {
+            _setStatus(bioStatus, `오류: ${err.message}`, true);
         }
     });
 

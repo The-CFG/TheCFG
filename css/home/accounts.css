@@ -84,6 +84,18 @@
 }
 .text-input::placeholder { color: var(--text-dim); }
 
+.text-area {
+    resize: vertical;
+    min-height: 72px;
+    font-family: var(--font);
+    line-height: 1.5;
+}
+
+.bio-count {
+    font-size: .8rem;
+    color: var(--text-dim);
+}
+
 .button-row {
     display: flex;
     align-items: center;

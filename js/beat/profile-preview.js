@@ -62,6 +62,7 @@ const ProfilePreview = {
             <div class="profile-preview-nickname">${this._esc(header.nickname || '(닉네임 없음)')}</div>
             ${header.handle ? `<div class="profile-preview-handle">@${this._esc(header.handle)}</div>` : ''}
             ${joinedStr ? `<div class="profile-preview-joined">${this._esc(joinedStr)}</div>` : ''}
+            ${header.bio && header.bio.trim() ? `<p class="profile-preview-bio">${this._esc(header.bio)}</p>` : ''}
             ${header.handle
                 ? `<a class="profile-preview-detail-btn" href="/profiles?u=${encodeURIComponent(header.handle)}">자세히 보기</a>`
                 : '<p class="profile-preview-nohandle">아직 아이디가 설정되지 않았습니다.</p>'}

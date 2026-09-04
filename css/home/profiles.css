@@ -74,6 +74,15 @@
     color: var(--text-dim);
 }
 
+.profile-bio {
+    margin: 8px 0 0;
+    font-size: .88rem;
+    line-height: 1.5;
+    color: var(--text);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
 /* ── 탭 ── */
 .profile-tabs {
     display: flex;

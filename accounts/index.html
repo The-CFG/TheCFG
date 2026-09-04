@@ -72,6 +72,19 @@
             </div>
 
             <div class="panel">
+                <h2 class="panel-title">소개</h2>
+                <p class="panel-desc">프로필 페이지에 표시되는 짧은 자기소개입니다. 200자 이내로 작성해주세요.</p>
+                <form id="bio-form" class="field-group">
+                    <textarea id="bio-input" class="text-input text-area" placeholder="소개를 입력해주세요" maxlength="200" rows="3"></textarea>
+                    <div class="button-row">
+                        <button type="submit" class="btn btn-primary">저장</button>
+                        <span id="bio-count" class="bio-count">0/200</span>
+                    </div>
+                </form>
+                <p id="bio-status" class="form-status" role="status"></p>
+            </div>
+
+            <div class="panel">
                 <h2 class="panel-title">비밀번호 변경</h2>
                 <form id="password-form" class="field-group">
                     <input type="password" id="new-password" class="text-input" placeholder="새 비밀번호 (6자 이상)" autocomplete="new-password">

@@ -100,6 +100,14 @@ function _renderHeader(header) {
     document.getElementById('profile-joined').textContent = joined
         ? `${joined.getFullYear()}년 ${joined.getMonth() + 1}월 가입`
         : '';
+
+    const bioEl = document.getElementById('profile-bio');
+    if (header.bio && header.bio.trim()) {
+        bioEl.textContent = header.bio;
+        _show(bioEl);
+    } else {
+        _hide(bioEl);
+    }
 }
 
 function _chartLine(chart) {
