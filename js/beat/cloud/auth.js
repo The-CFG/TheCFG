@@ -80,12 +80,16 @@ const CloudAuth = {
         return handle ? `/profiles?u=${encodeURIComponent(handle)}` : null;
     },
 
-    // 닉네임 표시용 HTML — 핸들이 있으면 /profiles 링크로, 없으면 평문 그대로.
+    // 닉네임 표시용 HTML — userId만 있으면 항상 클릭 가능한 profile-link로 감싼다
+    // (클릭 시 ProfilePreview 오버레이가 뜬다). 핸들(아이디)이 있으면 새 탭/미들클릭용
+    // href도 함께 채워 /profiles로 바로 이동할 수 있게 하고, 없으면 href 없이 클릭 위임에만 의존한다.
     // esc: 호출 측이 이미 쓰고 있는 HTML 이스케이프 함수를 넘겨받는다.
     linkedName(userId, label, esc) {
         const text = esc(label);
+        if (!userId) return text;
         const url = this.getProfileUrl(userId);
-        return url ? `<a href="${url}" class="profile-link" data-uid="${userId}">${text}</a>` : text;
+        const hrefAttr = url ? ` href="${url}"` : '';
+        return `<a${hrefAttr} class="profile-link" data-uid="${userId}">${text}</a>`;
     },
 
     // 프로필 오버레이(ProfilePreview)용 헤더 조회 — 닉네임/아이디/가입일

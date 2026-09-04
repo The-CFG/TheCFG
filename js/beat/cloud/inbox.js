@@ -68,9 +68,9 @@ function _inboxInviteCardHtml(inv) {
     const roleLabel = inv.role === 'editor' ? '✏️ 편집자' : '👁 뷰어';
     const songLabel = inv.song_title ? _inboxEsc(inv.song_title) : '(제목 없음)';
     const artistLabel = inv.song_artist ? `<span class="text-gray-400 font-normal"> — ${_inboxEsc(inv.song_artist)}</span>` : '';
-    const ownerLabel = inv.owner_nickname
-        ? CloudAuth.linkedName(inv.owner_id, inv.owner_nickname, _inboxEsc)
-        : (inv.owner_id ? `${_inboxEsc(inv.owner_id.slice(0, 8))}…` : '알 수 없음');
+    const ownerLabel = inv.owner_id
+        ? CloudAuth.linkedName(inv.owner_id, inv.owner_nickname || `${inv.owner_id.slice(0, 8)}…`, _inboxEsc)
+        : '알 수 없음';
     return `
         <div class="bg-gray-700/60 rounded-lg p-3" data-invite-id="${_inboxEsc(inv.id)}">
             <p class="text-sm text-white font-semibold truncate">🤝 ${songLabel}${artistLabel}</p>

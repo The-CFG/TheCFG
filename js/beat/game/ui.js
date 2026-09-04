@@ -608,6 +608,7 @@ const UI = {
             return {
                 user_id: p.user_id,
                 nickname: p.isSelf ? '나' : (p.nickname ? p.nickname : `${String(p.user_id).slice(0, 8)}…`),
+                nameHtml: p.isSelf ? '나' : CloudAuth.linkedName(p.user_id, p.nickname || `${String(p.user_id).slice(0, 8)}…`, _esc),
                 isSelf: !!p.isSelf,
                 finished: !!r,
                 finalScore: r ? r.finalScore : null,
@@ -629,7 +630,7 @@ const UI = {
             <div class="flex items-center justify-between py-2 px-3 rounded-lg text-sm ${e.isSelf ? 'bg-teal-900 border border-teal-600' : 'bg-gray-700'}">
                 <span class="flex items-center gap-2 text-gray-200 truncate min-w-0">
                     ${e.finished ? `<span class="text-xs text-gray-400 flex-shrink-0">${i + 1}위</span>` : ''}
-                    <span class="truncate">${_esc(e.nickname)}</span>
+                    <span class="truncate">${e.nameHtml}</span>
                     ${e.isSelf ? '<span class="text-xs text-teal-400 flex-shrink-0">(나)</span>' : ''}
                 </span>
                 ${e.finished ? `

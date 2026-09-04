@@ -146,7 +146,7 @@ function _makeSongMemberCard({ member_id, role, nickname, isSelf, isOwner, canMa
     card.className = 'collab-member-card';
 
     const displayName = nickname || member_id.slice(0, 8) + '…';
-    const nameHtml    = nickname ? CloudAuth.linkedName(member_id, nickname, _esc) : _esc(displayName);
+    const nameHtml    = CloudAuth.linkedName(member_id, displayName, _esc);
     const selfLabel   = isSelf ? ' <span class="collab-self-badge">(나)</span>' : '';
 
     const roleBadge = isOwner

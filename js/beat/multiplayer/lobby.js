@@ -266,7 +266,7 @@ const MultiplayerLobby = {
 
         body.innerHTML = rooms.map(r => {
             const chart = chartById[r.chart_id];
-            const hostName = nicknameMap[r.host_id] ? _esc(nicknameMap[r.host_id]) : `${_esc(r.host_id.slice(0, 8))}…`;
+            const hostName = CloudAuth.linkedName(r.host_id, nicknameMap[r.host_id] || `${r.host_id.slice(0, 8)}…`, _esc);
             const full = r.player_count >= r.max_players;
             return `
             <button class="mp-room-list-item w-full text-left p-3 bg-gray-800 hover:bg-gray-700 rounded-lg transition ${full ? 'opacity-60' : ''}"
@@ -714,7 +714,7 @@ const MultiplayerLobby = {
         const rows = this._players.map(p => {
             const isSelf = p.user_id === this._userId;
             const isHostRow = p.user_id === room.host_id;
-            const name = p.nickname ? _esc(p.nickname) : `${_esc(p.user_id.slice(0, 8))}…`;
+            const name = CloudAuth.linkedName(p.user_id, p.nickname || `${p.user_id.slice(0, 8)}…`, _esc);
             return `
             <div class="flex items-center justify-between py-2 px-3 rounded-lg text-sm ${isSelf ? 'bg-teal-900 border border-teal-600' : 'bg-gray-800'}">
                 <span class="flex items-center gap-1 text-gray-200 truncate min-w-0">

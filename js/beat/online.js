@@ -409,7 +409,7 @@ const Online = {
         const laneBadge = `<span class="text-xs px-1.5 py-0.5 bg-gray-600 rounded flex-shrink-0">${bm.lane_count}키</span>`;
         const label = bm.difficulty_label ? _esc(bm.difficulty_label) : '기본';
         const creatorName = bm.owner_id
-            ? (nickMap[bm.owner_id] ? _esc(nickMap[bm.owner_id]) : `${_esc(bm.owner_id.slice(0, 8))}…`)
+            ? CloudAuth.linkedName(bm.owner_id, nickMap[bm.owner_id] || `${bm.owner_id.slice(0, 8)}…`, _esc)
             : '';
         const dateLine = _formatDateLine(bm.created_at, bm.updated_at);
         const likeCount = likeInfo[bm.id]?.count || 0;
@@ -466,9 +466,7 @@ const Online = {
         const creatorNickMap = c.owner_id ? await CloudAuth._fetchNicknameMap([c.owner_id]) : {};
         if (seq !== this._loadSeq) return;
         const creatorName = c.owner_id
-            ? (creatorNickMap[c.owner_id]
-                ? CloudAuth.linkedName(c.owner_id, creatorNickMap[c.owner_id], _esc)
-                : `${_esc(c.owner_id.slice(0, 8))}…`)
+            ? CloudAuth.linkedName(c.owner_id, creatorNickMap[c.owner_id] || `${c.owner_id.slice(0, 8)}…`, _esc)
             : '';
 
         // 내 순위 계산
@@ -483,7 +481,7 @@ const Online = {
             ? '<p class="text-gray-500 text-xs text-center py-4">아직 기록이 없습니다.</p>'
             : lb.map((s, i) => {
                 const isMe = !!(currentUser && s.user_id === currentUser.id);
-                const displayName = s.nickname ? CloudAuth.linkedName(s.user_id, s.nickname, _esc) : `${_esc(s.user_id.slice(0, 8))}…`;
+                const displayName = CloudAuth.linkedName(s.user_id, s.nickname || `${s.user_id.slice(0, 8)}…`, _esc);
                 const acc = (+(s.accuracy) || 0).toFixed(1);
                 const rank = UI.rankFromJudgements(s.judge_perfect, s.judge_good, s.judge_bad, s.judge_miss);
                 const rankBadge = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`;
