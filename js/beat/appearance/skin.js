@@ -92,6 +92,32 @@ const BeatSkin = {
         }
     },
 
+    // ── 버그 수정: 스킨 간 색상(등 중첩 객체) 값 누수 ──
+    // settings 안의 colors/laneColors/backgroundGradient/themeCustomColors는 객체라서,
+    // 예전엔 이 파일 곳곳에서 { ...Appearance.settings } / Object.assign(...) 같은 얕은
+    // 복사만 했다. 얕은 복사는 최상위 키(예: colors)를 "복사"해도 그 값 자체(중첩 객체)는
+    // 원본과 같은 참조를 그대로 공유한다 — 그 결과 스킨 A를 스킨 B로부터 만들거나(createSkin),
+    // A → B로 전환했다가 다시 A로 돌아오면 두 스킨의 colors가 실제로는 같은 객체였던 경우가
+    // 생겼다. 이 상태에서 색상 피커로 B의 노트 색을 바꾸면(적용을 누르기도 전에, input
+    // 이벤트마다 Appearance.settings.colors[type]을 직접 mutate하므로) A의 저장된 색까지
+    // 같이 바뀌어 버린다 — "스킨을 바꿔도 노트 색이 안 바뀐다/다른 스킨 색까지 같이
+    // 바뀐다"는 버그로 보이는 원인. IndexedDB를 한 번 왕복하면(구조적 클론이라 항상 깊은
+    // 복사) 저절로 참조가 갈라지지만, 그 전까지(같은 세션 내 스킨 생성 직후 등)는 공유된
+    // 채로 남아있어 재현이 들쭉날쭉했다.
+    // 해결: settings가 스킨 경계를 넘나드는 지점(applyActive/captureFromAppearance/
+    // createSkin/_migrateLegacy/_seedBuiltinSkins) 전부에서 이 clone을 거치게 해서 항상
+    // 독립된 객체가 되도록 한다.
+    _cloneSettings(settings) {
+        if (!settings) return settings;
+        try {
+            if (typeof structuredClone === 'function') return structuredClone(settings);
+        } catch (err) {
+            // structuredClone이 없거나(구형 브라우저) 실패하면 JSON 왕복으로 폴백.
+            // settings는 문자열/숫자/불리언/plain object/null만 담으므로 안전하다.
+        }
+        return JSON.parse(JSON.stringify(settings));
+    },
+
     async init() {
         try {
             let state = await BeatLocalStore.get(this.STORE_NAME, this.STATE_KEY);
@@ -126,7 +152,7 @@ const BeatSkin = {
             if (state.builtinsSeeded) return;
             for (const builtin of this.BUILTIN_SKINS) {
                 if (!state.skins[builtin.id]) {
-                    state.skins[builtin.id] = { name: builtin.name, settings: { ...builtin.settings } };
+                    state.skins[builtin.id] = { name: builtin.name, settings: this._cloneSettings(builtin.settings) };
                 }
             }
             state.builtinsSeeded = true;
@@ -196,12 +222,12 @@ const BeatSkin = {
             this._logError(err, 'BeatSkin._migrateLegacy(parse)');
         }
 
-        const settings = {
+        const settings = this._cloneSettings({
             ...Appearance.settings,
             ...(legacySettings || {}),
             ...this._readLegacyPlayVisualKeys(),
             ...this._readLegacyThemeKeys(),
-        };
+        });
 
         const state = {
             activeId: this.DEFAULT_ID,
@@ -268,7 +294,7 @@ const BeatSkin = {
     applyActive() {
         const skin = this._activeSkin();
         if (!skin) return;
-        Object.assign(Appearance.settings, skin.settings);
+        Object.assign(Appearance.settings, this._cloneSettings(skin.settings));
         if (typeof Appearance.applySettings === 'function') {
             Appearance.applySettings();
         }
@@ -279,7 +305,7 @@ const BeatSkin = {
     async captureFromAppearance() {
         const skin = this._activeSkin();
         if (!skin) return;
-        skin.settings = { ...Appearance.settings };
+        skin.settings = this._cloneSettings(Appearance.settings);
         await BeatLocalStore.set(this.STORE_NAME, this.STATE_KEY, this.state);
     },
 
@@ -324,7 +350,7 @@ const BeatSkin = {
         if (!trimmed) return { ok: false, error: '스킨 이름을 입력해 주세요.' };
 
         const id = this._genId();
-        this.state.skins[id] = { name: trimmed, settings: { ...Appearance.settings } };
+        this.state.skins[id] = { name: trimmed, settings: this._cloneSettings(Appearance.settings) };
         await this.switchTo(id);
         return { ok: true, id, name: trimmed };
     },
