@@ -292,7 +292,9 @@ function _makeSharedProjectItem(p) {
 
     const roleLabel = p.role === 'editor' ? '✏️ 편집자' : '👁 뷰어';
     const roleColor = p.role === 'editor' ? '#4a9eff' : '#888';
-    const ownerName = p.owner_nickname || p.owner_id.slice(0, 8);
+    const ownerName = p.owner_nickname
+        ? CloudAuth.linkedName(p.owner_id, p.owner_nickname, escapeHtml)
+        : escapeHtml(p.owner_id.slice(0, 8));
     const dateStr   = p.updated_at ? new Date(p.updated_at).toLocaleDateString('ko-KR') : '';
 
     item.title = `"${p.project_name}" 열기`;
@@ -300,7 +302,7 @@ function _makeSharedProjectItem(p) {
         <div class="recent-item-icon">📁</div>
         <div class="recent-item-body">
             <div class="recent-name">${escapeHtml(p.project_name)}</div>
-            <div class="recent-meta" style="color:${roleColor};">${roleLabel} · <span style="color:var(--text-muted);">by ${escapeHtml(ownerName)}</span></div>
+            <div class="recent-meta" style="color:${roleColor};">${roleLabel} · <span style="color:var(--text-muted);">by <span class="profile-link-wrap" onclick="event.stopPropagation()">${ownerName}</span></span></div>
         </div>
     `;
     item.addEventListener('click', () => {
@@ -362,7 +364,9 @@ function openInvitesModal(invites) {
     `;
 
     const renderItems = (list) => list.map(inv => {
-        const ownerName = inv.owner_nickname || inv.owner_id.slice(0, 8);
+        const ownerName = inv.owner_nickname
+            ? CloudAuth.linkedName(inv.owner_id, inv.owner_nickname, escapeHtml)
+            : escapeHtml(inv.owner_id.slice(0, 8));
         const roleLabel = inv.role === 'editor' ? '✏️ 편집자' : '👁 뷰어';
         const roleColor = inv.role === 'editor' ? '#4a9eff' : '#888';
         const dateStr   = new Date(inv.created_at).toLocaleDateString('ko-KR');
@@ -376,8 +380,8 @@ function openInvitesModal(invites) {
                     <div style="font-weight:600;font-size:13px;color:var(--text);">
                         📁 ${escapeHtml(inv.project_name)}
                     </div>
-                    <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">
-                        ${escapeHtml(ownerName)} · <span style="color:${roleColor}">${roleLabel}</span> · ${dateStr}
+                    <div style="font-size:11px;color:var(--text-muted);margin-top:2px;" onclick="event.stopPropagation()">
+                        ${ownerName} · <span style="color:${roleColor}">${roleLabel}</span> · ${dateStr}
                     </div>
                 </div>
                 <button class="inv-accept" data-id="${inv.id}" style="

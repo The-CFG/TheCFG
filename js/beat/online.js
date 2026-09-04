@@ -466,7 +466,9 @@ const Online = {
         const creatorNickMap = c.owner_id ? await CloudAuth._fetchNicknameMap([c.owner_id]) : {};
         if (seq !== this._loadSeq) return;
         const creatorName = c.owner_id
-            ? (creatorNickMap[c.owner_id] ? _esc(creatorNickMap[c.owner_id]) : `${_esc(c.owner_id.slice(0, 8))}…`)
+            ? (creatorNickMap[c.owner_id]
+                ? CloudAuth.linkedName(c.owner_id, creatorNickMap[c.owner_id], _esc)
+                : `${_esc(c.owner_id.slice(0, 8))}…`)
             : '';
 
         // 내 순위 계산
@@ -481,7 +483,7 @@ const Online = {
             ? '<p class="text-gray-500 text-xs text-center py-4">아직 기록이 없습니다.</p>'
             : lb.map((s, i) => {
                 const isMe = !!(currentUser && s.user_id === currentUser.id);
-                const displayName = s.nickname ? _esc(s.nickname) : `${_esc(s.user_id.slice(0, 8))}…`;
+                const displayName = s.nickname ? CloudAuth.linkedName(s.user_id, s.nickname, _esc) : `${_esc(s.user_id.slice(0, 8))}…`;
                 const acc = (+(s.accuracy) || 0).toFixed(1);
                 const rank = UI.rankFromJudgements(s.judge_perfect, s.judge_good, s.judge_bad, s.judge_miss);
                 const rankBadge = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`;

@@ -93,13 +93,14 @@ async function _renderMemberList(modal, ownerUserId, projectName, myRole, curren
     const isOwnerUser = myRole === 'owner';
     listEl.innerHTML = '';
 
-    // 소유자 행
+    // 소유자 행 — _fetchNicknameMap을 항상 호출해 핸들 캐시(CloudAuth.getProfileUrl용)도 함께 채운다.
+    const ownerNickMap = await CloudAuth._fetchNicknameMap([ownerUserId]);
     const ownerCard = _makeMemberCard({
         member_id: ownerUserId,
         role: 'owner',
         nickname: isOwnerUser
-            ? await CloudAuth.getNickname()
-            : await CloudAuth.getNicknameByUserId(ownerUserId),
+            ? ((await CloudAuth.getNickname()) || ownerNickMap[ownerUserId] || null)
+            : (ownerNickMap[ownerUserId] || null),
         isSelf: isOwnerUser,
         isOwner: true,
         canManage: false,
@@ -138,6 +139,7 @@ function _makeMemberCard({ member_id, role, nickname, isSelf, isOwner, canManage
     card.className = 'collab-member-card';
 
     const displayName = nickname || member_id.slice(0, 8) + '…';
+    const nameHtml    = nickname ? CloudAuth.linkedName(member_id, nickname, escapeHtml) : escapeHtml(displayName);
     const selfLabel   = isSelf ? ' <span class="collab-self-badge">(나)</span>' : '';
 
     const roleBadge = isOwner
@@ -148,7 +150,7 @@ function _makeMemberCard({ member_id, role, nickname, isSelf, isOwner, canManage
 
     card.innerHTML = `
         <div class="collab-member-info">
-            <span class="collab-member-name">${escapeHtml(displayName)}${selfLabel}</span>
+            <span class="collab-member-name">${nameHtml}${selfLabel}</span>
             ${roleBadge}
         </div>
         <div class="collab-member-actions"></div>

@@ -98,9 +98,11 @@ async function _renderSongMemberList(modal, songId, ownerId, myRole, currentUser
     listEl.innerHTML = '';
 
     // 소유자 행 (beat_song_members엔 소유자 본인 행이 없으므로 따로 만들어 붙인다)
+    // _fetchNicknameMap을 항상 호출해 핸들 캐시(CloudAuth.getProfileUrl용)도 함께 채운다.
+    const ownerNickMap = await CloudAuth._fetchNicknameMap([ownerId]);
     const ownerNickname = isOwnerUser
-        ? (currentUser?.user_metadata?.display_name || null)
-        : (await CloudAuth._fetchNicknameMap([ownerId]))[ownerId] || null;
+        ? (currentUser?.user_metadata?.display_name || ownerNickMap[ownerId] || null)
+        : (ownerNickMap[ownerId] || null);
 
     const ownerCard = _makeSongMemberCard({
         member_id: ownerId,
@@ -144,6 +146,7 @@ function _makeSongMemberCard({ member_id, role, nickname, isSelf, isOwner, canMa
     card.className = 'collab-member-card';
 
     const displayName = nickname || member_id.slice(0, 8) + '…';
+    const nameHtml    = nickname ? CloudAuth.linkedName(member_id, nickname, _esc) : _esc(displayName);
     const selfLabel   = isSelf ? ' <span class="collab-self-badge">(나)</span>' : '';
 
     const roleBadge = isOwner
@@ -154,7 +157,7 @@ function _makeSongMemberCard({ member_id, role, nickname, isSelf, isOwner, canMa
 
     card.innerHTML = `
         <div class="collab-member-info">
-            <span class="collab-member-name">${_esc(displayName)}${selfLabel}</span>
+            <span class="collab-member-name">${nameHtml}${selfLabel}</span>
             ${roleBadge}
         </div>
         <div class="collab-member-actions"></div>

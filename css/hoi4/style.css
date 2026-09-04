@@ -1281,3 +1281,11 @@ hr { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
     color: #4a9eff;
     margin-left: 6px;
 }
+/* ── 프로필 링크 (닉네임 → /profiles?u= 링크) ───────────── */
+.profile-link {
+    color: inherit;
+    text-decoration: none;
+}
+.profile-link:hover {
+    text-decoration: underline;
+}

@@ -7,6 +7,10 @@ const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let isSignUpMode = false;
 
+// user_id → handle(아이디) 캐시. _fetchNicknameMap 호출 시 함께 채워지며,
+// /profiles?u=핸들 링크를 만드는 CloudAuth.getProfileUrl()이 이 캐시를 읽는다.
+const _handleCache = {};
+
 const CloudAuth = {
     // ── 기본 인증 ──────────────────────────────────────────
     async getUser() {
@@ -61,8 +65,27 @@ const CloudAuth = {
             return {};
         }
         const map = {};
-        for (const row of (data || [])) map[row.user_id] = row.nickname || null;
+        for (const row of (data || [])) {
+            map[row.user_id] = row.nickname || null;
+            _handleCache[row.user_id] = row.handle || null;
+        }
         return map;
+    },
+
+    // ── 프로필 링크 헬퍼 ─────────────────────────────────────
+    // _fetchNicknameMap로 이미 조회된 유저에 한해 /profiles?u=핸들 링크를 반환.
+    // 아직 조회 전이거나 아이디 미설정이면 null (호출 쪽에서 평문으로 표시).
+    getProfileUrl(userId) {
+        const handle = _handleCache[userId];
+        return handle ? `/profiles?u=${encodeURIComponent(handle)}` : null;
+    },
+
+    // 닉네임 표시용 HTML — 핸들이 있으면 /profiles 링크로, 없으면 평문 그대로.
+    // esc: 호출 측이 이미 쓰고 있는 HTML 이스케이프 함수를 넘겨받는다.
+    linkedName(userId, label, esc) {
+        const text = esc(label);
+        const url = this.getProfileUrl(userId);
+        return url ? `<a href="${url}" class="profile-link">${text}</a>` : text;
     },
 
     // ── 볼륨 설정 (계정별 저장) ──────────────────────────────
