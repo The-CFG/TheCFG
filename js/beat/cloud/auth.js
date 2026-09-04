@@ -85,7 +85,14 @@ const CloudAuth = {
     linkedName(userId, label, esc) {
         const text = esc(label);
         const url = this.getProfileUrl(userId);
-        return url ? `<a href="${url}" class="profile-link">${text}</a>` : text;
+        return url ? `<a href="${url}" class="profile-link" data-uid="${userId}">${text}</a>` : text;
+    },
+
+    // 프로필 오버레이(ProfilePreview)용 헤더 조회 — 닉네임/아이디/가입일
+    async getProfileHeader(userId) {
+        const { data, error } = await _supabase.rpc('get_profile_header', { p_user_id: userId });
+        if (error) { console.warn('getProfileHeader RPC 오류:', error.message); return null; }
+        return data?.[0] || null;
     },
 
     // ── 볼륨 설정 (계정별 저장) ──────────────────────────────
@@ -276,13 +283,14 @@ function _onAccountPopoverOutsideClick(e) {
     _closeAccountPopover();
 }
 
-function _openAccountPopover(user) {
+async function _openAccountPopover(user) {
     _closeAccountPopover();
 
     const wrap = document.getElementById('account-icon-wrap');
     if (!wrap) return;
 
     const nickname = user.user_metadata?.display_name || '(닉네임 미설정)';
+    await CloudAuth._fetchNicknameMap([user.id]); // 핸들 캐시 warm-up (프로필 링크용)
 
     const pop = document.createElement('div');
     pop.id = 'account-popover';
@@ -290,7 +298,7 @@ function _openAccountPopover(user) {
 
     const nickEl = document.createElement('p');
     nickEl.className = 'text-sm font-bold text-white';
-    nickEl.textContent = `현재 계정: ${nickname}`;
+    nickEl.innerHTML = `현재 계정: ${CloudAuth.linkedName(user.id, nickname, _esc)}`;
 
     const emailEl = document.createElement('p');
     emailEl.className = 'text-xs text-gray-400 mt-0.5';
@@ -420,7 +428,7 @@ function setupAuthUI() {
                 return;
             }
             const user = await CloudAuth.getUser();
-            if (user) _openAccountPopover(user);
+            if (user) await _openAccountPopover(user);
             else _openLoggedOutPopover();
         });
     });

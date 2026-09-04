@@ -1,0 +1,107 @@
+/* ════════════════════════════════════════════════════
+   profile-preview.css — 닉네임 클릭 시 뜨는 간단 프로필 오버레이
+   collab.css의 오버레이 패턴을 따르되 독립된 클래스를 사용 (동시에 열려도 안전)
+   ════════════════════════════════════════════════════ */
+
+.profile-preview-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.72);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+.profile-preview-overlay.hidden { display: none; }
+
+.profile-preview-dialog {
+    position: relative;
+    background: var(--bg-panel, #3d4548);
+    border: 1px solid var(--border, #555);
+    border-radius: 12px;
+    width: min(300px, 100%);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+    padding: 24px 20px 20px;
+}
+
+.profile-preview-close {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 16px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    line-height: 1;
+}
+.profile-preview-close:hover { color: var(--text); background: var(--bg-input, #2c3235); }
+
+.profile-preview-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 4px;
+    min-height: 100px;
+    justify-content: center;
+}
+
+.profile-preview-loading,
+.profile-preview-error {
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+.profile-preview-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--accent, #3b82f6);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.profile-preview-nickname {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.profile-preview-handle {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.profile-preview-joined {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+}
+
+.profile-preview-nohandle {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 8px;
+}
+
+.profile-preview-detail-btn {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 7px 18px;
+    background: var(--accent, #3b82f6);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: 6px;
+}
+.profile-preview-detail-btn:hover { background: var(--accent-h, #60a5fa); }

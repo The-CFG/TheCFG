@@ -161,7 +161,14 @@ const CloudAuth = {
     linkedName(userId, label, esc) {
         const text = esc(label);
         const url = this.getProfileUrl(userId);
-        return url ? `<a href="${url}" class="profile-link">${text}</a>` : text;
+        return url ? `<a href="${url}" class="profile-link" data-uid="${userId}">${text}</a>` : text;
+    },
+
+    // 프로필 오버레이(ProfilePreview)용 헤더 조회 — 닉네임/아이디/가입일
+    async getProfileHeader(userId) {
+        const { data, error } = await _supabase.rpc('get_profile_header', { p_user_id: userId });
+        if (error) { console.warn('getProfileHeader RPC 오류:', error.message); return null; }
+        return data?.[0] || null;
     },
 
     // 닉네임 저장 — auth.users.user_metadata.display_name에 저장
@@ -1014,18 +1021,19 @@ function _onAccountPopoverOutsideClick(e) {
     _closeAccountPopover();
 }
 
-function _openAccountPopover(user) {
+async function _openAccountPopover(user) {
     _closeAccountPopover();
 
     const wrap = document.getElementById('account-icon-wrap');
     if (!wrap) return;
 
     const nickname = user.user_metadata?.display_name || '(닉네임 미설정)';
+    await CloudAuth._fetchNicknameMap([user.id]); // 핸들 캐시 warm-up (프로필 링크용)
     const pop = document.createElement('div');
     pop.id = 'account-popover';
     pop.className = 'account-popover';
     pop.innerHTML = `
-        <p class="account-popover-nickname">현재 계정: ${escapeHtml(nickname)}</p>
+        <p class="account-popover-nickname">현재 계정: ${CloudAuth.linkedName(user.id, nickname, escapeHtml)}</p>
         <p class="account-popover-email">${escapeHtml(user.email || '')}</p>
         <hr class="account-popover-divider">
         <a href="/accounts" class="account-popover-link">계정 설정</a>
@@ -1085,7 +1093,7 @@ function setupAuthUI() {
         if (user) {
             document.getElementById('account-popover')
                 ? _closeAccountPopover()
-                : _openAccountPopover(user);
+                : await _openAccountPopover(user);
         } else {
             isSignUpMode = false;
             if (title)      title.textContent     = '서버 로그인';
