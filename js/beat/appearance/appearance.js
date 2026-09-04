@@ -640,6 +640,12 @@ const Appearance = {
             this.updateScrollDirectionUI();
             this.updateJudgementPositionUI();
             this.updateNoteSizeAnimationUI();
+            // 버그 수정: 노트 타입별/레인별 색상 미리보기(#preview-tap-note 등)가 지금까지
+            // 색상 피커를 "직접 드래그할 때"만(각 input 리스너 안에서) 갱신되고 있었다 —
+            // 스킨 전환/최초 로드/계정 값 수신처럼 applySettings()가 도는 다른 모든 경로에서는
+            // 갱신되지 않아, 미리보기가 이전 스킨의 색을 그대로 보여주는 버그가 있었다.
+            // 여기서 함께 호출해 applySettings()가 도는 모든 시점에 항상 최신 상태를 반영한다.
+            this.updatePreview();
         } catch (err) {
             this._logError(err, 'Appearance.applySettings');
         }

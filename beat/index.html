@@ -1049,6 +1049,17 @@
                                             <div class="note-preview" data-lane="R3" style="background-color: #a855f7;"></div>
                                             <div class="note-preview" data-lane="R4" style="background-color: #ec4899;"></div>
                                         </div>
+                                        <!-- 판정/콤보/카운트다운 텍스트 미리보기 — 실제 게임 중에만 보이는 요소들이라
+                                             여기서 항상 떠 있는 샘플 텍스트로 대신 보여준다. 색상/폰트는
+                                             --judgement-color 등 전역 CSS 변수를 그대로 참조하므로 피커를
+                                             드래그하는 즉시(다른 JS 없이) 같이 바뀐다 — 단, 실제 게임 중 크기
+                                             슬라이더(예: 카운트다운 8rem)를 그대로 쓰면 이 작은 미리보기 박스
+                                             안에서 넘쳐버리므로 글자 크기만은 고정된 작은 값을 쓴다. -->
+                                        <div id="preview-judgement-combo-countdown" class="flex justify-center items-center flex-wrap gap-x-6 gap-y-2 mt-3 pt-3 border-t border-gray-700">
+                                            <span id="preview-judgement-text" class="font-bold" style="color: var(--judgement-color, white); font-family: var(--judgement-font-family, inherit); font-size: 1.5rem; text-shadow: 0 0 8px rgba(0,0,0,0.5);">PERFECT!</span>
+                                            <span id="preview-combo-text" class="font-bold" style="color: var(--combo-color, #f6e05e); font-family: var(--combo-font-family, inherit); font-size: 1.25rem; text-shadow: 0 0 6px rgba(0,0,0,0.5);">COMBO 12</span>
+                                            <span id="preview-countdown-text" class="font-bold" style="color: var(--countdown-color, white); font-family: var(--countdown-font-family, inherit); font-size: 1.75rem; text-shadow: 0 0 8px rgba(0,0,0,0.5);">3</span>
+                                        </div>
                                     </div>
                                 </div>
                                 
