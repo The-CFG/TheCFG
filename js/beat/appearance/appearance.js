@@ -52,6 +52,11 @@ const Appearance = {
         judgementFontId: null,
         comboFontId: null,
         countdownFontId: null,
+        // 전체 UI 폰트(사이트 전역 --tb-font-family). 버그 수정: 예전엔 BeatFonts가 이 값을
+        // 스킨과 무관한 별도 전역 저장소(IndexedDB 'misc' 스토어)에 두고 있어서 스킨을
+        // 바꿔도 UI 폰트만 그대로 남는 문제가 있었다 — 판정/콤보/카운트다운 폰트와 동일하게
+        // 여기(스킨 소유)로 옮겨서 스킨 전환 시 함께 바뀌게 한다. null이면 기본 서체.
+        uiFontId: null,
         // ── 커스터마이징 계획 2단계: 노트 크기/애니메이션 ──
         // 실제 이미지 스킨 등록소는 BeatSkinImages(js/beat/appearance/skin-images.js)가
         // 별도로 관리한다(폰트와 마찬가지로 "몇 번째 노트가 어떤 이미지를 쓰는지"가 아니라
@@ -511,6 +516,14 @@ const Appearance = {
         root.setProperty('--combo-font-family', fontCss(this.settings.comboFontId));
         root.setProperty('--countdown-font-family', fontCss(this.settings.countdownFontId));
 
+        // 전체 UI 폰트(사이트 전역 --tb-font-family) — 버그 수정: 스킨을 바꿀 때마다 다른
+        // 판정/콤보/카운트다운 폰트처럼 이 값도 함께 바뀌어야 한다(이 함수는 applySettings()를
+        // 통해 스킨 전환/최초 로드/계정 값 수신 시점마다 항상 호출된다). 폴백은 기존
+        // BeatFonts._applyUiFontVariable()이 쓰던 것과 동일한 'Inter'.
+        root.setProperty('--tb-font-family', (typeof BeatFonts !== 'undefined' && BeatFonts.getFontFamilyCss)
+            ? BeatFonts.getFontFamilyCss(this.settings.uiFontId, "'Inter', sans-serif")
+            : "'Inter', sans-serif");
+
         // 애니메이션(pop/fade/slideUp/bounce) — 판정/콤보는 ui.js가 판정마다 className을
         // 통째로 새로 만들면서(reflow 트릭) 그때그때 Appearance.settings를 직접 읽어 반영하므로
         // 여기서 미리 클래스를 걸어둘 필요가 없다. 카운트다운은 game.js가 className을 갈아
@@ -817,6 +830,7 @@ const Appearance = {
                 judgementFontId: null,
                 comboFontId: null,
                 countdownFontId: null,
+                uiFontId: null,
                 noteSize: 1,
                 noteAnimation: 'none',
                 gameplayImageOpacity: 100,

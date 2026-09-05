@@ -209,6 +209,25 @@ const BeatSkin = {
         return out;
     },
 
+    // 버그 수정: "전체 UI 폰트"도 스킨 소유로 이관. 예전에는 BeatFonts가 이 값을 스킨과
+    // 무관한 별도 전역 저장소(IndexedDB 'misc' 스토어, 키 'activeUiFontId')에 두고
+    // 있어서 스킨을 바꿔도 전체 UI 폰트만 그대로 남는 버그가 있었다. 여기서 그 레거시
+    // 값을 1회 읽어 uiFontId로 흡수하고, 다시 읽히지 않도록 misc 키를 지운다
+    // (fonts.js는 이제 이 저장소를 전혀 참조하지 않는다).
+    async _readLegacyUiFontKey() {
+        const out = {};
+        try {
+            const id = await BeatLocalStore.get('misc', 'activeUiFontId');
+            if (id) {
+                out.uiFontId = id;
+                await BeatLocalStore.delete('misc', 'activeUiFontId');
+            }
+        } catch (err) {
+            this._logError(err, 'BeatSkin._readLegacyUiFontKey');
+        }
+        return out;
+    },
+
     // 레거시 localStorage(theBeat_appearance)를 1회 읽어 "기본" 스킨 하나로 변환한다.
     // Appearance.init()이 이 함수보다 먼저 실행되어 이미 legacy 값을 Appearance.settings에
     // 로드해 둔 상태이므로(appearance.js loadSettings()), 저장된 적 없는 완전 신규
@@ -227,6 +246,7 @@ const BeatSkin = {
             ...(legacySettings || {}),
             ...this._readLegacyPlayVisualKeys(),
             ...this._readLegacyThemeKeys(),
+            ...(await this._readLegacyUiFontKey()),
         });
 
         const state = {
@@ -248,9 +268,13 @@ const BeatSkin = {
             const skin = state.skins[state.activeId];
             if (!skin || !skin.settings) return;
 
-            const legacy = { ...this._readLegacyPlayVisualKeys(), ...this._readLegacyThemeKeys() };
+            const legacy = {
+                ...this._readLegacyPlayVisualKeys(),
+                ...this._readLegacyThemeKeys(),
+                ...(await this._readLegacyUiFontKey()),
+            };
             let changed = false;
-            for (const key of ['gameplayImageOpacity', 'laneBackgroundOpacity', 'laneHighlightOnInput', 'themeId', 'themeCustomColors']) {
+            for (const key of ['gameplayImageOpacity', 'laneBackgroundOpacity', 'laneHighlightOnInput', 'themeId', 'themeCustomColors', 'uiFontId']) {
                 if (legacy[key] !== undefined && skin.settings[key] === undefined) {
                     skin.settings[key] = legacy[key];
                     changed = true;
