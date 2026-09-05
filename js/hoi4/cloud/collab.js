@@ -39,8 +39,8 @@ async function openCollabModal(ownerUserId, projectName, myRole) {
                 <section class="collab-section">
                     <h3 class="collab-section-title">멤버 초대</h3>
                     <div class="collab-invite-form">
-                        <input type="email" id="collab-invite-email"
-                            class="collab-input" placeholder="초대할 이메일">
+                        <input type="text" id="collab-invite-email"
+                            class="collab-input" placeholder="이메일 또는 아이디">
                         <select id="collab-invite-role" class="collab-select">
                             <option value="editor">✏️ 편집자</option>
                             <option value="viewer">👁 뷰어</option>
@@ -238,7 +238,7 @@ async function _renderSentInvites(modal, ownerUserId, projectName) {
         row.className = 'collab-invite-row';
         const roleLabel = inv.role === 'editor' ? '✏️ 편집자' : '👁 뷰어';
         row.innerHTML = `
-            <span class="collab-invite-email">${escapeHtml(inv.invited_email)}</span>
+            <span class="collab-invite-email">${escapeHtml(inv.invited_label)}</span>
             <span class="collab-role-badge ${inv.role === 'editor' ? 'role-editor' : 'role-viewer'}" style="font-size:11px;">${roleLabel}</span>
             <button class="collab-btn-danger collab-btn-sm inv-cancel" data-id="${inv.id}">취소</button>
         `;
@@ -267,9 +267,9 @@ function _setupInviteForm(modal, ownerUserId, projectName) {
     if (!inviteBtn) return;
 
     inviteBtn.addEventListener('click', async () => {
-        const email = emailInput.value.trim();
+        const identifier = emailInput.value.trim();
         const role  = roleSelect.value;
-        if (!email) { _setInviteResult(resultEl, '이메일을 입력해주세요.', 'error'); return; }
+        if (!identifier) { _setInviteResult(resultEl, '이메일 또는 아이디를 입력해주세요.', 'error'); return; }
 
         inviteBtn.disabled    = true;
         inviteBtn.textContent = '초대 중...';
@@ -277,9 +277,9 @@ function _setupInviteForm(modal, ownerUserId, projectName) {
 
         try {
             const user = await CloudAuth.getUser();
-            const result = await CloudAuth.inviteMember(user.id, projectName, email, role);
+            const result = await CloudAuth.inviteMember(user.id, projectName, identifier, role);
             if (result.ok) {
-                _setInviteResult(resultEl, `✅ ${email}에 초대를 보냈습니다.`, 'success');
+                _setInviteResult(resultEl, `✅ ${identifier}에 초대를 보냈습니다.`, 'success');
                 emailInput.value = '';
                 await _renderSentInvites(modal, ownerUserId, projectName);
             } else {

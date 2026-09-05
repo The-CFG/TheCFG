@@ -44,8 +44,8 @@ async function openSongCollabModal(songId, songTitle, ownerId, myRole) {
                 <section class="collab-section">
                     <h3 class="collab-section-title">멤버 초대</h3>
                     <div class="collab-invite-form">
-                        <input type="email" id="collab-invite-email"
-                            class="collab-input" placeholder="초대할 이메일">
+                        <input type="text" id="collab-invite-email"
+                            class="collab-input" placeholder="이메일 또는 아이디">
                         <select id="collab-invite-role" class="collab-select">
                             <option value="editor">✏️ 편집자</option>
                             <option value="viewer">👁 뷰어</option>
@@ -248,7 +248,7 @@ async function _renderSongSentInvites(modal, songId) {
         row.className = 'collab-invite-row';
         const roleLabel = inv.role === 'editor' ? '✏️ 편집자' : '👁 뷰어';
         row.innerHTML = `
-            <span class="collab-invite-email">${_esc(inv.invited_email)}</span>
+            <span class="collab-invite-email">${_esc(inv.invited_label)}</span>
             <span class="collab-role-badge ${inv.role === 'editor' ? 'role-editor' : 'role-viewer'}" style="font-size:11px;">${roleLabel}</span>
             <button class="collab-btn-danger collab-btn-sm inv-cancel" data-id="${inv.id}">취소</button>
         `;
@@ -277,18 +277,18 @@ function _setupSongInviteForm(modal, songId) {
     if (!inviteBtn) return;
 
     inviteBtn.addEventListener('click', async () => {
-        const email = emailInput.value.trim();
+        const identifier = emailInput.value.trim();
         const role  = roleSelect.value;
-        if (!email) { _setSongInviteResult(resultEl, '이메일을 입력해주세요.', 'error'); return; }
+        if (!identifier) { _setSongInviteResult(resultEl, '이메일 또는 아이디를 입력해주세요.', 'error'); return; }
 
         inviteBtn.disabled    = true;
         inviteBtn.textContent = '초대 중...';
         _setSongInviteResult(resultEl, '', '');
 
         try {
-            const result = await CloudCharts.inviteToSong(songId, email, role);
+            const result = await CloudCharts.inviteToSong(songId, identifier, role);
             if (result.ok) {
-                _setSongInviteResult(resultEl, `✅ ${email}에 초대를 보냈습니다.`, 'success');
+                _setSongInviteResult(resultEl, `✅ ${identifier}에 초대를 보냈습니다.`, 'success');
                 emailInput.value = '';
                 await _renderSongSentInvites(modal, songId);
             } else {

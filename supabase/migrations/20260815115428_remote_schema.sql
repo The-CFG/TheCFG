@@ -2,6 +2,28 @@ create extension if not exists "pg_cron" with schema "pg_catalog";
 
 drop extension if exists "pg_net";
 
+-- 버그 수정: 원래 이 파일 뒤쪽(delete_user 다음)에 정의돼 있었는데, 바로 아래
+-- beat_rooms 테이블의 invite_code 컬럼 기본값이 이 함수를 참조하고 있어서
+-- (컬럼 default는 테이블 생성 시점에 함수가 이미 존재해야 함) supabase db pull/db reset
+-- 시 "function public.generate_invite_code() does not exist"로 실패했다. 정의를
+-- 여기(가장 먼저 쓰이는 지점 이전)로 옮겨서 순서 문제를 해결한다.
+CREATE OR REPLACE FUNCTION public.generate_invite_code()
+ RETURNS text
+ LANGUAGE plpgsql
+AS $function$
+declare
+  chars text := 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; -- 헷갈리는 문자(0,O,1,I) 제외
+  result text := '';
+  i integer;
+begin
+  for i in 1..6 loop
+    result := result || substr(chars, floor(random() * length(chars) + 1)::int, 1);
+  end loop;
+  return result;
+end;
+$function$
+;
+
 
   create table "public"."beat_chart_likes" (
     "chart_id" uuid not null,
@@ -426,23 +448,6 @@ CREATE OR REPLACE FUNCTION public.delete_user()
 AS $function$
 begin
     delete from auth.users where id = auth.uid();
-end;
-$function$
-;
-
-CREATE OR REPLACE FUNCTION public.generate_invite_code()
- RETURNS text
- LANGUAGE plpgsql
-AS $function$
-declare
-  chars text := 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; -- 헷갈리는 문자(0,O,1,I) 제외
-  result text := '';
-  i integer;
-begin
-  for i in 1..6 loop
-    result := result || substr(chars, floor(random() * length(chars) + 1)::int, 1);
-  end loop;
-  return result;
 end;
 $function$
 ;
@@ -1606,6 +1611,3 @@ using (((bucket_id = 'mod-images'::text) AND ((storage.foldername(name))[1] = (a
   for insert
   to authenticated
 with check (((bucket_id = 'mod-images'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text)));
-
-
-

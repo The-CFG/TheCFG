@@ -63,11 +63,12 @@
 
             <div class="panel">
                 <h2 class="panel-title">아이디</h2>
-                <p class="panel-desc">프로필 페이지 주소와 공동 작업 초대에 쓰이는 고유 아이디입니다. 4~10자, 영문/숫자/마침표(.)/언더바(_)만 사용할 수 있습니다.</p>
+                <p class="panel-desc">프로필 페이지 주소와 공동 작업 초대에 쓰이는 고유 아이디입니다. 4~10자, 영문/숫자/마침표(.)/언더바(_)만 사용할 수 있습니다. 한 번 바꾸면 14일 동안은 다시 바꿀 수 없습니다.</p>
                 <form id="handle-form" class="field-group field-group-row">
                     <input type="text" id="handle-input" class="text-input" placeholder="아이디" minlength="4" maxlength="10" autocomplete="off">
                     <button type="submit" class="btn btn-primary">저장</button>
                 </form>
+                <p id="handle-cooldown-notice" class="form-status"></p>
                 <p id="handle-status" class="form-status" role="status"></p>
             </div>
 

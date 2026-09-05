@@ -88,10 +88,25 @@ const CloudAuth = {
         return !!data;
     },
 
-    // 본인 아이디 설정/변경
+    // 본인 아이디 설정/변경 — 최근 변경 후 14일 이내면 서버(set_own_handle RPC)가
+    // 'handle_cooldown:N'(N=남은 일수) 형태 에러를 던진다. 호출부(initSettingsUI)가
+    // 이 접두사를 파싱해 안내 문구로 바꾼다.
     async setHandle(handle) {
         const { error } = await _supabase.rpc('set_own_handle', { p_handle: handle });
         if (error) throw error;
+    },
+
+    // 마지막으로 아이디를 바꾼 시각 — 쿨다운 안내 UI(다음 변경 가능일)에 사용.
+    async getHandleChangedAt() {
+        const user = await this.getUser();
+        if (!user) return null;
+        const { data, error } = await _supabase
+            .from('user_profiles')
+            .select('handle_changed_at')
+            .eq('user_id', user.id)
+            .single();
+        if (error) { console.warn('getHandleChangedAt 오류:', error.message); return null; }
+        return data?.handle_changed_at || null;
     },
 
     // ── 소개(bio) ──────────────────────────────────────────
@@ -176,6 +191,29 @@ function _updateBioCount() {
     bioCount.textContent = `${bioInput.value.length}/200`;
 }
 
+// set_own_handle RPC와 동일한 쿨다운 기간(스키마 마이그레이션 참고). 안내 문구에만 쓰이고
+// 실제 검증은 서버가 하므로, 여기 숫자를 바꿔도 서버 쪽 RPC를 함께 바꾸지 않으면 의미 없다.
+const HANDLE_COOLDOWN_DAYS = 14;
+
+// 아이디 패널에 "다음 변경 가능일" 안내를 채운다. 쿨다운 중이 아니면 입력/버튼을
+// 그대로 두고 문구만 비운다 — 폼 제출 자체는 항상 열어 두고 실제 판정은 서버(RPC)에
+// 맡긴다(여기서 계산한 남은 기간은 사용자 시간대/시계 오차로 서버와 몇 초 어긋날 수 있음).
+async function _refreshHandleCooldownNotice() {
+    const noticeEl = document.getElementById('handle-cooldown-notice');
+    if (!noticeEl) return;
+    try {
+        const changedAt = await CloudAuth.getHandleChangedAt();
+        if (!changedAt) { noticeEl.textContent = ''; return; }
+        const nextAllowed = new Date(changedAt);
+        nextAllowed.setDate(nextAllowed.getDate() + HANDLE_COOLDOWN_DAYS);
+        if (nextAllowed.getTime() <= Date.now()) { noticeEl.textContent = ''; return; }
+        const dateStr = `${nextAllowed.getFullYear()}년 ${nextAllowed.getMonth() + 1}월 ${nextAllowed.getDate()}일`;
+        noticeEl.textContent = `다음 변경 가능일: ${dateStr}부터`;
+    } catch (err) {
+        noticeEl.textContent = '';
+    }
+}
+
 async function _refreshView() {
     const user = await CloudAuth.getUser();
 
@@ -194,6 +232,7 @@ async function _refreshView() {
 
         const handleInput = document.getElementById('handle-input');
         if (handleInput) handleInput.value = await CloudAuth.getHandle() || '';
+        await _refreshHandleCooldownNotice();
 
         const bioInput = document.getElementById('bio-input');
         if (bioInput) bioInput.value = await CloudAuth.getBio() || '';
@@ -319,7 +358,13 @@ function _setupProfileSection() {
         try {
             await CloudAuth.setHandle(value);
             _setStatus(handleStatus, '아이디가 저장되었습니다.');
+            await _refreshHandleCooldownNotice();
         } catch (err) {
+            if (err.message && err.message.startsWith('handle_cooldown:')) {
+                const days = err.message.split(':')[1];
+                _setStatus(handleStatus, `아이디는 마지막 변경 후 ${HANDLE_COOLDOWN_DAYS}일이 지나야 다시 바꿀 수 있습니다. (${days}일 남음)`, true);
+                return;
+            }
             const map = {
                 invalid_handle_format: '4~10자, 영문/숫자/./_ 만 사용할 수 있습니다.',
                 handle_taken: '이미 사용 중인 아이디입니다.',

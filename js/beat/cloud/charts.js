@@ -609,29 +609,54 @@ const CloudCharts = {
         }));
     },
 
-    // 이메일로 멤버 초대 (소유자만 — RLS의 invites_owner 정책이 최종적으로 막아준다)
+    // 이메일 또는 아이디로 멤버 초대 (소유자만 — RLS의 invites_owner 정책이 최종적으로 막아준다)
+    // identifier: '@'가 포함되면 이메일로, 아니면 아이디(handle)로 해석해 get_user_id_by_handle로
+    // user_id를 미리 조회한 뒤 invited_user_id에 저장한다(이메일/아이디 중 하나만 채워짐 —
+    // 마이그레이션의 beat_song_invites_target_check 참고).
     // 반환: { ok: true } | { ok: false, error: string }
-    async inviteToSong(songId, email, role = 'editor') {
+    async inviteToSong(songId, identifier, role = 'editor') {
         const user = await CloudAuth.getUser();
         if (!user) return { ok: false, error: '로그인이 필요합니다.' };
-        if (email === user.email) return { ok: false, error: '본인은 초대할 수 없습니다.' };
 
-        // beat_song_invites엔 (song_id, invited_email) 유니크 제약이 없어서(마이그레이션에 없음)
-        // upsert 대신 "기존 pending 초대가 있으면 지우고 새로 꽂기"로 흉내낸다 — 역할을 바꿔서
-        // 다시 초대하는 경우에도 초대 목록에 중복이 안 쌓이게 하기 위함.
-        await _supabase
+        const trimmed = (identifier || '').trim();
+        if (!trimmed) return { ok: false, error: '이메일 또는 아이디를 입력해주세요.' };
+
+        let invitedEmail = null;
+        let invitedUserId = null;
+
+        if (trimmed.includes('@')) {
+            if (trimmed === user.email) return { ok: false, error: '본인은 초대할 수 없습니다.' };
+            invitedEmail = trimmed;
+        } else {
+            const { data: targetUserId, error: lookupError } = await _supabase
+                .rpc('get_user_id_by_handle', { p_handle: trimmed });
+            if (lookupError) return { ok: false, error: lookupError.message };
+            if (!targetUserId) return { ok: false, error: `"${trimmed}" 아이디를 가진 사용자를 찾을 수 없습니다.` };
+            if (targetUserId === user.id) return { ok: false, error: '본인은 초대할 수 없습니다.' };
+            invitedUserId = targetUserId;
+        }
+
+        // beat_song_invites엔 (song_id, invited_email/invited_user_id) 유니크 제약이 없어서
+        // (마이그레이션에 없음) upsert 대신 "기존 pending 초대가 있으면 지우고 새로 꽂기"로
+        // 흉내낸다 — 역할을 바꿔서 다시 초대하는 경우에도 초대 목록에 중복이 안 쌓이게
+        // 하기 위함. 이메일/아이디 초대 둘 다 동일하게 처리.
+        let dupQuery = _supabase
             .from('beat_song_invites')
             .delete()
             .eq('song_id', songId)
-            .eq('invited_email', email)
             .eq('status', 'pending');
+        dupQuery = invitedEmail
+            ? dupQuery.eq('invited_email', invitedEmail)
+            : dupQuery.eq('invited_user_id', invitedUserId);
+        await dupQuery;
 
         const { error } = await _supabase
             .from('beat_song_invites')
             .insert({
                 song_id: songId,
                 owner_id: user.id,
-                invited_email: email,
+                invited_email: invitedEmail,
+                invited_user_id: invitedUserId,
                 role,
                 status: 'pending',
                 created_at: new Date().toISOString(),
@@ -661,15 +686,22 @@ const CloudCharts = {
     },
 
     // 이 노래에 대해 내가 보낸 초대 목록 (소유자용 — "발송한 초대" 섹션)
-    // 반환: [{ id, invited_email, role, status, created_at }]
+    // 반환: [{ id, invited_email, invited_user_id, role, status, created_at, invited_label }]
+    // invited_label: 이메일 초대면 이메일 그대로, 아이디 초대면 닉네임(없으면 "(알 수 없음)").
     async listSentInvites(songId) {
         const { data, error } = await _supabase
             .from('beat_song_invites')
-            .select('id, invited_email, role, status, created_at')
+            .select('id, invited_email, invited_user_id, role, status, created_at')
             .eq('song_id', songId)
             .order('created_at', { ascending: false });
         if (error) { console.warn('listSentInvites 오류:', error.message); return []; }
-        return data || [];
+        const invites = data || [];
+        const idTargets = invites.filter(i => i.invited_user_id).map(i => i.invited_user_id);
+        const nickMap = idTargets.length ? await CloudAuth._fetchNicknameMap(idTargets) : {};
+        return invites.map(inv => ({
+            ...inv,
+            invited_label: inv.invited_email || nickMap[inv.invited_user_id] || '(알 수 없음)',
+        }));
     },
 
     // 초대 취소 (소유자가 보낸 초대 삭제)
