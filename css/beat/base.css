@@ -208,3 +208,56 @@ img, video {
     --tb-space-3: 0.75rem;
     --tb-space-4: 1rem;
 }
+/* ── 계정 팝오버 (js/beat/cloud/auth.js의 _openAccountPopover가 #account-icon-wrap
+   안에 동적으로 삽입) ──
+   지금까지 beat 쪽 css에 이 클래스들이 하나도 정의돼 있지 않아서, 팝오버 DOM은
+   생기는데 위치/배경/그림자 없이 페이지 흐름에 그냥 '박힌' 것처럼 보이던 문제를 고쳤다.
+   hoi4의 .account-popover(css/hoi4/style.css)를 beat의 --tb-* 테마 토큰으로 옮긴 것. */
+.account-popover {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 220px;
+    background: var(--tb-bg-surface);
+    border: 1px solid var(--tb-border);
+    border-radius: var(--tb-radius-lg);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, .55), 0 0 0 1px rgba(255, 255, 255, .03);
+    padding: var(--tb-space-4);
+    z-index: 60;
+}
+.account-popover-nickname {
+    margin: 0;
+    font-size: .92em;
+    font-weight: 700;
+    color: var(--tb-text-primary);
+}
+.account-popover-email {
+    margin: 3px 0 0;
+    font-size: .76em;
+    color: var(--tb-text-tertiary);
+}
+.account-popover-divider {
+    border: none;
+    border-top: 1px solid var(--tb-border);
+    margin: var(--tb-space-3) 0;
+}
+.account-popover-link,
+.account-popover-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 7px var(--tb-space-2);
+    margin: 0 0 2px;
+    border-radius: var(--tb-radius);
+    background: transparent;
+    border: none;
+    color: var(--tb-text-primary);
+    font-size: .85em;
+    font-family: var(--tb-font-family);
+    text-decoration: none;
+    cursor: pointer;
+    transition: background .1s;
+}
+.account-popover-link:hover,
+.account-popover-btn:hover { background: var(--tb-hover-surface); }
+.account-popover-btn:last-child { margin-bottom: 0; }
