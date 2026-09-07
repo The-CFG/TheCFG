@@ -9,6 +9,19 @@ let isSignUpMode = false;
 // /profiles?u=핸들 링크를 만드는 CloudAuth.getProfileUrl()이 이 캐시를 읽는다.
 const _handleCache = {};
 
+// 계정 팝오버(_openAccountPopover)에서 이메일/닉네임을 HTML에 꽂아 넣을 때 쓰는 이스케이프 유틸.
+// hoi4 쪽은 js/hoi4/core/io-parsers.js에 정의돼 있지만, beat 페이지는 그 파일을 불러오지 않고
+// 다른 어디에도 정의돼 있지 않아 escapeHtml 호출 시 ReferenceError가 나던 것을 여기 직접 정의해 고쳤다.
+function escapeHtml(str) {
+    if (str == null) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 const CloudAuth = {
     // ── 기본 인증 ──────────────────────────────────────────
     async getUser() {
