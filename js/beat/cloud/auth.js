@@ -1059,7 +1059,7 @@ function _blobToBase64(blob) {
 
 // ── 로그인 상태 표시 (계정 아이콘) ────────────────────────────
 function _updateAuthStatus(user) {
-    const btn = document.getElementById('account-icon-btn');
+    const btn = document.getElementById('account-icon-menu');
     if (!btn) return;
     btn.classList.toggle('is-logged-in', !!user);
     btn.title = user ? `${user.email} (클릭하여 계정 메뉴 열기)` : '로그인';
@@ -1074,7 +1074,7 @@ function _closeAccountPopover() {
 
 function _onAccountPopoverOutsideClick(e) {
     const pop = document.getElementById('account-popover');
-    const btn = document.getElementById('account-icon-btn');
+    const btn = document.getElementById('account-icon-menu');
     if (!pop) return;
     if (pop.contains(e.target) || btn?.contains(e.target)) return;
     _closeAccountPopover();
@@ -1129,7 +1129,7 @@ function setupAuthUI() {
     const executeBtn = document.getElementById('btn-auth-execute');
     const switchBtn  = document.getElementById('auth-switch');
     const closeBtn   = document.getElementById('btn-auth-close');
-    const openBtn    = document.getElementById('account-icon-btn');
+    const openBtn    = document.getElementById('account-icon-menu');
     const discordBtn = document.getElementById('btn-auth-discord');
 
     discordBtn?.addEventListener('click', async () => {
