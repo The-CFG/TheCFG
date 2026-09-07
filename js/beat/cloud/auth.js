@@ -1131,6 +1131,13 @@ function setupAuthUI() {
     const closeBtn   = document.getElementById('btn-auth-close');
     const openBtn    = document.getElementById('account-icon-menu');
     const discordBtn = document.getElementById('btn-auth-discord');
+    const authForm   = document.getElementById('auth-form');
+
+    // btn-auth-execute가 <form id="auth-form"> 안의 type="submit" 버튼이라
+    // 폼 자체의 기본 제출(현재 URL로 GET 재요청 → 새로고침)도 막아야 한다.
+    // (버튼 클릭 시의 preventDefault는 아래 executeBtn 리스너에서, Enter 키로
+    //  제출되는 경우는 여기서 막는다.)
+    authForm?.addEventListener('submit', (e) => e.preventDefault());
 
     discordBtn?.addEventListener('click', async () => {
         discordBtn.disabled = true;
@@ -1176,7 +1183,11 @@ function setupAuthUI() {
     });
 
     // 실행 (로그인 / 회원가입)
-    executeBtn?.addEventListener('click', async () => {
+    // btn-auth-execute는 <form id="auth-form"> 안의 type="submit" 버튼이라
+    // preventDefault 없이는 클릭 시 폼이 그대로 제출되어 페이지가 새로고침되고
+    // (액션/메서드 지정이 없어 현재 URL로 GET 재요청) 아래 로직이 끝까지 실행되지 못한다.
+    executeBtn?.addEventListener('click', async (e) => {
+        e.preventDefault();
         const email = document.getElementById('auth-email')?.value?.trim();
         const pw    = document.getElementById('auth-password')?.value;
         if (!email || !pw) { alert('이메일과 비밀번호를 입력해주세요.'); return; }
