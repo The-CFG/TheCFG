@@ -372,8 +372,114 @@ const Appearance = {
                     }
                 });
             }
+
+            this.setupPositionEditor();
         } catch (err) {
             this._logError(err, 'Appearance.setupEventListeners');
+        }
+    },
+
+    // 판정/콤보/카운트다운 텍스트 위치를 드래그로 편집하는 모달.
+    // 기존 가로/세로 위치 슬라이더(judgement/combo/countdown-offset-x/y)를 그대로
+    // "정답 저장소"로 쓴다 — 드래그로 값을 바꾼 뒤 저장을 누르면 그 슬라이더에
+    // value를 넣고 input 이벤트를 발생시켜서, 기존 슬라이더 리스너(라벨 갱신 +
+    // this.settings 갱신 + updateJudgementCssVariables)를 그대로 재사용한다.
+    // 실제 저장(IndexedDB)은 기존과 동일하게 탭 하단의 "적용" 버튼에서 이뤄진다.
+    setupPositionEditor() {
+        try {
+            const modal   = document.getElementById('position-editor-modal');
+            const stage   = document.getElementById('position-editor-stage');
+            const openBtn = document.getElementById('open-position-editor-btn');
+            if (!modal || !stage || !openBtn) return;
+
+            const closeBtn = document.getElementById('position-editor-close-btn');
+            const resetBtn = document.getElementById('position-editor-reset-btn');
+            const saveBtn  = document.getElementById('position-editor-save-btn');
+            const items    = Array.from(stage.querySelectorAll('.position-editor-item'));
+
+            // css/beat/game.css의 .judgement-text/.combo-text/.countdown-text 기본 top%와 동일
+            const BASE_TOP_PCT = { judgement: 50, combo: 60, countdown: 40 };
+            const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+            let draft = null; // { judgement: {x,y}, combo: {x,y}, countdown: {x,y} }
+
+            const layoutItem = (el) => {
+                const prefix = el.dataset.prefix;
+                const rect = stage.getBoundingClientRect();
+                const baseTop  = (BASE_TOP_PCT[prefix] / 100) * rect.height;
+                const baseLeft = 0.5 * rect.width;
+                el.style.left = `${baseLeft + draft[prefix].x}px`;
+                el.style.top  = `${baseTop + draft[prefix].y}px`;
+            };
+            const layoutAll = () => items.forEach(layoutItem);
+
+            const readCurrentOffsets = () => ({
+                judgement: { x: this.settings.judgementOffsetX || 0, y: this.settings.judgementOffsetY || 0 },
+                combo:     { x: this.settings.comboOffsetX     || 0, y: this.settings.comboOffsetY     || 0 },
+                countdown: { x: this.settings.countdownOffsetX || 0, y: this.settings.countdownOffsetY || 0 },
+            });
+
+            const openEditor = () => {
+                draft = readCurrentOffsets();
+                modal.classList.remove('hidden');
+                // 스테이지가 실제로 렌더되어 크기가 확정된 다음 프레임에 배치해야
+                // getBoundingClientRect()가 0을 반환하지 않는다.
+                requestAnimationFrame(layoutAll);
+            };
+            const closeEditor = () => modal.classList.add('hidden');
+
+            openBtn.addEventListener('click', openEditor);
+            closeBtn?.addEventListener('click', closeEditor);
+            modal.addEventListener('click', (e) => { if (e.target === modal) closeEditor(); });
+
+            resetBtn?.addEventListener('click', () => {
+                draft = { judgement: { x: 0, y: 0 }, combo: { x: 0, y: 0 }, countdown: { x: 0, y: 0 } };
+                layoutAll();
+            });
+
+            saveBtn?.addEventListener('click', () => {
+                if (!draft) { closeEditor(); return; }
+                ['judgement', 'combo', 'countdown'].forEach((prefix) => {
+                    const xInput = document.getElementById(`${prefix}-offset-x`);
+                    const yInput = document.getElementById(`${prefix}-offset-y`);
+                    if (xInput) { xInput.value = Math.round(draft[prefix].x); xInput.dispatchEvent(new Event('input')); }
+                    if (yInput) { yInput.value = Math.round(draft[prefix].y); yInput.dispatchEvent(new Event('input')); }
+                });
+                closeEditor();
+            });
+
+            // 드래그 (마우스 + 터치 공용 Pointer Events)
+            let dragPrefix = null;
+            let dragStart  = null; // { x, y, origX, origY }
+            items.forEach((el) => {
+                el.addEventListener('pointerdown', (e) => {
+                    e.preventDefault();
+                    const prefix = el.dataset.prefix;
+                    dragPrefix = prefix;
+                    dragStart = { x: e.clientX, y: e.clientY, origX: draft[prefix].x, origY: draft[prefix].y };
+                    el.setPointerCapture(e.pointerId);
+                    el.classList.add('dragging');
+                });
+                el.addEventListener('pointermove', (e) => {
+                    if (dragPrefix !== el.dataset.prefix || !dragStart) return;
+                    const dx = e.clientX - dragStart.x;
+                    const dy = e.clientY - dragStart.y;
+                    draft[dragPrefix].x = clamp(dragStart.origX + dx, -200, 200);
+                    draft[dragPrefix].y = clamp(dragStart.origY + dy, -200, 200);
+                    layoutItem(el);
+                });
+                const endDrag = () => {
+                    if (dragPrefix === el.dataset.prefix) {
+                        el.classList.remove('dragging');
+                        dragPrefix = null;
+                        dragStart = null;
+                    }
+                };
+                el.addEventListener('pointerup', endDrag);
+                el.addEventListener('pointercancel', endDrag);
+            });
+        } catch (err) {
+            this._logError(err, 'Appearance.setupPositionEditor');
         }
     },
 

@@ -277,3 +277,73 @@ img, video {
     border-top: 1px solid var(--tb-border);
     padding-top: 1.25rem;
 }
+
+/* ── 텍스트 위치 편집 모달 (드래그로 판정/콤보/카운트다운 위치 지정) ── */
+.position-editor-modal {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, .8);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    box-sizing: border-box;
+}
+.position-editor-card {
+    background: var(--tb-bg-surface);
+    border: 1px solid var(--tb-border);
+    border-radius: var(--tb-radius-lg);
+    width: min(360px, 94vw);
+    box-sizing: border-box;
+    padding: var(--tb-space-4);
+}
+.position-editor-close-btn {
+    background: transparent;
+    border: none;
+    color: var(--tb-text-tertiary);
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 4px;
+}
+.position-editor-stage {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 9 / 16;
+    max-height: 55vh;
+    background: #000 radial-gradient(circle at 50% 20%, #1a1a1a, #000 70%);
+    border: 1px solid var(--tb-border);
+    border-radius: var(--tb-radius);
+    overflow: hidden;
+    touch-action: none;
+}
+.position-editor-item {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    font-weight: bold;
+    font-size: 1.1rem;
+    white-space: nowrap;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+    padding: 4px 8px;
+    border-radius: 6px;
+    text-shadow: 0 0 10px rgba(0,0,0,.6);
+    touch-action: none;
+}
+.position-editor-item:active,
+.position-editor-item.dragging {
+    cursor: grabbing;
+    outline: 1px dashed rgba(255,255,255,.5);
+    background: rgba(255,255,255,.08);
+}
+
+/* ── 위치 편집: 기존 슬라이더는 접이식 "직접 입력" 아래로 ── */
+.position-editor-advanced summary {
+    font-size: .8rem;
+    color: var(--tb-text-tertiary);
+    cursor: pointer;
+    user-select: none;
+}
+.position-editor-advanced summary:hover { color: var(--tb-text-primary); }

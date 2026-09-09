@@ -732,6 +732,9 @@
                                             <input type="color" id="color-judgement-line" value="#ffffff" class="w-16 h-10 rounded cursor-pointer bg-gray-700 border-2 border-gray-600">
                                         </div>
                                     </div>
+                                    <div class="mt-4">
+                                        <button id="open-position-editor-btn" type="button" class="w-full py-2 bg-teal-700 hover:bg-teal-600 rounded-lg text-sm font-semibold" data-i18n="position_editor_open_btn">🖐 판정 / 콤보 / 카운트다운 위치 드래그로 편집</button>
+                                    </div>
                                     <div class="mt-4 space-y-4">
                                         <div>
                                             <div class="flex items-center justify-between mb-2">
@@ -750,16 +753,19 @@
                                                 <option value="slideUp">애니메이션: 슬라이드 업</option>
                                                 <option value="bounce">애니메이션: 바운스</option>
                                             </select>
-                                            <div class="flex justify-between items-center text-gray-300 mb-1 mt-2">
-                                                <label for="judgement-offset-x">가로 위치</label>
-                                                <span id="judgement-offset-x-value" class="font-mono">0px</span>
-                                            </div>
-                                            <input id="judgement-offset-x" type="range" min="-200" max="200" step="5" value="0" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
-                                            <div class="flex justify-between items-center text-gray-300 mb-1 mt-2">
-                                                <label for="judgement-offset-y">세로 위치</label>
-                                                <span id="judgement-offset-y-value" class="font-mono">0px</span>
-                                            </div>
-                                            <input id="judgement-offset-y" type="range" min="-200" max="200" step="5" value="0" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                            <details class="position-editor-advanced mt-2">
+                                                <summary data-i18n="position_editor_manual">직접 입력 (숫자로 미세 조정)</summary>
+                                                <div class="flex justify-between items-center text-gray-300 mb-1 mt-2">
+                                                    <label for="judgement-offset-x">가로 위치</label>
+                                                    <span id="judgement-offset-x-value" class="font-mono">0px</span>
+                                                </div>
+                                                <input id="judgement-offset-x" type="range" min="-200" max="200" step="5" value="0" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                                <div class="flex justify-between items-center text-gray-300 mb-1 mt-2">
+                                                    <label for="judgement-offset-y">세로 위치</label>
+                                                    <span id="judgement-offset-y-value" class="font-mono">0px</span>
+                                                </div>
+                                                <input id="judgement-offset-y" type="range" min="-200" max="200" step="5" value="0" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                            </details>
                                         </div>
                                         <div>
                                             <div class="flex items-center justify-between mb-2">
@@ -778,16 +784,19 @@
                                                 <option value="slideUp">애니메이션: 슬라이드 업</option>
                                                 <option value="bounce">애니메이션: 바운스</option>
                                             </select>
-                                            <div class="flex justify-between items-center text-gray-300 mb-1 mt-2">
-                                                <label for="combo-offset-x">가로 위치</label>
-                                                <span id="combo-offset-x-value" class="font-mono">0px</span>
-                                            </div>
-                                            <input id="combo-offset-x" type="range" min="-200" max="200" step="5" value="0" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
-                                            <div class="flex justify-between items-center text-gray-300 mb-1 mt-2">
-                                                <label for="combo-offset-y">세로 위치</label>
-                                                <span id="combo-offset-y-value" class="font-mono">0px</span>
-                                            </div>
-                                            <input id="combo-offset-y" type="range" min="-200" max="200" step="5" value="0" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                            <details class="position-editor-advanced mt-2">
+                                                <summary data-i18n="position_editor_manual">직접 입력 (숫자로 미세 조정)</summary>
+                                                <div class="flex justify-between items-center text-gray-300 mb-1 mt-2">
+                                                    <label for="combo-offset-x">가로 위치</label>
+                                                    <span id="combo-offset-x-value" class="font-mono">0px</span>
+                                                </div>
+                                                <input id="combo-offset-x" type="range" min="-200" max="200" step="5" value="0" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                                <div class="flex justify-between items-center text-gray-300 mb-1 mt-2">
+                                                    <label for="combo-offset-y">세로 위치</label>
+                                                    <span id="combo-offset-y-value" class="font-mono">0px</span>
+                                                </div>
+                                                <input id="combo-offset-y" type="range" min="-200" max="200" step="5" value="0" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                            </details>
                                         </div>
                                         <div>
                                             <div class="flex items-center justify-between mb-2">
@@ -806,16 +815,19 @@
                                                 <option value="slideUp">애니메이션: 슬라이드 업</option>
                                                 <option value="bounce">애니메이션: 바운스</option>
                                             </select>
-                                            <div class="flex justify-between items-center text-gray-300 mb-1 mt-2">
-                                                <label for="countdown-offset-x">가로 위치</label>
-                                                <span id="countdown-offset-x-value" class="font-mono">0px</span>
-                                            </div>
-                                            <input id="countdown-offset-x" type="range" min="-200" max="200" step="5" value="0" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
-                                            <div class="flex justify-between items-center text-gray-300 mb-1 mt-2">
-                                                <label for="countdown-offset-y">세로 위치</label>
-                                                <span id="countdown-offset-y-value" class="font-mono">0px</span>
-                                            </div>
-                                            <input id="countdown-offset-y" type="range" min="-200" max="200" step="5" value="0" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                            <details class="position-editor-advanced mt-2">
+                                                <summary data-i18n="position_editor_manual">직접 입력 (숫자로 미세 조정)</summary>
+                                                <div class="flex justify-between items-center text-gray-300 mb-1 mt-2">
+                                                    <label for="countdown-offset-x">가로 위치</label>
+                                                    <span id="countdown-offset-x-value" class="font-mono">0px</span>
+                                                </div>
+                                                <input id="countdown-offset-x" type="range" min="-200" max="200" step="5" value="0" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                                <div class="flex justify-between items-center text-gray-300 mb-1 mt-2">
+                                                    <label for="countdown-offset-y">세로 위치</label>
+                                                    <span id="countdown-offset-y-value" class="font-mono">0px</span>
+                                                </div>
+                                                <input id="countdown-offset-y" type="range" min="-200" max="200" step="5" value="0" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                            </details>
                                         </div>
                                     </div>
                                 </div>
@@ -2031,6 +2043,31 @@
                         <p id="auth-switch" style="font-size:12px;color:#aaa;cursor:pointer;text-align:center;margin:0;">계정이 없으신가요? 회원가입</p>
                         <button id="btn-auth-close" type="button" class="py-2 bg-gray-600 hover:bg-gray-500 rounded text-white">닫기</button>
                     </form>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- 텍스트 위치 편집 모달 (판정/콤보/카운트다운 텍스트를 드래그로 배치) ──
+             기존 가로/세로 위치 슬라이더 대신, 실제 게임 화면 비율의 미니 스테이지 위에서
+             세 요소를 자유롭게 드래그해 배치하고 "저장"을 누르면 그 값이 기존 오프셋
+             슬라이더(judgement/combo/countdown-offset-x/y)에 그대로 반영된다.
+             (js/beat/appearance/appearance.js의 setupPositionEditor 참고) -->
+        <div id="position-editor-modal" class="hidden position-editor-modal">
+            <div class="position-editor-card">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-lg font-semibold text-white" data-i18n="position_editor_title">텍스트 위치 편집</h3>
+                    <button id="position-editor-close-btn" type="button" aria-label="닫기" class="position-editor-close-btn">✕</button>
+                </div>
+                <p class="text-xs text-gray-400 mb-3" data-i18n="position_editor_desc">드래그해서 원하는 위치에 놓아보세요. 저장을 누르면 그 위치가 계속 적용됩니다. (설정 탭 하단의 "적용" 버튼을 눌러야 최종 저장됩니다.)</p>
+                <div id="position-editor-stage" class="position-editor-stage">
+                    <div class="position-editor-item" data-prefix="judgement" style="color:var(--judgement-color,#fff);font-family:var(--judgement-font-family,inherit);">PERFECT</div>
+                    <div class="position-editor-item" data-prefix="combo" style="color:var(--combo-color,#f6e05e);font-family:var(--combo-font-family,inherit);">128 COMBO</div>
+                    <div class="position-editor-item" data-prefix="countdown" style="color:var(--countdown-color,#fff);font-family:var(--countdown-font-family,inherit);">3</div>
+                </div>
+                <div class="flex gap-2 mt-3">
+                    <button id="position-editor-reset-btn" type="button" class="flex-1 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm transition" data-i18n="position_editor_reset">초기화</button>
+                    <button id="position-editor-save-btn" type="button" class="flex-1 py-2 bg-teal-600 hover:bg-teal-500 rounded-lg text-sm font-semibold transition" data-i18n="position_editor_save">저장</button>
                 </div>
             </div>
         </div>
