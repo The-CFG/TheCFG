@@ -261,3 +261,19 @@ img, video {
 .account-popover-link:hover,
 .account-popover-btn:hover { background: var(--tb-hover-surface); }
 .account-popover-btn:last-child { margin-bottom: 0; }
+
+/* ── 환경설정 상위 그룹 라벨 (settings-screen 정렬 개편) ──
+   각 탭 안에서 h3 소제목들을 다시 큰 카테고리로 묶어 보여주는 상위 라벨.
+   h3와 톤을 다르게(작게/전각 대문자/포인트 컬러) 줘서 위계가 헷갈리지 않게 했다. */
+.settings-group-label {
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--tb-teal-400, #2dd4bf);
+    margin-bottom: -.25rem;
+}
+.settings-group-label-bordered {
+    border-top: 1px solid var(--tb-border);
+    padding-top: 1.25rem;
+}

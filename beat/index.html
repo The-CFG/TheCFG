@@ -446,6 +446,7 @@
                         </div>
                         <div class="flex-grow space-y-6 overflow-y-auto">
                             <div id="tab-content-volume" class="tab-content space-y-6">
+                                <h3 class="text-lg font-semibold mb-3 text-white" data-i18n="settings_group_audio">오디오</h3>
                                 <div>
                                     <div class="flex justify-between items-center text-gray-300 mb-2">
                                         <label for="volume-slider-music" data-i18n="music_volume">음악 볼륨</label>
@@ -461,6 +462,7 @@
                                     <input id="volume-slider-sfx" type="range" min="0" max="100" value="100" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
                                 </div>
                                 <div class="border-t border-gray-700 pt-4 mt-4 space-y-6">
+                                    <h3 class="text-lg font-semibold mb-3 text-white" data-i18n="settings_group_gameplay_screen">게임플레이 화면</h3>
                                     <div>
                                         <div class="flex justify-between items-center text-gray-300 mb-2">
                                             <label for="gameplay-image-opacity-slider" data-i18n="show_gameplay_image">게임플레이 시 이미지 표시</label>
@@ -484,10 +486,6 @@
                                         <input id="auto-hide-ui-toggle" type="checkbox" class="h-5 w-5 bg-gray-700 rounded border-gray-600 text-blue-500 focus:ring-blue-500">
                                     </div>
                                     <div class="flex items-center justify-between text-gray-300">
-                                        <label for="show-home-recommendations-toggle" data-i18n="show_home_recommendations">홈 화면 추천 비트맵</label>
-                                        <input id="show-home-recommendations-toggle" type="checkbox" checked class="h-5 w-5 bg-gray-700 rounded border-gray-600 text-blue-500 focus:ring-blue-500">
-                                    </div>
-                                    <div class="flex items-center justify-between text-gray-300">
                                         <label for="player-default-fallspeed-toggle" data-i18n="use_default_fall_speed">플레이어 기본 하강 속도 지정</label>
                                         <input id="player-default-fallspeed-toggle" type="checkbox" class="h-5 w-5 bg-gray-700 rounded border-gray-600 text-blue-500 focus:ring-blue-500">
                                     </div>
@@ -501,6 +499,7 @@
                                     </div>
                                 </div>
                                 <div class="border-t border-gray-700 pt-4 mt-4 space-y-6">
+                                    <h3 class="text-lg font-semibold mb-3 text-white" data-i18n="settings_group_timing_calibration">판정 타이밍 보정</h3>
                                     <div>
                                         <div class="flex justify-between items-center text-gray-300 mb-2">
                                             <label for="input-offset-slider" data-i18n="input_offset">판정 보정 (입력 지연 보정)</label>
@@ -521,6 +520,7 @@
                                 </div>
                             </div>
                             <div id="tab-content-appearance" class="tab-content hidden space-y-6">
+                                <div class="settings-group-label" data-i18n="settings_group_theme_skin">테마 &amp; 스킨</div>
                                 <!-- 스킨 프리셋: 아래 모든 모양 설정(색상/모양/판정 텍스트/이미지/폰트 등)을
                                      하나로 묶어 저장/전환한다(커스터마이징 계획 1/3단계, BeatSkin). -->
                                 <div>
@@ -603,6 +603,7 @@
                                         <button id="custom-theme-apply-btn" type="button" class="w-full py-2 px-4 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-semibold mt-2">커스텀 테마 적용</button>
                                     </div>
                                 </div>
+                                <div class="settings-group-label settings-group-label-bordered" data-i18n="settings_group_note_style">노트 스타일</div>
                                 <!-- 노트 방향 선택 -->
                                 <div>
                                     <h3 class="text-lg font-semibold mb-3 text-white" data-i18n="note_direction">노트 방향</h3>
@@ -721,8 +722,9 @@
                                     </div>
                                 </div>
 
+                                <div class="settings-group-label settings-group-label-bordered" data-i18n="settings_group_text_effects">텍스트 &amp; 이펙트</div>
                                 <!-- 판정선/판정 텍스트/콤보/카운트다운 (커스터마이징 계획 2단계) -->
-                                <div class="border-t border-gray-700 pt-4">
+                                <div class="pt-1">
                                     <h3 class="text-lg font-semibold mb-3 text-white">판정선 / 텍스트</h3>
                                     <div class="space-y-3">
                                         <div class="flex items-center justify-between">
@@ -818,8 +820,9 @@
                                     </div>
                                 </div>
 
+                                <div class="settings-group-label settings-group-label-bordered" data-i18n="settings_group_font_image">폰트 &amp; 이미지 스킨</div>
                                 <!-- 폰트 업로드 (커스터마이징 계획 1-B단계, BeatFonts) -->
-                                <div class="border-t border-gray-700 pt-4">
+                                <div class="pt-1">
                                     <h3 class="text-lg font-semibold mb-3 text-white">폰트</h3>
                                     <div>
                                         <p class="text-gray-300 mb-2">전체 UI 폰트</p>
@@ -1028,9 +1031,10 @@
                                     </div>
                                 </div>
 
+                                <div class="settings-group-label settings-group-label-bordered" data-i18n="settings_group_preview">미리보기</div>
                                 <!-- 미리보기 -->
-                                <div>
-                                    <h3 class="text-lg font-semibold mb-3 text-white">미리보기</h3>
+                                <div class="pt-1">
+                                    <h3 class="hidden">미리보기</h3>
                                     <div id="color-preview-container" class="bg-gray-800 p-4 rounded-lg" style="min-height: 100px;">
                                         <!-- 노트별 미리보기 -->
                                         <div id="preview-note-type" class="flex justify-center items-center space-x-4">
@@ -1558,6 +1562,13 @@
                             </div>
                             <div id="tab-content-etc" class="tab-content hidden">
                                 <div>
+                                    <h3 class="text-xl font-semibold mb-2 text-white" data-i18n="settings_group_general">일반</h3>
+                                    <div class="flex items-center justify-between text-sm">
+                                        <label for="show-home-recommendations-toggle" data-i18n="show_home_recommendations">홈 화면 추천 비트맵</label>
+                                        <input id="show-home-recommendations-toggle" type="checkbox" checked class="h-5 w-5 bg-gray-700 rounded border-gray-600 text-blue-500 focus:ring-blue-500">
+                                    </div>
+                                </div>
+                                <div class="border-t border-gray-700 pt-4 mt-4">
                                     <h3 class="text-xl font-semibold mb-2 text-white flex items-center gap-2">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                             <circle cx="12" cy="12" r="10"/>
