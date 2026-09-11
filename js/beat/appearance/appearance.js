@@ -37,15 +37,18 @@ const Appearance = {
         // ── 커스터마이징 계획 2단계 후속: 판정/콤보/카운트다운 텍스트 위치·애니메이션 ──
         // 오프셋은 기존 중앙 기준 top/left(50%/60%/40%)에서 px 단위로 더해지는 값이다
         // (css/beat/game.css calc() 참고) — 0이면 기존과 완전히 동일한 위치.
+        // 화면 배치별로 #game-area의 실제 크기/비율이 달라서(데스크톱 패널 펼침 60%폭 /
+        // 패널 접힘 100%폭 / 모바일은 아예 세로 1/3 띠) 위치를 세 상태 각각 따로 저장한다.
+        // 실제 렌더링에 쓰는 CSS 변수(--judgement-offset-x 등)는 하나뿐이라, 지금 화면이
+        // 어느 상태인지 보고 그때그때 값을 골라 넣는다(updateJudgementCssVariables,
+        // _currentLayoutState 참고). 구버전(단일 judgementOffsetX/Y)에서 저장된 스킨은
+        // _migrateOffsets()가 세 상태 모두에 같은 값을 채워 넣는 방식으로 옮겨준다.
         // 애니메이션은 'pop'(기존 기본 동작)/'fade'/'slideUp'/'bounce' 중 하나.
-        judgementOffsetX: 0,
-        judgementOffsetY: 0,
+        judgementOffsets: { desktop: { x: 0, y: 0 }, desktopCollapsed: { x: 0, y: 0 }, mobile: { x: 0, y: 0 } },
         judgementAnimation: 'pop',
-        comboOffsetX: 0,
-        comboOffsetY: 0,
+        comboOffsets: { desktop: { x: 0, y: 0 }, desktopCollapsed: { x: 0, y: 0 }, mobile: { x: 0, y: 0 } },
         comboAnimation: 'pop',
-        countdownOffsetX: 0,
-        countdownOffsetY: 0,
+        countdownOffsets: { desktop: { x: 0, y: 0 }, desktopCollapsed: { x: 0, y: 0 }, mobile: { x: 0, y: 0 } },
         countdownAnimation: 'pop',
         // 커스터마이징 계획 1-B단계: BeatFonts(js/beat/appearance/fonts.js)에 업로드된
         // 폰트의 id. null이면 CSS 기본값(inherit → 전역 UI 폰트)을 그대로 쓴다.
@@ -265,7 +268,8 @@ const Appearance = {
                 if (offsetXInput) {
                     offsetXInput.addEventListener('input', (e) => {
                         const value = parseInt(e.target.value, 10);
-                        this.settings[`${prefix}OffsetX`] = value;
+                        const state = this._offsetEditState || 'desktop';
+                        this.settings[`${prefix}Offsets`][state].x = value;
                         const label = document.getElementById(`${prefix}-offset-x-value`);
                         if (label) label.textContent = `${value}px`;
                         this.updateJudgementCssVariables();
@@ -275,7 +279,8 @@ const Appearance = {
                 if (offsetYInput) {
                     offsetYInput.addEventListener('input', (e) => {
                         const value = parseInt(e.target.value, 10);
-                        this.settings[`${prefix}OffsetY`] = value;
+                        const state = this._offsetEditState || 'desktop';
+                        this.settings[`${prefix}Offsets`][state].y = value;
                         const label = document.getElementById(`${prefix}-offset-y-value`);
                         if (label) label.textContent = `${value}px`;
                         this.updateJudgementCssVariables();
@@ -374,16 +379,32 @@ const Appearance = {
             }
 
             this.setupPositionEditor();
+
+            // 판정/콤보/카운트다운 위치는 화면 배치 상태별로 저장되는데, 실제 렌더링에
+            // 쓰는 CSS 변수(--judgement-offset-x 등)는 "지금 실제 화면 상태"의 값 하나만
+            // 반영한다(updateJudgementCssVariables/_currentLayoutState 참고). 그래서 브레이크
+            // 포인트(1024px)를 넘나들며 모바일↔데스크톱 레이아웃이 바뀔 때도 다시 계산해야
+            // 한다. 패널 접기/펼치기 쪽은 js/beat/game/ui.js의 setPanelCollapsed()에서 직접
+            // Appearance.updateJudgementCssVariables()를 호출해 처리한다.
+            if (typeof window.matchMedia === 'function') {
+                const desktopQuery = window.matchMedia('(min-width: 1024px)');
+                const onLayoutBreakpointChange = () => this.updateJudgementCssVariables();
+                if (desktopQuery.addEventListener) desktopQuery.addEventListener('change', onLayoutBreakpointChange);
+                else if (desktopQuery.addListener) desktopQuery.addListener(onLayoutBreakpointChange); // 구형 Safari 호환
+            }
         } catch (err) {
             this._logError(err, 'Appearance.setupEventListeners');
         }
     },
 
     // 판정/콤보/카운트다운 텍스트 위치를 드래그로 편집하는 모달.
-    // 기존 가로/세로 위치 슬라이더(judgement/combo/countdown-offset-x/y)를 그대로
-    // "정답 저장소"로 쓴다 — 드래그로 값을 바꾼 뒤 저장을 누르면 그 슬라이더에
-    // value를 넣고 input 이벤트를 발생시켜서, 기존 슬라이더 리스너(라벨 갱신 +
-    // this.settings 갱신 + updateJudgementCssVariables)를 그대로 재사용한다.
+    // 위치는 화면 배치 상태(데스크톱 펼침/접힘/모바일)별로 따로 저장되므로
+    // (this.settings.judgementOffsets 등, _currentLayoutState/_migrateOffsets 참고),
+    // 지금 "어느 상태를 편집 중인지"를 this._offsetEditState에 들고 있고 이 값은
+    // 밖의 탭(position-editor-state-tabs-outer)과 모달 안 탭(-modal) 둘 다에서 공유한다.
+    // 기존 가로/세로 위치 슬라이더는 그대로 "정답 저장소"로 쓴다 — 드래그로 값을 바꾼 뒤
+    // 저장을 누르면 그 슬라이더에 value를 넣고 input 이벤트를 발생시켜서, 기존 슬라이더
+    // 리스너(라벨 갱신 + this.settings 갱신 + updateJudgementCssVariables)를 재사용한다.
     // 실제 저장(IndexedDB)은 기존과 동일하게 탭 하단의 "적용" 버튼에서 이뤄진다.
     setupPositionEditor() {
         try {
@@ -396,12 +417,15 @@ const Appearance = {
             const resetBtn = document.getElementById('position-editor-reset-btn');
             const saveBtn  = document.getElementById('position-editor-save-btn');
             const items    = Array.from(stage.querySelectorAll('.position-editor-item'));
+            const stateTabs = Array.from(document.querySelectorAll('.position-editor-state-tab'));
+
+            if (!this._offsetEditState) this._offsetEditState = 'desktop';
 
             // css/beat/game.css의 .judgement-text/.combo-text/.countdown-text 기본 top%와 동일
             const BASE_TOP_PCT = { judgement: 50, combo: 60, countdown: 40 };
             const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
-            let draft = null; // { judgement: {x,y}, combo: {x,y}, countdown: {x,y} }
+            let draft = null; // { judgement: {x,y}, combo: {x,y}, countdown: {x,y} } — 지금 편집 상태(this._offsetEditState) 기준
 
             const layoutItem = (el) => {
                 const prefix = el.dataset.prefix;
@@ -413,14 +437,33 @@ const Appearance = {
             };
             const layoutAll = () => items.forEach(layoutItem);
 
-            const readCurrentOffsets = () => ({
-                judgement: { x: this.settings.judgementOffsetX || 0, y: this.settings.judgementOffsetY || 0 },
-                combo:     { x: this.settings.comboOffsetX     || 0, y: this.settings.comboOffsetY     || 0 },
-                countdown: { x: this.settings.countdownOffsetX || 0, y: this.settings.countdownOffsetY || 0 },
+            const readOffsetsFor = (state) => ({
+                judgement: { ...(this.settings.judgementOffsets[state] || { x: 0, y: 0 }) },
+                combo:     { ...(this.settings.comboOffsets[state]     || { x: 0, y: 0 }) },
+                countdown: { ...(this.settings.countdownOffsets[state] || { x: 0, y: 0 }) },
             });
 
+            // 밖/모달 두 탭 그룹을 한 번에 동기화 + 슬라이더/스테이지 비율/드래그 아이템까지 갱신.
+            const applyEditState = (state) => {
+                this._offsetEditState = state;
+                stateTabs.forEach((btn) => btn.classList.toggle('active', btn.dataset.state === state));
+                stage.dataset.layout = state;
+                this.updateColorInputs(); // 슬라이더 value/라벨을 새 상태 기준으로 다시 채움
+                if (!modal.classList.contains('hidden')) {
+                    draft = readOffsetsFor(state);
+                    requestAnimationFrame(layoutAll);
+                }
+            };
+
+            stateTabs.forEach((btn) => {
+                btn.addEventListener('click', () => applyEditState(btn.dataset.state));
+            });
+            // 초기 상태(기본 'desktop') 반영
+            applyEditState(this._offsetEditState);
+
             const openEditor = () => {
-                draft = readCurrentOffsets();
+                draft = readOffsetsFor(this._offsetEditState);
+                stage.dataset.layout = this._offsetEditState;
                 modal.classList.remove('hidden');
                 // 스테이지가 실제로 렌더되어 크기가 확정된 다음 프레임에 배치해야
                 // getBoundingClientRect()가 0을 반환하지 않는다.
@@ -595,6 +638,40 @@ const Appearance = {
         }
     },
 
+    // 지금 실제 게임 화면이 어떤 배치인지 판단한다: 'mobile' | 'desktop' | 'desktopCollapsed'.
+    // breakpoint(1024px)는 css/beat 전역에서 쓰는 lg: 브레이크포인트와 동일해야 한다
+    // (css/beat/game.css의 @media (min-width: 1024px), #app-shell.ui-collapsed 참고).
+    _currentLayoutState() {
+        const isDesktop = typeof window.matchMedia === 'function'
+            && window.matchMedia('(min-width: 1024px)').matches;
+        if (!isDesktop) return 'mobile';
+        const appShell = document.getElementById('app-shell');
+        return (appShell && appShell.classList.contains('ui-collapsed')) ? 'desktopCollapsed' : 'desktop';
+    },
+
+    // 구버전(화면 상태 구분 없이 judgementOffsetX/Y 단일 값만 쓰던 시절)에 저장된 스킨을
+    // 새 구조(judgementOffsets.desktop/desktopCollapsed/mobile)로 옮긴다. 스킨이 저장소에서
+    // 다시 불러와질 때마다(사용자가 "적용"을 눌러 새 구조로 재저장하기 전까지) applySettings()를
+    // 통해 반복 실행돼도 안전하도록 멱등적으로 짜여 있다 — 옛 평면 키가 있으면 세 상태 모두에
+    // 같은 값을 채워 넣고 옛 키는 지운다.
+    _migrateOffsets() {
+        ['judgement', 'combo', 'countdown'].forEach((prefix) => {
+            const xKey = `${prefix}OffsetX`;
+            const yKey = `${prefix}OffsetY`;
+            if (this.settings[xKey] !== undefined || this.settings[yKey] !== undefined) {
+                const x = this.settings[xKey] || 0;
+                const y = this.settings[yKey] || 0;
+                this.settings[`${prefix}Offsets`] = {
+                    desktop: { x, y },
+                    desktopCollapsed: { x, y },
+                    mobile: { x, y }
+                };
+                delete this.settings[xKey];
+                delete this.settings[yKey];
+            }
+        });
+    },
+
     // 판정 텍스트/콤보/카운트다운(DOM 기반, css/beat/game.css)에 쓰이는 CSS 변수를
     // 주입한다. updateCSSVariables()/applySettings() 양쪽에서 공용으로 호출.
     updateJudgementCssVariables() {
@@ -607,12 +684,15 @@ const Appearance = {
         root.setProperty('--countdown-font-size', `${this.settings.countdownTextSize}rem`);
 
         // 위치(오프셋) — 기본 top/left(50%/60%/40%)에 px로 더해진다(css/beat/game.css calc() 참고).
-        root.setProperty('--judgement-offset-x', `${this.settings.judgementOffsetX || 0}px`);
-        root.setProperty('--judgement-offset-y', `${this.settings.judgementOffsetY || 0}px`);
-        root.setProperty('--combo-offset-x', `${this.settings.comboOffsetX || 0}px`);
-        root.setProperty('--combo-offset-y', `${this.settings.comboOffsetY || 0}px`);
-        root.setProperty('--countdown-offset-x', `${this.settings.countdownOffsetX || 0}px`);
-        root.setProperty('--countdown-offset-y', `${this.settings.countdownOffsetY || 0}px`);
+        // 실제 렌더링에 쓰는 CSS 변수는 상태 구분 없이 하나뿐이라, 지금 화면이 데스크톱
+        // 패널 펼침/접힘/모바일 중 어느 상태인지 보고 그 상태에 저장된 값을 골라 넣는다.
+        const state = this._currentLayoutState();
+        ['judgement', 'combo', 'countdown'].forEach((prefix) => {
+            const offsets = this.settings[`${prefix}Offsets`];
+            const off = (offsets && offsets[state]) || { x: 0, y: 0 };
+            root.setProperty(`--${prefix}-offset-x`, `${off.x || 0}px`);
+            root.setProperty(`--${prefix}-offset-y`, `${off.y || 0}px`);
+        });
 
         // 폰트(1-B단계): BeatFonts가 아직 로드/초기화되지 않았을 수 있어 존재 체크 후 폴백.
         const fontCss = (id) => (typeof BeatFonts !== 'undefined' && BeatFonts.getFontFamilyCss)
@@ -725,6 +805,11 @@ const Appearance = {
 
     applySettings() {
         try {
+            // 구버전(화면 상태 구분 없이 단일 오프셋만 있던 시절) 스킨 마이그레이션.
+            // applySettings()가 도는 모든 경로(최초 로드/스킨 전환/계정 값 수신)에서 항상
+            // 먼저 실행돼야 이후 updateJudgementCssVariables()가 올바른 구조를 읽는다.
+            this._migrateOffsets();
+
             // CSS 변수로 색상 적용 (노트 타입별 색상 모드용)
             document.documentElement.style.setProperty('--note-tap-color', this.settings.colors.tap);
             document.documentElement.style.setProperty('--note-long-color', this.settings.colors.long);
@@ -835,7 +920,10 @@ const Appearance = {
             const countdownSizeLabel = document.getElementById('countdown-text-size-value');
             if (countdownSizeLabel) countdownSizeLabel.textContent = `${this.settings.countdownTextSize}rem`;
 
-            // 판정/콤보/카운트다운 위치(오프셋)·애니메이션 입력값 동기화(스킨 전환 시 등)
+            // 판정/콤보/카운트다운 위치(오프셋)·애니메이션 입력값 동기화(스킨 전환 시 등).
+            // 위치는 지금 선택된 화면 배치 상태(this._offsetEditState, 기본 'desktop')
+            // 기준으로 슬라이더에 반영한다 — setupPositionEditor()의 상태 탭과 공유.
+            const editState = this._offsetEditState || 'desktop';
             [
                 { prefix: 'judgement' },
                 { prefix: 'combo' },
@@ -844,17 +932,18 @@ const Appearance = {
                 const animSelect = document.getElementById(`${prefix}-animation-select`);
                 if (animSelect) animSelect.value = this.settings[`${prefix}Animation`] || 'pop';
 
-                const offsetX = this.settings[`${prefix}OffsetX`] || 0;
-                const offsetXInput = document.getElementById(`${prefix}-offset-x`);
-                if (offsetXInput) offsetXInput.value = offsetX;
-                const offsetXLabel = document.getElementById(`${prefix}-offset-x-value`);
-                if (offsetXLabel) offsetXLabel.textContent = `${offsetX}px`;
+                const offsets = this.settings[`${prefix}Offsets`] || {};
+                const cur = offsets[editState] || { x: 0, y: 0 };
 
-                const offsetY = this.settings[`${prefix}OffsetY`] || 0;
+                const offsetXInput = document.getElementById(`${prefix}-offset-x`);
+                if (offsetXInput) offsetXInput.value = cur.x || 0;
+                const offsetXLabel = document.getElementById(`${prefix}-offset-x-value`);
+                if (offsetXLabel) offsetXLabel.textContent = `${cur.x || 0}px`;
+
                 const offsetYInput = document.getElementById(`${prefix}-offset-y`);
-                if (offsetYInput) offsetYInput.value = offsetY;
+                if (offsetYInput) offsetYInput.value = cur.y || 0;
                 const offsetYLabel = document.getElementById(`${prefix}-offset-y-value`);
-                if (offsetYLabel) offsetYLabel.textContent = `${offsetY}px`;
+                if (offsetYLabel) offsetYLabel.textContent = `${cur.y || 0}px`;
             });
         } catch (err) {
             this._logError(err, 'Appearance.updateColorInputs');
@@ -924,14 +1013,11 @@ const Appearance = {
                 comboTextSize: 2.5,
                 countdownTextColor: '#ffffff',
                 countdownTextSize: 8,
-                judgementOffsetX: 0,
-                judgementOffsetY: 0,
+                judgementOffsets: { desktop: { x: 0, y: 0 }, desktopCollapsed: { x: 0, y: 0 }, mobile: { x: 0, y: 0 } },
                 judgementAnimation: 'pop',
-                comboOffsetX: 0,
-                comboOffsetY: 0,
+                comboOffsets: { desktop: { x: 0, y: 0 }, desktopCollapsed: { x: 0, y: 0 }, mobile: { x: 0, y: 0 } },
                 comboAnimation: 'pop',
-                countdownOffsetX: 0,
-                countdownOffsetY: 0,
+                countdownOffsets: { desktop: { x: 0, y: 0 }, desktopCollapsed: { x: 0, y: 0 }, mobile: { x: 0, y: 0 } },
                 countdownAnimation: 'pop',
                 judgementFontId: null,
                 comboFontId: null,

@@ -665,6 +665,12 @@ const UI = {
             btn.setAttribute('aria-label', label);
             btn.title = label;
         }
+        // 판정/콤보/카운트다운 위치는 데스크톱 패널 펼침/접힘 상태별로 따로 저장돼 있어서
+        // (js/beat/appearance/appearance.js의 judgementOffsets 등 참고), 패널이 접히고
+        // 펼쳐질 때마다 실제 렌더링용 CSS 변수를 다시 계산해줘야 한다.
+        if (typeof Appearance !== 'undefined' && Appearance.updateJudgementCssVariables) {
+            Appearance.updateJudgementCssVariables();
+        }
     },
     // 접기/펼치기 핸들 버튼 초기화. 클릭 시 현재 상태를 그대로 반전만 시킨다.
     initPanelToggle() {

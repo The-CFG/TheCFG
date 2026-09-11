@@ -734,6 +734,12 @@
                                     </div>
                                     <div class="mt-4">
                                         <button id="open-position-editor-btn" type="button" class="w-full py-2 bg-teal-700 hover:bg-teal-600 rounded-lg text-sm font-semibold" data-i18n="position_editor_open_btn">🖐 판정 / 콤보 / 카운트다운 위치 드래그로 편집</button>
+                                        <p class="text-xs text-gray-500 mt-2 mb-1" data-i18n="position_editor_state_desc">화면 배치별로 #game-area 크기가 달라서, 위치는 아래 3가지를 각각 따로 저장합니다. 지금 편집할 대상을 골라주세요.</p>
+                                        <div id="position-editor-state-tabs-outer" class="position-editor-state-tabs">
+                                            <button type="button" class="position-editor-state-tab active" data-state="desktop" data-i18n="position_editor_state_desktop">데스크톱(펼침)</button>
+                                            <button type="button" class="position-editor-state-tab" data-state="desktopCollapsed" data-i18n="position_editor_state_desktop_collapsed">데스크톱(접힘)</button>
+                                            <button type="button" class="position-editor-state-tab" data-state="mobile" data-i18n="position_editor_state_mobile">모바일</button>
+                                        </div>
                                     </div>
                                     <div class="mt-4 space-y-4">
                                         <div>
@@ -2060,7 +2066,12 @@
                     <button id="position-editor-close-btn" type="button" aria-label="닫기" class="position-editor-close-btn">✕</button>
                 </div>
                 <p class="text-xs text-gray-400 mb-3" data-i18n="position_editor_desc">드래그해서 원하는 위치에 놓아보세요. 저장을 누르면 그 위치가 계속 적용됩니다. (설정 탭 하단의 "적용" 버튼을 눌러야 최종 저장됩니다.)</p>
-                <div id="position-editor-stage" class="position-editor-stage">
+                <div id="position-editor-state-tabs-modal" class="position-editor-state-tabs mb-3">
+                    <button type="button" class="position-editor-state-tab active" data-state="desktop" data-i18n="position_editor_state_desktop">데스크톱(펼침)</button>
+                    <button type="button" class="position-editor-state-tab" data-state="desktopCollapsed" data-i18n="position_editor_state_desktop_collapsed">데스크톱(접힘)</button>
+                    <button type="button" class="position-editor-state-tab" data-state="mobile" data-i18n="position_editor_state_mobile">모바일</button>
+                </div>
+                <div id="position-editor-stage" class="position-editor-stage" data-layout="desktop">
                     <div class="position-editor-item" data-prefix="judgement" style="color:var(--judgement-color,#fff);font-family:var(--judgement-font-family,inherit);">PERFECT</div>
                     <div class="position-editor-item" data-prefix="combo" style="color:var(--combo-color,#f6e05e);font-family:var(--combo-font-family,inherit);">128 COMBO</div>
                     <div class="position-editor-item" data-prefix="countdown" style="color:var(--countdown-color,#fff);font-family:var(--countdown-font-family,inherit);">3</div>
