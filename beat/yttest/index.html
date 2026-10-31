@@ -141,10 +141,12 @@
       if (st === S.PLAYING) {
         run.anchor = { perf: now, yt: player.getCurrentTime() };
         run.anchorCount++;
+        run.settleBase = now; run.settled = null;
       }
       if (st === S.BUFFERING && run.anchor) {
         run.buffering.push({ atSec: (now - run.t0) / 1000 });
         run.anchor = null; // 버퍼링 후 재앵커
+        run.settled = null;
       }
       if (st === S.PAUSED && run.anchor && !run.stopping) {
         run.anchor = null;
@@ -200,6 +202,7 @@
       startLatency: null,
       firstReadErr: null,
       durationAtStart: cvDur, durationDuring: [],
+      settled: null, settledSamples: [], settleBase: 0,
       raf: 0
     };
     $('btnRun').disabled = true; $('btnStop').disabled = false;
@@ -231,6 +234,12 @@
       }
       run.lastYt = yt;
 
+      // 안정화 후 재앵커: PLAYING 이벤트 직후 값은 부정확할 수 있어 3초 뒤 다시 기준을 잡는다
+      if (!run.settled && run.anchor && now - run.settleBase >= 3000) run.settled = { perf: now, yt };
+      if (run.settled) {
+        const exp2 = run.settled.yt + (now - run.settled.perf) / 1000 * run.rate;
+        run.settledSamples.push({ t: (now - run.t0) / 1000, drift: (yt - exp2) * 1000 });
+      }
       if (run.anchor) {
         const expected = run.anchor.yt + (now - run.anchor.perf) / 1000 * run.rate;
         const drift = (yt - expected) * 1000;
@@ -270,7 +279,17 @@
       run.samples.forEach(p => { sx += p.t; sy += p.drift; sxy += p.t * p.drift; sxx += p.t * p.t; });
       slope = ((n * sxy - sx * sy) / (n * sxx - sx * sx)) * 60;
     }
-    const durMismatch = run.durationDuring.some(d => Math.abs(d - run.durationAtStart) > 0.5);
+    // 재생 전 getDuration()은 0이라 기준값이 못 된다 → 재생 중 처음 관측된 0 초과 값을 기준으로 삼는다
+    const durs = run.durationDuring.filter(d => d > 0);
+    const sd = stats(run.settledSamples.map(x => x.drift));
+    let slopeS = null;
+    if (run.settledSamples.length > 10) {
+      const n = run.settledSamples.length;
+      let sx = 0, sy = 0, sxy = 0, sxx = 0;
+      run.settledSamples.forEach(p => { sx += p.t; sy += p.drift; sxy += p.t * p.drift; sxx += p.t * p.t; });
+      slopeS = ((n * sxy - sx * sy) / (n * sxx - sx * sx)) * 60;
+    }
+    const durMismatch = durs.length > 0 && durs.some(d => Math.abs(d - durs[0]) > 0.5);
     const result = {
       env: { ua: navigator.userAgent, dpr: devicePixelRatio, time: new Date().toISOString() },
       videoId, rate: run.rate, testSec: run.durSec, failed: !!failed,
@@ -278,6 +297,7 @@
       firstReadErrMs: run.firstReadErr,
       getCurrentTimeUpdateIntervalMs: upd,
       driftMs: dr, driftAbsMs: dra, driftSlopeMsPerMin: slope,
+      driftSettledMs: sd, driftSettledSlopeMsPerMin: slopeS,
       bufferingEvents: run.buffering.length, bufferingAtSec: run.buffering.map(b => +b.atSec.toFixed(1)),
       anchors: run.anchorCount,
       durationValues: run.durationDuring,
@@ -304,6 +324,8 @@
       ['|드리프트| p95 / p99', fmt(da.p95, 0) + ' / ' + fmt(da.p99, 0) + ' ms', cls(da.p95 || 0, 40, 100)],
       ['|드리프트| 최대', fmt(da.max, 0) + ' ms', cls(da.max || 0, 80, 200)],
       ['드리프트 추세', fmt(r.driftSlopeMsPerMin, 1) + ' ms/분', cls(Math.abs(r.driftSlopeMsPerMin || 0), 20, 80)],
+      ['안정화 후(3초~) 드리프트 평균 ± σ', fmt(r.driftSettledMs.mean, 1) + ' ± ' + fmt(r.driftSettledMs.sd, 1) + ' ms', cls(r.driftSettledMs.sd || 0, 15, 40)],
+      ['안정화 후 |최대| / 추세', fmt(Math.max(Math.abs(r.driftSettledMs.min || 0), Math.abs(r.driftSettledMs.max || 0)), 0) + ' ms / ' + fmt(r.driftSettledSlopeMsPerMin, 1) + ' ms/분', cls(Math.max(Math.abs(r.driftSettledMs.min || 0), Math.abs(r.driftSettledMs.max || 0)), 40, 100)],
       ['버퍼링 이벤트', r.bufferingEvents + '회', r.bufferingEvents ? 'warn' : 'ok'],
       ['광고 의심 (duration 변동)', r.adSuspected ? '예' : '아니오', r.adSuspected ? 'bad' : 'ok'],
       ['샘플 수', String(d.n || 0), '']
