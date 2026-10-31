@@ -9,6 +9,19 @@ let isSignUpMode = false;
 // /profiles?u=핸들 링크를 만드는 CloudAuth.getProfileUrl()이 이 캐시를 읽는다.
 const _handleCache = {};
 
+// 계정 팝오버(_openAccountPopover)에서 이메일/닉네임을 HTML에 꽂아 넣을 때 쓰는 이스케이프 유틸.
+// hoi4 쪽은 js/hoi4/core/io-parsers.js에 정의돼 있지만, beat 페이지는 그 파일을 불러오지 않고
+// 다른 어디에도 정의돼 있지 않아 escapeHtml 호출 시 ReferenceError가 나던 것을 여기 직접 정의해 고쳤다.
+function escapeHtml(str) {
+    if (str == null) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 const CloudAuth = {
     // ── 기본 인증 ──────────────────────────────────────────
     async getUser() {
@@ -1059,7 +1072,7 @@ function _blobToBase64(blob) {
 
 // ── 로그인 상태 표시 (계정 아이콘) ────────────────────────────
 function _updateAuthStatus(user) {
-    const btn = document.getElementById('account-icon-btn');
+    const btn = document.getElementById('account-icon-menu');
     if (!btn) return;
     btn.classList.toggle('is-logged-in', !!user);
     btn.title = user ? `${user.email} (클릭하여 계정 메뉴 열기)` : '로그인';
@@ -1074,7 +1087,7 @@ function _closeAccountPopover() {
 
 function _onAccountPopoverOutsideClick(e) {
     const pop = document.getElementById('account-popover');
-    const btn = document.getElementById('account-icon-btn');
+    const btn = document.getElementById('account-icon-menu');
     if (!pop) return;
     if (pop.contains(e.target) || btn?.contains(e.target)) return;
     _closeAccountPopover();
@@ -1129,8 +1142,15 @@ function setupAuthUI() {
     const executeBtn = document.getElementById('btn-auth-execute');
     const switchBtn  = document.getElementById('auth-switch');
     const closeBtn   = document.getElementById('btn-auth-close');
-    const openBtn    = document.getElementById('account-icon-btn');
+    const openBtn    = document.getElementById('account-icon-menu');
     const discordBtn = document.getElementById('btn-auth-discord');
+    const authForm   = document.getElementById('auth-form');
+
+    // btn-auth-execute가 <form id="auth-form"> 안의 type="submit" 버튼이라
+    // 폼 자체의 기본 제출(현재 URL로 GET 재요청 → 새로고침)도 막아야 한다.
+    // (버튼 클릭 시의 preventDefault는 아래 executeBtn 리스너에서, Enter 키로
+    //  제출되는 경우는 여기서 막는다.)
+    authForm?.addEventListener('submit', (e) => e.preventDefault());
 
     discordBtn?.addEventListener('click', async () => {
         discordBtn.disabled = true;
@@ -1176,7 +1196,11 @@ function setupAuthUI() {
     });
 
     // 실행 (로그인 / 회원가입)
-    executeBtn?.addEventListener('click', async () => {
+    // btn-auth-execute는 <form id="auth-form"> 안의 type="submit" 버튼이라
+    // preventDefault 없이는 클릭 시 폼이 그대로 제출되어 페이지가 새로고침되고
+    // (액션/메서드 지정이 없어 현재 URL로 GET 재요청) 아래 로직이 끝까지 실행되지 못한다.
+    executeBtn?.addEventListener('click', async (e) => {
+        e.preventDefault();
         const email = document.getElementById('auth-email')?.value?.trim();
         const pw    = document.getElementById('auth-password')?.value;
         if (!email || !pw) { alert('이메일과 비밀번호를 입력해주세요.'); return; }
