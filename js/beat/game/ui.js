@@ -464,7 +464,7 @@ const UI = {
 
         ctx.globalAlpha = 0.75;
         ctx.strokeStyle = '#ff0000';
-        ctx.lineWidth = 1.5;
+        ctx.lineWidth = 0.15;
         tickXs.forEach(x => {
             ctx.beginPath();
             ctx.moveTo(x, 4);
