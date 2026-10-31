@@ -451,17 +451,6 @@ const UI = {
             return msToX(displayMs);
         });
 
-        ctx.lineCap = 'round';
-        ctx.globalAlpha = 0.3;
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 3.5;
-        tickXs.forEach(x => {
-            ctx.beginPath();
-            ctx.moveTo(x, 3);
-            ctx.lineTo(x, cssHeight - 3);
-            ctx.stroke();
-        });
-
         ctx.globalAlpha = 0.75;
         ctx.strokeStyle = '#ff0000';
         ctx.lineWidth = 0.15;
