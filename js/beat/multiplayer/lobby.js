@@ -414,7 +414,7 @@ const MultiplayerLobby = {
         this._renderWaiting();
 
         // 채보/오디오는 미리 받아둔다 — "시작" 버튼을 눌렀을 때 다운로드/디코딩 대기 없이
-        // 바로 예약 재생(AudioEngine.play(when))할 수 있어야 동시 시작 정확도가 올라간다.
+        // 바로 예약 재생(DOM.musicPlayer.play(when))할 수 있어야 동시 시작 정확도가 올라간다.
         this._preloadChart();
 
         const ok = await this._connectRealtime();
@@ -895,7 +895,7 @@ const MultiplayerLobby = {
 
         // 준비 완료는 실제 사용자 제스처이므로, 여기서 AudioContext를 미리 리쥼해둔다 —
         // 나중에 실제 동시 시작 시점에 resume 대기 시간 없이 바로 정확하게 예약 재생할 수 있다.
-        if (ready) AudioEngine.resumeContext().catch(() => {});
+        if (ready) DOM.musicPlayer.resumeContext().catch(() => {});
 
         // 낙관적 갱신 — presence sync 왕복을 기다리지 않고 내 상태를 바로 반영
         const self = this._players.find(p => p.user_id === this._userId);
@@ -950,7 +950,7 @@ const MultiplayerLobby = {
         if (startBtn) { startBtn.disabled = true; startBtn.textContent = '시작하는 중…'; }
         this._showMsg('');
 
-        await AudioEngine.resumeContext().catch(() => {});
+        await DOM.musicPlayer.resumeContext().catch(() => {});
 
         const ok = await this._preloadChart();
         if (!ok) {
@@ -1021,7 +1021,7 @@ const MultiplayerLobby = {
             this._renderWaiting();
             return;
         }
-        await AudioEngine.resumeContext().catch(() => {});
+        await DOM.musicPlayer.resumeContext().catch(() => {});
 
         // 대기실 Realtime 연결은 유지한다 — 진행 중 관전 HUD가 이 채널을 그대로 쓴다.
         // 상대 목록(나를 제외)은 대기실에서 이미 갖고 있던 _players 스냅샷으로 넘긴다 —

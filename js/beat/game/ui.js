@@ -34,10 +34,10 @@ const UI = {
         // 여기서는 건드리지 않는다(중복 적용 방지).
         if (screenName === 'settings' && previousScreen !== 'settings' && previousScreen !== 'menu') {
             GameBackground.setBlurred(true);
-            AudioEngine.setMuffled(true);
+            DOM.musicPlayer.setMuffled(true);
         } else if (previousScreen === 'settings' && screenName !== 'settings' && screenName !== 'menu') {
             GameBackground.setBlurred(false);
-            AudioEngine.setMuffled(false);
+            DOM.musicPlayer.setMuffled(false);
         }
 
         // 접기 핸들은 게임플레이 화면(#playing-screen)에서만 노출.

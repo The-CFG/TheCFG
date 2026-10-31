@@ -600,7 +600,7 @@ const Game = {
         // 터치/키보드 입력 자체는 정상이어도 판정만 이상해 보이는 증상이 생긴다.
         // 사용자가 "시작"을 누른 이 시점(제스처 콜스택 안)에 곧바로 resume해두면
         // 4초 카운트다운이 끝나기 전에 컨텍스트가 이미 안정적으로 활성화된 상태가 된다.
-        try { await AudioEngine.resumeContext(); } catch (e) { /* 무시 — play() 시점에 재시도됨 */ }
+        try { await DOM.musicPlayer.resumeContext(); } catch (e) { /* 무시 — play() 시점에 재시도됨 */ }
         this.resetState();
         resetPlayingScreenUI();
 
