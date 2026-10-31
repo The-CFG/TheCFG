@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>YT 싱크 스파이크 (S0)</title>
+<style>
+  :root { color-scheme: dark; --bg:#111318; --card:#1b1f27; --line:#2a303b; --fg:#e6e9ef; --dim:#8a93a3; --ok:#5ad19a; --warn:#f2c14e; --bad:#ef6b6b; --acc:#6aa7ff; }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:16px; background:var(--bg); color:var(--fg); font:14px/1.5 system-ui,-apple-system,"Noto Sans KR",sans-serif; }
+  h1 { font-size:18px; margin:0 0 4px; }
+  .sub { color:var(--dim); margin-bottom:14px; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:10px; }
+  input[type=text] { flex:1; min-width:220px; padding:8px 10px; background:var(--card); border:1px solid var(--line); color:var(--fg); border-radius:6px; }
+  select, button { padding:8px 12px; background:var(--card); border:1px solid var(--line); color:var(--fg); border-radius:6px; cursor:pointer; font:inherit; }
+  button:hover { border-color:var(--acc); }
+  button.primary { background:var(--acc); color:#08111f; border-color:var(--acc); font-weight:600; }
+  button:disabled { opacity:.45; cursor:default; }
+  .grid { display:grid; grid-template-columns: minmax(0,480px) minmax(0,1fr); gap:16px; align-items:start; }
+  @media (max-width:900px){ .grid { grid-template-columns:1fr; } }
+  #playerWrap { width:480px; max-width:100%; aspect-ratio:16/9; background:#000; border-radius:6px; overflow:hidden; }
+  #playerWrap iframe { width:100%; height:100%; display:block; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:12px; margin-bottom:12px; }
+  .card h2 { font-size:13px; margin:0 0 8px; color:var(--dim); font-weight:600; letter-spacing:.02em; }
+  table { width:100%; border-collapse:collapse; }
+  td { padding:3px 0; border-bottom:1px solid var(--line); }
+  td:last-child { text-align:right; font-variant-numeric:tabular-nums; }
+  tr:last-child td { border-bottom:0; }
+  .ok { color:var(--ok); } .warn { color:var(--warn); } .bad { color:var(--bad); }
+  canvas { width:100%; height:160px; display:block; background:#0d1015; border-radius:6px; }
+  textarea { width:100%; height:130px; background:#0d1015; color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:8px; font:12px/1.4 ui-monospace,Consolas,monospace; }
+  #log { height:110px; overflow:auto; font:12px/1.4 ui-monospace,Consolas,monospace; color:var(--dim); background:#0d1015; border-radius:6px; padding:8px; }
+  .note { color:var(--dim); font-size:12px; }
+</style>
+</head>
+<body>
+<h1>YouTube 싱크 스파이크 (S0)</h1>
+<div class="sub">getCurrentTime 갱신 간격 · 시작 지연 · 드리프트 · 버퍼링 · 광고 휴리스틱을 실측한다. 기기/브라우저별로 각각 돌려서 결과 JSON을 모아줘.</div>
+
+<div class="row">
+  <input type="text" id="url" placeholder="YouTube URL 또는 영상 ID" value="">
+  <button id="btnLoad">불러오기</button>
+</div>
+<div class="row">
+  <label>테스트 길이
+    <select id="dur">
+      <option value="30">30초</option>
+      <option value="60" selected>60초</option>
+      <option value="120">120초</option>
+    </select>
+  </label>
+  <label>재생 속도 <select id="rate"><option>1</option></select></label>
+  <label>시작 위치(초) <input type="text" id="startAt" value="0" style="width:60px;min-width:0"></label>
+  <button id="btnRun" class="primary" disabled>측정 시작</button>
+  <button id="btnStop" disabled>중지</button>
+  <button id="btnSeek" disabled>시크 테스트</button>
+  <button id="btnRestart" disabled>재시작 지연 테스트</button>
+</div>
+
+<div class="grid">
+  <div>
+    <div id="playerWrap"><div id="player"></div></div>
+    <div class="note" style="margin-top:6px">플레이어는 항상 보이는 상태로 둔다 (정책 준수). 측정 중 탭을 백그라운드로 보내지 말 것.</div>
+    <div class="card" style="margin-top:12px">
+      <h2>드리프트 그래프 (ms, 기대값 대비 getCurrentTime 오차)</h2>
+      <canvas id="chart" width="600" height="160"></canvas>
+    </div>
+  </div>
+  <div>
+    <div class="card">
+      <h2>결과</h2>
+      <table id="res"></table>
+    </div>
+    <div class="card">
+      <h2>결과 JSON (복사해서 전달)</h2>
+      <textarea id="json" readonly></textarea>
+      <div class="row" style="margin-top:6px"><button id="btnCopy">복사</button></div>
+    </div>
+    <div class="card">
+      <h2>로그</h2>
+      <div id="log"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const logEl = $('log');
+  function log(msg) {
+    const t = (performance.now() / 1000).toFixed(2).padStart(7, ' ');
+    logEl.textContent += t + '  ' + msg + '\n';
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function parseId(s) {
+    s = (s || '').trim();
+    if (/^[\w-]{11}$/.test(s)) return s;
+    try {
+      const u = new URL(s);
+      if (u.hostname.includes('youtu.be')) return u.pathname.slice(1, 12);
+      const v = u.searchParams.get('v');
+      if (v) return v.slice(0, 11);
+      const m = u.pathname.match(/\/(embed|shorts|live)\/([\w-]{11})/);
+      if (m) return m[2];
+    } catch (e) {}
+    return null;
+  }
+
+  let YTready = !!(window.YT && window.YT.Player), player = null, videoId = null, playerReady = false;
+  function apiReady() { if (YTready) return; YTready = true; log('IFrame API 로드됨'); }
+  window.onYouTubeIframeAPIReady = apiReady;
+  if (YTready) apiReady();
+  // 콜백을 놓쳤을 때를 대비한 폴링 (캐시/타이밍 이슈)
+  const apiPoll = setInterval(() => { if (window.YT && window.YT.Player) { apiReady(); clearInterval(apiPoll); } }, 200);
+  setTimeout(() => { if (!YTready) log('⚠ IFrame API가 10초 넘게 안 뜸: 광고차단/네트워크 확인, https://www.youtube.com/iframe_api 직접 열어보기'); }, 10000);
+
+  // 측정 상태
+  let run = null; // 진행 중 측정
+  const S = { UNSTARTED: -1, ENDED: 0, PLAYING: 1, PAUSED: 2, BUFFERING: 3, CUED: 5 };
+
+  // 최근 이벤트 대기용
+  let waiters = [];
+  function waitState(target, timeoutMs) {
+    return new Promise(res => {
+      const w = { target, res, t0: performance.now() };
+      w.timer = setTimeout(() => { waiters = waiters.filter(x => x !== w); res(null); }, timeoutMs || 15000);
+      waiters.push(w);
+    });
+  }
+
+  function onStateChange(e) {
+    const now = performance.now();
+    const st = e.data;
+    log('state → ' + st + ' (' + Object.keys(S).find(k => S[k] === st) + ')');
+    waiters = waiters.filter(w => {
+      if (w.target === st) { clearTimeout(w.timer); w.res({ at: now, since: now - w.t0 }); return false; }
+      return true;
+    });
+    if (run) {
+      if (st === S.PLAYING) {
+        run.anchor = { perf: now, yt: player.getCurrentTime() };
+        run.anchorCount++;
+      }
+      if (st === S.BUFFERING && run.anchor) {
+        run.buffering.push({ atSec: (now - run.t0) / 1000 });
+        run.anchor = null; // 버퍼링 후 재앵커
+      }
+      if (st === S.PAUSED && run.anchor && !run.stopping) {
+        run.anchor = null;
+      }
+    }
+  }
+
+  function loadVideo() {
+    const id = parseId($('url').value);
+    if (!id) { log('영상 ID 파싱 실패'); return; }
+    if (!(window.YT && window.YT.Player)) { log('IFrame API 아직 로드 중'); return; }
+    if (location.protocol === 'file:') { log('⚠ file://로 열면 Referer가 없어 오류 153이 난다. 로컬 서버(http://localhost)나 배포 URL로 열 것'); }
+    videoId = id;
+    playerReady = false;
+    $('btnRun').disabled = true;
+    if (player) { player.destroy(); player = null; $('playerWrap').innerHTML = '<div id="player"></div>'; }
+    player = new YT.Player('player', {
+      width: '100%', height: '100%', videoId: id,
+      playerVars: Object.assign({ playsinline: 1, rel: 0, modestbranding: 1, controls: 1 }, location.protocol.startsWith('http') ? { origin: location.origin } : {}),
+      events: {
+        onReady: () => {
+          playerReady = true;
+          const rates = player.getAvailablePlaybackRates();
+          $('rate').innerHTML = rates.map(r => '<option' + (r === 1 ? ' selected' : '') + '>' + r + '</option>').join('');
+          ['btnRun', 'btnSeek', 'btnRestart'].forEach(b => $(b).disabled = false);
+          log('준비 완료. duration=' + player.getDuration().toFixed(2) + 's');
+        },
+        onStateChange,
+        onError: e => log('오류 코드 ' + e.data + ' (2 잘못된 ID, 5 HTML5 오류, 100 없음/비공개, 101·150 임베드 금지)')
+      }
+    });
+  }
+
+  // ───── 본 측정 ─────
+  async function startRun() {
+    if (run) return;
+    const durSec = parseInt($('dur').value, 10);
+    const rate = parseFloat($('rate').value);
+    const startAt = parseFloat($('startAt').value) || 0;
+    const cvDur = player.getDuration();
+
+    player.setPlaybackRate(rate);
+    player.seekTo(startAt, true);
+
+    run = {
+      t0: 0, durSec, rate, startAt,
+      anchor: null, anchorCount: 0,
+      samples: [],          // {t, drift}
+      updates: [],          // getCurrentTime 값이 바뀐 간격(ms)
+      lastYt: null, lastChangePerf: null,
+      buffering: [],
+      stopping: false,
+      startLatency: null,
+      firstReadErr: null,
+      durationAtStart: cvDur, durationDuring: [],
+      raf: 0
+    };
+    $('btnRun').disabled = true; $('btnStop').disabled = false;
+    log('측정 시작 (사용자 제스처 안에서 playVideo 호출)');
+
+    const tCall = performance.now();
+    const pw = waitState(S.PLAYING, 20000);
+    player.playVideo();
+    const r = await pw;
+    if (!r) { log('PLAYING 진입 실패(타임아웃). 광고/차단 가능성'); finish(true); return; }
+    run.startLatency = r.at - tCall;
+    run.t0 = r.at;
+    run.firstReadErr = (player.getCurrentTime() - startAt) * 1000;
+    log('시작 지연 ' + run.startLatency.toFixed(0) + 'ms');
+
+    function tick() {
+      if (!run) return;
+      const now = performance.now();
+      const yt = player.getCurrentTime();
+      const dur = player.getDuration();
+      if (run.durationDuring.length === 0 || run.durationDuring[run.durationDuring.length - 1] !== dur) {
+        run.durationDuring.push(dur);
+      }
+      if (run.lastYt !== null && yt !== run.lastYt) {
+        if (run.lastChangePerf !== null) run.updates.push(now - run.lastChangePerf);
+        run.lastChangePerf = now;
+      } else if (run.lastYt === null) {
+        run.lastChangePerf = now;
+      }
+      run.lastYt = yt;
+
+      if (run.anchor) {
+        const expected = run.anchor.yt + (now - run.anchor.perf) / 1000 * run.rate;
+        const drift = (yt - expected) * 1000;
+        run.samples.push({ t: (now - run.t0) / 1000, drift });
+      }
+      if ((now - run.t0) / 1000 >= run.durSec) { finish(false); return; }
+      run.raf = requestAnimationFrame(tick);
+    }
+    run.raf = requestAnimationFrame(tick);
+  }
+
+  function stats(arr) {
+    if (!arr.length) return { n: 0 };
+    const n = arr.length;
+    const sorted = arr.slice().sort((a, b) => a - b);
+    const mean = arr.reduce((a, b) => a + b, 0) / n;
+    const sd = Math.sqrt(arr.reduce((a, b) => a + (b - mean) ** 2, 0) / n);
+    const q = p => sorted[Math.min(n - 1, Math.floor(p * n))];
+    return { n, min: sorted[0], max: sorted[n - 1], mean, sd, p50: q(.5), p95: q(.95), p99: q(.99) };
+  }
+
+  function finish(failed) {
+    if (!run) return;
+    cancelAnimationFrame(run.raf);
+    run.stopping = true;
+    try { player.pauseVideo(); } catch (e) {}
+    const driftVals = run.samples.map(s => s.drift);
+    const driftAbs = driftVals.map(Math.abs);
+    const upd = stats(run.updates);
+    const dr = stats(driftVals);
+    const dra = stats(driftAbs);
+    // 드리프트 추세: 선형회귀 기울기 (ms/분)
+    let slope = null;
+    if (run.samples.length > 10) {
+      const n = run.samples.length;
+      let sx = 0, sy = 0, sxy = 0, sxx = 0;
+      run.samples.forEach(p => { sx += p.t; sy += p.drift; sxy += p.t * p.drift; sxx += p.t * p.t; });
+      slope = ((n * sxy - sx * sy) / (n * sxx - sx * sx)) * 60;
+    }
+    const durMismatch = run.durationDuring.some(d => Math.abs(d - run.durationAtStart) > 0.5);
+    const result = {
+      env: { ua: navigator.userAgent, dpr: devicePixelRatio, time: new Date().toISOString() },
+      videoId, rate: run.rate, testSec: run.durSec, failed: !!failed,
+      startLatencyMs: run.startLatency,
+      firstReadErrMs: run.firstReadErr,
+      getCurrentTimeUpdateIntervalMs: upd,
+      driftMs: dr, driftAbsMs: dra, driftSlopeMsPerMin: slope,
+      bufferingEvents: run.buffering.length, bufferingAtSec: run.buffering.map(b => +b.atSec.toFixed(1)),
+      anchors: run.anchorCount,
+      durationValues: run.durationDuring,
+      adSuspected: durMismatch
+    };
+    window.__lastResult = result;
+    render(result, run.samples);
+    run = null;
+    $('btnRun').disabled = false; $('btnStop').disabled = true;
+    log('측정 종료');
+  }
+
+  function fmt(x, d) { return (x === null || x === undefined || Number.isNaN(x)) ? '-' : x.toFixed(d === undefined ? 1 : d); }
+  function cls(v, warn, bad) { return v >= bad ? 'bad' : v >= warn ? 'warn' : 'ok'; }
+
+  function render(r, samples) {
+    const u = r.getCurrentTimeUpdateIntervalMs, d = r.driftMs, da = r.driftAbsMs;
+    const rows = [
+      ['시작 지연 (play→PLAYING)', fmt(r.startLatencyMs, 0) + ' ms', cls(r.startLatencyMs || 0, 400, 1000)],
+      ['첫 읽기 오차', fmt(r.firstReadErrMs, 0) + ' ms', cls(Math.abs(r.firstReadErrMs || 0), 100, 300)],
+      ['getCurrentTime 갱신 간격 평균', fmt(u.mean, 0) + ' ms', cls(u.mean || 0, 120, 300)],
+      ['갱신 간격 p95 / 최대', fmt(u.p95, 0) + ' / ' + fmt(u.max, 0) + ' ms', ''],
+      ['드리프트 평균 ± σ', fmt(d.mean, 1) + ' ± ' + fmt(d.sd, 1) + ' ms', cls(d.sd || 0, 15, 40)],
+      ['|드리프트| p95 / p99', fmt(da.p95, 0) + ' / ' + fmt(da.p99, 0) + ' ms', cls(da.p95 || 0, 40, 100)],
+      ['|드리프트| 최대', fmt(da.max, 0) + ' ms', cls(da.max || 0, 80, 200)],
+      ['드리프트 추세', fmt(r.driftSlopeMsPerMin, 1) + ' ms/분', cls(Math.abs(r.driftSlopeMsPerMin || 0), 20, 80)],
+      ['버퍼링 이벤트', r.bufferingEvents + '회', r.bufferingEvents ? 'warn' : 'ok'],
+      ['광고 의심 (duration 변동)', r.adSuspected ? '예' : '아니오', r.adSuspected ? 'bad' : 'ok'],
+      ['샘플 수', String(d.n || 0), '']
+    ];
+    $('res').innerHTML = rows.map(x => '<tr><td>' + x[0] + '</td><td class="' + x[2] + '">' + x[1] + '</td></tr>').join('');
+    $('json').value = JSON.stringify(r, null, 2);
+    drawChart(samples);
+  }
+
+  function drawChart(samples) {
+    const c = $('chart'), g = c.getContext('2d');
+    const W = c.width = c.clientWidth * (devicePixelRatio || 1);
+    const H = c.height = c.clientHeight * (devicePixelRatio || 1);
+    g.clearRect(0, 0, W, H);
+    if (!samples.length) return;
+    const maxAbs = Math.max(50, ...samples.map(s => Math.abs(s.drift)));
+    const tMax = samples[samples.length - 1].t || 1;
+    g.strokeStyle = '#2a303b'; g.lineWidth = 1;
+    g.beginPath(); g.moveTo(0, H / 2); g.lineTo(W, H / 2); g.stroke();
+    g.fillStyle = '#8a93a3'; g.font = (11 * (devicePixelRatio || 1)) + 'px sans-serif';
+    g.fillText('+' + maxAbs.toFixed(0) + 'ms', 4, 12 * (devicePixelRatio || 1));
+    g.fillText('-' + maxAbs.toFixed(0) + 'ms', 4, H - 4);
+    g.strokeStyle = '#6aa7ff'; g.lineWidth = 1.2 * (devicePixelRatio || 1);
+    g.beginPath();
+    samples.forEach((s, i) => {
+      const x = (s.t / tMax) * W, y = H / 2 - (s.drift / maxAbs) * (H / 2 - 4);
+      i ? g.lineTo(x, y) : g.moveTo(x, y);
+    });
+    g.stroke();
+  }
+
+  // ───── 시크 테스트: seekTo 후 PLAYING 복귀 시간 + 위치 정확도 ─────
+  async function seekTest() {
+    const dur = player.getDuration();
+    const targets = [10, Math.max(20, dur * 0.3), Math.max(30, dur * 0.6)].map(t => Math.min(t, dur - 5));
+    const out = [];
+    const pw0 = waitState(S.PLAYING, 20000);
+    player.playVideo();
+    await pw0;
+    for (const t of targets) {
+      const t0 = performance.now();
+      const pw = waitState(S.PLAYING, 15000);
+      player.seekTo(t, true);
+      // seek 직후 BUFFERING 거쳐 PLAYING이 되는 경우가 일반적
+      await new Promise(r => setTimeout(r, 50));
+      const r = await pw;
+      const settle = r ? r.at - t0 : null;
+      await new Promise(r2 => setTimeout(r2, 300));
+      const posErr = (player.getCurrentTime() - t - 0.3) * 1000;
+      out.push({ target: +t.toFixed(1), settleMs: settle, posErrMs: posErr });
+      log('seek ' + t.toFixed(1) + 's → 복귀 ' + fmt(settle, 0) + 'ms, 위치오차 ' + fmt(posErr, 0) + 'ms');
+    }
+    player.pauseVideo();
+    const merged = Object.assign({}, window.__lastResult || {}, { seekTest: out });
+    window.__lastResult = merged;
+    $('json').value = JSON.stringify(merged, null, 2);
+  }
+
+  // ───── 재시작 지연: pause → seek(0) → play 반복 ─────
+  async function restartTest() {
+    const lat = [];
+    for (let i = 0; i < 5; i++) {
+      player.pauseVideo();
+      player.seekTo(0, true);
+      await new Promise(r => setTimeout(r, 500));
+      const t0 = performance.now();
+      const pw = waitState(S.PLAYING, 15000);
+      player.playVideo();
+      const r = await pw;
+      lat.push(r ? r.at - t0 : null);
+      log('재시작 ' + (i + 1) + ': ' + fmt(lat[i], 0) + 'ms');
+      await new Promise(r2 => setTimeout(r2, 800));
+    }
+    player.pauseVideo();
+    const valid = lat.filter(x => x !== null);
+    const merged = Object.assign({}, window.__lastResult || {}, { restartLatencyMs: lat, restartLatencyStats: stats(valid) });
+    window.__lastResult = merged;
+    $('json').value = JSON.stringify(merged, null, 2);
+  }
+
+  $('btnLoad').onclick = loadVideo;
+  $('btnRun').onclick = startRun;
+  $('btnStop').onclick = () => finish(false);
+  $('btnSeek').onclick = seekTest;
+  $('btnRestart').onclick = restartTest;
+  $('btnCopy').onclick = () => { $('json').select(); document.execCommand('copy'); log('복사됨'); };
+})();
+</script>
+<script src="https://www.youtube.com/iframe_api"></script>
+</body>
+</html>

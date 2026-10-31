@@ -451,7 +451,7 @@ const UI = {
             return msToX(displayMs);
         });
 
-        ctx.globalAlpha = 0.75;
+        ctx.globalAlpha = 1;
         ctx.strokeStyle = '#ff0000';
         ctx.lineWidth = 0.15;
         tickXs.forEach(x => {
