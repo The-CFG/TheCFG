@@ -36,7 +36,7 @@ const MenuFeatured = {
         const el = document.getElementById('menu-featured-beatmap');
         if (this._muffled || this._loaded) {
             SongPreview.stop();
-            AudioEngine.setMuffled(false);
+            DOM.musicPlayer.setMuffled(false);
             GameBackground.clear();
         }
         this._muffled = false;
@@ -70,7 +70,7 @@ const MenuFeatured = {
             // 다시 로드/재생하지 않고 블러/필터만 원상복구한다 (끊김 없이 이어짐).
             this._muffled = false;
             GameBackground.setBlurred(false);
-            AudioEngine.setMuffled(false);
+            DOM.musicPlayer.setMuffled(false);
             return;
         }
 
@@ -90,12 +90,12 @@ const MenuFeatured = {
         if (screenName === 'settings' && this._loaded && this._current) {
             this._muffled = true;
             GameBackground.setBlurred(true);
-            AudioEngine.setMuffled(true);
+            DOM.musicPlayer.setMuffled(true);
             return;
         }
         this._muffled = false;
         SongPreview.stop();
-        AudioEngine.setMuffled(false);
+        DOM.musicPlayer.setMuffled(false);
         GameBackground.clear();
         UI.hideAreaLoading('preview');
     },

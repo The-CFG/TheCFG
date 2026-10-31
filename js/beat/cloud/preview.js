@@ -2,7 +2,7 @@
  * SongPreview
  * -----------
  * 온라인 화면(난이도 선택 / 플레이 전 화면)에서 쓰는 "미리듣기" 재생기.
- * DOM.musicPlayer(AudioEngine)로 오디오를 재생하고, 노트 미리보기는 항상 화면에
+ * DOM.musicPlayer(MusicPlayer 파사드)로 오디오를 재생하고, 노트 미리보기는 항상 화면에
  * 떠 있는 좌측 게임 화면(#game-area의 Game.canvas / DOM.lanesContainer)에
  * 그대로 그린다 — Editor.startPreview()/previewLoop()와 동일한 방식.
  *
@@ -47,7 +47,7 @@ const SongPreview = {
             // 다운로드/디코딩 자체는 위에서 이미 시작해뒀으므로 백그라운드에서 계속
             // 진행되고, 나중에 실제로 탭하면 이미 받아둔 버퍼로 바로 이어서 재생된다.
             await Promise.race([
-                AudioEngine.resumeContext(),
+                DOM.musicPlayer.resumeContext(),
                 new Promise((_, reject) => {
                     const timeoutErr = new Error('오디오 재생 제스처 대기 시간 초과');
                     timeoutErr.isGestureTimeout = true; // 진짜 예외와 구분해서 로그 여부를 가르는 데 사용
@@ -118,7 +118,7 @@ const SongPreview = {
         try {
             // resumeContext() 대기도 타임아웃을 걸어 무한 pending을 방지한다.
             await Promise.race([
-                AudioEngine.resumeContext(),
+                DOM.musicPlayer.resumeContext(),
                 new Promise((_, reject) => {
                     const timeoutErr = new Error('오디오 재생 제스처 대기 시간 초과');
                     timeoutErr.isGestureTimeout = true;
