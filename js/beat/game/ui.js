@@ -463,7 +463,7 @@ const UI = {
         });
 
         ctx.globalAlpha = 0.75;
-        ctx.strokeStyle = '#0f172a';
+        ctx.strokeStyle = '#ff0000';
         ctx.lineWidth = 1.5;
         tickXs.forEach(x => {
             ctx.beginPath();
