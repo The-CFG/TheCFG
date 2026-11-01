@@ -1802,9 +1802,36 @@
                             <input type="text" id="editor-song-artist-input" placeholder="가수 (선택)" class="flex-1 p-2 bg-gray-700 rounded text-sm">
                         </div>
                         <div class="flex items-center gap-2">
-                            <label for="editor-song-audio-input" class="cursor-pointer flex-shrink-0 py-2 px-3 bg-teal-600 hover:bg-teal-500 rounded text-sm">오디오 선택</label>
-                            <input type="file" id="editor-song-audio-input" accept="audio/*" class="hidden">
-                            <span id="editor-song-audio-name" class="text-xs text-gray-400 flex-1 truncate">선택된 파일 없음</span>
+                            <label for="editor-song-source-select" class="text-sm w-12 flex-shrink-0">음원</label>
+                            <select id="editor-song-source-select" class="flex-1 p-2 bg-gray-700 rounded text-sm">
+                                <option value="youtube">YouTube 링크 (상용곡 — 서버에 음원 저장 안 함)</option>
+                                <option value="local">내 파일 (서버에 올리지 않음, 플레이할 때 각자 파일 선택)</option>
+                                <option value="hosted">창작곡 직접 업로드 (약관 동의 필요)</option>
+                            </select>
+                        </div>
+                        <div id="editor-song-yt-panel" class="space-y-2">
+                            <div class="flex items-center gap-2">
+                                <input type="text" id="editor-song-yt-input" placeholder="YouTube 링크 또는 영상 ID" class="flex-1 p-2 bg-gray-700 rounded text-sm">
+                                <button type="button" id="editor-song-yt-check-btn" class="flex-shrink-0 py-2 px-3 bg-teal-600 hover:bg-teal-500 rounded text-sm">확인</button>
+                            </div>
+                            <p id="editor-song-yt-status" class="text-xs text-gray-400 min-h-[1rem]"></p>
+                            <div class="flex items-center gap-2">
+                                <label for="editor-song-yt-offset-input" class="text-sm w-auto flex-shrink-0 whitespace-nowrap">영상 오프셋(초)</label>
+                                <input type="number" id="editor-song-yt-offset-input" min="0" step="0.01" value="0" class="w-24 p-2 bg-gray-700 rounded text-sm">
+                                <button type="button" id="editor-song-yt-preview-btn" class="flex-shrink-0 py-2 px-3 bg-blue-600 hover:bg-blue-500 rounded text-sm">▶ 미리듣기</button>
+                            </div>
+                            <p class="text-xs text-gray-500">영상에서 곡이 실제로 시작되는 지점입니다. 미리듣기는 화면 좌측 하단 플레이어에서 이 지점부터 재생됩니다.</p>
+                        </div>
+                        <div id="editor-song-file-panel" class="space-y-2 hidden">
+                            <div class="flex items-center gap-2">
+                                <label for="editor-song-audio-input" class="cursor-pointer flex-shrink-0 py-2 px-3 bg-teal-600 hover:bg-teal-500 rounded text-sm">오디오 선택</label>
+                                <input type="file" id="editor-song-audio-input" accept="audio/*" class="hidden">
+                                <span id="editor-song-audio-name" class="text-xs text-gray-400 flex-1 truncate">선택된 파일 없음</span>
+                            </div>
+                            <div id="editor-song-hosted-terms" class="hidden space-y-1 text-xs text-gray-300">
+                                <label class="flex items-start gap-2"><input type="checkbox" id="editor-song-declared-check" class="mt-0.5"> <span>제가 직접 만든 창작곡이며 저작권을 보유하고 있습니다.</span></label>
+                                <label class="flex items-start gap-2"><input type="checkbox" id="editor-song-terms-check" class="mt-0.5"> <span>이용약관(창작곡 업로드 조항)에 동의합니다. 위반 시 곡이 비공개/삭제될 수 있습니다.</span></label>
+                            </div>
                         </div>
                         <div class="flex items-center gap-2">
                             <label for="editor-song-cover-input" class="cursor-pointer flex-shrink-0 py-2 px-3 bg-teal-600 hover:bg-teal-500 rounded text-sm">이미지 선택</label>

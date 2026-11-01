@@ -163,7 +163,7 @@ Object.assign(Editor, {
             startOffsetSec: 0,
             timingStartSec: 0,
             // 음원 소스 (S2) — editor-core.js의 state.song 기본값과 동일하게 유지할 것
-            sourceType: 'hosted',
+            sourceType: 'youtube',
             youtubeId: null,
             ytOffsetMs: 0,
             ytDurationMs: null,
@@ -201,9 +201,11 @@ Object.assign(Editor, {
         // (실제 디코딩은 비트맵 창 진입 시 Editor.loadAudioFromUrl에서 이뤄진다 — 게임 플레이 화면과 동일한 방식)
         this.state.song.audioFileObject = null;
         this.state.song.audioFileName = (data.song.audio_storage_path || '').split('/').pop() || '';
-        this.state.song.audioUrl = data.song.audio_storage_path
-            ? CloudCharts.getAudioUrl(data.song.audio_storage_path)
-            : null;
+        // youtube 곡은 'yt:<ID>', hosted는 Storage URL, local은 null(내 파일을 직접 골라야 함)
+        this.state.song.audioUrl = CloudCharts.getSongAudioSrc(data.song);
+        if (data.song.source_type === 'youtube' && data.song.youtube_id) {
+            this.state.song.audioFileName = `YouTube ${data.song.youtube_id}`;
+        }
         this.state.song.sourceType = data.song.source_type || 'hosted';
         this.state.song.youtubeId = data.song.youtube_id || null;
         this.state.song.ytOffsetMs = data.song.yt_offset_ms || 0;

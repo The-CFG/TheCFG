@@ -360,6 +360,7 @@ document.addEventListener('DOMContentLoaded', () => {
             EditorOsuConvert.importAsNewSong();
         });
         document.getElementById('editor-song-back-btn').addEventListener('click', () => {
+            EditorSong.stopYtPreview();
             UI.showScreen('editorHome');
             EditorHome.refresh(); // Phase 3d: 방금 업로드했을 수 있으니 목록 새로고침
         });
@@ -384,6 +385,13 @@ document.addEventListener('DOMContentLoaded', () => {
             DOM.editorSong.timingStartInput.addEventListener('input', (e) => EditorSong.onTimingStartInput(e.target.value));
         }
         DOM.editorSong.audioFileInput.addEventListener('change', (e) => EditorSong.handleAudioSelect(e.target.files[0]));
+        DOM.editorSong.sourceSelect.addEventListener('change', (e) => EditorSong.onSourceChange(e.target.value));
+        DOM.editorSong.ytInput.addEventListener('input', (e) => EditorSong.onYtInput(e.target.value));
+        DOM.editorSong.ytCheckBtn.addEventListener('click', () => EditorSong.checkYoutube());
+        DOM.editorSong.ytOffsetInput.addEventListener('input', (e) => EditorSong.onYtOffsetInput(e.target.value));
+        DOM.editorSong.ytPreviewBtn.addEventListener('click', () => EditorSong.toggleYtPreview());
+        DOM.editorSong.declaredCheck.addEventListener('change', (e) => EditorSong.onHostedTermsChange({ declared: e.target.checked }));
+        DOM.editorSong.termsCheck.addEventListener('change', (e) => EditorSong.onHostedTermsChange({ terms: e.target.checked }));
         DOM.editorSong.coverFileInput.addEventListener('change', (e) => EditorSong.handleCoverSelect(e.target.files[0]));
         DOM.editorSong.saveLocalBtn.addEventListener('click', () => EditorSong.saveLocal());
         DOM.editorSong.loadLocalInput.addEventListener('change', (e) => {

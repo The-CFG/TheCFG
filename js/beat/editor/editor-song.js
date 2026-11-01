@@ -46,6 +46,7 @@ const EditorSong = {
 
         if (DOM.editorSong.titleInput) DOM.editorSong.titleInput.value = song.title || '';
         if (DOM.editorSong.artistInput) DOM.editorSong.artistInput.value = song.artist || '';
+        this._renderSourcePanels();
         if (DOM.editorSong.audioNameEl) {
             DOM.editorSong.audioNameEl.textContent = song.audioFileObject
                 ? song.audioFileName
@@ -83,6 +84,7 @@ const EditorSong = {
             DOM.editorSong.titleInput, DOM.editorSong.artistInput,
             DOM.editorSong.previewStartInput, DOM.editorSong.startTimeInput, DOM.editorSong.timingStartInput,
             DOM.editorSong.audioFileInput, DOM.editorSong.coverFileInput,
+            DOM.editorSong.ytOffsetInput, DOM.editorSong.declaredCheck, DOM.editorSong.termsCheck,
             DOM.editorSong.uploadCloudBtn, DOM.editorSong.saveDraftBtn,
             DOM.editorSong.addBeatmapBtn,
         ].forEach(el => { if (el) el.disabled = readOnly; });
@@ -366,6 +368,244 @@ const EditorSong = {
         Editor.setTimingStartSec(sec);
     },
 
+    // ── 음원 소스 (YouTube / 내 파일 / 창작곡 업로드) ──────────────────────────
+    // 약관 문구는 아직 미확정(계획서 7절) — 문구가 확정되면 이 버전 문자열을 올린다.
+    TERMS_VERSION: 'draft-2026-11',
+    _ytVerifiedId: null,    // 이 세션에서 '확인'(oEmbed + 길이 취득)을 통과한 영상 ID
+    _ytPreviewing: false,
+
+    // 공유 링크/영상 ID 문자열 → 11자 영상 ID (실패 시 null)
+    parseYoutubeId(input) {
+        const s = (input || '').trim();
+        if (!s) return null;
+        if (/^[A-Za-z0-9_-]{11}$/.test(s)) return s;
+        let u;
+        try { u = new URL(/^https?:\/\//i.test(s) ? s : `https://${s}`); } catch (e) { return null; }
+        const host = u.hostname.replace(/^www\.|^m\.|^music\./, '');
+        let id = null;
+        if (host === 'youtu.be') {
+            id = u.pathname.slice(1).split('/')[0];
+        } else if (host === 'youtube.com' || host === 'youtube-nocookie.com') {
+            if (u.pathname === '/watch') id = u.searchParams.get('v');
+            else {
+                const m = u.pathname.match(/^\/(?:embed|shorts|live|v)\/([^/?#]+)/);
+                if (m) id = m[1];
+            }
+        }
+        return id && /^[A-Za-z0-9_-]{11}$/.test(id) ? id : null;
+    },
+
+    _formatDuration(ms) {
+        const total = Math.round((ms || 0) / 1000);
+        return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+    },
+
+    _setYtStatus(text, isError = false) {
+        const el = DOM.editorSong.ytStatusEl;
+        if (!el) return;
+        el.textContent = text || '';
+        el.classList.toggle('text-red-400', !!isError);
+        el.classList.toggle('text-gray-400', !isError);
+    },
+
+    // 소스 종류에 맞춰 패널/입력값/체크박스를 현재 state 기준으로 다시 그린다.
+    _renderSourcePanels() {
+        const song = Editor.state.song;
+        const d = DOM.editorSong;
+        const src = song.sourceType || 'youtube';
+        const isCloud = !!song.cloudSongId;
+        if (d.sourceSelect) {
+            d.sourceSelect.value = src;
+            d.sourceSelect.disabled = isCloud || this._isReadOnly(); // 이미 저장된 노래는 소스 종류를 바꾸지 않는다
+        }
+        if (d.ytPanel) d.ytPanel.classList.toggle('hidden', src !== 'youtube');
+        if (d.filePanel) d.filePanel.classList.toggle('hidden', src === 'youtube');
+        if (d.hostedTermsEl) d.hostedTermsEl.classList.toggle('hidden', !(src === 'hosted' && !isCloud));
+        if (d.ytInput) {
+            d.ytInput.value = song.youtubeId ? `https://youtu.be/${song.youtubeId}` : (d.ytInput.value || '');
+            d.ytInput.disabled = isCloud || this._isReadOnly(); // 저장된 영상은 바꾸지 않음(오프셋만 조정)
+        }
+        if (d.ytCheckBtn) d.ytCheckBtn.disabled = isCloud || this._isReadOnly();
+        if (d.ytOffsetInput) d.ytOffsetInput.value = (song.ytOffsetMs || 0) / 1000;
+        if (d.declaredCheck) d.declaredCheck.checked = song.originalDeclared === true;
+        if (d.termsCheck) d.termsCheck.checked = !!song.termsVersion;
+        if (src === 'youtube') {
+            if (song.youtubeId && song.ytDurationMs) {
+                this._setYtStatus(`✔ 영상 ${song.youtubeId} · 길이 ${this._formatDuration(song.ytDurationMs)}`);
+            } else if (song.youtubeId) {
+                this._setYtStatus('아직 확인되지 않았습니다. "확인"을 눌러주세요.');
+            } else {
+                this._setYtStatus('');
+            }
+        }
+        if (d.ytPreviewBtn) d.ytPreviewBtn.textContent = this._ytPreviewing ? '■ 정지' : '▶ 미리듣기';
+    },
+
+    onSourceChange(value) {
+        if (this._isReadOnly() || Editor.state.song.cloudSongId) return;
+        if (!['youtube', 'local', 'hosted'].includes(value)) return;
+        const song = Editor.state.song;
+        this.stopYtPreview();
+        song.sourceType = value;
+        if (value === 'youtube') {
+            // 비트맵 창은 audioFileObject를 먼저 쓰므로, youtube에서는 비워두고 yt:ID를 재생 소스로 쓴다.
+            song.audioFileObject = null;
+            song.audioUrl = song.youtubeId ? `yt:${song.youtubeId}` : null;
+            song.audioFileName = song.youtubeId ? `YouTube ${song.youtubeId}` : '';
+            song.originalDeclared = false;
+            song.termsVersion = null;
+        } else {
+            song.audioUrl = null; // 서버/YouTube 소스는 더 이상 쓰지 않음 — 파일을 직접 골라야 한다
+            if (value !== 'hosted') { song.originalDeclared = false; song.termsVersion = null; }
+        }
+        this.render();
+    },
+
+    onYtInput(value) {
+        if (this._isReadOnly() || Editor.state.song.cloudSongId) return;
+        const song = Editor.state.song;
+        const id = this.parseYoutubeId(value);
+        if (id !== song.youtubeId) {
+            this.stopYtPreview();
+            song.youtubeId = id;
+            song.ytDurationMs = null;
+            song.audioUrl = id ? `yt:${id}` : null;
+            song.audioFileName = id ? `YouTube ${id}` : '';
+            this._ytVerifiedId = null;
+        }
+        if (!value.trim()) this._setYtStatus('');
+        else if (!id) this._setYtStatus('올바른 YouTube 링크 또는 영상 ID가 아닙니다.', true);
+        else this._setYtStatus('"확인"을 눌러 영상을 검증해주세요.');
+    },
+
+    onYtOffsetInput(value) {
+        const sec = Math.max(0, parseFloat(value) || 0);
+        Editor.state.song.ytOffsetMs = Math.round(sec * 1000);
+    },
+
+    onHostedTermsChange({ declared, terms }) {
+        const song = Editor.state.song;
+        if (declared !== undefined) song.originalDeclared = declared === true;
+        if (terms !== undefined) song.termsVersion = terms ? this.TERMS_VERSION : null;
+    },
+
+    // 영상 검증: ① oEmbed(삭제/비공개/임베드 금지 확인) ② IFrame API로 길이 취득
+    async checkYoutube() {
+        if (this._isReadOnly() || Editor.state.song.cloudSongId) return;
+        const song = Editor.state.song;
+        const id = song.youtubeId;
+        if (!id) { this._setYtStatus('올바른 YouTube 링크 또는 영상 ID가 아닙니다.', true); return; }
+
+        const btn = DOM.editorSong.ytCheckBtn;
+        if (btn) btn.disabled = true;
+        this._setYtStatus('영상 확인 중…');
+        try {
+            // ① oEmbed — 404: 없는/비공개 영상, 401/403: 임베드 불가
+            let info = null;
+            try {
+                const ctrl = new AbortController();
+                const timer = setTimeout(() => ctrl.abort(), 8000);
+                const res = await fetch(
+                    `https://www.youtube.com/oembed?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${id}`)}&format=json`,
+                    { signal: ctrl.signal });
+                clearTimeout(timer);
+                if (res.status === 404) throw new Error('영상을 찾을 수 없습니다 (삭제됨/비공개).');
+                if (res.status === 401 || res.status === 403) throw new Error('이 영상은 임베드가 허용되지 않아 사용할 수 없습니다.');
+                if (res.ok) info = await res.json();
+            } catch (err) {
+                if (err.name !== 'AbortError' && /영상/.test(err.message)) throw err;
+                // 네트워크/시간 초과는 검증을 건너뛰고 ②에서 재생기로 한 번 더 확인한다
+            }
+            if (id !== song.youtubeId) return; // 확인 중 입력이 바뀜
+
+            // ② 재생기로 로드해서 길이를 얻는다 (좌측 하단에 플레이어가 잠깐 보인다)
+            this._setYtStatus('영상 길이 확인 중…');
+            const durationMs = await this._probeYoutubeDuration(id);
+            if (id !== song.youtubeId) return;
+
+            song.ytDurationMs = durationMs;
+            song.audioUrl = `yt:${id}`;
+            song.audioFileName = `YouTube ${id}`;
+            this._ytVerifiedId = id;
+            if (info?.title && !(song.title || '').trim()) {
+                song.title = info.title;
+                if (DOM.editorSong.titleInput) DOM.editorSong.titleInput.value = info.title;
+                if (DOM.editorSong.titleHeading) DOM.editorSong.titleHeading.textContent = info.title;
+            }
+            this._setYtStatus(`✔ ${info?.title ? info.title + ' · ' : ''}길이 ${this._formatDuration(durationMs)}`);
+        } catch (err) {
+            this._ytVerifiedId = null;
+            song.ytDurationMs = null;
+            this._setYtStatus(err.message || '영상을 확인하지 못했습니다.', true);
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    },
+
+    // 플레이어를 yt:<ID>로 로드해서 길이(ms)를 읽는다. 에러/시간 초과면 throw.
+    _probeYoutubeDuration(id) {
+        return new Promise((resolve, reject) => {
+            const player = DOM.musicPlayer;
+            const prevMeta = player.onloadedmetadata;
+            let done = false;
+            const finish = (fn, val) => {
+                if (done) return;
+                done = true;
+                clearTimeout(timer);
+                player.removeEventListener('error', onErr);
+                player.onloadedmetadata = prevMeta;
+                try { player.pause(); } catch (e) { /* 무시 */ }
+                fn(val);
+            };
+            const onErr = () => finish(reject, new Error(player.error?.message || '영상을 재생할 수 없습니다 (삭제/임베드 금지/지역 차단).'));
+            const timer = setTimeout(() => finish(reject, new Error('영상 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.')), 12000);
+            player.addEventListener('error', onErr);
+            player.onloadedmetadata = () => {
+                const ms = Math.round((player.duration || 0) * 1000);
+                if (ms > 0) finish(resolve, ms);
+            };
+            player.src = `yt:${id}`;
+        });
+    },
+
+    // 오프셋 지점부터 재생해서 곡 시작 위치가 맞는지 귀로 확인한다.
+    async toggleYtPreview() {
+        const song = Editor.state.song;
+        if (this._ytPreviewing) { this.stopYtPreview(); return; }
+        if (!song.youtubeId) { this._setYtStatus('먼저 YouTube 링크를 입력해주세요.', true); return; }
+        try {
+            if (DOM.musicPlayer.src !== `yt:${song.youtubeId}`) {
+                DOM.musicPlayer.src = `yt:${song.youtubeId}`;
+            }
+            const ready = await DOM.musicPlayer.whenReady();
+            if (!ready) throw new Error('영상을 재생할 수 없습니다.');
+            DOM.musicPlayer.currentTime = (song.ytOffsetMs || 0) / 1000;
+            await DOM.musicPlayer.play();
+            this._ytPreviewing = true;
+        } catch (err) {
+            this._ytPreviewing = false;
+            this._setYtStatus(err.message || '미리듣기에 실패했습니다.', true);
+        }
+        if (DOM.editorSong.ytPreviewBtn) DOM.editorSong.ytPreviewBtn.textContent = this._ytPreviewing ? '■ 정지' : '▶ 미리듣기';
+    },
+
+    stopYtPreview() {
+        if (this._ytPreviewing) { try { DOM.musicPlayer.pause(); } catch (e) { /* 무시 */ } }
+        this._ytPreviewing = false;
+        if (DOM.editorSong.ytPreviewBtn) DOM.editorSong.ytPreviewBtn.textContent = '▶ 미리듣기';
+    },
+
+    // local 곡의 파일 검증용 해시(SHA-256 hex). 실패하면 null.
+    async _hashFile(file) {
+        try {
+            const buf = await file.arrayBuffer();
+            const digest = await crypto.subtle.digest('SHA-256', buf);
+            return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+        } catch (e) {
+            return null;
+        }
+    },
+
     // 오디오는 노래(song) 단위로 한 번만 고르면 모든 난이도가 공유해서 쓴다.
     handleAudioSelect(file) {
         if (!file) return;
@@ -540,6 +780,10 @@ const EditorSong = {
                 UI.showMessage('editorSong', '먼저 YouTube 링크를 입력해주세요.');
                 return;
             }
+            if (isNewSong && srcType === 'youtube' && this._ytVerifiedId !== Editor.state.song.youtubeId) {
+                UI.showMessage('editorSong', 'YouTube 링크를 "확인"해서 영상이 사용 가능한지 검증해주세요.');
+                return;
+            }
             if (isNewSong && srcType !== 'youtube' && !Editor.state.song.audioFileObject) {
                 // hosted/local — 편집·해시 계산에 오디오 파일이 필요 (local은 서버에 올리지 않음)
                 UI.showMessage('editorSong', '먼저 오디오 파일을 선택해주세요.');
@@ -566,6 +810,9 @@ const EditorSong = {
             const previewStartMs = Math.round((Editor.state.song.previewStartSec || 0) * 1000);
             const startOffsetMs = Math.round((Editor.state.song.startOffsetSec || 0) * 1000);
             const timingStartMs = Math.round((Editor.state.song.timingStartSec || 0) * 1000);
+            if (srcType === 'local' && Editor.state.song.audioFileObject) {
+                Editor.state.song.audioHash = await this._hashFile(Editor.state.song.audioFileObject);
+            }
             if (isNewSong) {
                 const { data, error } = await CloudCharts.uploadSong(
                     {
@@ -596,6 +843,11 @@ const EditorSong = {
                     start_offset_ms: startOffsetMs,
                     timing_start_ms: timingStartMs,
                     is_public: publish,
+                    ...(srcType === 'youtube' ? {
+                        yt_offset_ms: Editor.state.song.ytOffsetMs || 0,
+                        yt_duration_ms: Editor.state.song.ytDurationMs,
+                    } : {}),
+                    ...(srcType === 'local' && Editor.state.song.audioHash ? { audio_hash: Editor.state.song.audioHash } : {}),
                 }, Editor.state.song.coverFileObject, Editor.state.song.updatedAt);
                 if (metaErr?.conflict) {
                     this._handleSaveConflict();
