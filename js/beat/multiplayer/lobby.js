@@ -438,7 +438,8 @@ const MultiplayerLobby = {
             try {
                 const { data: chartData, error } = await CloudCharts.downloadChartData(this._chart.chart_storage_path);
                 if (error) throw error;
-                const audioUrl = CloudCharts.getAudioUrl(this._chart.audio_storage_path);
+                const audioUrl = CloudCharts.getSongAudioSrc(this._chart);
+                if (!audioUrl) throw new Error('이 곡은 서버에 음원이 없어 멀티플레이를 지원하지 않습니다.');
                 // 오디오 fetch+decode를 시작해두고, 실제로 재생 가능한 버퍼가 준비될 때까지 기다린다.
                 DOM.musicPlayer.src = audioUrl;
                 const audioReady = await DOM.musicPlayer.whenReady();

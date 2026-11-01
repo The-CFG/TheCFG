@@ -535,9 +535,18 @@ const EditorSong = {
             const publicSyncBeatmaps = publicStateChanged
                 ? Editor.state.beatmaps.filter(bm => bm.cloudChartId && !bm._cloudDirty)
                 : [];
-            if (isNewSong && !Editor.state.song.audioFileObject) {
-                // 신규 노래 업로드 — 오디오 필수
+            const srcType = Editor.state.song.sourceType || 'hosted';
+            if (isNewSong && srcType === 'youtube' && !Editor.state.song.youtubeId) {
+                UI.showMessage('editorSong', '먼저 YouTube 링크를 입력해주세요.');
+                return;
+            }
+            if (isNewSong && srcType !== 'youtube' && !Editor.state.song.audioFileObject) {
+                // hosted/local — 편집·해시 계산에 오디오 파일이 필요 (local은 서버에 올리지 않음)
                 UI.showMessage('editorSong', '먼저 오디오 파일을 선택해주세요.');
+                return;
+            }
+            if (isNewSong && srcType === 'hosted' && !(Editor.state.song.originalDeclared && Editor.state.song.termsVersion)) {
+                UI.showMessage('editorSong', '서버 업로드는 창작곡 선언과 약관 동의가 필요합니다. 상용곡은 YouTube 링크를 사용해주세요.');
                 return;
             }
             // 난이도 변경사항이 없어도, 이미 클라우드에 있는 노래라면 제목/가수/미리듣기 시작 시각이
@@ -559,7 +568,16 @@ const EditorSong = {
             const timingStartMs = Math.round((Editor.state.song.timingStartSec || 0) * 1000);
             if (isNewSong) {
                 const { data, error } = await CloudCharts.uploadSong(
-                    { title: Editor.state.song.title, artist: Editor.state.song.artist, preview_start_ms: previewStartMs, start_offset_ms: startOffsetMs, timing_start_ms: timingStartMs, is_public: publish },
+                    {
+                        title: Editor.state.song.title, artist: Editor.state.song.artist, preview_start_ms: previewStartMs, start_offset_ms: startOffsetMs, timing_start_ms: timingStartMs, is_public: publish,
+                        source_type: srcType,
+                        youtube_id: Editor.state.song.youtubeId,
+                        yt_offset_ms: Editor.state.song.ytOffsetMs || 0,
+                        yt_duration_ms: Editor.state.song.ytDurationMs,
+                        audio_hash: Editor.state.song.audioHash,
+                        original_declared: Editor.state.song.originalDeclared === true,
+                        terms_version: Editor.state.song.termsVersion,
+                    },
                     Editor.state.song.audioFileObject,
                     Editor.state.song.coverFileObject
                 );

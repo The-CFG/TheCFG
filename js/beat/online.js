@@ -393,10 +393,12 @@ const Online = {
         // 재생 가능해질 때까지 좌측 오버레이를 이어서 띄운다(플레이 전 화면의 미리보기
         // 로딩과 동일한 'preview' 키 재사용 — 화면이 바뀌면 show()가 SongPreview.stop()으로
         // 항상 정리해주므로 겹칠 일이 없다).
-        if (song.audio_storage_path) {
+        // (서버에 파일이 있는 hosted/기존 곡만 — YouTube 곡 미리듣기는 보이는 플레이어가 필요해 S6에서 구현)
+        const previewAudioUrl = CloudCharts.getHostedAudioUrl(song);
+        if (previewAudioUrl) {
             UI.showAreaLoading('preview', '노래 불러오는 중…');
             const stopTracking = UI.trackAudioDownloadProgress('preview');
-            SongPreview.playAudio(CloudCharts.getAudioUrl(song.audio_storage_path), song.preview_start_ms || 0)
+            SongPreview.playAudio(previewAudioUrl, song.preview_start_ms || 0)
                 .catch(() => {}) // 실패(제스처 대기 타임아웃 등)해도 아래 정리는 항상 수행 — 여기선 결과를 따로 다루지 않음
                 .finally(() => {
                     stopTracking();
@@ -596,7 +598,7 @@ const Online = {
             if (error) throw error;
             await SongPreview.start({
                 chartData,
-                audioUrl: CloudCharts.getAudioUrl(c.audio_storage_path),
+                audioUrl: CloudCharts.getHostedAudioUrl(c),
                 // 노트 미리보기는 실제 플레이와 동일하게 항상 처음(0)부터 재생한다.
                 // preview_start_ms는 난이도 선택(노래 상세) 화면의 "미리듣기"에만 쓰인다 —
                 // 여기서 그 값을 그대로 쓰면 노트 타이밍과 어긋나 노트가 하나도 안 보일 수 있다.
@@ -611,7 +613,7 @@ const Online = {
             stopTracking();
             // 노트 미리보기 실패 시에도 오디오 미리듣기는 시도한다.
             if (this._currentChartId !== c.id || seq !== this._loadSeq) { UI.hideAreaLoading('preview'); return; }
-            SongPreview.playAudio(CloudCharts.getAudioUrl(c.audio_storage_path), c.preview_start_ms || 0).catch(() => {});
+            SongPreview.playAudio(CloudCharts.getHostedAudioUrl(c), c.preview_start_ms || 0).catch(() => {});
             // 이 경우엔 좌측 화면에 노트 미리보기 없이 오디오만 재생되므로, 오버레이에
             // 안내를 계속 남겨둔다 — 다만 로딩이 끝난 확정 상태이므로 스피너는 끈다.
             UI.showAreaLoading('preview', '🎵 노래 미리듣기만 재생 중입니다.', { spinner: false });
@@ -654,7 +656,12 @@ const Online = {
             const { data: chartData, error: cdErr } = await CloudCharts.downloadChartData(c.chart_storage_path);
             if (cdErr) throw cdErr;
 
-            const audioUrl = CloudCharts.getAudioUrl(c.audio_storage_path);
+            const audioUrl = CloudCharts.getSongAudioSrc(c);
+            if (!audioUrl) {
+                // local 곡: 서버에 음원이 없다 — 내 파일로 재생하는 흐름은 아직 연결 전
+                throw new Error('이 곡은 서버에 음원이 없습니다. (직접 파일 재생은 아직 지원되지 않습니다)');
+            }
+            // TODO(S3): YouTube 곡의 yt_offset_ms(영상 기준 곡 시작 위치)를 재생 시계에 반영해야 한다.
 
             // 채보 파일에 저장된 startTimeOffset(노트 타이밍 기준점)은 무시하고
             // 노래의 start_offset_ms(종합 창 "시작(초)")로 덮어쓴다.

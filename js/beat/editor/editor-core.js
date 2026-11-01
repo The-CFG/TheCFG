@@ -60,6 +60,14 @@ const Editor = {
             previewStartSec: 0,     // 온라인 화면 미리듣기 시작 시각(초). 0이면 처음부터.
             startOffsetSec: 0,      // 실제 플레이 시 노래가 재생되기 시작하는 지점(초). 0이면 처음부터.
             timingStartSec: 0,      // 그리드(격자선)가 존재하기 시작하는 노래 절대 시각(초). startOffsetSec과 독립적. 0이면 기존과 동일(제약 없음).
+            // 음원 소스 (S2). 에디터 UI에서 고르기 전까지는 기존과 같은 hosted.
+            sourceType: 'hosted',   // 'youtube' | 'local' | 'hosted'
+            youtubeId: null,        // youtube: 11자 영상 ID
+            ytOffsetMs: 0,          // youtube: 영상 기준 곡 시작 오프셋
+            ytDurationMs: null,     // youtube: 등록 시 영상 길이(광고 감지 기준)
+            audioHash: null,        // local: 파일 검증용 해시
+            originalDeclared: false,// hosted: 창작곡 선언
+            termsVersion: null,     // hosted: 동의한 약관 버전
         },
         // 노래에 딸린 난이도(비트맵) 목록. 각 항목은
         // { difficultyLabel, laneCount, bpm, startTimeOffset, notes, triggers, cloudChartId } 형태.

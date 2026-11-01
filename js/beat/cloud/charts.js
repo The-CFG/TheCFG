@@ -222,6 +222,23 @@ const CloudCharts = {
         return data.publicUrl;
     },
 
+    // 노래 행 → 게임 재생 소스.
+    //   youtube          → 'yt:<영상 ID>' (MusicPlayer 파사드가 YouTubeSource로 라우팅)
+    //   hosted/기존 곡    → Storage 공개 URL
+    //   local            → null (유저가 자기 파일을 직접 골라야 함 — 호출부가 안내 처리)
+    getSongAudioSrc(song) {
+        if (!song) return null;
+        if (song.source_type === 'youtube' && song.youtube_id) return `yt:${song.youtube_id}`;
+        if (song.audio_storage_path) return this.getAudioUrl(song.audio_storage_path);
+        return null;
+    },
+
+    // 서버에 실제 음원 파일이 있는 곡만 URL을 돌려준다(미리듣기용).
+    // YouTube 미리듣기는 정책상 보이는 플레이어가 필요해서 S3/S6에서 별도 구현한다.
+    getHostedAudioUrl(song) {
+        return song && song.audio_storage_path ? this.getAudioUrl(song.audio_storage_path) : null;
+    },
+
     // ── Storage에서 커버 이미지 공개 URL 가져오기 ─────────────────────────────
     getCoverUrl(coverStoragePath) {
         if (!coverStoragePath) return null;
@@ -238,22 +255,43 @@ const CloudCharts = {
     // ════════════════════════════════════════════════════════════════════════
 
     // ── 노래 업로드 (신규 beat_songs 행 + 오디오 [+ 커버 이미지]) ────────────
-    // meta: { title, artist, preview_start_ms, start_offset_ms, timing_start_ms, is_public }, audioFile: File 객체 (필수),
+    // meta: { title, artist, preview_start_ms, start_offset_ms, timing_start_ms, is_public,
+    //         source_type('youtube'|'local'|'hosted', 기본 'hosted'),
+    //         youtube_id, yt_offset_ms, yt_duration_ms,           // youtube
+    //         audio_hash,                                          // local
+    //         original_declared, terms_version }                   // hosted(창작곡 선언 + 약관 동의)
+    // audioFile: File 객체 — hosted일 때만 필수/업로드된다 (youtube/local은 서버에 음원을 올리지 않음)
     // coverFile: File 객체 (선택 — 노래 선택~결과 화면 배경으로 쓰임)
     // is_public: false로 넘기면 공개 라이브러리에는 노출되지 않고 "내 노래" 목록(서버 저장)에만 보인다.
     async uploadSong(meta, audioFile, coverFile) {
         const user = await CloudAuth.getUser();
         if (!user) return { error: new Error('로그인이 필요합니다.') };
-        if (!audioFile) return { error: new Error('음악 파일을 선택해주세요.') };
+
+        const sourceType = meta.source_type || 'hosted';
+        if (!['youtube', 'local', 'hosted'].includes(sourceType)) {
+            return { error: new Error('알 수 없는 음원 종류입니다.') };
+        }
+        if (sourceType === 'youtube' && !/^[A-Za-z0-9_-]{11}$/.test(meta.youtube_id || '')) {
+            return { error: new Error('올바른 YouTube 링크가 필요합니다.') };
+        }
+        if (sourceType === 'hosted') {
+            if (!audioFile) return { error: new Error('음악 파일을 선택해주세요.') };
+            if (meta.original_declared !== true || !meta.terms_version) {
+                return { error: new Error('서버 호스팅은 창작곡 선언과 약관 동의가 필요합니다. 상용곡은 YouTube 링크를 사용해주세요.') };
+            }
+        }
 
         const songId = crypto.randomUUID();
-        const audioExt = (audioFile.name.split('.').pop() || 'mp3').toLowerCase();
-        const audioPath = `${user.id}/songs/${songId}/audio.${audioExt}`;
-
-        const { error: audioErr } = await _supabase.storage
-            .from('beat-files')
-            .upload(audioPath, audioFile, { contentType: audioFile.type || 'audio/mpeg', upsert: false });
-        if (audioErr) return { error: audioErr };
+        // youtube/local은 서버에 음원을 올리지 않는다 (audio_storage_path = null)
+        let audioPath = null;
+        if (sourceType === 'hosted') {
+            const audioExt = (audioFile.name.split('.').pop() || 'mp3').toLowerCase();
+            audioPath = `${user.id}/songs/${songId}/audio.${audioExt}`;
+            const { error: audioErr } = await _supabase.storage
+                .from('beat-files')
+                .upload(audioPath, audioFile, { contentType: audioFile.type || 'audio/mpeg', upsert: false });
+            if (audioErr) return { error: audioErr };
+        }
 
         let coverPath = null;
         if (coverFile) {
@@ -263,7 +301,7 @@ const CloudCharts = {
                 .from('beat-files')
                 .upload(coverPath, coverFile, { contentType: coverFile.type || 'image/jpeg', upsert: false });
             if (coverErr) {
-                await _supabase.storage.from('beat-files').remove([audioPath]);
+                if (audioPath) await _supabase.storage.from('beat-files').remove([audioPath]);
                 return { error: coverErr };
             }
         }
@@ -279,16 +317,24 @@ const CloudCharts = {
                 start_offset_ms: meta.start_offset_ms || 0,
                 timing_start_ms: meta.timing_start_ms || 0,
                 audio_storage_path: audioPath,
-                audio_mime: audioFile.type || 'audio/mpeg',
+                audio_mime: audioPath ? (audioFile.type || 'audio/mpeg') : null,
                 cover_storage_path: coverPath,
                 is_public: meta.is_public === true,
+                source_type: sourceType,
+                youtube_id: sourceType === 'youtube' ? meta.youtube_id : (meta.youtube_id || null),
+                yt_offset_ms: meta.yt_offset_ms || 0,
+                yt_duration_ms: meta.yt_duration_ms || null,
+                audio_hash: sourceType === 'local' ? (meta.audio_hash || null) : null,
+                original_declared: sourceType === 'hosted',
+                terms_version: sourceType === 'hosted' ? meta.terms_version : null,
+                // terms_agreed_at은 DB 트리거가 서버 시각으로 기록한다
             })
             .select()
             .single();
 
         if (dbErr) {
-            const toRemove = coverPath ? [audioPath, coverPath] : [audioPath];
-            await _supabase.storage.from('beat-files').remove(toRemove);
+            const toRemove = [audioPath, coverPath].filter(Boolean);
+            if (toRemove.length) await _supabase.storage.from('beat-files').remove(toRemove);
             return { error: dbErr };
         }
 
@@ -314,6 +360,11 @@ const CloudCharts = {
             timing_start_ms: meta.timing_start_ms || 0,
         };
         if (typeof meta.is_public === 'boolean') updatePayload.is_public = meta.is_public;
+        // 음원 소스 관련 필드는 넘어온 것만 갱신한다 (기존 곡의 source_type은 여기서 바꾸지 않음)
+        if (meta.yt_offset_ms !== undefined) updatePayload.yt_offset_ms = meta.yt_offset_ms || 0;
+        if (meta.yt_duration_ms !== undefined) updatePayload.yt_duration_ms = meta.yt_duration_ms || null;
+        if (meta.youtube_id !== undefined) updatePayload.youtube_id = meta.youtube_id || null;
+        if (meta.audio_hash !== undefined) updatePayload.audio_hash = meta.audio_hash || null;
 
         if (coverFile) {
             const coverExt = (coverFile.name.split('.').pop() || 'jpg').toLowerCase();

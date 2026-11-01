@@ -162,6 +162,14 @@ Object.assign(Editor, {
             previewStartSec: 0,
             startOffsetSec: 0,
             timingStartSec: 0,
+            // 음원 소스 (S2) — editor-core.js의 state.song 기본값과 동일하게 유지할 것
+            sourceType: 'hosted',
+            youtubeId: null,
+            ytOffsetMs: 0,
+            ytDurationMs: null,
+            audioHash: null,
+            originalDeclared: false,
+            termsVersion: null,
             // 낙관적 잠금(A안)용 — 이 노래를 불러온/직전에 저장한 시점의 updated_at.
             // updateSongMeta 호출 시 그대로 실어보내 "그 사이 다른 곳에서 먼저 저장"됐는지 판별한다.
             updatedAt: null,
@@ -196,6 +204,13 @@ Object.assign(Editor, {
         this.state.song.audioUrl = data.song.audio_storage_path
             ? CloudCharts.getAudioUrl(data.song.audio_storage_path)
             : null;
+        this.state.song.sourceType = data.song.source_type || 'hosted';
+        this.state.song.youtubeId = data.song.youtube_id || null;
+        this.state.song.ytOffsetMs = data.song.yt_offset_ms || 0;
+        this.state.song.ytDurationMs = data.song.yt_duration_ms || null;
+        this.state.song.audioHash = data.song.audio_hash || null;
+        this.state.song.originalDeclared = data.song.original_declared === true;
+        this.state.song.termsVersion = data.song.terms_version || null;
         this.state.song.coverFileObject = null;
         this.state.song.coverFileName = (data.song.cover_storage_path || '').split('/').pop() || '';
         this.state.song.coverUrl = data.song.cover_storage_path

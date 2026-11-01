@@ -128,7 +128,8 @@ const MenuFeatured = {
 
     _playPreview() {
         const chart = this._current;
-        if (!chart || !chart.audio_storage_path) return;
+        const previewUrl = chart ? CloudCharts.getHostedAudioUrl(chart) : null;
+        if (!previewUrl) return; // 서버에 음원이 없는 곡(YouTube/local)은 추천 미리듣기를 생략
         const seq = this._loadSeq;
         // online.js의 미리듣기 로딩과 동일하게 'preview' 키를 재사용해 좌측 game-area에
         // "노래 불러오는 중…" 오버레이 + 실제 다운로드 진행률 바를 띄운다(진행률을 알 수
@@ -136,7 +137,7 @@ const MenuFeatured = {
         // 항상 정리한다.
         UI.showAreaLoading('preview', '노래 불러오는 중…');
         const stopTracking = UI.trackAudioDownloadProgress('preview');
-        SongPreview.playAudio(CloudCharts.getAudioUrl(chart.audio_storage_path), chart.preview_start_ms || 0)
+        SongPreview.playAudio(previewUrl, chart.preview_start_ms || 0)
             .then(() => this._hideTapOverlay())
             .catch(() => {
                 // 제스처 없이 자동재생이 막힌 경우 — 페이지 첫 진입마다 항상 있을 수 있는
