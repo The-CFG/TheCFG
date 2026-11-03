@@ -199,6 +199,8 @@ const DOM = {
         inputOffsetValue: document.getElementById('input-offset-value'),
         touchInputOffsetSlider: document.getElementById('touch-input-offset-slider'),
         touchInputOffsetValue: document.getElementById('touch-input-offset-value'),
+        ytInputOffsetSlider: document.getElementById('yt-input-offset-slider'),
+        ytInputOffsetValue: document.getElementById('yt-input-offset-value'),
         debugModeToggle: document.getElementById('debug-mode-toggle'),
         controls: {
             lanesSelector: document.getElementById('keybind-lanes-selector'),

@@ -516,6 +516,14 @@
                                         <input id="touch-input-offset-slider" type="range" min="-300" max="300" step="5" value="0" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
                                         <p class="text-xs text-gray-500 mt-1">일부 모바일 브라우저(특히 iOS의 Chrome 등)는 터치 입력 전달이 키보드/마우스보다 느릴 수 있습니다. 터치로 플레이할 때만 위 보정값에 추가로 더해집니다. 터치 판정이 유독 심하게 늦게(MISS) 나온다면 이 값을 올려보세요.</p>
                                     </div>
+                                    <div>
+                                        <div class="flex justify-between items-center text-gray-300 mb-2">
+                                            <label for="yt-input-offset-slider">YouTube 곡 추가 보정</label>
+                                            <span id="yt-input-offset-value" class="font-mono">0ms</span>
+                                        </div>
+                                        <input id="yt-input-offset-slider" type="range" min="-300" max="300" step="5" value="0" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                        <p class="text-xs text-gray-500 mt-1">YouTube로 재생되는 곡에서만 위 보정값에 추가로 더해집니다. 소리 출력 지연이 일반 곡과 달라서 YouTube 곡만 판정이 계속 빠르거나 느리게 나올 때 조절하세요. 이 기기에만 저장됩니다.</p>
+                                    </div>
                                     <button id="open-calibration-btn" class="w-full py-2 bg-purple-700 hover:bg-purple-600 rounded-lg text-sm font-semibold" data-i18n="calibration_open_btn">🎯 탭 타이밍 자동 보정 (다시 측정)</button>
                                 </div>
                             </div>

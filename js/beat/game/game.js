@@ -51,6 +51,13 @@ const Game = {
                 const parsed = parseInt(stored, 10);
                 return Number.isNaN(parsed) ? 0 : Math.max(-300, Math.min(300, parsed));
             })(),
+            // YouTube 곡 전용 추가 보정(ms). YouTube 재생은 Web Audio와 소리 출력 지연이 달라서,
+            // 위 일반 보정에 YouTube 곡일 때만 더해진다. (이 기기 localStorage에만 저장)
+            ytInputOffsetMs: (() => {
+                const stored = localStorage.getItem('theBeat_ytInputOffsetMs');
+                const parsed = parseInt(stored, 10);
+                return Number.isNaN(parsed) ? 0 : Math.max(-300, Math.min(300, parsed));
+            })(),
             bpm: 120,
             startTimeOffset: 0, // 채보 박자 계산 기준점 (bpm/noteoffset 등 노트 타이밍용)
             songStartOffset: 0, // 실제 오디오 재생을 시작할 지점 (종합 창의 "시작(초)")
@@ -1106,7 +1113,9 @@ const Game = {
     getInputOffsetMs(isTouch) {
         const base = this.state.settings.inputOffsetMs || 0;
         const touchExtra = isTouch ? (this.state.settings.touchInputOffsetMs || 0) : 0;
-        return base + touchExtra;
+        const src = this.state.settings.musicSrc;
+        const ytExtra = (typeof src === 'string' && src.startsWith('yt:')) ? (this.state.settings.ytInputOffsetMs || 0) : 0;
+        return base + touchExtra + ytExtra;
     },
 
     handleInputDown(laneIndex, isTouch = false) {

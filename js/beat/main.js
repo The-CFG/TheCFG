@@ -809,6 +809,18 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
+        if (DOM.settings.ytInputOffsetSlider) {
+            DOM.settings.ytInputOffsetSlider.addEventListener('input', (e) => {
+                const value = parseInt(e.target.value);
+                Game.state.settings.ytInputOffsetMs = value;
+                if (DOM.settings.ytInputOffsetValue) DOM.settings.ytInputOffsetValue.textContent = `${value}ms`;
+            });
+            DOM.settings.ytInputOffsetSlider.addEventListener('change', () => {
+                // 기기별 값이라 클라우드 동기화(PLAY_SETTINGS_KEYS)에는 넣지 않고 localStorage에만 저장한다
+                localStorage.setItem('theBeat_ytInputOffsetMs', Game.state.settings.ytInputOffsetMs);
+            });
+        }
+
         if (DOM.settings.touchInputOffsetSlider) {
             DOM.settings.touchInputOffsetSlider.addEventListener('input', (e) => {
                 const value = parseInt(e.target.value);
@@ -1417,6 +1429,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (DOM.settings.inputOffsetValue) {
                 DOM.settings.inputOffsetValue.textContent = `${offset}ms`;
             }
+        }
+        if (DOM.settings.ytInputOffsetSlider) {
+            const ytOffset = Game.state.settings.ytInputOffsetMs;
+            DOM.settings.ytInputOffsetSlider.value = ytOffset;
+            if (DOM.settings.ytInputOffsetValue) DOM.settings.ytInputOffsetValue.textContent = `${ytOffset}ms`;
         }
         if (DOM.settings.touchInputOffsetSlider) {
             const touchOffset = Game.state.settings.touchInputOffsetMs;

@@ -21,6 +21,7 @@
         '<b>YT 플레이 테스트 (임시)</b>' +
         '<label>YouTube 링크/ID<input id="ytt-url" placeholder="https://youtu.be/..."></label>' +
         '<label>영상 오프셋(초) — 곡이 시작되는 지점<input id="ytt-offset" type="number" step="0.01" min="0" value="0"></label>' +
+        '<label>YouTube 판정 보정(ms) — 설정의 같은 값<input id="ytt-yto" type="number" step="5" min="-300" max="300" value="0"></label>' +
         '<label>BPM(박자마다 노트)<input id="ytt-bpm" type="number" min="40" max="300" value="120"></label>' +
         '<label>레인 수<select id="ytt-lanes"><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select></label>' +
         '<button id="ytt-start" type="button">▶ 시작</button>' +
@@ -48,6 +49,9 @@
         const offset = Math.max(0, parseFloat($('ytt-offset').value) || 0);
         const bpm = Math.max(40, Math.min(300, parseInt($('ytt-bpm').value, 10) || 120));
         const lanes = parseInt($('ytt-lanes').value, 10) || 4;
+        const yto = Math.max(-300, Math.min(300, parseInt($('ytt-yto').value, 10) || 0));
+        Game.state.settings.ytInputOffsetMs = yto;
+        try { localStorage.setItem('theBeat_ytInputOffsetMs', yto); } catch (e) { /* 무시 */ }
         $('ytt-start').disabled = true;
         try {
             const chart = buildChart(bpm, lanes, offset);
@@ -89,6 +93,7 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         document.body.append(btn, panel, hud);
+        $('ytt-yto').value = Game.state.settings.ytInputOffsetMs || 0;
         btn.addEventListener('click', () => { panel.style.display = panel.style.display === 'block' ? 'none' : 'block'; });
         $('ytt-start').addEventListener('click', start);
         requestAnimationFrame(tick);
