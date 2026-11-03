@@ -208,6 +208,111 @@ const CloudAuth = {
         return profile?.settings || null;
     },
 
+    // ── TheBeat 계정 설정 (user_profiles.beat_music_volume / beat_sfx_volume / beat_settings jsonb) ──
+    // beat_settings 구조: { skins: BeatSkin.state, customFonts: [...], ...플레이 탭 설정(평탄) }
+    _BEAT_RESERVED_KEYS: ['skins', 'customFonts', 'uiTheme'],
+
+    async _getBeatSettings(userId) {
+        const { data, error } = await _supabase
+            .from('user_profiles').select('beat_settings').eq('user_id', userId).maybeSingle();
+        if (error) { console.warn('beat_settings 조회 오류:', error.message); return null; }
+        return (data && data.beat_settings) || {};
+    },
+
+    // beat_settings에 patch(얕은 병합) 후 저장. 반환: 성공 여부
+    async _patchBeatSettings(patch) {
+        const user = await this.getUser();
+        if (!user) return false;
+        const cur = await this._getBeatSettings(user.id);
+        if (cur === null) return false;
+        const { error } = await _supabase
+            .from('user_profiles')
+            .upsert({ user_id: user.id, beat_settings: { ...cur, ...patch }, updated_at: new Date().toISOString() },
+                    { onConflict: 'user_id' });
+        if (error) { console.warn('beat_settings 저장 오류:', error.message); return false; }
+        return true;
+    },
+
+    async getVolumeSettings() {
+        const user = await this.getUser();
+        if (!user) return null;
+        const { data, error } = await _supabase
+            .from('user_profiles').select('beat_music_volume, beat_sfx_volume').eq('user_id', user.id).maybeSingle();
+        if (error || !data) return null;
+        return { musicVolume: data.beat_music_volume, sfxVolume: data.beat_sfx_volume };
+    },
+
+    async saveVolumeSettings(musicVolume, sfxVolume) {
+        const user = await this.getUser();
+        if (!user) return;
+        const clamp = (v) => Math.max(0, Math.min(100, Math.round(Number(v) || 0)));
+        const { error } = await _supabase
+            .from('user_profiles')
+            .upsert({ user_id: user.id, beat_music_volume: clamp(musicVolume), beat_sfx_volume: clamp(sfxVolume), updated_at: new Date().toISOString() },
+                    { onConflict: 'user_id' });
+        if (error) console.warn('saveVolumeSettings 오류:', error.message);
+    },
+
+    // 플레이 탭 설정: beat_settings 루트의 예약 키(skins/customFonts/uiTheme)를 뺀 나머지
+    async getPlaySettings() {
+        const user = await this.getUser();
+        if (!user) return null;
+        const bs = await this._getBeatSettings(user.id);
+        if (!bs) return null;
+        const out = {};
+        for (const k of Object.keys(bs)) if (!this._BEAT_RESERVED_KEYS.includes(k)) out[k] = bs[k];
+        return Object.keys(out).length ? out : null;
+    },
+
+    async savePlaySettings(settings) {
+        if (!settings || typeof settings !== 'object') return;
+        const patch = {};
+        for (const k of Object.keys(settings)) if (!this._BEAT_RESERVED_KEYS.includes(k)) patch[k] = settings[k];
+        await this._patchBeatSettings(patch);
+    },
+
+    async getSkinsSettings() {
+        const user = await this.getUser();
+        if (!user) return null;
+        const bs = await this._getBeatSettings(user.id);
+        return (bs && bs.skins) || null;
+    },
+
+    async saveSkinsSettings(state) {
+        if (!state) return;
+        await this._patchBeatSettings({ skins: state });
+    },
+
+    async getCustomFonts() {
+        const user = await this.getUser();
+        if (!user) return [];
+        const bs = await this._getBeatSettings(user.id);
+        return (bs && Array.isArray(bs.customFonts)) ? bs.customFonts : [];
+    },
+
+    async saveCustomFonts(list) {
+        await this._patchBeatSettings({ customFonts: Array.isArray(list) ? list : [] });
+    },
+
+    // 커스터마이징 파일(스킨 이미지/폰트) 업로드: beat-files/<uid>/customization/<relPath>
+    // 반환: { ok, path }  (path는 버킷 내 경로 — 스킨/폰트 메타의 storagePath에 저장됨)
+    async uploadCustomizationFile(relPath, blob) {
+        const user = await this.getUser();
+        if (!user) return { ok: false, path: null };
+        const path = `${user.id}/customization/${relPath}`;
+        const { error } = await _supabase.storage.from('beat-files').upload(path, blob, { upsert: true });
+        if (error) { console.warn('uploadCustomizationFile 오류:', error.message); return { ok: false, path: null }; }
+        return { ok: true, path };
+    },
+
+    // 반환: Blob | null
+    async downloadCustomizationFile(path) {
+        if (!path) return null;
+        const { data, error } = await _supabase.storage.from('beat-files').download(path);
+        if (error) { console.warn('downloadCustomizationFile 오류:', error.message); return null; }
+        return data;
+    },
+
     // ── 공동 작업 — 멤버 관리 ───────────────────────────────
 
     // 현재 프로젝트의 내 역할 조회
@@ -1220,7 +1325,7 @@ function setupAuthUI() {
                     _updateAuthStatus(data.session.user);
                     alert('회원가입 및 로그인 완료!');
                     _closeModal();
-                    renderRecentList();
+                    if (typeof renderRecentList === 'function') renderRecentList();
                 } else {
                     alert('가입 신청 완료!\nSupabase 대시보드에서 이메일 인증을 비활성화하면 바로 로그인할 수 있습니다.');
                 }
@@ -1228,7 +1333,7 @@ function setupAuthUI() {
                 _updateAuthStatus(data.user);
                 alert('로그인 완료! 서버 동기화가 활성화됩니다.');
                 _closeModal();
-                renderRecentList();  // 클라우드 프로젝트 목록 즉시 갱신
+                if (typeof renderRecentList === 'function') renderRecentList();  // 클라우드 프로젝트 목록 즉시 갱신(hoi4 전용)
             }
         } catch (err) {
             // 진단용: 실제 에러 객체는 콘솔에서 전체 확인 가능
