@@ -389,7 +389,7 @@
                 </div>
                 <!-- Playing Screen -->
                 <div id="playing-screen" class="hidden h-full flex flex-col overflow-y-auto" style="-webkit-overflow-scrolling: touch;">
-                    <div class="flex-1 overflow-y-auto">
+                    <div style="flex:1 0 auto;">
                         <div class="flex justify-between items-center mb-4">
                             <h2 id="playing-status-label" class="text-3xl font-bold text-white" data-i18n="playing">플레이 중</h2>
                             <button id="settings-icon-playing" class="p-2 rounded-full hover:bg-gray-600 transition">
@@ -426,6 +426,8 @@
                         </div>
                         <button id="give-up-btn" class="w-full py-3 text-lg font-bold bg-red-600 hover:bg-red-500 rounded-lg transition" data-i18n="give_up">포기하기</button>
                     </div>
+                    <!-- YouTube 플레이어 자리: YTLayout이 높이를 잡고 그 위에 임베드를 맞춘다(포기하기 아래, 스크롤로 전체 확인) -->
+                    <div id="yt-slot" class="flex-shrink-0" style="height:0;margin-top:12px;margin-bottom:12px;"></div>
                 </div>
                 <div id="settings-screen" class="hidden h-full flex flex-col justify-between overflow-y-auto" style="-webkit-overflow-scrolling: touch;">
                     <div class="flex-grow flex flex-col min-h-0">
