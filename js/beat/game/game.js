@@ -625,6 +625,7 @@ const Game = {
         this.canvas.resize(this.state.settings.lanes);
 
         UI.showScreen('playing');
+        if (typeof YTLayout !== 'undefined') YTLayout.update(); // YouTube 플레이어 패널을 레인/HUD 기준으로 재배치
         UI.updateScoreboard();
         // HUD 초기값 표시 — 실패해도 게임 시작 흐름에 영향 없도록 격리
         try {

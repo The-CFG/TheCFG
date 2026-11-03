@@ -355,7 +355,7 @@ const Online = {
         }
 
         const { song, beatmaps } = data;
-        GameBackground.set(CloudCharts.getCoverUrl(song.cover_storage_path));
+        GameBackground.set(CloudCharts.getBackgroundUrl(song));
         const nickMap = await CloudAuth._fetchNicknameMap(beatmaps.map(bm => bm.owner_id).filter(Boolean));
         if (seq !== this._loadSeq) return;
         const { data: likeInfo } = await CloudLikes.getLikeInfo(beatmaps.map(bm => bm.id));
@@ -464,7 +464,7 @@ const Online = {
         const lb = lbRes.data || [];
         const myScore = myRes.data;
         const like = (likeRes.data && likeRes.data[chartId]) || { count: 0, likedByMe: false };
-        GameBackground.set(CloudCharts.getCoverUrl(c.cover_storage_path));
+        GameBackground.set(CloudCharts.getBackgroundUrl(c));
         const creatorNickMap = c.owner_id ? await CloudAuth._fetchNicknameMap([c.owner_id]) : {};
         if (seq !== this._loadSeq) return;
         const creatorName = c.owner_id
@@ -661,19 +661,20 @@ const Online = {
                 // local 곡: 서버에 음원이 없다 — 내 파일로 재생하는 흐름은 아직 연결 전
                 throw new Error('이 곡은 서버에 음원이 없습니다. (직접 파일 재생은 아직 지원되지 않습니다)');
             }
-            // TODO(S3): YouTube 곡의 yt_offset_ms(영상 기준 곡 시작 위치)를 재생 시계에 반영해야 한다.
+            // YouTube 곡은 영상 시계 = 곡 시계 + yt_offset_ms. 노트 기준점과 재생 시작점에 같이 더해준다.
+            const ytOffsetSec = c.source_type === 'youtube' ? (c.yt_offset_ms || 0) / 1000 : 0;
 
             // 채보 파일에 저장된 startTimeOffset(노트 타이밍 기준점)은 무시하고
             // 노래의 start_offset_ms(종합 창 "시작(초)")로 덮어쓴다.
             // 그래야 오디오 재생 시작 위치(songStartOffset)와 노트 타이밍 기준점이 항상 일치한다
             // (안 그러면 종합 창에서 "시작(초)"를 바꿔도 노트 타이밍에는 반영되지 않는 문제가 생긴다).
-            chartData.startTimeOffset = (c.start_offset_ms || 0) / 1000;
+            chartData.startTimeOffset = (c.start_offset_ms || 0) / 1000 + ytOffsetSec;
 
             Game.loadChartNotes(chartData);
             Game.state._onlineChartId = c.id;
             Game.state.settings.mode = 'music';
             Game.state.settings.musicSrc = audioUrl;
-            Game.state.settings.songStartOffset = (c.start_offset_ms || 0) / 1000;
+            Game.state.settings.songStartOffset = (c.start_offset_ms || 0) / 1000 + ytOffsetSec;
 
             // 노래(오디오) 디코딩이 실제로 끝날 때까지 기다린 뒤에야 카운트다운/플레이 화면으로
             // 넘어간다 — 채보 JSON은 이미 위에서 기다렸으니, 이제 노래까지 확실히 준비된

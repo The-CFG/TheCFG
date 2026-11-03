@@ -233,6 +233,15 @@ const CloudCharts = {
         return null;
     },
 
+    // 게임 화면 배경: 커버 이미지가 있으면 그걸, 없고 YouTube 곡이면 영상 썸네일을 쓴다.
+    // (썸네일은 배경 이미지로만 쓰며 플레이어 iframe 자체에는 어떤 효과도 주지 않는다)
+    getBackgroundUrl(song) {
+        if (!song) return null;
+        if (song.cover_storage_path) return this.getCoverUrl(song.cover_storage_path);
+        if (song.source_type === 'youtube' && song.youtube_id) return `https://i.ytimg.com/vi/${song.youtube_id}/hqdefault.jpg`;
+        return null;
+    },
+
     // 서버에 실제 음원 파일이 있는 곡만 URL을 돌려준다(미리듣기용).
     // YouTube 미리듣기는 정책상 보이는 플레이어가 필요해서 S3/S6에서 별도 구현한다.
     getHostedAudioUrl(song) {

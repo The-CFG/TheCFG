@@ -8,6 +8,7 @@ const UI = {
         Object.values(DOM.screens).forEach(screen => screen.classList.add('hidden'));
         DOM.screens[screenName].classList.remove('hidden');
         this.currentScreen = screenName;
+        if (typeof YTLayout !== 'undefined') YTLayout.update(); // YouTube 임베드: 보이는 화면에서만 표시, 우측 패널 하단에 고정
 
         // 메인 메뉴 "추천 비트맵" 카드: 메뉴 화면에 들어올 때만 로드/재생, 나갈 때 정리.
         // 핵심은 "메뉴 화면을 실제로 벗어날 때만" MenuFeatured.onLeave()를 부르는 것 —
