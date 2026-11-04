@@ -214,6 +214,17 @@ const CloudCharts = {
         }
     },
 
+    // YouTube 곡 재생 중 광고가 관찰되면 beat_songs.has_ads=true로 누적한다 (RPC, 실패해도 게임엔 영향 없음)
+    _adReported: {},
+    async reportSongAds(songId) {
+        if (!songId || this._adReported[songId]) return;
+        this._adReported[songId] = true;
+        try {
+            const { error } = await _supabase.rpc('beat_report_song_ads', { p_song_id: songId });
+            if (error) console.warn('reportSongAds 오류:', error.message);
+        } catch (e) { console.warn('reportSongAds 오류:', e); }
+    },
+
     // ── Storage에서 오디오 공개 URL 가져오기 ──────────────────────────────────
     getAudioUrl(audioStoragePath) {
         const { data } = _supabase.storage

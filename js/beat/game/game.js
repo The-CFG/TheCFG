@@ -597,6 +597,8 @@ const Game = {
     // 목표 시작 시각. 주어지면 고정 4초 카운트다운 대신 이 시각에 맞춰 오디오를 예약하고
     // 화면 카운트다운도 여기 맞춘다(runSyncedCountdown). 생략하면 기존 동작(로컬 4초 카운트다운) 그대로.
     async start(opts = {}) {
+        // 모바일 YouTube: await 전에(제스처 콜스택 안에서) 재생 잠금을 풀어둔다 (플레이어 준비된 경우)
+        try { DOM.musicPlayer.unlockYouTube(); } catch (e) { /* 무시 */ }
         await Audio.start();
         // Fix (iPad 판정 오류): 실제 곡 재생에 쓰이는 AudioEngine의 AudioContext는
         // Tone.js(Audio.start)의 AudioContext와 별개다. 기존에는 이 컨텍스트가
@@ -1427,7 +1429,7 @@ const Game = {
     // opponents: [{ user_id, nickname }] — 나를 제외한 같은 방 참가자 목록(관전 HUD/결과 비교 골격용).
     // selfNickname: 관전 HUD에 내 점수도 같이 띄우기 위한 내 닉네임.
     // roomId: beat_rooms.id — 결과 화면에서 전원 완료 시 status를 finished로 정리하는 데 쓴다.
-    async startMultiplayer({ chartData, audioUrl, startOffsetMs = 0, targetPerfTime, onlineChartId = null, userId = null, opponents = [], roomId = null, hostId = null, selfNickname = null }) {
+    async startMultiplayer({ chartData, audioUrl, startOffsetMs = 0, targetPerfTime, awaitTarget = null, onlineChartId = null, userId = null, opponents = [], roomId = null, hostId = null, selfNickname = null }) {
         chartData.startTimeOffset = (startOffsetMs || 0) / 1000;
         if (!this.loadChartNotes(chartData)) return;
 
@@ -1443,9 +1445,38 @@ const Game = {
         // 화면을 먼저 거칠 필요가 없다 — _playOnlineChart()와 동일한 이유로, 그 단계가
         // MenuFeatured.onEnter()/onLeave()를 오발동시켜 추천 곡 배경이 잠깐 떴다가
         // 실제 플레이할 곡 배경이 까맣게 지워지는 원인이었다.
+        // YouTube ready 배리어(S5): 목표 시각을 아직 모르는 상태 — 플레이 화면(플레이어 노출)에서 광고를 먼저 소화하고
+        // 본영상 준비가 끝나면 전원 ready를 기다려 목표 시각을 받는다. 실패/중단 시 false.
+        if (targetPerfTime == null && typeof awaitTarget === 'function') {
+            this.resetState();
+            resetPlayingScreenUI();
+            UI.showScreen('playing');
+            if (typeof YTLayout !== 'undefined') YTLayout.update();
+            this.state.gameState = 'countdown';
+            this.state.audioReady = false;
+            const setLabel = (t) => { if (DOM.playingStatusLabel) DOM.playingStatusLabel.textContent = t; };
+            setLabel('영상 준비 중…');
+            const warmed = await DOM.musicPlayer.warmUp(120000);
+            if (!warmed || this.state.gameState !== 'countdown') { this._abortBarrier(); return false; }
+            setLabel('다른 플레이어를 기다리는 중…');
+            const target = await awaitTarget();
+            if (!(target > 0) || this.state.gameState !== 'countdown') { this._abortBarrier(); return false; }
+            setLabel('플레이 중');
+            targetPerfTime = target;
+        }
+
         await this.start({ syncStartPerfTime: targetPerfTime });
         UI.showScreen('playing');
         this.state.gameState = 'playing';
+        return true;
+    },
+
+    // 배리어 도중 실패/중단: 재생/상태 정리 (화면 복귀는 호출한 로비가 담당)
+    _abortBarrier() {
+        try { DOM.musicPlayer.pause(); } catch (e) { /* 무시 */ }
+        this.cancelCountdown();
+        this._teardownMultiplayerSpectate();
+        if (this.state.gameState === 'countdown') this.state.gameState = 'menu';
     },
 
     // 진행 중 상대 관전(Phase 5) + 결과 비교(Phase 6) 준비: 상대 목록으로 HUD 골격을 그리고,

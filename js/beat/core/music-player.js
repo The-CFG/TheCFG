@@ -59,6 +59,15 @@ const MusicPlayer = {
     removeAttribute(name) { return this._get().removeAttribute(name); },
     whenReady() { return this._get().whenReady(); },
 
+    // YouTube 곡 전용 (S4): 광고 감지 기준 길이 / 모바일 제스처 잠금 해제 / 광고 관찰 콜백
+    set expectedDurationMs(ms) { YouTubeSource.expectedDurationMs = Number(ms) || 0; },
+    unlockYouTube() { YouTubeSource.unlock(); },
+    // 멀티플레이 ready 배리어: YouTube면 광고를 먼저 소화하고 본영상 준비를 확인, 그 외는 즉시 true
+    warmUp(maxMs) { return this.kind === 'yt' ? YouTubeSource.warmUp(maxMs) : Promise.resolve(true); },
+    set onAdDetected(fn) { YouTubeSource.onAdDetected = fn; },
+    get inAd() { return this.kind === 'yt' && YouTubeSource.inAd; },
+    get buffering() { return this.kind === 'yt' && YouTubeSource.buffering; },
+
     // 사용자 제스처 안에서 호출. AudioContext는 항상 깨워둔다 (효과음/전환 대비).
     async resumeContext() {
         await AudioEngine.resumeContext();

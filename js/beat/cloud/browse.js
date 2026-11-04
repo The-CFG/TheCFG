@@ -289,7 +289,7 @@ const CloudBrowse = {
 
         const { data: song, error: songErr } = await _supabase
             .from('beat_songs')
-            .select('id, title, artist, audio_storage_path, audio_mime, preview_start_ms, start_offset_ms, cover_storage_path, source_type, youtube_id, yt_offset_ms, yt_duration_ms, audio_hash')
+            .select('id, title, artist, audio_storage_path, audio_mime, preview_start_ms, start_offset_ms, cover_storage_path, source_type, youtube_id, yt_offset_ms, yt_duration_ms, audio_hash, has_ads')
             .eq('id', chart.song_id)
             .or(ownFilter)
             .single();
@@ -310,6 +310,7 @@ const CloudBrowse = {
                 yt_offset_ms: song.yt_offset_ms || 0,
                 yt_duration_ms: song.yt_duration_ms || null,
                 audio_hash: song.audio_hash || null,
+                has_ads: song.has_ads === true,
                 song_id: song.id,
             },
             error: null,

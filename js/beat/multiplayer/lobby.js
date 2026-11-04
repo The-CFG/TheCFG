@@ -27,6 +27,10 @@ const MultiplayerLobby = {
                               //  이 추정이 채 끝나기 전에 브로드캐스트가 도착 — 오프셋 초기값(0)을 그대로
                               //  쓰면 목표 시각이 완전히 어긋나 시작하자마자 전 노트가 미스 처리되며
                               //  0점으로 강제 종료됐다.)
+    _ytReady: new Set(),     // [YouTube 배리어] 호스트 기준 — 워밍업을 끝낸 user_id
+    _ytFailed: new Set(),    // [YouTube 배리어] 로딩 실패로 이번 판에서 빠진 user_id
+    _goPayload: null,        // [YouTube 배리어] 참가자 기준 — 받은 'yt_go' { hostStartTime }
+    _goResolver: null,
     _hasPlayedOnce: false,   // 이 방에서 한 판이라도 끝난 적이 있는지(첫 시작인지 구분용)
     _pendingQueueAdvance: false, // 방금 판이 끝나서 대기실 복귀 시 큐를 아직 안 넘겼는지(1회성 소비 플래그)
 
@@ -441,9 +445,10 @@ const MultiplayerLobby = {
                 const audioUrl = CloudCharts.getSongAudioSrc(this._chart);
                 if (!audioUrl) throw new Error('이 곡은 서버에 음원이 없어 멀티플레이를 지원하지 않습니다.');
                 // 오디오 fetch+decode를 시작해두고, 실제로 재생 가능한 버퍼가 준비될 때까지 기다린다.
+                DOM.musicPlayer.expectedDurationMs = this._isYtChart() ? (this._chart.yt_duration_ms || 0) : 0;
                 DOM.musicPlayer.src = audioUrl;
                 const audioReady = await DOM.musicPlayer.whenReady();
-                if (!audioReady) throw new Error('오디오를 불러오지 못했습니다.');
+                if (!audioReady) throw new Error((DOM.musicPlayer.error && DOM.musicPlayer.error.message) || '오디오를 불러오지 못했습니다.');
                 this._preload = { chartData, audioUrl };
                 return true;
             } catch (err) {
@@ -474,6 +479,8 @@ const MultiplayerLobby = {
         MultiplayerRealtime.on('start', payload => this._onStartBroadcast(payload));
         MultiplayerRealtime.on('host_transferred', payload => this._onHostTransferred(payload));
         MultiplayerRealtime.on('preload_failed', payload => this._onPeerPreloadFailed(payload));
+        MultiplayerRealtime.on('yt_ready', payload => { if (payload?.userId) this._ytReady.add(payload.userId); });
+        MultiplayerRealtime.on('yt_go', payload => this._onYtGo(payload));
         MultiplayerRealtime.on('kicked', payload => this._onKicked(payload));
         MultiplayerRealtime.on('restart_vote', payload => this._onRestartVote(payload));
         MultiplayerRealtime.on('restart_start', payload => this._onRestartStartBroadcast(payload));
@@ -682,6 +689,7 @@ const MultiplayerLobby = {
     // 같은 방의 누군가가 이번 판 프리로드에 실패했을 때 — 대기실/관전 중인 화면에 알려준다.
     // (게임에 이미 진입한 경우엔 UI가 다른 화면이라 이 메시지는 대기실에 남아있는 사람에게만 보인다.)
     _onPeerPreloadFailed(payload) {
+        if (payload?.userId) this._ytFailed.add(payload.userId); // 배리어 대상에서 제외 (화면 상태와 무관하게)
         if (this._view !== 'waiting') return;
         const name = this._players.find(p => p.user_id === payload.userId)?.nickname || '누군가';
         this._showMsg(`${name}님이 로딩에 실패해 이번 판에 참가하지 못했습니다.`);
@@ -960,6 +968,15 @@ const MultiplayerLobby = {
             return;
         }
 
+        // YouTube 곡: 목표 시각을 먼저 정하지 않고 "전원 ready(광고 종료 포함) → 시작" 2단계로 진행한다.
+        if (this._isYtChart()) {
+            this._ytReset();
+            await MultiplayerRooms.updateRoomStatus(this._room.id, 'countdown');
+            await MultiplayerRealtime.send('start', { prepare: true, chartId: this._room.chart_id });
+            this._beginSyncedStart(null);
+            return;
+        }
+
         // 브로드캐스트 전파 + 참가자 쪽 프리로드 여유를 감안한 리드 타임.
         const LEAD_MS = 4500;
         const hostStartTime = performance.now() + LEAD_MS;
@@ -998,7 +1015,7 @@ const MultiplayerLobby = {
                 GameBackground.set(CloudCharts.getCoverUrl(chart.cover_storage_path));
             }
         }
-        const targetLocalTime = MultiplayerRealtime.toLocalTime(payload.hostStartTime);
+        const targetLocalTime = payload.prepare ? null : MultiplayerRealtime.toLocalTime(payload.hostStartTime);
         this._beginSyncedStart(targetLocalTime);
     },
 
@@ -1007,6 +1024,7 @@ const MultiplayerLobby = {
         if (this._starting) return;
         this._starting = true;
         this._view = 'starting';
+        if (targetPerfTime == null) this._ytReset(); // YouTube 배리어 모드
 
         let ok = await this._preloadChart();
         if (!ok) {
@@ -1027,11 +1045,14 @@ const MultiplayerLobby = {
         // 대기실 Realtime 연결은 유지한다 — 진행 중 관전 HUD가 이 채널을 그대로 쓴다.
         // 상대 목록(나를 제외)은 대기실에서 이미 갖고 있던 _players 스냅샷으로 넘긴다 —
         // 게임 중에는 presence sync를 다시 안 쓰므로 시작 시점 스냅샷이면 충분하다.
-        await Game.startMultiplayer({
+        // YouTube 곡은 영상 시계 = 곡 시계 + yt_offset_ms (노트 기준점/재생 시작점에 같이 더함 — online.js와 동일)
+        const ytOffsetMs = this._isYtChart() ? (this._chart.yt_offset_ms || 0) : 0;
+        const started = await Game.startMultiplayer({
             chartData: this._preload.chartData,
             audioUrl: this._preload.audioUrl,
-            startOffsetMs: this._chart.start_offset_ms || 0,
+            startOffsetMs: (this._chart.start_offset_ms || 0) + ytOffsetMs,
             targetPerfTime,
+            awaitTarget: targetPerfTime == null ? () => this._awaitStartTarget() : null,
             onlineChartId: this._chart.id,
             userId: this._userId,
             roomId: this._room.id,
@@ -1041,6 +1062,68 @@ const MultiplayerLobby = {
                 .filter(p => p.user_id !== this._userId)
                 .map(p => ({ user_id: p.user_id, nickname: p.nickname })),
         });
+        if (started === false) await this._recoverFromFailedStart();
+    },
+
+    // ── YouTube ready 배리어 (S5) ─────────────────────────────────────────────
+    _isYtChart() { return this._chart?.source_type === 'youtube'; },
+    _ytReset() { this._ytReady = new Set(); this._ytFailed = new Set(); this._goPayload = null; this._goResolver = null; },
+
+    _onYtGo(payload) {
+        if (this._isHost || !payload) return;
+        this._goPayload = { hostStartTime: payload.hostStartTime };
+        if (this._goResolver) { const r = this._goResolver; this._goResolver = null; r(); }
+    },
+
+    // Game.startMultiplayer가 워밍업(광고 소화 + 본영상 확인) 후 호출한다.
+    // 호스트: 전원 ready(또는 타임아웃)를 기다렸다가 목표 시각을 정해 'yt_go'로 전파.
+    // 참가자: 'yt_ready'를 보내고 'yt_go'를 기다린다. 반환: 이 클라이언트의 performance.now() 기준 목표 시각, 실패 시 null.
+    async _awaitStartTarget() {
+        const LEAD_MS = 4500;
+        const MAX_WAIT_MS = 120000;
+        if (this._isHost) {
+            this._ytReady.add(this._userId);
+            const t0 = performance.now();
+            while (this._starting) {
+                const expected = this._players.map(p => p.user_id).filter(id => !this._ytFailed.has(id));
+                if (expected.every(id => this._ytReady.has(id))) break;
+                if (performance.now() - t0 > MAX_WAIT_MS) break; // 못 끝낸 참가자는 이번 판에서 빠진다
+                await new Promise(r => setTimeout(r, 250));
+            }
+            if (!this._starting) return null;
+            const hostStartTime = performance.now() + LEAD_MS;
+            await MultiplayerRealtime.send('yt_go', { hostStartTime }).catch(() => {});
+            return hostStartTime;
+        }
+        await MultiplayerRealtime.send('yt_ready', { userId: this._userId }).catch(() => {});
+        if (!this._goPayload) {
+            await new Promise(resolve => {
+                this._goResolver = resolve;
+                setTimeout(() => { if (this._goResolver === resolve) { this._goResolver = null; resolve(); } }, MAX_WAIT_MS + 30000);
+            });
+        }
+        if (!this._goPayload || !this._starting) return null;
+        const target = MultiplayerRealtime.toLocalTime(this._goPayload.hostStartTime);
+        // 너무 늦게 ready가 된 경우(호스트가 이미 시작): 이번 판은 건너뛴다
+        if (target - performance.now() < 1500) return null;
+        return target;
+    },
+
+    // 배리어 실패(영상 오류/타임아웃/너무 늦음): 이번 판은 빠지고 대기실로 복귀
+    async _recoverFromFailedStart() {
+        await MultiplayerRealtime.send('preload_failed', { userId: this._userId }).catch(() => {});
+        try { Game._teardownMultiplayerFinish(); } catch (e) { /* 무시 */ }
+        this._starting = false;
+        this._restarting = false;
+        this._preload = null;
+        this._preloadPromise = null;
+        if (this._room) {
+            this._room.status = 'waiting';
+            if (this._isHost) await MultiplayerRooms.updateRoomStatus(this._room.id, 'waiting').catch(() => {});
+        }
+        UI.showScreen('multiplayer');
+        await this._enterWaitingRoom();
+        this._showMsg('영상을 준비하지 못했거나 너무 늦어서 이번 판에 참가하지 못했습니다.');
     },
 
     // 결과 화면에서 "방으로 돌아가기"를 눌렀을 때 쓰는 진입점.
@@ -1139,6 +1222,14 @@ const MultiplayerLobby = {
             return;
         }
 
+        if (this._isYtChart()) {
+            this._ytReset();
+            await MultiplayerRooms.updateRoomStatus(this._room.id, 'countdown');
+            await MultiplayerRealtime.send('restart_start', { prepare: true, chartId: this._room.chart_id }).catch(() => {});
+            this._beginInstantRestart(null);
+            return;
+        }
+
         const LEAD_MS = 4500;
         const hostStartTime = performance.now() + LEAD_MS;
         await MultiplayerRooms.updateRoomStatus(this._room.id, 'countdown');
@@ -1171,7 +1262,7 @@ const MultiplayerLobby = {
                 GameBackground.set(CloudCharts.getCoverUrl(chart.cover_storage_path));
             }
         }
-        const targetLocalTime = MultiplayerRealtime.toLocalTime(payload.hostStartTime);
+        const targetLocalTime = payload.prepare ? null : MultiplayerRealtime.toLocalTime(payload.hostStartTime);
         this._beginInstantRestart(targetLocalTime);
     },
 

@@ -65,6 +65,19 @@ const Online = {
             <div id="online-content" class="flex-1 min-h-0 overflow-y-auto"></div>
         </div>`;
 
+        // 모더레이터에게만 "신고 관리" 버튼 노출 (권한은 서버 RPC가 다시 검사한다)
+        CloudModeration.isModerator().then(isMod => {
+            const back = document.getElementById('online-back-btn');
+            if (!isMod || !back || document.getElementById('online-mod-btn')) return;
+            const b = document.createElement('button');
+            b.id = 'online-mod-btn';
+            b.className = 'py-2 px-3 bg-red-800 hover:bg-red-700 rounded-lg text-sm flex-shrink-0';
+            b.textContent = '🛡';
+            b.title = '신고 관리';
+            b.addEventListener('click', () => ModerationUI.openPanel());
+            back.parentNode.insertBefore(b, back);
+        });
+
         document.getElementById('online-tab-browse').addEventListener('click', () => this.show('browse'));
         document.getElementById('online-tab-my')?.addEventListener('click', () => this.show('my'));
         // 메인 메뉴의 환경설정 아이콘(settings-icon-menu)과 같은 함수를 그대로 재사용 — main.js가
@@ -535,7 +548,7 @@ const Online = {
         <button id="detail-back-btn" class="mb-3 text-sm text-gray-400 hover:text-white transition">← 난이도 선택으로</button>
         <div class="p-4 bg-gray-800 rounded-lg mb-3">
             <h2 class="text-xl font-bold text-white truncate">${_esc(c.title)}${c.difficulty_label ? ` - ${_esc(c.difficulty_label)}` : ''}</h2>
-            <p class="text-gray-400 truncate">${_esc(c.artist || '—')}</p>
+            <p class="text-gray-400 truncate">${_esc(c.artist || '—')}${c.has_ads ? ' <span class="text-xs text-yellow-400 ml-1" title="이 영상은 재생 시 광고가 나온 적이 있습니다">📺 광고 있을 수 있음</span>' : ''}</p>
             <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-gray-400">
                 ${this._starRatingHtml(c.difficulty_score, 'text-sm')}
                 ${c.bpm             ? `<span>BPM ${c.bpm}</span>` : ''}
@@ -562,6 +575,10 @@ const Online = {
             <div class="space-y-0.5">${lbRows}</div>
             ${myPanel}
         </div>
+        <div class="mt-3 flex justify-end gap-2">
+            <button id="detail-report-btn" class="px-3 py-1 rounded text-xs bg-gray-700 hover:bg-gray-600 text-gray-300">🚩 신고</button>
+            <button id="detail-mod-takedown-btn" class="hidden px-3 py-1 rounded text-xs bg-red-700 hover:bg-red-600 text-white">🛡 삭제 처리</button>
+        </div>
         `);
 
         document.getElementById('detail-back-btn').addEventListener('click', () => {
@@ -576,6 +593,15 @@ const Online = {
             else this._playOnlineChart(c);
         });
         document.getElementById('detail-like-btn').addEventListener('click', () => this._toggleLike(c.id));
+        document.getElementById('detail-report-btn').addEventListener('click', () => ModerationUI.openReport({ songId: c.song_id, chartId: c.id, title: c.title }));
+        CloudModeration.isModerator().then(isMod => {
+            const mb = document.getElementById('detail-mod-takedown-btn');
+            if (!isMod || !mb) return;
+            mb.classList.remove('hidden');
+            mb.addEventListener('click', async () => {
+                if (await ModerationUI.takedownFromDetail(c.song_id, c.title)) this.show('browse');
+            });
+        });
 
         // 플레이 전 미리보기 — 노래(오디오) + 에디터와 동일한 방식의 노트 낙하 미리보기를
         // 실제 플레이 화면 크기로 크게 보여준다. 로딩 상태는 좌측 game-area 오버레이
@@ -647,6 +673,8 @@ const Online = {
 
     // ── 온라인 차트 플레이 ────────────────────────────────────────────────────
     async _playOnlineChart(c) {
+        // 모바일: 클릭 제스처 안(동기)에서 YouTube 재생 잠금을 풀어둔다 (플레이어가 이미 준비된 경우)
+        try { DOM.musicPlayer.unlockYouTube(); } catch (e) { /* 무시 */ }
         SongPreview.stop();
         const btn = document.getElementById('detail-play-btn');
         btn.disabled = true;
@@ -672,6 +700,7 @@ const Online = {
 
             Game.loadChartNotes(chartData);
             Game.state._onlineChartId = c.id;
+            Game.state._onlineSongId = c.song_id || null;
             Game.state.settings.mode = 'music';
             Game.state.settings.musicSrc = audioUrl;
             Game.state.settings.songStartOffset = (c.start_offset_ms || 0) / 1000 + ytOffsetSec;
@@ -682,11 +711,12 @@ const Online = {
             // 디코딩되길 기대했는데, 느린 회선/큰 파일이면 그 안에 안 끝날 수 있었다).
             UI.showAreaLoading('startPlay', '노래 불러오는 중…');
             const stopTracking = UI.trackAudioDownloadProgress('startPlay');
+            DOM.musicPlayer.expectedDurationMs = c.source_type === 'youtube' ? (c.yt_duration_ms || 0) : 0;
             DOM.musicPlayer.src = audioUrl;
             const audioReady = await DOM.musicPlayer.whenReady();
             stopTracking();
             UI.hideAreaLoading('startPlay');
-            if (!audioReady) throw new Error('노래를 불러오지 못했습니다.');
+            if (!audioReady) throw new Error((DOM.musicPlayer.error && DOM.musicPlayer.error.message) || '노래를 불러오지 못했습니다.');
 
             // Game.start()가 내부에서 UI.showScreen('playing')을 호출하므로 별도 화면 전환은
             // 필요 없다. 예전엔 여기서 UI.showScreen('menu')를 먼저 거쳤는데, showScreen()이
