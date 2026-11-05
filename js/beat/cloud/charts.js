@@ -486,7 +486,7 @@ const CloudCharts = {
 
         const { data: songs, error: songsErr } = await _supabase
             .from('beat_songs')
-            .select('id, title, artist, is_public, created_at, updated_at')
+            .select('id, title, artist, is_public, created_at, updated_at, source_type, youtube_id, audio_storage_path, moderation_status')
             .eq('owner_id', user.id)
             .order('updated_at', { ascending: false });
         if (songsErr) return { data: null, error: songsErr };
@@ -506,6 +506,23 @@ const CloudCharts = {
 
         const data = songs.map(s => ({ ...s, beatmapCount: countBySongId[s.id] || 0 }));
         return { data, error: null };
+    },
+
+    // 내가 올린 곡을 YouTube 링크 기반으로 전환 (hosted/local → youtube). 서버 오디오는 삭제된다.
+    // 반환: { error, purgeFailed } — purgeFailed면 DB 전환은 끝났고 옛 파일만 정리 대기열에 남은 상태
+    async attachYoutubeToMySong(songId, youtubeId, offsetMs, durationMs) {
+        const { data: paths, error } = await _supabase.rpc('beat_attach_youtube_own', {
+            p_song_id: songId, p_youtube_id: youtubeId,
+            p_offset_ms: Math.max(0, Math.round(offsetMs || 0)), p_duration_ms: Math.round(durationMs),
+        });
+        if (error) return { error, purgeFailed: false };
+        let purgeFailed = false;
+        if (Array.isArray(paths) && paths.length) {
+            const { error: rmErr } = await _supabase.storage.from('beat-files').remove(paths);
+            if (rmErr) purgeFailed = true;
+            else await _supabase.rpc('beat_own_purge_done', { p_paths: paths });
+        }
+        return { error: null, purgeFailed };
     },
 
     // ── 노래 삭제 (Storage + DB) — 그 노래에 딸린 난이도(beatmap)까지 전부 함께 삭제 ──

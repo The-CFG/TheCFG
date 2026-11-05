@@ -879,6 +879,12 @@ const Online = {
                 e.stopPropagation();
                 this._deleteMyChart(btn.dataset.id, btn.dataset.title);
             }));
+        document.querySelectorAll('.my-song-yt-btn').forEach(btn =>
+            btn.addEventListener('click', e => {
+                e.stopPropagation();
+                const song = (songs || []).find(x => x.id === btn.dataset.id);
+                if (song) ModerationUI.openOwnAttach(song, () => this._loadMyCharts());
+            }));
         document.querySelectorAll('.my-song-delete-btn').forEach(btn =>
             btn.addEventListener('click', e => {
                 e.stopPropagation();
@@ -905,6 +911,8 @@ const Online = {
                 </div>
                 <div class="flex items-center space-x-1 flex-shrink-0">
                     ${pub}
+                    ${(s.source_type !== 'youtube' && s.moderation_status !== 'removed')
+                        ? `<button class="my-song-yt-btn py-1 px-2 bg-teal-800 hover:bg-teal-700 rounded text-xs" data-id="${s.id}" title="서버 음원 대신 YouTube 링크로 전환">🔗 YouTube 전환</button>` : ''}
                     <button class="my-song-delete-btn py-1 px-2 bg-red-800 hover:bg-red-700 rounded text-xs"
                         data-id="${s.id}" data-title="${_esc(s.title || '(제목 없음)')}">삭제</button>
                 </div>

@@ -206,12 +206,24 @@ const ModerationUI = {
         });
     },
 
-    async _openAttachEditor(song) {
+    // 곡 소유자 본인이 자기 곡을 YouTube 링크 기반으로 전환 (내 곡 목록의 "🔗 YouTube 전환")
+    openOwnAttach(mySong, onDone) {
+        try { SongPreview.stop(); } catch (e) { /* 무시 */ }
+        this._openAttachEditor({
+            song_id: mySong.id, title: mySong.title || '(제목 없음)', artist: mySong.artist,
+            owner_handle: '나', chart_count: mySong.beatmapCount || 0, audio_storage_path: mySong.audio_storage_path || null,
+        }, { own: true, onDone });
+    },
+
+    async _openAttachEditor(song, opts = {}) {
         if (!song) return;
         this._lgCleanup();
+        const own = !!opts.own;
+        const hasOrig = !!song.audio_storage_path;
+        const canCompare = hasOrig || own; // 본인 전환: 서버 음원이 없는 곡(local)은 내 파일을 골라 비교
         const box = this._open(`
             <div class="flex items-center justify-between mb-2"><h3 class="text-lg font-bold truncate">${_esc(song.title)}</h3>
-                <button id="ae-back" class="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 text-sm flex-shrink-0">← 목록</button></div>
+                <button id="ae-back" class="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 text-sm flex-shrink-0">${own ? '닫기' : '← 목록'}</button></div>
             <p class="text-xs text-gray-400 mb-3">${_esc(song.artist || '—')} · 소유자 ${_esc(song.owner_handle || '—')} · 차트 ${song.chart_count}개</p>
             <div class="flex gap-2 mb-2"><input id="ae-url" placeholder="YouTube 링크 또는 영상 ID" class="flex-1 p-2 rounded bg-gray-700 border border-gray-600 text-sm">
                 <button id="ae-check" class="px-3 py-1 rounded bg-blue-700 hover:bg-blue-600 text-sm">확인</button></div>
@@ -223,11 +235,13 @@ const ModerationUI = {
                 <input id="ae-off" type="number" step="0.01" min="0" value="0" class="w-24 p-1 rounded bg-gray-700 border border-gray-600 text-center">
                 <button data-d="0.1" class="ae-nudge px-2 py-1 rounded bg-gray-700 hover:bg-gray-600">+0.1</button>
                 <span class="text-xs text-gray-500">= 영상에서 곡이 시작하는 지점</span></div>
+            ${own && !hasOrig ? `<p class="text-xs text-gray-400 mb-2">비교용 내 음원 파일(선택): <input id="ae-file" type="file" accept="audio/*" class="text-xs"></p>` : ''}
             <div class="flex flex-wrap gap-2 mb-3 text-sm">
                 <button id="ae-play-video" class="px-3 py-1 rounded bg-gray-600 hover:bg-gray-500">▶ 영상(오프셋부터)</button>
-                <button id="ae-play-orig" class="px-3 py-1 rounded bg-gray-600 hover:bg-gray-500">▶ 원본 음원</button>
-                <button id="ae-play-both" class="px-3 py-1 rounded bg-gray-600 hover:bg-gray-500">▶ 동시 재생(싱크 확인)</button>
+                ${canCompare ? `<button id="ae-play-orig" class="px-3 py-1 rounded bg-gray-600 hover:bg-gray-500">▶ 원본 음원</button>
+                <button id="ae-play-both" class="px-3 py-1 rounded bg-gray-600 hover:bg-gray-500">▶ 동시 재생(싱크 확인)</button>` : ''}
                 <button id="ae-stop" class="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600">■ 정지</button></div>
+            ${own ? `<p class="text-xs text-yellow-300 mb-2">⚠ 전환하면 서버에 올린 음원 파일은 삭제되고 되돌릴 수 없습니다. 오프셋은 이 곡의 노트 타이밍에 맞춰야 합니다.</p>` : ''}
             <p class="text-xs text-gray-500 mb-3">동시 재생: 원본 음원은 0초부터, 영상은 오프셋 지점부터 같이 재생합니다. 소리가 겹쳐 울리거나(에코) 어긋나면 오프셋을 조정하세요.</p>
             <p id="ae-msg" class="text-sm text-red-400 mb-2 hidden"></p>
             <div class="flex justify-end"><button id="ae-save" disabled class="px-4 py-2 rounded bg-green-700 hover:bg-green-600 text-sm font-semibold opacity-40">첨부하고 전환</button></div>`);
@@ -240,18 +254,24 @@ const ModerationUI = {
             if (this._lg.audioEl) this._lg.audioEl.pause();
         };
         const ensureAudio = async () => {
+            const picked = box.querySelector('#ae-file') && box.querySelector('#ae-file').files[0];
+            if (!this._lg.audioEl && !hasOrig && !picked) throw new Error('비교할 음원 파일을 먼저 선택하세요.');
             if (!this._lg.audioEl) {
                 const a = new Audio();
-                a.src = await CloudModeration.legacyAudioUrl(song.audio_storage_path);
+                a.src = hasOrig ? await CloudModeration.legacyAudioUrl(song.audio_storage_path) : URL.createObjectURL(picked);
                 a.preload = 'auto';
                 this._lg.audioEl = a;
             }
             return this._lg.audioEl;
         };
         const playVideo = () => { const p = this._lg.ytPlayer; if (!p || !state.id) return; p.seekTo(offSec(), true); p.playVideo(); };
-        const playOrig = async () => { const a = await ensureAudio(); a.currentTime = 0; a.play().catch(e => setStatus('원본 음원 재생 실패: ' + e.message, true)); };
+        const playOrig = async () => {
+            try { const a = await ensureAudio(); a.currentTime = 0; await a.play(); }
+            catch (e) { setStatus('원본 음원 재생 실패: ' + e.message, true); }
+        };
 
-        $('#ae-back').addEventListener('click', () => { this._lgCleanup(); this.openLegacyTool(); });
+        $('#ae-back').addEventListener('click', () => { this._lgCleanup(); if (own) this._close(); else this.openLegacyTool(); });
+        if ($('#ae-file')) $('#ae-file').addEventListener('change', () => { if (this._lg.audioEl) { this._lg.audioEl.pause(); this._lg.audioEl = null; } });
         box.querySelectorAll('.ae-nudge').forEach(b => b.addEventListener('click', () => {
             const v = Math.max(0, Math.round((offSec() + parseFloat(b.dataset.d)) * 100) / 100);
             $('#ae-off').value = v; if (state.verified) playVideo();
@@ -308,8 +328,16 @@ const ModerationUI = {
 
         $('#ae-save').addEventListener('click', async () => {
             if (!state.verified) return;
-            if (!confirm(`"${song.title}"을(를) YouTube(${state.id}), 오프셋 ${offSec()}초로 전환합니다.\n옛 오디오는 정리 대기열로 이동합니다. 진행할까요?`)) return;
+            if (!confirm(`"${song.title}"을(를) YouTube(${state.id}), 오프셋 ${offSec()}초로 전환합니다.\n서버의 옛 음원 파일은 삭제됩니다. 진행할까요?`)) return;
             const msg = $('#ae-msg'); msg.classList.add('hidden');
+            if (own) {
+                const r = await CloudCharts.attachYoutubeToMySong(song.song_id, state.id, Math.round(offSec() * 1000), state.durationMs);
+                if (r.error) { msg.textContent = '실패: ' + (CloudModeration._errMsg(r.error)); msg.classList.remove('hidden'); return; }
+                if (r.purgeFailed) alert('전환은 완료됐지만 옛 음원 파일 삭제는 실패했습니다. 대기열에 남아 나중에 정리됩니다.');
+                this._close();
+                if (typeof opts.onDone === 'function') opts.onDone();
+                return;
+            }
             const res = await CloudModeration.attachYoutube(song.song_id, state.id, Math.round(offSec() * 1000), state.durationMs);
             if (!res.ok) { msg.textContent = '실패: ' + res.error; msg.classList.remove('hidden'); return; }
             this._lgCleanup();
