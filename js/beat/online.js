@@ -407,11 +407,13 @@ const Online = {
         // 로딩과 동일한 'preview' 키 재사용 — 화면이 바뀌면 show()가 SongPreview.stop()으로
         // 항상 정리해주므로 겹칠 일이 없다).
         // (서버에 파일이 있는 hosted/기존 곡만 — YouTube 곡 미리듣기는 보이는 플레이어가 필요해 S6에서 구현)
-        const previewAudioUrl = CloudCharts.getHostedAudioUrl(song);
+        // YouTube 곡은 yt:<ID>로 재생 (플레이어는 우측 패널 하단에 보임, 20초 후 자동 정지)
+        const previewAudioUrl = CloudCharts.getHostedAudioUrl(song)
+            || (song.source_type === 'youtube' ? CloudCharts.getSongAudioSrc(song) : null);
         if (previewAudioUrl) {
             UI.showAreaLoading('preview', '노래 불러오는 중…');
             const stopTracking = UI.trackAudioDownloadProgress('preview');
-            SongPreview.playAudio(previewAudioUrl, song.preview_start_ms || 0)
+            SongPreview.playAudio(previewAudioUrl, song.preview_start_ms || 0, song.yt_offset_ms || 0)
                 .catch(() => {}) // 실패(제스처 대기 타임아웃 등)해도 아래 정리는 항상 수행 — 여기선 결과를 따로 다루지 않음
                 .finally(() => {
                     stopTracking();
@@ -611,6 +613,12 @@ const Online = {
         this._startDetailPreview(c);
     },
 
+    // 미리듣기 소스: 서버 호스팅 음원 URL 또는 YouTube(yt:<ID>)
+    _previewSrc(row) {
+        return CloudCharts.getHostedAudioUrl(row)
+            || (row.source_type === 'youtube' ? CloudCharts.getSongAudioSrc(row) : null);
+    },
+
     async _startDetailPreview(c) {
         const seq = this._loadSeq; // _showDetail이 이미 발급해 둔 토큰을 그대로 이어받는다
         UI.showAreaLoading('preview', '미리보기 불러오는 중…');
@@ -624,7 +632,8 @@ const Online = {
             if (error) throw error;
             await SongPreview.start({
                 chartData,
-                audioUrl: CloudCharts.getHostedAudioUrl(c),
+                audioUrl: this._previewSrc(c),
+                ytOffsetMs: c.source_type === 'youtube' ? (c.yt_offset_ms || 0) : 0,
                 // 노트 미리보기는 실제 플레이와 동일하게 항상 처음(0)부터 재생한다.
                 // preview_start_ms는 난이도 선택(노래 상세) 화면의 "미리듣기"에만 쓰인다 —
                 // 여기서 그 값을 그대로 쓰면 노트 타이밍과 어긋나 노트가 하나도 안 보일 수 있다.
@@ -639,7 +648,14 @@ const Online = {
             stopTracking();
             // 노트 미리보기 실패 시에도 오디오 미리듣기는 시도한다.
             if (this._currentChartId !== c.id || seq !== this._loadSeq) { UI.hideAreaLoading('preview'); return; }
-            SongPreview.playAudio(CloudCharts.getHostedAudioUrl(c), c.preview_start_ms || 0).catch(() => {});
+            SongPreview.playAudio(this._previewSrc(c), c.preview_start_ms || 0, c.source_type === 'youtube' ? (c.yt_offset_ms || 0) : 0)
+                .catch(() => {
+                    // YouTube 영상 사용 불가(삭제/임베드 금지/지역 차단)면 사유를 안내
+                    const pe = DOM.musicPlayer.kind === 'yt' ? DOM.musicPlayer.error : null;
+                    if (pe && pe.unavailable && this._currentChartId === c.id && seq === this._loadSeq) {
+                        UI.showAreaLoading('preview', '⚠ ' + pe.message, { spinner: false });
+                    }
+                });
             // 이 경우엔 좌측 화면에 노트 미리보기 없이 오디오만 재생되므로, 오버레이에
             // 안내를 계속 남겨둔다 — 다만 로딩이 끝난 확정 상태이므로 스피너는 끈다.
             UI.showAreaLoading('preview', '🎵 노래 미리듣기만 재생 중입니다.', { spinner: false });

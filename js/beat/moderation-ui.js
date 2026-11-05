@@ -5,7 +5,10 @@
 const ModerationUI = {
     _overlay: null,
 
-    _close() { if (this._overlay) { this._overlay.remove(); this._overlay = null; } },
+    _close() {
+        if (typeof this._lgCleanup === 'function') this._lgCleanup(); // 첨부 도구의 플레이어/원본 음원 정리
+        if (this._overlay) { this._overlay.remove(); this._overlay = null; }
+    },
 
     _open(innerHtml) {
         this._close();
@@ -68,10 +71,12 @@ const ModerationUI = {
             : (data.length === 0 ? `<p class="text-center text-gray-500 py-6 text-sm">항목이 없습니다.</p>` : data.map(r => this._rowHtml(r)).join(''));
         box.innerHTML = `
             <div class="flex items-center justify-between mb-3"><h3 class="text-lg font-bold">🛡 신고 관리</h3>
-                <button id="mod-close" class="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 text-sm">닫기</button></div>
+                <div class="flex gap-2"><button id="mod-legacy" class="px-3 py-1 rounded bg-teal-700 hover:bg-teal-600 text-sm">🔗 링크 일괄 첨부</button>
+                <button id="mod-close" class="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 text-sm">닫기</button></div></div>
             <div class="flex gap-2 mb-3">${tabs}</div>
             <div class="space-y-3">${rows}</div>`;
         box.querySelector('#mod-close').addEventListener('click', () => this._close());
+        box.querySelector('#mod-legacy').addEventListener('click', () => this.openLegacyTool());
         box.querySelectorAll('.mod-tab').forEach(b => b.addEventListener('click', () => this.openPanel(b.dataset.st)));
         box.querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', () => this._onAction(b, status)));
     },
@@ -128,5 +133,187 @@ const ModerationUI = {
         const res = await CloudModeration.takedownSong(songId, reason);
         if (!res.ok) { alert('처리 실패: ' + res.error); return false; }
         return true;
+    },
+
+    // ═══ 기존(legacy) 곡 → YouTube 링크 일괄 첨부 도구 (S6) ═══════════════════════════
+    // 운영자가 곡별로: 링크 입력 → 영상 검증(oEmbed+길이) → 원본 음원과 영상을 오프셋 맞춰 비교 재생 → 첨부.
+    // 첨부하면 곡은 youtube 소스로 전환되고 옛 오디오는 정리 대기열로 간다(Storage 삭제는 "파일 삭제 실행").
+    // 이 도구의 플레이어는 모달 안에 보이게 따로 만든다(숨김/오버레이 없음).
+    _lg: { q: '', offset: 0, ytPlayer: null, audioEl: null },
+
+    _parseYtId(v) {
+        v = (v || '').trim();
+        if (/^[A-Za-z0-9_-]{11}$/.test(v)) return v;
+        try {
+            const u = new URL(v);
+            if (u.hostname === 'youtu.be') { const id = u.pathname.slice(1, 12); return /^[A-Za-z0-9_-]{11}$/.test(id) ? id : null; }
+            if (/(^|\.)youtube\.com$/.test(u.hostname)) {
+                const id = u.searchParams.get('v') || (u.pathname.match(/^\/(?:embed|shorts|live)\/([A-Za-z0-9_-]{11})/) || [])[1];
+                return id && /^[A-Za-z0-9_-]{11}$/.test(id) ? id : null;
+            }
+        } catch (e) { /* URL 아님 */ }
+        return null;
+    },
+
+    _lgCleanup() {
+        try { if (this._lg.ytPlayer) this._lg.ytPlayer.destroy(); } catch (e) { /* 무시 */ }
+        this._lg.ytPlayer = null;
+        if (this._lg.audioEl) { try { this._lg.audioEl.pause(); } catch (e) { /* 무시 */ } this._lg.audioEl = null; }
+    },
+
+    async openLegacyTool() {
+        if (!(await CloudModeration.isModerator())) return;
+        try { SongPreview.stop(); } catch (e) { /* 무시 */ } // 뒤에서 재생 중인 미리듣기 정리
+        this._lgCleanup();
+        const box = this._open(`<p class="text-center text-gray-400 py-6">불러오는 중…</p>`);
+        const lg = this._lg;
+        const [{ data, total, error }, pending] = await Promise.all([
+            CloudModeration.listLegacySongs(lg.q, 20, lg.offset), CloudModeration.purgeCount(),
+        ]);
+        const rows = error ? `<p class="text-red-400 text-sm">${_esc(error)}</p>`
+            : (data.length === 0 ? `<p class="text-center text-gray-500 py-6 text-sm">첨부할 legacy 곡이 없습니다. 🎉</p>`
+                : data.map(r => `<button data-song="${r.song_id}" class="lg-row w-full text-left p-3 bg-gray-900 hover:bg-gray-700 rounded-lg text-sm">
+                    <div class="font-semibold truncate">${_esc(r.title)} <span class="text-gray-400 font-normal">— ${_esc(r.artist || '—')}</span></div>
+                    <div class="text-xs text-gray-500">소유자 ${_esc(r.owner_handle || '—')} · 차트 ${r.chart_count}개 · ${r.is_public ? '공개' : '비공개'}</div></button>`).join(''));
+        box.innerHTML = `
+            <div class="flex items-center justify-between mb-3"><h3 class="text-lg font-bold">🔗 링크 일괄 첨부 <span class="text-sm text-gray-400">(남은 ${total}곡)</span></h3>
+                <button id="lg-back" class="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 text-sm">← 신고 관리</button></div>
+            <div class="flex gap-2 mb-3"><input id="lg-q" value="${_esc(lg.q)}" placeholder="제목/아티스트 검색" class="flex-1 p-2 rounded bg-gray-700 border border-gray-600 text-sm">
+                <button id="lg-search" class="px-3 py-1 rounded bg-gray-600 hover:bg-gray-500 text-sm">검색</button></div>
+            <div class="space-y-2 mb-3">${rows}</div>
+            <div class="flex items-center justify-between mb-3 text-sm">
+                <button id="lg-prev" class="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 ${lg.offset === 0 ? 'opacity-40' : ''}" ${lg.offset === 0 ? 'disabled' : ''}>이전</button>
+                <span class="text-gray-400">${total ? `${lg.offset + 1}–${Math.min(lg.offset + 20, total)} / ${total}` : ''}</span>
+                <button id="lg-next" class="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 ${lg.offset + 20 >= total ? 'opacity-40' : ''}" ${lg.offset + 20 >= total ? 'disabled' : ''}>다음</button></div>
+            <div class="p-3 bg-gray-900 rounded-lg text-sm flex items-center justify-between">
+                <span>정리 대기 중인 옛 오디오 파일: <b>${pending}</b>개</span>
+                <button id="lg-purge" class="px-3 py-1 rounded bg-red-700 hover:bg-red-600 text-xs ${pending ? '' : 'opacity-40'}" ${pending ? '' : 'disabled'}>파일 삭제 실행</button></div>
+            <p id="lg-msg" class="text-xs text-gray-400 mt-2"></p>`;
+        box.querySelector('#lg-back').addEventListener('click', () => this.openPanel());
+        const search = () => { lg.q = box.querySelector('#lg-q').value; lg.offset = 0; this.openLegacyTool(); };
+        box.querySelector('#lg-search').addEventListener('click', search);
+        box.querySelector('#lg-q').addEventListener('keydown', e => { if (e.key === 'Enter') search(); });
+        box.querySelector('#lg-prev').addEventListener('click', () => { lg.offset = Math.max(0, lg.offset - 20); this.openLegacyTool(); });
+        box.querySelector('#lg-next').addEventListener('click', () => { lg.offset += 20; this.openLegacyTool(); });
+        box.querySelectorAll('.lg-row').forEach(b => b.addEventListener('click', () => this._openAttachEditor(data.find(r => r.song_id === b.dataset.song))));
+        box.querySelector('#lg-purge').addEventListener('click', async () => {
+            if (!confirm(`정리 대기 중인 옛 오디오 ${pending}개를 Storage에서 영구 삭제합니다. 진행할까요?`)) return;
+            const msg = box.querySelector('#lg-msg');
+            const res = await CloudModeration.purgeFiles((ok, fail) => { msg.textContent = `삭제 중… 완료 ${ok} / 실패 ${fail}`; });
+            if (res.error) { msg.textContent = '실패: ' + res.error; return; }
+            alert(`완료: ${res.removed}개 삭제${res.failed ? `, ${res.failed}개 실패(다시 실행하면 재시도)` : ''}`);
+            this.openLegacyTool();
+        });
+    },
+
+    async _openAttachEditor(song) {
+        if (!song) return;
+        this._lgCleanup();
+        const box = this._open(`
+            <div class="flex items-center justify-between mb-2"><h3 class="text-lg font-bold truncate">${_esc(song.title)}</h3>
+                <button id="ae-back" class="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 text-sm flex-shrink-0">← 목록</button></div>
+            <p class="text-xs text-gray-400 mb-3">${_esc(song.artist || '—')} · 소유자 ${_esc(song.owner_handle || '—')} · 차트 ${song.chart_count}개</p>
+            <div class="flex gap-2 mb-2"><input id="ae-url" placeholder="YouTube 링크 또는 영상 ID" class="flex-1 p-2 rounded bg-gray-700 border border-gray-600 text-sm">
+                <button id="ae-check" class="px-3 py-1 rounded bg-blue-700 hover:bg-blue-600 text-sm">확인</button></div>
+            <p id="ae-status" class="text-xs text-gray-400 mb-2 min-h-[1rem]"></p>
+            <div id="ae-player-wrap" class="mb-2" style="width:480px;max-width:100%;aspect-ratio:16/9;background:#000"><div id="ae-player"></div></div>
+            <div class="flex items-center gap-2 mb-2 text-sm">
+                <label class="text-gray-300">오프셋(초)</label>
+                <button data-d="-0.1" class="ae-nudge px-2 py-1 rounded bg-gray-700 hover:bg-gray-600">-0.1</button>
+                <input id="ae-off" type="number" step="0.01" min="0" value="0" class="w-24 p-1 rounded bg-gray-700 border border-gray-600 text-center">
+                <button data-d="0.1" class="ae-nudge px-2 py-1 rounded bg-gray-700 hover:bg-gray-600">+0.1</button>
+                <span class="text-xs text-gray-500">= 영상에서 곡이 시작하는 지점</span></div>
+            <div class="flex flex-wrap gap-2 mb-3 text-sm">
+                <button id="ae-play-video" class="px-3 py-1 rounded bg-gray-600 hover:bg-gray-500">▶ 영상(오프셋부터)</button>
+                <button id="ae-play-orig" class="px-3 py-1 rounded bg-gray-600 hover:bg-gray-500">▶ 원본 음원</button>
+                <button id="ae-play-both" class="px-3 py-1 rounded bg-gray-600 hover:bg-gray-500">▶ 동시 재생(싱크 확인)</button>
+                <button id="ae-stop" class="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600">■ 정지</button></div>
+            <p class="text-xs text-gray-500 mb-3">동시 재생: 원본 음원은 0초부터, 영상은 오프셋 지점부터 같이 재생합니다. 소리가 겹쳐 울리거나(에코) 어긋나면 오프셋을 조정하세요.</p>
+            <p id="ae-msg" class="text-sm text-red-400 mb-2 hidden"></p>
+            <div class="flex justify-end"><button id="ae-save" disabled class="px-4 py-2 rounded bg-green-700 hover:bg-green-600 text-sm font-semibold opacity-40">첨부하고 전환</button></div>`);
+        const $ = (s) => box.querySelector(s);
+        const state = { id: null, durationMs: 0, verified: false };
+        const setStatus = (t, err) => { const el = $('#ae-status'); el.textContent = t; el.className = 'text-xs mb-2 min-h-[1rem] ' + (err ? 'text-red-400' : 'text-gray-400'); };
+        const offSec = () => Math.max(0, parseFloat($('#ae-off').value) || 0);
+        const stopAll = () => {
+            try { if (this._lg.ytPlayer && this._lg.ytPlayer.pauseVideo) this._lg.ytPlayer.pauseVideo(); } catch (e) { /* 무시 */ }
+            if (this._lg.audioEl) this._lg.audioEl.pause();
+        };
+        const ensureAudio = async () => {
+            if (!this._lg.audioEl) {
+                const a = new Audio();
+                a.src = await CloudModeration.legacyAudioUrl(song.audio_storage_path);
+                a.preload = 'auto';
+                this._lg.audioEl = a;
+            }
+            return this._lg.audioEl;
+        };
+        const playVideo = () => { const p = this._lg.ytPlayer; if (!p || !state.id) return; p.seekTo(offSec(), true); p.playVideo(); };
+        const playOrig = async () => { const a = await ensureAudio(); a.currentTime = 0; a.play().catch(e => setStatus('원본 음원 재생 실패: ' + e.message, true)); };
+
+        $('#ae-back').addEventListener('click', () => { this._lgCleanup(); this.openLegacyTool(); });
+        box.querySelectorAll('.ae-nudge').forEach(b => b.addEventListener('click', () => {
+            const v = Math.max(0, Math.round((offSec() + parseFloat(b.dataset.d)) * 100) / 100);
+            $('#ae-off').value = v; if (state.verified) playVideo();
+        }));
+        $('#ae-stop').addEventListener('click', stopAll);
+        $('#ae-play-video').addEventListener('click', () => { stopAll(); playVideo(); });
+        $('#ae-play-orig').addEventListener('click', () => { stopAll(); playOrig(); });
+        $('#ae-play-both').addEventListener('click', async () => { stopAll(); await playOrig(); playVideo(); });
+
+        $('#ae-check').addEventListener('click', async () => {
+            const id = this._parseYtId($('#ae-url').value);
+            if (!id) { setStatus('올바른 YouTube 링크 또는 영상 ID가 아닙니다.', true); return; }
+            state.verified = false; state.id = null;
+            $('#ae-save').disabled = true; $('#ae-save').classList.add('opacity-40');
+            setStatus('영상 확인 중…');
+            try {
+                // ① oEmbed — 404: 없음/비공개, 401/403: 임베드 불가
+                let info = null;
+                try {
+                    const res = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent('https://www.youtube.com/watch?v=' + id)}&format=json`);
+                    if (res.status === 404) throw new Error('영상을 찾을 수 없습니다 (삭제됨/비공개).');
+                    if (res.status === 401 || res.status === 403) throw new Error('이 영상은 임베드가 허용되지 않아 사용할 수 없습니다.');
+                    if (res.ok) info = await res.json();
+                } catch (err) { if (/영상/.test(err.message)) throw err; }
+                // ② 모달 안의 (보이는) 플레이어로 길이 취득
+                await YouTubeSource._loadApi();
+                this._lgCleanup();
+                const wrap = $('#ae-player-wrap');
+                wrap.innerHTML = '<div id="ae-player"></div>';
+                const durationMs = await new Promise((resolve, reject) => {
+                    const timer = setTimeout(() => reject(new Error('영상 정보를 불러오지 못했습니다.')), 15000);
+                    this._lg.ytPlayer = new YT.Player('ae-player', {
+                        width: '100%', height: '100%', videoId: id,
+                        playerVars: { playsinline: 1, rel: 0, origin: location.origin },
+                        events: {
+                            onReady: (e) => {
+                                const poll = setInterval(() => {
+                                    const d = e.target.getDuration();
+                                    if (d > 0) { clearInterval(poll); clearTimeout(timer); resolve(Math.round(d * 1000)); }
+                                }, 200);
+                                e.target.playVideo(); // 길이가 늦게 잡히는 영상 대비(플레이어는 보이는 상태)
+                                setTimeout(() => { try { e.target.pauseVideo(); } catch (x) { /* 무시 */ } }, 1500);
+                            },
+                            onError: (e) => { clearTimeout(timer); reject(new Error([100, 101, 150].includes(e.data) ? '영상 사용 불가: 삭제/비공개/임베드 금지/지역 차단' : 'YouTube 오류 ' + e.data)); },
+                        },
+                    });
+                });
+                state.id = id; state.durationMs = durationMs; state.verified = true;
+                const m = Math.floor(durationMs / 60000), s = Math.floor(durationMs / 1000) % 60;
+                setStatus(`✔ ${info && info.title ? info.title + ' · ' : ''}길이 ${m}:${String(s).padStart(2, '0')}`);
+                $('#ae-save').disabled = false; $('#ae-save').classList.remove('opacity-40');
+            } catch (err) { setStatus(err.message || '영상을 확인하지 못했습니다.', true); }
+        });
+
+        $('#ae-save').addEventListener('click', async () => {
+            if (!state.verified) return;
+            if (!confirm(`"${song.title}"을(를) YouTube(${state.id}), 오프셋 ${offSec()}초로 전환합니다.\n옛 오디오는 정리 대기열로 이동합니다. 진행할까요?`)) return;
+            const msg = $('#ae-msg'); msg.classList.add('hidden');
+            const res = await CloudModeration.attachYoutube(song.song_id, state.id, Math.round(offSec() * 1000), state.durationMs);
+            if (!res.ok) { msg.textContent = '실패: ' + res.error; msg.classList.remove('hidden'); return; }
+            this._lgCleanup();
+            this.openLegacyTool(); // 처리된 곡은 목록에서 빠진다 → 다음 곡으로
+        });
     },
 };

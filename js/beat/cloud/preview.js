@@ -26,12 +26,16 @@ const SongPreview = {
     // 덮어써버리는 상태 누수가 생긴다. AudioEngine._loadToken과 동일한 패턴으로
     // 호출마다 토큰을 발급하고, await 이후 여전히 최신 호출인지 확인한 뒤에만 적용한다.
     _loadToken: 0,
+    _ytOffsetMs: 0,   // YouTube 곡: 영상 시계 = 곡 시계 + yt_offset_ms (노트 기준 시계 보정)
+    _endTimer: null,
+    YT_PREVIEW_MS: 20000, // YouTube 미리듣기는 광고/트래픽을 고려해 이 길이 후 자동 정지
 
     // ── 오디오만 미리듣기 (난이도 선택 = 노래 상세 화면) ────────────────────
-    async playAudio(audioUrl, previewStartMs = 0) {
+    async playAudio(audioUrl, previewStartMs = 0, ytOffsetMs = 0) {
         this._resetPlayback();
         if (!audioUrl) return;
         const token = ++this._loadToken;
+        this._ytOffsetMs = audioUrl.startsWith('yt:') ? (ytOffsetMs || 0) : 0;
         // 오디오 소스 지정(= 다운로드+디코딩 시작)을 AudioContext 상태와 무관하게 가장 먼저
         // 해둔다. 예전엔 resumeContext()부터 기다렸는데, 페이지에 들어와서 아직 한 번도
         // 클릭 같은 제스처가 없었던 시점(예: 메인 메뉴 첫 진입)엔 AudioContext.resume()의
@@ -40,7 +44,7 @@ const SongPreview = {
         // 다운로드 자체가 시작을 못 했고, 그래서 진행률 바가 0%에서 영원히 사라지지
         // 않는 문제가 있었다.
         DOM.musicPlayer.src = audioUrl;
-        DOM.musicPlayer.currentTime = Math.max(0, (previewStartMs || 0) / 1000);
+        DOM.musicPlayer.currentTime = Math.max(0, ((previewStartMs || 0) + this._ytOffsetMs) / 1000);
         try {
             // resumeContext()도 같은 이유로 하염없이 pending일 수 있으므로, 일정 시간 안에
             // 끝나지 않으면 "아직 제스처가 없다"고 보고 타임아웃시켜 catch로 넘긴다.
@@ -58,6 +62,7 @@ const SongPreview = {
             await DOM.musicPlayer.play();
             if (token !== this._loadToken) { DOM.musicPlayer.pause(); return; }
             this._active = true;
+            this._armEndTimer(token, audioUrl);
         } catch (err) {
             // 제스처 대기 타임아웃은 페이지에 아직 클릭 등 상호작용이 없었던 첫 진입마다
             // 브라우저 자동재생 정책 때문에 항상 발생하는 정상적인 상황이라, 에러로
@@ -73,12 +78,13 @@ const SongPreview = {
     async start(opts) {
         this._resetPlayback();
         const token = ++this._loadToken;
-        const { chartData, audioUrl, previewStartMs = 0 } = opts || {};
+        const { chartData, audioUrl, previewStartMs = 0, ytOffsetMs = 0 } = opts || {};
+        this._ytOffsetMs = (audioUrl && audioUrl.startsWith('yt:')) ? (ytOffsetMs || 0) : 0;
         const laneCount = (opts && opts.laneCount) || chartData?.laneCount || 4;
         const laneIds = CONFIG.LANE_KEY_MAPPING_ORDER[laneCount];
         if (!laneIds) {
             // 알 수 없는 레인 수면 노트 미리보기 없이 오디오만이라도 재생 (실패해도 무시)
-            await this.playAudio(audioUrl, previewStartMs).catch(() => {});
+            await this.playAudio(audioUrl, previewStartMs, ytOffsetMs).catch(() => {});
             return;
         }
 
@@ -113,7 +119,7 @@ const SongPreview = {
         // 제스처 없이 resume()이 하염없이 pending인 브라우저에서도 다운로드는 진행되게 하기 위함.
         if (audioUrl) {
             DOM.musicPlayer.src = audioUrl;
-            DOM.musicPlayer.currentTime = Math.max(0, (previewStartMs || 0) / 1000);
+            DOM.musicPlayer.currentTime = Math.max(0, ((previewStartMs || 0) + this._ytOffsetMs) / 1000);
         }
         try {
             // resumeContext() 대기도 타임아웃을 걸어 무한 pending을 방지한다.
@@ -127,6 +133,7 @@ const SongPreview = {
             ]);
             if (token !== this._loadToken) return; // 그 사이 다른 곡 요청이 들어옴 — 이 호출은 폐기
             if (audioUrl) await DOM.musicPlayer.play();
+            if (audioUrl && token === this._loadToken) this._armEndTimer(token, audioUrl);
         } catch (err) {
             // 제스처 타임아웃은 정상 상황이므로 로그하지 않는다 (playAudio()와 동일한 처리)
             if (!err.isGestureTimeout) Debugger?.logError?.(err, 'SongPreview.start');
@@ -159,7 +166,7 @@ const SongPreview = {
     _loop() {
         if (!this._active) return;
         try {
-            const elapsedTime = DOM.musicPlayer.currentTime * 1000;
+            const elapsedTime = DOM.musicPlayer.currentTime * 1000 - this._ytOffsetMs;
 
             let noteSpeed = this._baseNoteSpeed;
             if (this._triggers.length > 0) {
@@ -216,6 +223,13 @@ const SongPreview = {
         }
     },
 
+    // YouTube 미리듣기는 일정 시간 후 자동 정지 (광고/트래픽 부담 최소화)
+    _armEndTimer(token, audioUrl) {
+        clearTimeout(this._endTimer);
+        if (!audioUrl || !audioUrl.startsWith('yt:')) return;
+        this._endTimer = setTimeout(() => { if (token === this._loadToken) this.stopAudio(); }, this.YT_PREVIEW_MS);
+    },
+
     stopAudio() {
         try { DOM.musicPlayer.pause(); } catch (e) { /* 무시 */ }
     },
@@ -229,6 +243,8 @@ const SongPreview = {
     // 다른 동작이므로 분리한다.)
     _resetPlayback() {
         this._loadToken++; // 진행 중이던 playAudio()/start() 호출을 전부 무효화
+        clearTimeout(this._endTimer); this._endTimer = null;
+        this._ytOffsetMs = 0;
         this._active = false;
         if (this._animId) {
             cancelAnimationFrame(this._animId);

@@ -61,6 +61,48 @@ const CloudModeration = {
         const { error } = await _supabase.rpc('beat_mod_dismiss_report', { p_report_id: reportId, p_note: note || null });
         return { ok: !error, error: error ? this._errMsg(error) : null };
     },
+    // ── 기존(legacy) 곡 → YouTube 링크 일괄 첨부 / 기존 오디오 정리 (S6) ──
+    async listLegacySongs(q = '', limit = 20, offset = 0) {
+        const { data, error } = await _supabase.rpc('beat_mod_list_legacy_songs', { p_q: q || null, p_limit: limit, p_offset: offset });
+        if (error) return { data: [], total: 0, error: this._errMsg(error) };
+        return { data: data || [], total: data && data.length ? Number(data[0].total) : 0, error: null };
+    },
+    async attachYoutube(songId, youtubeId, offsetMs, durationMs) {
+        const { error } = await _supabase.rpc('beat_mod_attach_youtube', {
+            p_song_id: songId, p_youtube_id: youtubeId, p_offset_ms: Math.max(0, Math.round(offsetMs || 0)), p_duration_ms: Math.round(durationMs),
+        });
+        return { ok: !error, error: error ? this._errMsg(error) : null };
+    },
+    async purgeCount() {
+        const { data, error } = await _supabase.rpc('beat_mod_purge_count');
+        return error ? 0 : Number(data || 0);
+    },
+    // 정리 대기열의 옛 오디오를 Storage에서 실제로 삭제하고 대기열을 비운다. 반환: { removed, failed, error }
+    async purgeFiles(onProgress) {
+        let removed = 0, failed = 0;
+        for (let round = 0; round < 50; round++) {
+            const { data, error } = await _supabase.rpc('beat_mod_purge_list', { p_limit: 100 });
+            if (error) return { removed, failed, error: this._errMsg(error) };
+            if (!data || data.length === 0) break;
+            const done = [];
+            for (let i = 0; i < data.length; i += 50) {
+                const chunk = data.slice(i, i + 50);
+                const { error: rmErr } = await _supabase.storage.from('beat-files').remove(chunk.map(r => r.storage_path));
+                if (rmErr) failed += chunk.length;
+                else { done.push(...chunk.map(r => r.id)); removed += chunk.length; }
+                if (onProgress) onProgress(removed, failed);
+            }
+            if (done.length) await _supabase.rpc('beat_mod_purge_done', { p_ids: done });
+            if (done.length === 0) break; // 전부 실패하면 무한 반복 방지
+        }
+        return { removed, failed, error: null };
+    },
+    // legacy 음원 재생용 URL: 비공개 전환 후에도 모더레이터는 서명 URL로 들을 수 있다 (실패 시 공개 URL)
+    async legacyAudioUrl(path) {
+        const { data } = await _supabase.storage.from('beat-files').createSignedUrl(path, 3600);
+        return (data && data.signedUrl) || CloudCharts.getAudioUrl(path);
+    },
+
     async restoreSong(songId, note) {
         const { error } = await _supabase.rpc('beat_mod_restore_song', { p_song_id: songId, p_note: note || null });
         return { ok: !error, error: error ? this._errMsg(error) : null };

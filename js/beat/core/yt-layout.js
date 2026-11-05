@@ -22,7 +22,7 @@ const YTLayout = {
     PREF_W: 480,
     GAP: 8,
     RESERVE_SPACE: true,
-    SHOW_SCREENS: ['playing', 'editorSong', 'editor', 'settings'],
+    SHOW_SCREENS: ['playing', 'editorSong', 'editor', 'settings', 'online'], // online: 곡/난이도 상세 YouTube 미리듣기
 
     mode: 'hidden',       // 'slot' | 'ui-bottom' | 'covered' | 'hidden'
     coveredTopPx: 0,      // lane-top 모드에서 game-area 상단부터 가려지는 높이(px). 그 외엔 0
