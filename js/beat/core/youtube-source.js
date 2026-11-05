@@ -337,12 +337,15 @@ const YouTubeSource = {
     // ───── 재생 제어 ─────
     // when: 지금부터 몇 초 뒤에 "소리가 나기 시작해야 하는지". 시작 지연 추정치만큼 일찍 playVideo를 호출한다.
     async play(when = 0) {
+        // whenReady() 대기 시간만큼 목표 시각이 밀리지 않도록, 목표 시각을 await 전에 절대값으로 고정한다.
+        const targetAt = performance.now() + when * 1000;
         const ok = await this.whenReady();
         if (!ok) return;
         this._wantPlay = true;
         if (!this._playing) this._lastT = this._pausedAt;
         clearTimeout(this._playTimer);
-        const delayMs = Math.max(0, when * 1000 - this._latencyMs);
+        const remainMs = when > 0 ? targetAt - performance.now() : 0;
+        const delayMs = Math.max(0, remainMs - this._latencyMs);
         if (when > 0 && delayMs > 10) {
             this._playTimer = setTimeout(() => this._doPlay(), delayMs);
             return;

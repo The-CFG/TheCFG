@@ -694,13 +694,26 @@ const Game = {
                 }
             });
         } else {
+            // YouTube는 playVideo() → 실제 재생까지 ~0.7~1초 걸린다. 카운트다운이 끝난 뒤에야 play()를 부르면
+            // 그 사이 노트는 performance.now() 시계로 먼저 내려오고, 음악이 시작될 때 시계가 갈아타며 싱크가 어긋난다.
+            // 그래서 YT는 멀티플레이 경로처럼 카운트다운 시작 시점에 "카운트다운 종료 시각에 소리가 나도록" 재생을 예약하고,
+            // 종료 시점부터는 곧바로 YT 시계를 쓴다. (YT가 아직 안 떴으면 시계가 시작 위치에 멈춰 있어 노트도 같이 대기한다.)
+            const isYtMusic = this.state.settings.mode === 'music' && DOM.musicPlayer.src && DOM.musicPlayer.kind === 'yt';
+            if (isYtMusic) {
+                const whenSec = Math.max(0, (this.state.gameStartTime - performance.now()) / 1000);
+                DOM.musicPlayer.play(whenSec).catch(() => {});
+            }
             this.runCountdown(() => {
                 this.state.gameState = 'playing';
                 if (this.state.settings.mode === 'music' && DOM.musicPlayer.src) {
-                    DOM.musicPlayer.currentTime = this.state.settings.songStartOffset || 0;
-                    DOM.musicPlayer.play().then(() => {
+                    if (isYtMusic) {
                         this.state.audioReady = true;
-                    }).catch(() => {});
+                    } else {
+                        DOM.musicPlayer.currentTime = this.state.settings.songStartOffset || 0;
+                        DOM.musicPlayer.play().then(() => {
+                            this.state.audioReady = true;
+                        }).catch(() => {});
+                    }
                 }
             });
         }
@@ -1252,6 +1265,8 @@ const Game = {
             this.runCountdown(() => {
                 this.state.totalPausedTime += performance.now() - this.state.pauseStartTime;
                 if (this.state.settings.mode === 'music') DOM.musicPlayer.play();
+                // YouTube: 시작 카운트다운 중 일시정지했다가 재개한 경우에도 wall-clock으로 먼저 흐르지 않게 YT 시계로 전환
+                if (this.state.settings.mode === 'music' && DOM.musicPlayer.kind === 'yt') this.state.audioReady = true;
                 this.state.gameState = 'playing';
                 // 재개되면 "게임플레이 시 우측 화면 숨기기" 설정에 맞춰 다시 접는다.
                 UI.setPanelCollapsed(this.state.settings.autoHideUiOnPlay === true);
