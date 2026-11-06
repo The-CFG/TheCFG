@@ -242,7 +242,7 @@ const ModerationUI = {
                 <button id="ae-play-both" class="px-3 py-1 rounded bg-gray-600 hover:bg-gray-500">▶ 동시 재생(싱크 확인)</button>` : ''}
                 <button id="ae-stop" class="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600">■ 정지</button></div>
             ${own ? `<p class="text-xs text-yellow-300 mb-2">⚠ 전환하면 서버에 올린 음원 파일은 삭제되고 되돌릴 수 없습니다. 오프셋은 이 곡의 노트 타이밍에 맞춰야 합니다.</p>` : ''}
-            <p class="text-xs text-gray-500 mb-3">동시 재생: 원본 음원은 0초부터, 영상은 오프셋 지점부터 같이 재생합니다. 소리가 겹쳐 울리거나(에코) 어긋나면 오프셋을 조정하세요.</p>
+            <p class="text-xs text-gray-500 mb-3">동시 재생: 영상이 실제로 재생되기 시작하는 순간에 맞춰 원본 음원을 같은 곡 지점부터 재생합니다(영상 로딩 지연은 자동 보정). 오프셋이 맞으면 소리가 하나로 들리고, 틀리면 메아리처럼 겹쳐 들립니다. <b>영상 소리가 원본보다 늦게 들리면 오프셋을 늘리고, 빠르면 줄이세요.</b> (큰 단위 → 0.1초 → 0.01초 순으로)</p>
             <p id="ae-msg" class="text-sm text-red-400 mb-2 hidden"></p>
             <div class="flex justify-end"><button id="ae-save" disabled class="px-4 py-2 rounded bg-green-700 hover:bg-green-600 text-sm font-semibold opacity-40">첨부하고 전환</button></div>`);
         const $ = (s) => box.querySelector(s);
@@ -264,6 +264,15 @@ const ModerationUI = {
             }
             return this._lg.audioEl;
         };
+        const pending = { audio: false, timer: null };
+        // 영상이 실제 PLAYING이 된 시점의 영상 위치(getCurrentTime)에서 오프셋을 빼 곡 위치를 구하고, 원본 음원을 그 지점에 맞춰 시작한다
+        const startAudioSynced = () => {
+            const a = this._lg.audioEl, p = this._lg.ytPlayer;
+            if (!a || !p) return;
+            const songT = p.getCurrentTime() - offSec();
+            if (songT >= 0) { a.currentTime = songT; a.play().catch(e => setStatus('원본 음원 재생 실패: ' + e.message, true)); }
+            else { a.currentTime = 0; setTimeout(() => a.play().catch(() => {}), -songT * 1000); } // 영상이 곡 시작 전 지점이면 그만큼 기다렸다가
+        };
         const playVideo = () => { const p = this._lg.ytPlayer; if (!p || !state.id) return; p.seekTo(offSec(), true); p.playVideo(); };
         const playOrig = async () => {
             try { const a = await ensureAudio(); a.currentTime = 0; await a.play(); }
@@ -279,7 +288,14 @@ const ModerationUI = {
         $('#ae-stop').addEventListener('click', stopAll);
         $('#ae-play-video').addEventListener('click', () => { stopAll(); playVideo(); });
         $('#ae-play-orig').addEventListener('click', () => { stopAll(); playOrig(); });
-        $('#ae-play-both').addEventListener('click', async () => { stopAll(); await playOrig(); playVideo(); });
+        $('#ae-play-both').addEventListener('click', async () => {
+            stopAll();
+            try { await ensureAudio(); } catch (e) { setStatus('원본 음원 재생 실패: ' + e.message, true); return; }
+            pending.audio = true;
+            clearTimeout(pending.timer);
+            pending.timer = setTimeout(() => { pending.audio = false; }, 8000); // 영상이 시작 못 하면 대기 해제
+            playVideo();
+        });
 
         $('#ae-check').addEventListener('click', async () => {
             const id = this._parseYtId($('#ae-url').value);
@@ -314,6 +330,9 @@ const ModerationUI = {
                                 }, 200);
                                 e.target.playVideo(); // 길이가 늦게 잡히는 영상 대비(플레이어는 보이는 상태)
                                 setTimeout(() => { try { e.target.pauseVideo(); } catch (x) { /* 무시 */ } }, 1500);
+                            },
+                            onStateChange: (e) => {
+                                if (e.data === 1 && pending.audio) { pending.audio = false; clearTimeout(pending.timer); startAudioSynced(); }
                             },
                             onError: (e) => { clearTimeout(timer); reject(new Error([100, 101, 150].includes(e.data) ? '영상 사용 불가: 삭제/비공개/임베드 금지/지역 차단' : 'YouTube 오류 ' + e.data)); },
                         },
