@@ -17,7 +17,9 @@ const YTLayout = {
     PREF_W: 480,
     GAP: 8,
     RESERVE_SPACE: true,
-    SHOW_SCREENS: ['playing', 'editorSong', 'editor', 'settings', 'online'], // online: 곡/난이도 상세 YouTube 미리듣기
+    // 환경설정('settings')은 현재 제외 — 유튜브 플레이어 관련 설정을 추가하면 여기에 다시 넣는다.
+    // (제외된 화면에서는 임베드가 화면 밖으로 치워지고, 재생 중이면 자동 일시정지된다)
+    SHOW_SCREENS: ['playing', 'editorSong', 'editor', 'online'], // online: 곡/난이도 상세 YouTube 미리듣기
 
     mode: 'hidden',       // 'slot' | 'ui-bottom'(화면 요소를 못 찾을 때의 폴백) | 'covered' | 'hidden'
     coveredTopPx: 0,      // lane-top 모드에서 game-area 상단부터 가려지는 높이(px). 그 외엔 0
