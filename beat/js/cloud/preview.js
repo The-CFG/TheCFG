@@ -193,6 +193,22 @@ const SongPreview = {
             this._notes.forEach(note => {
                 if (note.type === 'long_tail') { note._visible = false; return; }
                 const timeToHit = note.time - elapsedTime;
+                // 실제 게임처럼 판정선에 닿는 순간 자동 판정 처리:
+                //  - tap/false: 판정선에서 사라진다
+                //  - long_head: 하단을 판정선에 고정하고 꼬리 시점까지 점점 짧아지다 사라진다
+                //    (Game.canvas.drawNote()의 shrinking/tailTime 경로를 그대로 사용)
+                if (timeToHit <= 0) {
+                    if (note.type === 'long_head') {
+                        const tailTime = note.time + note.duration;
+                        note.shrinking = true;
+                        note.tailTime = tailTime;
+                        note._visible = tailTime - elapsedTime > 0;
+                    } else {
+                        note._visible = false;
+                    }
+                    return;
+                }
+                note.shrinking = false; // 되감기/재시작 시 수축 상태 해제
                 const bodyH = note.type === 'long_head'
                     ? Math.max((note.duration / 10) * noteSpeed, noteH)
                     : noteH;
