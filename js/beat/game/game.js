@@ -478,8 +478,15 @@ const Game = {
             ? 2 * progress * progress
             : 1 - Math.pow(-2 * progress + 2, 2) / 2;
 
-        this.state.settings.bpm       = from.bpm       + (target.bpm       - from.bpm)       * eased;
-        this.state.settings.noteSpeed = from.fallSpeed + (target.fallSpeed - from.fallSpeed) * eased;
+        // 방어: 트리거 값이 비었거나 NaN/문자열이면 직전 값을 유지 (NaN/문자열 연결로 속도가 깨지는 것 방지)
+        const bpmFrom = Number(from.bpm), bpmTo = Number(target.bpm);
+        const spdFrom = Number(from.fallSpeed), spdTo = Number(target.fallSpeed);
+        if (Number.isFinite(bpmFrom) && Number.isFinite(bpmTo)) {
+            this.state.settings.bpm = bpmFrom + (bpmTo - bpmFrom) * eased;
+        }
+        if (Number.isFinite(spdFrom) && Number.isFinite(spdTo)) {
+            this.state.settings.noteSpeed = spdFrom + (spdTo - spdFrom) * eased;
+        }
     },
 
     resetState() {
@@ -614,6 +621,10 @@ const Game = {
         resetPlayingScreenUI();
 
         if (this.state.settings.mode === 'random') {
+            // 버그 수정: 직전에 플레이한 뮤직 차트의 트리거/기준 하강속도가 state에 그대로 남아,
+            // 연습(랜덤) 모드에서도 applyActiveTrigger()가 매 프레임 noteSpeed를 그 값으로 덮어써
+            // 슬라이더/난이도 설정과 무관하게 속도가 고정되던 문제. 랜덤 모드는 트리거를 쓰지 않으므로 비운다.
+            this.state.triggers = [];
             this.generateRandomNotes();
         } else { // Music Mode
             if (!this.state.chartData) {
