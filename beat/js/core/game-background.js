@@ -5,6 +5,10 @@
 // GameBackground.set(url) / GameBackground.clear() 로 제어한다.
 
 const GameBackground = {
+    // 곡 커버가 없을 때(메인 메뉴 등) 검은 화면 대신 보여줄 기본 배경.
+    DEFAULT_URL: '/assets/TheBeat.png',
+    _defaultActive: false,   // 현재 기본 배경이 표시 중인지
+    _defaultFailed: false,   // 기본 배경 파일 로드에 실패했는지(없으면 예전처럼 검은 화면)
     _currentUrl: null,
     // 마지막으로 요청된 url. 불투명도가 0이어도 기억해뒀다가, 슬라이더를 다시 올렸을 때
     // 화면 전환 없이 곧바로 복원할 수 있도록 한다.
@@ -12,7 +16,8 @@ const GameBackground = {
 
     _targetOpacity() {
         // 커스터마이징 계획 1/4단계 완료로 Appearance.settings(BeatSkin 소유)로 이관됨.
-        const value = Appearance.settings.gameplayImageOpacity;
+        // 스크립트 로드 순서상 Appearance보다 먼저 호출될 수 있어(초기 기본 배경 표시) 존재를 확인한다.
+        const value = (typeof Appearance !== 'undefined' && Appearance.settings) ? Appearance.settings.gameplayImageOpacity : undefined;
         const pct = (value === undefined || value === null) ? 100 : value;
         return Math.max(0, Math.min(100, pct)) / 100;
     },
@@ -38,6 +43,7 @@ const GameBackground = {
         img.onload = () => {
             if (this._currentUrl !== url) return; // 로딩 도중 다른 곡으로 바뀌었으면 무시
             UI.hideAreaLoading('cover');
+            this._defaultActive = false;
             bg.style.transition = 'opacity 0.3s ease';
             bg.style.opacity = '0';
             requestAnimationFrame(() => {
@@ -54,23 +60,54 @@ const GameBackground = {
         img.src = url;
     },
 
+    // 커버 이미지를 내리고 기본 배경(TheBeat.png)으로 되돌린다.
     clear() {
         const bg = document.getElementById('game-area-bg');
         if (!bg) return;
         UI.hideAreaLoading('cover'); // 로딩 도중 취소된 경우에도 표시가 남지 않도록
         this._currentUrl = null;
+        this._showDefault();
+    },
+
+    // 기본 배경 표시. 이미 기본 배경이 떠 있으면 깜빡임 없이 불투명도만 맞춘다.
+    // 다른(커버) 이미지가 떠 있었다면 페이드아웃 → 교체 → 페이드인.
+    _showDefault() {
+        const bg = document.getElementById('game-area-bg');
+        if (!bg) return;
+        if (this._defaultFailed) { // 기본 배경 파일이 없으면 예전처럼 비움(검은 화면)
+            this._defaultActive = false;
+            bg.style.transition = 'opacity 0.3s ease';
+            bg.style.opacity = '0';
+            setTimeout(() => { if (this._currentUrl === null) bg.style.backgroundImage = ''; }, 300);
+            return;
+        }
+        if (this._defaultActive) {
+            bg.style.opacity = String(this._targetOpacity());
+            return;
+        }
+        const apply = () => {
+            if (this._currentUrl !== null) return; // 그 사이 다른 커버가 요청됨
+            this._defaultActive = true;
+            bg.style.backgroundImage = `url("${this.DEFAULT_URL}")`;
+            requestAnimationFrame(() => { bg.style.opacity = String(this._targetOpacity()); });
+        };
         bg.style.transition = 'opacity 0.3s ease';
         bg.style.opacity = '0';
-        setTimeout(() => {
-            if (this._currentUrl === null) bg.style.backgroundImage = '';
-        }, 300);
+        // 파일이 실제로 로드되는지 확인한 뒤 적용(깨진 이미지/빈 화면 방지)
+        const img = new Image();
+        img.onload = () => setTimeout(apply, bg.style.backgroundImage ? 300 : 0);
+        img.onerror = () => {
+            this._defaultFailed = true;
+            this._showDefault();
+        };
+        img.src = this.DEFAULT_URL;
     },
 
     // 설정 화면에서 "게임플레이 시 이미지 표시" 슬라이더를 조작할 때 호출 — 화면 전환 없이
     // 현재 표시 중인 배경 이미지의 불투명도만 즉시 갱신한다.
     applyOpacity() {
         const bg = document.getElementById('game-area-bg');
-        if (bg && this._currentUrl) {
+        if (bg && (this._currentUrl || this._defaultActive)) {
             bg.style.opacity = String(this._targetOpacity());
         }
     },
@@ -106,8 +143,10 @@ const GameBackground = {
     },
 };
 
-// 초기 상태: 배경 없음 (opacity 0에서 시작)
+// 초기 상태: 기본 배경(TheBeat.png)을 표시. 파일 로드 전에는 opacity 0에서 시작한다.
 (function initGameBackground() {
     const bg = document.getElementById('game-area-bg');
-    if (bg) bg.style.opacity = '0';
+    if (!bg) return;
+    bg.style.opacity = '0';
+    GameBackground._showDefault();
 })();
