@@ -27,6 +27,7 @@ const SongPreview = {
     // 호출마다 토큰을 발급하고, await 이후 여전히 최신 호출인지 확인한 뒤에만 적용한다.
     _loadToken: 0,
     _endTimer: null,
+    TAP_FLASH_MS: 100, // 미리보기에서 탭 노트 판정 후 레인 하이라이트를 유지하는 시간
     YT_PREVIEW_MS: 0, // YouTube 미리듣기 자동 정지 시간(ms). 0 = 자동 정지 없음(곡 끝까지 재생). 예전 값: 20000
 
     // ── 오디오만 미리듣기 (난이도 선택 = 노래 상세 화면) ────────────────────
@@ -190,6 +191,9 @@ const SongPreview = {
             const noteH = isCircle ? canvas.NOTE_CIRCLE_D : canvas.NOTE_BAR_H;
             const jY = canvas.judgementLineY();
 
+            // 자동 연주처럼 레인 하이라이트: 탭은 판정 순간부터 TAP_FLASH_MS 동안, 롱노트는 꼬리까지 켠다.
+            // (false 노트는 누르지 않는 노트이므로 제외)
+            const activeLanes = [];
             this._notes.forEach(note => {
                 if (note.type === 'long_tail') { note._visible = false; return; }
                 const timeToHit = note.time - elapsedTime;
@@ -203,8 +207,10 @@ const SongPreview = {
                         note.shrinking = true;
                         note.tailTime = tailTime;
                         note._visible = tailTime - elapsedTime > 0;
+                        if (note._visible) activeLanes[note.lane] = true;
                     } else {
                         note._visible = false;
+                        if (note.type !== 'false' && -timeToHit < this.TAP_FLASH_MS) activeLanes[note.lane] = true;
                     }
                     return;
                 }
@@ -217,7 +223,13 @@ const SongPreview = {
                 note._visible = noteBottomY > -noteH && noteTopY < gameHeight;
             });
 
-            canvas.render(this._notes, this._laneCount, {}, this._laneIdMapping, elapsedTime, noteSpeed);
+            canvas.render(this._notes, this._laneCount, activeLanes, this._laneIdMapping, elapsedTime, noteSpeed);
+
+            // 레인 DOM 요소의 입력 피드백 클래스도 실제 플레이와 동일하게 맞춘다
+            if (typeof Appearance !== 'undefined' && Appearance.settings.laneHighlightOnInput) {
+                const laneEls = DOM.lanesContainer.children;
+                for (let i = 0; i < laneEls.length; i++) laneEls[i].classList.toggle('active-feedback', !!activeLanes[i]);
+            }
 
             // 오디오가 끝까지 재생되어 멈추면 미리보기 루프도 함께 종료
             if (!DOM.musicPlayer.paused) {
@@ -233,6 +245,7 @@ const SongPreview = {
     },
 
     _clearCanvas() {
+        Array.from(DOM.lanesContainer.children).forEach(el => el.classList.remove('active-feedback')); // 멈출 때 하이라이트 잔상 제거
         if (Game.canvas.ctx) {
             Game.canvas.ctx.clearRect(0, 0, Game.canvas.w, Game.canvas.h);
         }
