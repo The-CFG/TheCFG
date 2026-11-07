@@ -440,6 +440,7 @@
                         <p id="settings-message" class="hidden text-center text-yellow-400 mb-4 py-2 bg-gray-700 rounded"></p>
                         <div id="settings-tabs" class="flex border-b border-gray-600 mb-4">
                             <button data-tab="volume" class="tab-btn py-2 px-4 text-gray-300 hover:text-white transition active" data-i18n="play_tab">플레이</button>
+                            <button data-tab="calibration" class="tab-btn py-2 px-4 text-gray-300 hover:text-white transition">캘리브레이션</button>
                             <button data-tab="appearance" class="tab-btn py-2 px-4 text-gray-300 hover:text-white transition" data-i18n="appearance">모양</button>
                             <button data-tab="controls" class="tab-btn py-2 px-4 text-gray-300 hover:text-white transition" data-i18n="controls">조작</button>
                             <button data-tab="editor" class="tab-btn py-2 px-4 text-gray-300 hover:text-white transition" data-i18n="editor_settings_tab">에디터</button>
@@ -500,7 +501,25 @@
                                         <p class="text-xs text-gray-500 mt-1">비트맵에 "이 맵 전용 하강 속도"가 지정되어 있지 않은 경우에만 적용됩니다.</p>
                                     </div>
                                 </div>
-                                <div class="border-t border-gray-700 pt-4 mt-4 space-y-6">
+                                                            </div>
+                            <div id="tab-content-calibration" class="tab-content hidden space-y-6">
+                                <div>
+                                    <h3 class="text-lg font-semibold mb-2 text-white">캘리브레이션 프리셋</h3>
+                                    <p class="text-xs text-gray-400 mb-3">입력/소리 지연은 기기와 출력 장치(스피커, 블루투스 이어폰 등)마다 다릅니다. 환경별로 보정값을 프리셋으로 저장해 두고 바꿔 쓰세요.</p>
+                                    <p id="cal-notice" class="hidden text-sm text-yellow-300 bg-gray-700 rounded p-2 mb-3"></p>
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <select id="cal-preset-select" class="flex-1 p-2 rounded bg-gray-700 border border-gray-600 text-sm"></select>
+                                        <span id="cal-dirty-badge" class="hidden text-xs px-2 py-1 rounded bg-yellow-700 text-yellow-100">수정됨</span>
+                                    </div>
+                                    <div class="flex flex-wrap gap-2">
+                                        <button id="cal-save-btn" type="button" class="py-1.5 px-3 rounded bg-blue-700 hover:bg-blue-600 text-sm">현재 값으로 덮어쓰기</button>
+                                        <button id="cal-new-btn" type="button" class="py-1.5 px-3 rounded bg-teal-700 hover:bg-teal-600 text-sm">새 프리셋으로 저장</button>
+                                        <button id="cal-rename-btn" type="button" class="py-1.5 px-3 rounded bg-gray-600 hover:bg-gray-500 text-sm">이름 변경</button>
+                                        <button id="cal-delete-btn" type="button" class="py-1.5 px-3 rounded bg-red-800 hover:bg-red-700 text-sm">삭제</button>
+                                    </div>
+                                    <p id="cal-sync-note" class="text-xs text-gray-500 mt-2"></p>
+                                </div>
+                                <div class="space-y-6">
                                     <h3 class="text-lg font-semibold mb-3 text-white" data-i18n="settings_group_timing_calibration">판정 타이밍 보정</h3>
                                     <div>
                                         <div class="flex justify-between items-center text-gray-300 mb-2">
@@ -524,7 +543,7 @@
                                             <span id="yt-input-offset-value" class="font-mono">0ms</span>
                                         </div>
                                         <input id="yt-input-offset-slider" type="range" min="-300" max="300" step="5" value="0" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
-                                        <p class="text-xs text-gray-500 mt-1">YouTube로 재생되는 곡에서만 위 보정값에 추가로 더해집니다. 소리 출력 지연이 일반 곡과 달라서 YouTube 곡만 판정이 계속 빠르거나 느리게 나올 때 조절하세요. 이 기기에만 저장됩니다.</p>
+                                        <p class="text-xs text-gray-500 mt-1">YouTube로 재생되는 곡에서만 위 보정값에 추가로 더해집니다. 소리 출력 지연이 일반 곡과 달라서 YouTube 곡만 판정이 계속 빠르거나 느리게 나올 때 조절하세요. 선택한 프리셋에 함께 저장됩니다.</p>
                                     </div>
                                     <button id="open-calibration-btn" class="w-full py-2 bg-purple-700 hover:bg-purple-600 rounded-lg text-sm font-semibold" data-i18n="calibration_open_btn">🎯 탭 타이밍 자동 보정 (다시 측정)</button>
                                 </div>
@@ -2186,6 +2205,7 @@
         <script defer src="/js/beat/game/ui.js"></script>
         <script defer src="/js/beat/game/session-history.js"></script>
         <script defer src="/js/beat/game/calibration.js"></script>
+        <script defer src="/js/beat/game/calibration-presets.js"></script><!-- CalibrationPresets: 설정 > 캘리브레이션 탭 -->
         <script defer src="/js/beat/cloud/auth.js"></script>
         <script defer src="/js/beat/profile-preview.js"></script><!-- 닉네임 클릭 프로필 오버레이 -->
         <script defer src="/js/beat/cloud/customization-sync.js"></script><!-- BeatCustomizationSync: 스킨/폰트/UI테마 계정 동기화(4단계) -->

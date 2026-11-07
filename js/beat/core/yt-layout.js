@@ -144,7 +144,17 @@ const YTLayout = {
         if (this._covered || !panelShown) {
             // 패널이 접힘/숨김이거나 다른 스크립트가 가린 상태: 화면 밖으로 치운다. 재생은 건드리지 않는다.
             this.mode = 'covered'; this.coveredTopPx = 0; this.rect = null;
-            Object.assign(st, { left: '-9999px', top: '0px', right: 'auto', bottom: 'auto', width: `${this.MIN_W}px`, height: `${this.MIN_H}px` });
+            // 진단용: localStorage theBeat_ytDebugOnscreen=1 이면 가려진 상태에서도 화면 우하단에 노출한다.
+            // (모바일 플레이 중엔 우측 패널이 숨겨져 임베드가 화면 밖(-9999px)에 있는데, 화면 밖 cross-origin iframe은
+            //  브라우저가 타이머/렌더를 줄일 수 있어 시계 갱신이 거칠어지는지 비교해 보기 위한 스위치)
+            let dbgOn = false;
+            try { dbgOn = localStorage.getItem('theBeat_ytDebugOnscreen') === '1' && !this._covered; } catch (e) { /* 무시 */ }
+            if (dbgOn) {
+                Object.assign(st, { left: 'auto', top: 'auto', right: '0px', bottom: '0px', width: `${this.MIN_W}px`, height: `${this.MIN_H}px` });
+                st.zIndex = '1';
+            } else {
+                Object.assign(st, { left: '-9999px', top: '0px', right: 'auto', bottom: 'auto', width: `${this.MIN_W}px`, height: `${this.MIN_H}px` });
+            }
             this._applyReserve(0);
             return;
         }

@@ -210,6 +210,8 @@ Object.assign(Editor, {
         this.state.song.youtubeId = data.song.youtube_id || null;
         this.state.song.ytOffsetMs = data.song.yt_offset_ms || 0;
         this.state.song.ytDurationMs = data.song.yt_duration_ms || null;
+        this.state.song.savedYoutubeId = data.song.youtube_id || null;
+        this.state.song.savedYtOffsetMs = data.song.yt_offset_ms || 0;
         this.state.song.audioHash = data.song.audio_hash || null;
         this.state.song.originalDeclared = data.song.original_declared === true;
         this.state.song.termsVersion = data.song.terms_version || null;

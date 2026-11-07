@@ -423,9 +423,9 @@ const EditorSong = {
         if (d.hostedTermsEl) d.hostedTermsEl.classList.toggle('hidden', !(src === 'hosted' && !isCloud));
         if (d.ytInput) {
             d.ytInput.value = song.youtubeId ? `https://youtu.be/${song.youtubeId}` : (d.ytInput.value || '');
-            d.ytInput.disabled = isCloud || this._isReadOnly(); // 저장된 영상은 바꾸지 않음(오프셋만 조정)
+            d.ytInput.disabled = this._isReadOnly(); // 저장된 곡도 영상 링크를 바꿀 수 있다 (소스 종류 변경은 계속 막음)
         }
-        if (d.ytCheckBtn) d.ytCheckBtn.disabled = isCloud || this._isReadOnly();
+        if (d.ytCheckBtn) d.ytCheckBtn.disabled = this._isReadOnly();
         if (d.ytOffsetInput) d.ytOffsetInput.value = (song.ytOffsetMs || 0) / 1000;
         if (d.declaredCheck) d.declaredCheck.checked = song.originalDeclared === true;
         if (d.termsCheck) d.termsCheck.checked = !!song.termsVersion;
@@ -462,7 +462,7 @@ const EditorSong = {
     },
 
     onYtInput(value) {
-        if (this._isReadOnly() || Editor.state.song.cloudSongId) return;
+        if (this._isReadOnly()) return;
         const song = Editor.state.song;
         const id = this.parseYoutubeId(value);
         if (id !== song.youtubeId) {
@@ -475,6 +475,7 @@ const EditorSong = {
         }
         if (!value.trim()) this._setYtStatus('');
         else if (!id) this._setYtStatus('올바른 YouTube 링크 또는 영상 ID가 아닙니다.', true);
+        else if (Editor.state.song.cloudSongId && id !== Editor.state.song.savedYoutubeId) this._setYtStatus('"확인"을 눌러 영상을 검증하세요. 영상을 바꾸면 오프셋도 새 영상에 맞게 다시 조정해야 합니다.');
         else this._setYtStatus('"확인"을 눌러 영상을 검증해주세요.');
     },
 
@@ -491,7 +492,7 @@ const EditorSong = {
 
     // 영상 검증: ① oEmbed(삭제/비공개/임베드 금지 확인) ② IFrame API로 길이 취득
     async checkYoutube() {
-        if (this._isReadOnly() || Editor.state.song.cloudSongId) return;
+        if (this._isReadOnly()) return;
         const song = Editor.state.song;
         const id = song.youtubeId;
         if (!id) { this._setYtStatus('올바른 YouTube 링크 또는 영상 ID가 아닙니다.', true); return; }
@@ -780,6 +781,17 @@ const EditorSong = {
                 UI.showMessage('editorSong', '먼저 YouTube 링크를 입력해주세요.');
                 return;
             }
+            // 저장된 곡의 영상 링크/오프셋 변경 감지 (난이도 변경이 없어도 노래 메타로 저장해야 한다)
+            const ytLinkChanged = !isNewSong && srcType === 'youtube' && Editor.state.song.youtubeId !== Editor.state.song.savedYoutubeId;
+            const ytDirty = ytLinkChanged || (!isNewSong && srcType === 'youtube' && (Editor.state.song.ytOffsetMs || 0) !== (Editor.state.song.savedYtOffsetMs || 0));
+            if (ytLinkChanged && !Editor.state.song.youtubeId) {
+                UI.showMessage('editorSong', 'YouTube 링크를 입력해주세요.');
+                return;
+            }
+            if (ytLinkChanged && this._ytVerifiedId !== Editor.state.song.youtubeId) {
+                UI.showMessage('editorSong', '바뀐 YouTube 링크를 "확인"해서 영상이 사용 가능한지 검증해주세요.');
+                return;
+            }
             if (isNewSong && srcType === 'youtube' && this._ytVerifiedId !== Editor.state.song.youtubeId) {
                 UI.showMessage('editorSong', 'YouTube 링크를 "확인"해서 영상이 사용 가능한지 검증해주세요.');
                 return;
@@ -796,7 +808,7 @@ const EditorSong = {
             // 난이도 변경사항이 없어도, 이미 클라우드에 있는 노래라면 제목/가수/미리듣기 시작 시각이
             // 바뀌었을 수 있으니 아래로 계속 진행해서 노래 메타는 항상 갱신한다.
             const noBeatmapChanges = pendingBeatmaps.length === 0 && dirtyBeatmaps.length === 0 && publicSyncBeatmaps.length === 0;
-            if (noBeatmapChanges && !isNewSong && !publicStateChanged) {
+            if (noBeatmapChanges && !isNewSong && !publicStateChanged && !ytDirty) {
                 UI.showMessage('editorSong', '이미 모든 난이도가 클라우드와 동기화되어 있습니다.');
                 return;
             }
@@ -846,6 +858,8 @@ const EditorSong = {
                     ...(srcType === 'youtube' ? {
                         yt_offset_ms: Editor.state.song.ytOffsetMs || 0,
                         yt_duration_ms: Editor.state.song.ytDurationMs,
+                        // 링크가 바뀐 경우에만 영상 ID를 보내고, 광고 관찰 기록(has_ads)은 새 영상 기준으로 초기화한다
+                        ...(ytLinkChanged ? { youtube_id: Editor.state.song.youtubeId, has_ads: null } : {}),
                     } : {}),
                     ...(srcType === 'local' && Editor.state.song.audioHash ? { audio_hash: Editor.state.song.audioHash } : {}),
                 }, Editor.state.song.coverFileObject, Editor.state.song.updatedAt);
@@ -861,6 +875,10 @@ const EditorSong = {
                 // 다음에 또 저장 버튼을 누를 때도 이번에 막 바뀐 updated_at 기준으로 비교해야
                 // 방금 한 내 저장을 "충돌"로 오판하지 않는다.
                 Editor.state.song.updatedAt = metaData?.updated_at || Editor.state.song.updatedAt;
+                if (srcType === 'youtube') {
+                    Editor.state.song.savedYoutubeId = Editor.state.song.youtubeId;
+                    Editor.state.song.savedYtOffsetMs = Editor.state.song.ytOffsetMs || 0;
+                }
             }
 
             // 2) 아직 안 올라간 난이도들을 순서대로 신규 추가

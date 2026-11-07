@@ -48,6 +48,15 @@ const YouTubeSource = {
     _adPoll: null,
     _cued: false,
 
+    // 시계 품질 (모바일 대응): getCurrentTime() 값이 갱신되는 간격이 거칠면(중앙값 > CLK_COARSE_MS) 계단식으로 움직여
+    // 노트가 끊겨 보인다. 그런 기기에서만 performance.now() 외삽 + 새 샘플로 완만하게 보정(PLL)하는 'smooth' 모드를 쓴다.
+    // PLAYING 이벤트 시점 값은 앵커로 쓰지 않는다(S0 실측: 신뢰 불가) — 값이 실제로 바뀐 샘플만 보정에 사용한다.
+    _clk: { mode: 'direct', lastRaw: -1, lastRawAt: 0, intervals: [], base: 0, baseAt: 0, init: false },
+    CLK_COARSE_MS: 45,
+    CLK_SNAP_SEC: 0.25,      // 외삽 값과 새 샘플 차이가 이보다 크면 보정 없이 바로 붙는다(시크/버퍼링 직후)
+    CLK_GAIN: 0.2,           // 새 샘플 하나당 오차를 보정하는 비율
+    CLK_MAX_EXTRAP_MS: 500,  // 샘플이 끊겨도 외삽은 이 길이까지만
+
     // S4 상태
     expectedDurationMs: 0,   // 등록 시 영상 길이 (광고 감지 기준). 0이면 광고 감지 안 함
     _inAd: false,
@@ -310,11 +319,58 @@ const YouTubeSource = {
     get duration() { return this._duration; },
     get paused() { return !this._wantPlay; },
 
+    _clkReset() {
+        const c = this._clk;
+        c.lastRaw = -1; c.lastRawAt = 0; c.init = false;
+    },
+
+    // getCurrentTime()를 읽어 모드에 맞는 시계 값(초)을 돌려준다. 호출은 프레임마다 이뤄진다고 가정한다.
+    _readClock() {
+        const c = this._clk;
+        const raw = this._player.getCurrentTime();
+        const now = performance.now();
+        if (raw !== c.lastRaw) {                       // 새 샘플 도착
+            if (c.lastRawAt && c.lastRaw >= 0) {
+                c.intervals.push(now - c.lastRawAt);
+                if (c.intervals.length > 60) c.intervals.shift();
+            }
+            c.lastRaw = raw; c.lastRawAt = now;
+            if (c.mode === 'smooth') {
+                const pred = c.base + Math.min(now - c.baseAt, this.CLK_MAX_EXTRAP_MS) / 1000 * this._rate;
+                const err = raw - pred;
+                c.base = (!c.init || Math.abs(err) > this.CLK_SNAP_SEC) ? raw : pred + err * this.CLK_GAIN;
+                c.baseAt = now; c.init = true;
+            }
+            if (c.intervals.length >= 12) {            // 모드 판정: 값이 바뀌는 간격의 중앙값
+                const med = this._clkMedian(c.intervals);
+                const want = med > this.CLK_COARSE_MS ? 'smooth' : 'direct';
+                if (want !== c.mode) { c.mode = want; c.init = false; }
+            }
+        }
+        if (c.mode === 'smooth' && c.init) {
+            return c.base + Math.min(now - c.baseAt, this.CLK_MAX_EXTRAP_MS) / 1000 * this._rate;
+        }
+        return raw;
+    },
+    _clkMedian(arr) {
+        const a = arr.slice().sort((x, y) => x - y);
+        return a[Math.floor(a.length / 2)];
+    },
+    // 디버그/진단용: 시계 갱신 간격 통계 (콘솔: YouTubeSource.clockStats())
+    clockStats() {
+        const a = this._clk.intervals;
+        if (!a.length) return { mode: this._clk.mode, samples: 0 };
+        const s = a.slice().sort((x, y) => x - y);
+        return { mode: this._clk.mode, samples: a.length, medianMs: Math.round(s[Math.floor(s.length / 2)]),
+                 p95Ms: Math.round(s[Math.min(s.length - 1, Math.floor(s.length * 0.95))]), maxMs: Math.round(s[s.length - 1]) };
+    },
+
     get currentTime() {
         if (this._inAd) return this._lastT; // 광고 중엔 광고 시계를 쓰지 않고 곡 시계를 동결
         if (this._wantPlay && this._playing && this._player) {
             let t = 0;
-            try { t = this._player.getCurrentTime(); } catch (e) { /* 무시 */ }
+            try { t = this._readClock(); } catch (e) { /* 무시 */ }
+            if (this._buffering) return this._lastT; // 버퍼링 중엔 외삽하지 않고 동결
             // PLAYING 직후 구간의 되감김/NaN을 막기 위한 단조 증가 클램프
             if (!(t >= this._lastT)) t = this._lastT; else this._lastT = t;
             return t;
@@ -325,6 +381,7 @@ const YouTubeSource = {
         const t = Math.max(0, Number(value) || 0);
         this._pausedAt = t;
         this._lastT = t;
+        this._clkReset();
         if (!this._player || !this._ready) { this._needSeek = true; return; }
         let st = -1;
         try { st = this._player.getPlayerState(); } catch (e) { /* 무시 */ }
@@ -337,15 +394,12 @@ const YouTubeSource = {
     // ───── 재생 제어 ─────
     // when: 지금부터 몇 초 뒤에 "소리가 나기 시작해야 하는지". 시작 지연 추정치만큼 일찍 playVideo를 호출한다.
     async play(when = 0) {
-        // whenReady() 대기 시간만큼 목표 시각이 밀리지 않도록, 목표 시각을 await 전에 절대값으로 고정한다.
-        const targetAt = performance.now() + when * 1000;
         const ok = await this.whenReady();
         if (!ok) return;
         this._wantPlay = true;
         if (!this._playing) this._lastT = this._pausedAt;
         clearTimeout(this._playTimer);
-        const remainMs = when > 0 ? targetAt - performance.now() : 0;
-        const delayMs = Math.max(0, remainMs - this._latencyMs);
+        const delayMs = Math.max(0, when * 1000 - this._latencyMs);
         if (when > 0 && delayMs > 10) {
             this._playTimer = setTimeout(() => this._doPlay(), delayMs);
             return;
@@ -361,6 +415,7 @@ const YouTubeSource = {
             if (this._needSeek) { this._player.seekTo(this._pausedAt, true); this._needSeek = false; }
             this._player.setPlaybackRate(this._rate);
             this._playCalledAt = performance.now();
+            this._clkReset();
             this._player.playVideo();
         } catch (e) {
             this._fail(0, e.message);

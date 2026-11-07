@@ -805,7 +805,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             DOM.settings.inputOffsetSlider.addEventListener('change', () => {
                 localStorage.setItem('theBeat_inputOffsetMs', Game.state.settings.inputOffsetMs);
-                savePlaySettingsToCloud();
+                if (typeof CalibrationPresets !== 'undefined') CalibrationPresets.onLiveChange();
             });
         }
 
@@ -816,8 +816,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (DOM.settings.ytInputOffsetValue) DOM.settings.ytInputOffsetValue.textContent = `${value}ms`;
             });
             DOM.settings.ytInputOffsetSlider.addEventListener('change', () => {
-                // 기기별 값이라 클라우드 동기화(PLAY_SETTINGS_KEYS)에는 넣지 않고 localStorage에만 저장한다
+                // 기기별 값이라 플레이 설정 동기화에는 넣지 않고 localStorage + 캘리브레이션 프리셋으로 관리한다
                 localStorage.setItem('theBeat_ytInputOffsetMs', Game.state.settings.ytInputOffsetMs);
+                if (typeof CalibrationPresets !== 'undefined') CalibrationPresets.onLiveChange();
             });
         }
 
@@ -831,7 +832,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             DOM.settings.touchInputOffsetSlider.addEventListener('change', () => {
                 localStorage.setItem('theBeat_touchInputOffsetMs', Game.state.settings.touchInputOffsetMs);
-                savePlaySettingsToCloud();
+                if (typeof CalibrationPresets !== 'undefined') CalibrationPresets.onLiveChange();
             });
         }
 
@@ -1601,8 +1602,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // CloudAuth.savePlaySettings가 아니라 BeatCustomizationSync(스킨 동기화)를 탄다.
     const PLAY_SETTINGS_KEYS = [
         'autoHideUiOnPlay', 'useDefaultFallSpeed', 'defaultFallSpeedValue',
-        'inputOffsetMs', 'touchInputOffsetMs', 'showHomeRecommendations',
+        'showHomeRecommendations',
     ];
+    // 입력/터치/YouTube 판정 보정값(inputOffsetMs 등)은 기기·출력 장치마다 달라서 계정 플레이 설정으로 동기화하지 않는다
+    // (다른 기기에서 로그인하면 이 기기 값을 덮어쓰던 문제). 대신 캘리브레이션 프리셋(CalibrationPresets)으로 저장/전환한다.
 
     function collectPlaySettings() {
         const settings = {};
@@ -1747,7 +1750,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 applyAccountVolume(session.user);
                 applyAccountPlaySettings(session.user);
                 applyAccountCustomization(session.user);
+                if (typeof CalibrationPresets !== 'undefined') CalibrationPresets.onLogin(session.user);
             } else {
+                if (typeof CalibrationPresets !== 'undefined') CalibrationPresets.onLogin(null);
                 _lastVolumeAppliedUserId = null;
                 _lastPlaySettingsAppliedUserId = null;
                 _lastCustomizationAppliedUserId = null;

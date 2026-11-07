@@ -210,7 +210,7 @@ const CloudAuth = {
 
     // ── TheBeat 계정 설정 (user_profiles.beat_music_volume / beat_sfx_volume / beat_settings jsonb) ──
     // beat_settings 구조: { skins: BeatSkin.state, customFonts: [...], ...플레이 탭 설정(평탄) }
-    _BEAT_RESERVED_KEYS: ['skins', 'customFonts', 'uiTheme'],
+    _BEAT_RESERVED_KEYS: ['skins', 'customFonts', 'uiTheme', 'calibrationPresets'],
 
     async _getBeatSettings(userId) {
         const { data, error } = await _supabase
@@ -281,6 +281,18 @@ const CloudAuth = {
     async saveSkinsSettings(state) {
         if (!state) return;
         await this._patchBeatSettings({ skins: state });
+    },
+
+    // 캘리브레이션 프리셋: [{ id, name, inputOffsetMs, touchInputOffsetMs, ytInputOffsetMs, updatedAt }]
+    async getCalibrationPresets() {
+        const user = await this.getUser();
+        if (!user) return null;
+        const bs = await this._getBeatSettings(user.id);
+        return (bs && Array.isArray(bs.calibrationPresets)) ? bs.calibrationPresets : [];
+    },
+
+    async saveCalibrationPresets(list) {
+        await this._patchBeatSettings({ calibrationPresets: Array.isArray(list) ? list : [] });
     },
 
     async getCustomFonts() {

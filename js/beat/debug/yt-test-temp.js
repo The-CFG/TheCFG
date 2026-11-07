@@ -24,6 +24,7 @@
         '<label>YouTube 판정 보정(ms) — 설정의 같은 값<input id="ytt-yto" type="number" step="5" min="-300" max="300" value="0"></label>' +
         '<label>BPM(박자마다 노트)<input id="ytt-bpm" type="number" min="40" max="300" value="120"></label>' +
         '<label>레인 수<select id="ytt-lanes"><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select></label>' +
+        '<label style="display:flex;gap:6px;align-items:center"><input id="ytt-onscreen" type="checkbox" style="width:auto"> 플레이어 항상 노출(진단: 모바일 플레이 중에도 화면 우하단)</label>' +
         '<button id="ytt-start" type="button">▶ 시작</button>' +
         '<div id="ytt-msg" style="margin-top:6px;color:#fca5a5;min-height:14px"></div>';
     const hud = document.createElement('div');
@@ -86,7 +87,8 @@
             hud.textContent =
                 `yt ${t.toFixed(3)}s  song ${(t - so).toFixed(3)}s\n` +
                 `layout ${YTLayout.mode}${r ? ` ${r.w}x${r.h}` : ''}  covered ${YTLayout.coveredTopPx}px\n` +
-                `state ${Game.state.gameState}  audioReady ${Game.state.audioReady}`;
+                `state ${Game.state.gameState}  audioReady ${Game.state.audioReady}\n` +
+                (() => { const k = YouTubeSource.clockStats(); return `clk ${k.mode}  upd med ${k.medianMs ?? '-'}ms p95 ${k.p95Ms ?? '-'}ms max ${k.maxMs ?? '-'}ms`; })();
         }
         requestAnimationFrame(tick);
     }
@@ -96,6 +98,12 @@
         $('ytt-yto').value = Game.state.settings.ytInputOffsetMs || 0;
         btn.addEventListener('click', () => { panel.style.display = panel.style.display === 'block' ? 'none' : 'block'; });
         $('ytt-start').addEventListener('click', start);
+        const onscreenEl = $('ytt-onscreen');
+        try { onscreenEl.checked = localStorage.getItem('theBeat_ytDebugOnscreen') === '1'; } catch (e) { /* 무시 */ }
+        onscreenEl.addEventListener('change', () => {
+            try { localStorage.setItem('theBeat_ytDebugOnscreen', onscreenEl.checked ? '1' : '0'); } catch (e) { /* 무시 */ }
+            YTLayout.update();
+        });
         requestAnimationFrame(tick);
     });
 })();

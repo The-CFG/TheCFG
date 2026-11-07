@@ -384,6 +384,7 @@ const CloudCharts = {
         if (meta.yt_offset_ms !== undefined) updatePayload.yt_offset_ms = meta.yt_offset_ms || 0;
         if (meta.yt_duration_ms !== undefined) updatePayload.yt_duration_ms = meta.yt_duration_ms || null;
         if (meta.youtube_id !== undefined) updatePayload.youtube_id = meta.youtube_id || null;
+        if (meta.has_ads !== undefined) updatePayload.has_ads = meta.has_ads; // 영상이 바뀌면 광고 관찰 기록을 초기화(null)
         if (meta.audio_hash !== undefined) updatePayload.audio_hash = meta.audio_hash || null;
 
         if (coverFile) {

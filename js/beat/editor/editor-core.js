@@ -65,6 +65,8 @@ const Editor = {
             youtubeId: null,        // youtube: 11자 영상 ID
             ytOffsetMs: 0,          // youtube: 영상 기준 곡 시작 오프셋
             ytDurationMs: null,     // youtube: 등록 시 영상 길이(광고 감지 기준)
+            savedYoutubeId: null,   // youtube: 서버에 저장돼 있는 영상 ID (링크 변경 감지용, 클라우드 곡을 열 때 채움)
+            savedYtOffsetMs: 0,     // youtube: 서버에 저장돼 있는 오프셋 (변경 감지용)
             audioHash: null,        // local: 파일 검증용 해시
             originalDeclared: false,// hosted: 창작곡 선언
             termsVersion: null,     // hosted: 동의한 약관 버전
