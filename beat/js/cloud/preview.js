@@ -27,7 +27,7 @@ const SongPreview = {
     // 호출마다 토큰을 발급하고, await 이후 여전히 최신 호출인지 확인한 뒤에만 적용한다.
     _loadToken: 0,
     _endTimer: null,
-    YT_PREVIEW_MS: 20000, // YouTube 미리듣기는 광고/트래픽을 고려해 이 길이 후 자동 정지
+    YT_PREVIEW_MS: 0, // YouTube 미리듣기 자동 정지 시간(ms). 0 = 자동 정지 없음(곡 끝까지 재생). 예전 값: 20000
 
     // ── 오디오만 미리듣기 (난이도 선택 = 노래 상세 화면) ────────────────────
     async playAudio(audioUrl, previewStartMs = 0, ytOffsetMs = 0) {
@@ -222,10 +222,11 @@ const SongPreview = {
         }
     },
 
-    // YouTube 미리듣기는 일정 시간 후 자동 정지 (광고/트래픽 부담 최소화)
+    // YouTube 미리듣기 자동 정지 타이머 — YT_PREVIEW_MS가 0보다 클 때만 동작
     _armEndTimer(token, audioUrl) {
         clearTimeout(this._endTimer);
         if (!audioUrl || !audioUrl.startsWith('yt:')) return;
+        if (!(this.YT_PREVIEW_MS > 0)) return; // 0이면 자동 정지 비활성
         this._endTimer = setTimeout(() => { if (token === this._loadToken) this.stopAudio(); }, this.YT_PREVIEW_MS);
     },
 

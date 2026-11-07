@@ -407,7 +407,7 @@ const Online = {
         // 로딩과 동일한 'preview' 키 재사용 — 화면이 바뀌면 show()가 SongPreview.stop()으로
         // 항상 정리해주므로 겹칠 일이 없다).
         // (서버에 파일이 있는 hosted/기존 곡만 — YouTube 곡 미리듣기는 보이는 플레이어가 필요해 S6에서 구현)
-        // YouTube 곡은 yt:<ID>로 재생 (플레이어는 우측 패널 하단에 보임, 20초 후 자동 정지)
+        // YouTube 곡은 yt:<ID>로 재생 (플레이어는 우측 패널 하단에 보임, 자동 정지 없음)
         const previewAudioUrl = CloudCharts.getHostedAudioUrl(song)
             || (song.source_type === 'youtube' ? CloudCharts.getSongAudioSrc(song) : null);
         if (previewAudioUrl) {
