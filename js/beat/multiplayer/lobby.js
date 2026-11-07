@@ -446,6 +446,7 @@ const MultiplayerLobby = {
                 if (!audioUrl) throw new Error('이 곡은 서버에 음원이 없어 멀티플레이를 지원하지 않습니다.');
                 // 오디오 fetch+decode를 시작해두고, 실제로 재생 가능한 버퍼가 준비될 때까지 기다린다.
                 DOM.musicPlayer.expectedDurationMs = this._isYtChart() ? (this._chart.yt_duration_ms || 0) : 0;
+                DOM.musicPlayer.ytOffsetMs = this._isYtChart() ? (this._chart.yt_offset_ms || 0) : 0;
                 DOM.musicPlayer.src = audioUrl;
                 const audioReady = await DOM.musicPlayer.whenReady();
                 if (!audioReady) throw new Error((DOM.musicPlayer.error && DOM.musicPlayer.error.message) || '오디오를 불러오지 못했습니다.');
@@ -1045,12 +1046,11 @@ const MultiplayerLobby = {
         // 대기실 Realtime 연결은 유지한다 — 진행 중 관전 HUD가 이 채널을 그대로 쓴다.
         // 상대 목록(나를 제외)은 대기실에서 이미 갖고 있던 _players 스냅샷으로 넘긴다 —
         // 게임 중에는 presence sync를 다시 안 쓰므로 시작 시점 스냅샷이면 충분하다.
-        // YouTube 곡은 영상 시계 = 곡 시계 + yt_offset_ms (노트 기준점/재생 시작점에 같이 더함 — online.js와 동일)
-        const ytOffsetMs = this._isYtChart() ? (this._chart.yt_offset_ms || 0) : 0;
+        // 시계 통일: 영상 오프셋은 MusicPlayer.ytOffsetMs(프리로드 시 지정)가 흡수한다 — 여기서는 곡 시간만 다룬다
         const started = await Game.startMultiplayer({
             chartData: this._preload.chartData,
             audioUrl: this._preload.audioUrl,
-            startOffsetMs: (this._chart.start_offset_ms || 0) + ytOffsetMs,
+            startOffsetMs: this._chart.start_offset_ms || 0,
             targetPerfTime,
             awaitTarget: targetPerfTime == null ? () => this._awaitStartTarget() : null,
             onlineChartId: this._chart.id,

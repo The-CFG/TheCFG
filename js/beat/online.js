@@ -705,21 +705,20 @@ const Online = {
                 // local 곡: 서버에 음원이 없다 — 내 파일로 재생하는 흐름은 아직 연결 전
                 throw new Error('이 곡은 서버에 음원이 없습니다. (직접 파일 재생은 아직 지원되지 않습니다)');
             }
-            // YouTube 곡은 영상 시계 = 곡 시계 + yt_offset_ms. 노트 기준점과 재생 시작점에 같이 더해준다.
-            const ytOffsetSec = c.source_type === 'youtube' ? (c.yt_offset_ms || 0) / 1000 : 0;
+            // (시계 통일: 영상 오프셋은 MusicPlayer.ytOffsetMs가 흡수하므로 여기서는 더하지 않는다 — 모든 시간은 곡 시간)
 
             // 채보 파일에 저장된 startTimeOffset(노트 타이밍 기준점)은 무시하고
             // 노래의 start_offset_ms(종합 창 "시작(초)")로 덮어쓴다.
             // 그래야 오디오 재생 시작 위치(songStartOffset)와 노트 타이밍 기준점이 항상 일치한다
             // (안 그러면 종합 창에서 "시작(초)"를 바꿔도 노트 타이밍에는 반영되지 않는 문제가 생긴다).
-            chartData.startTimeOffset = (c.start_offset_ms || 0) / 1000 + ytOffsetSec;
+            chartData.startTimeOffset = (c.start_offset_ms || 0) / 1000;
 
             Game.loadChartNotes(chartData);
             Game.state._onlineChartId = c.id;
             Game.state._onlineSongId = c.song_id || null;
             Game.state.settings.mode = 'music';
             Game.state.settings.musicSrc = audioUrl;
-            Game.state.settings.songStartOffset = (c.start_offset_ms || 0) / 1000 + ytOffsetSec;
+            Game.state.settings.songStartOffset = (c.start_offset_ms || 0) / 1000;
 
             // 노래(오디오) 디코딩이 실제로 끝날 때까지 기다린 뒤에야 카운트다운/플레이 화면으로
             // 넘어간다 — 채보 JSON은 이미 위에서 기다렸으니, 이제 노래까지 확실히 준비된
@@ -728,6 +727,7 @@ const Online = {
             UI.showAreaLoading('startPlay', '노래 불러오는 중…');
             const stopTracking = UI.trackAudioDownloadProgress('startPlay');
             DOM.musicPlayer.expectedDurationMs = c.source_type === 'youtube' ? (c.yt_duration_ms || 0) : 0;
+            DOM.musicPlayer.ytOffsetMs = c.source_type === 'youtube' ? (c.yt_offset_ms || 0) : 0;
             DOM.musicPlayer.src = audioUrl;
             const audioReady = await DOM.musicPlayer.whenReady();
             stopTracking();

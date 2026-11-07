@@ -63,6 +63,7 @@
             Game.state.settings.songStartOffset = offset;
             Game.state.settings.musicFileObject = null;
             GameBackground.set(`https://i.ytimg.com/vi/${id}/hqdefault.jpg`);
+            DOM.musicPlayer.ytOffsetMs = 0; // 테스트 도구는 영상 시간 = 곡 시간
             DOM.musicPlayer.src = `yt:${id}`;
             const ready = await DOM.musicPlayer.whenReady();
             if (!ready) throw new Error(DOM.musicPlayer.error?.message || '영상을 불러오지 못했습니다.');

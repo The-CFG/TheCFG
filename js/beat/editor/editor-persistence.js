@@ -209,6 +209,7 @@ Object.assign(Editor, {
         this.state.song.sourceType = data.song.source_type || 'hosted';
         this.state.song.youtubeId = data.song.youtube_id || null;
         this.state.song.ytOffsetMs = data.song.yt_offset_ms || 0;
+        DOM.musicPlayer.ytOffsetMs = this.state.song.ytOffsetMs; // 에디터 시계(곡 시간) 변환용
         this.state.song.ytDurationMs = data.song.yt_duration_ms || null;
         this.state.song.savedYoutubeId = data.song.youtube_id || null;
         this.state.song.savedYtOffsetMs = data.song.yt_offset_ms || 0;

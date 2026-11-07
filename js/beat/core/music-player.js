@@ -38,11 +38,24 @@ const MusicPlayer = {
 
     get downloadProgress() { return this._get().downloadProgress; },
     get error() { return this._get().error; },
-    get duration() { return this._get().duration; },
+    // ── 시계 통일: MusicPlayer의 currentTime/duration은 항상 "곡 시간(song time)"이다 ──
+    // YouTube 곡은 영상 시간 = 곡 시간 + yt_offset_ms. 호출부(게임/에디터/미리듣기/멀티플레이)는 영상 오프셋을 따로
+    // 더하거나 빼지 않고 이 파사드의 ytOffsetMs만 곡을 불러올 때 한 번 지정한다. (local/hosted는 오프셋 0과 동일)
+    _ytOffsetMs: 0,
+    get ytOffsetMs() { return this._ytOffsetMs; },
+    set ytOffsetMs(ms) { this._ytOffsetMs = Number(ms) || 0; },
+    _off() { return this._get() === YouTubeSource ? this._ytOffsetMs / 1000 : 0; },
+    // 영상 쪽 원래 시간(초) — 진단/디버그용
+    get videoTime() { return this._get().currentTime; },
+
+    get duration() {
+        const d = this._get().duration;
+        return (this._get() === YouTubeSource && isFinite(d)) ? Math.max(0, d - this._off()) : d;
+    },
     get paused() { return this._get().paused; },
 
-    get currentTime() { return this._get().currentTime; },
-    set currentTime(v) { this._get().currentTime = v; },
+    get currentTime() { return this._get().currentTime - this._off(); },
+    set currentTime(v) { this._get().currentTime = v + this._off(); },
 
     get volume() { return this._get().volume; },
     set volume(v) { this._backends().forEach(b => { b.volume = v; }); },

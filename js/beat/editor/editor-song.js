@@ -482,6 +482,7 @@ const EditorSong = {
     onYtOffsetInput(value) {
         const sec = Math.max(0, parseFloat(value) || 0);
         Editor.state.song.ytOffsetMs = Math.round(sec * 1000);
+        DOM.musicPlayer.ytOffsetMs = Editor.state.song.ytOffsetMs; // 에디터의 곡 시간 ↔ 영상 시간 변환에 즉시 반영
     },
 
     onHostedTermsChange({ declared, terms }) {
@@ -575,12 +576,13 @@ const EditorSong = {
         if (this._ytPreviewing) { this.stopYtPreview(); return; }
         if (!song.youtubeId) { this._setYtStatus('먼저 YouTube 링크를 입력해주세요.', true); return; }
         try {
+            DOM.musicPlayer.ytOffsetMs = song.ytOffsetMs || 0;
             if (DOM.musicPlayer.src !== `yt:${song.youtubeId}`) {
                 DOM.musicPlayer.src = `yt:${song.youtubeId}`;
             }
             const ready = await DOM.musicPlayer.whenReady();
             if (!ready) throw new Error('영상을 재생할 수 없습니다.');
-            DOM.musicPlayer.currentTime = (song.ytOffsetMs || 0) / 1000;
+            DOM.musicPlayer.currentTime = 0; // 곡 시간 0초 = 영상 오프셋 지점
             await DOM.musicPlayer.play();
             this._ytPreviewing = true;
         } catch (err) {

@@ -26,7 +26,6 @@ const SongPreview = {
     // 덮어써버리는 상태 누수가 생긴다. AudioEngine._loadToken과 동일한 패턴으로
     // 호출마다 토큰을 발급하고, await 이후 여전히 최신 호출인지 확인한 뒤에만 적용한다.
     _loadToken: 0,
-    _ytOffsetMs: 0,   // YouTube 곡: 영상 시계 = 곡 시계 + yt_offset_ms (노트 기준 시계 보정)
     _endTimer: null,
     YT_PREVIEW_MS: 20000, // YouTube 미리듣기는 광고/트래픽을 고려해 이 길이 후 자동 정지
 
@@ -35,7 +34,7 @@ const SongPreview = {
         this._resetPlayback();
         if (!audioUrl) return;
         const token = ++this._loadToken;
-        this._ytOffsetMs = audioUrl.startsWith('yt:') ? (ytOffsetMs || 0) : 0;
+        DOM.musicPlayer.ytOffsetMs = audioUrl.startsWith('yt:') ? (ytOffsetMs || 0) : 0; // 곡 시간 ↔ 영상 시간 변환은 파사드가 한다
         // 오디오 소스 지정(= 다운로드+디코딩 시작)을 AudioContext 상태와 무관하게 가장 먼저
         // 해둔다. 예전엔 resumeContext()부터 기다렸는데, 페이지에 들어와서 아직 한 번도
         // 클릭 같은 제스처가 없었던 시점(예: 메인 메뉴 첫 진입)엔 AudioContext.resume()의
@@ -44,7 +43,7 @@ const SongPreview = {
         // 다운로드 자체가 시작을 못 했고, 그래서 진행률 바가 0%에서 영원히 사라지지
         // 않는 문제가 있었다.
         DOM.musicPlayer.src = audioUrl;
-        DOM.musicPlayer.currentTime = Math.max(0, ((previewStartMs || 0) + this._ytOffsetMs) / 1000);
+        DOM.musicPlayer.currentTime = Math.max(0, (previewStartMs || 0) / 1000);
         try {
             // resumeContext()도 같은 이유로 하염없이 pending일 수 있으므로, 일정 시간 안에
             // 끝나지 않으면 "아직 제스처가 없다"고 보고 타임아웃시켜 catch로 넘긴다.
@@ -79,7 +78,7 @@ const SongPreview = {
         this._resetPlayback();
         const token = ++this._loadToken;
         const { chartData, audioUrl, previewStartMs = 0, ytOffsetMs = 0 } = opts || {};
-        this._ytOffsetMs = (audioUrl && audioUrl.startsWith('yt:')) ? (ytOffsetMs || 0) : 0;
+        DOM.musicPlayer.ytOffsetMs = (audioUrl && audioUrl.startsWith('yt:')) ? (ytOffsetMs || 0) : 0;
         const laneCount = (opts && opts.laneCount) || chartData?.laneCount || 4;
         const laneIds = CONFIG.LANE_KEY_MAPPING_ORDER[laneCount];
         if (!laneIds) {
@@ -119,7 +118,7 @@ const SongPreview = {
         // 제스처 없이 resume()이 하염없이 pending인 브라우저에서도 다운로드는 진행되게 하기 위함.
         if (audioUrl) {
             DOM.musicPlayer.src = audioUrl;
-            DOM.musicPlayer.currentTime = Math.max(0, ((previewStartMs || 0) + this._ytOffsetMs) / 1000);
+            DOM.musicPlayer.currentTime = Math.max(0, (previewStartMs || 0) / 1000);
         }
         try {
             // resumeContext() 대기도 타임아웃을 걸어 무한 pending을 방지한다.
@@ -166,7 +165,7 @@ const SongPreview = {
     _loop() {
         if (!this._active) return;
         try {
-            const elapsedTime = DOM.musicPlayer.currentTime * 1000 - this._ytOffsetMs;
+            const elapsedTime = DOM.musicPlayer.currentTime * 1000;
 
             let noteSpeed = this._baseNoteSpeed;
             if (this._triggers.length > 0) {
@@ -244,7 +243,6 @@ const SongPreview = {
     _resetPlayback() {
         this._loadToken++; // 진행 중이던 playAudio()/start() 호출을 전부 무효화
         clearTimeout(this._endTimer); this._endTimer = null;
-        this._ytOffsetMs = 0;
         this._active = false;
         if (this._animId) {
             cancelAnimationFrame(this._animId);
