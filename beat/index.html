@@ -9,17 +9,17 @@
     <title>TheCFG TheBeat</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link rel="icon" href="/css/favicon.png" type="image/png">
-    <link rel="stylesheet" href="/css/beat/base.css">
-    <link rel="stylesheet" href="/css/beat/utilities.css"><!-- Tailwind 걷어내기 Phase 2 -->
-    <link rel="stylesheet" href="/css/beat/game.css">
-    <link rel="stylesheet" href="/css/beat/editor.css">
-    <link rel="stylesheet" href="/css/beat/responsive.css">
-    <link rel="stylesheet" href="/css/beat/help.css">
-    <link rel="stylesheet" href="/css/beat/theme.css">
-    <link rel="stylesheet" href="/css/beat/collab.css"><!-- 공동 작업 모달 (openSongCollabModal) 스타일 -->
-    <link rel="stylesheet" href="/css/beat/menu-featured.css"><!-- 메인 메뉴 추천 비트맵 카드 (menu-featured.js) -->
-    <link rel="stylesheet" href="/css/beat/profile-preview.css"><!-- 닉네임 클릭 프로필 오버레이 (profile-preview.js) -->
+    <link rel="icon" href="/assets/favicon.png" type="image/png">
+    <link rel="stylesheet" href="/beat/css/base.css">
+    <link rel="stylesheet" href="/beat/css/utilities.css"><!-- Tailwind 걷어내기 Phase 2 -->
+    <link rel="stylesheet" href="/beat/css/game.css">
+    <link rel="stylesheet" href="/beat/css/editor.css">
+    <link rel="stylesheet" href="/beat/css/responsive.css">
+    <link rel="stylesheet" href="/beat/css/help.css">
+    <link rel="stylesheet" href="/beat/css/theme.css">
+    <link rel="stylesheet" href="/beat/css/collab.css"><!-- 공동 작업 모달 (openSongCollabModal) 스타일 -->
+    <link rel="stylesheet" href="/beat/css/menu-featured.css"><!-- 메인 메뉴 추천 비트맵 카드 (menu-featured.js) -->
+    <link rel="stylesheet" href="/beat/css/profile-preview.css"><!-- 닉네임 클릭 프로필 오버레이 (profile-preview.js) -->
     <style>
         /* 터치 디바이스 레이아웃 - 좁은 화면(1024px 이하)에서만 세로 배치 */
         /* [수정] 기존에는 'body > div'로 잡아서 업로드/로그인/트리거/디버그 모달도
@@ -66,7 +66,7 @@
              모바일 메뉴 버튼(1024px 이하 전용): 게임 중엔 게임 화면만 꽉 채워 보여주고 ui-area(메뉴/
              일시정지/포기하기 등)는 숨겨두는데, 그래도 접근은 해야 하니 이 버튼으로 오버레이를 띄운다.
              누르면 자동으로 일시정지도 같이 된다(Game.togglePause). 데스크톱 좌우 분할 레이아웃에서는
-             애초에 안 보임(css/beat/responsive.css). -->
+             애초에 안 보임(beat/css/responsive.css). -->
         <div id="game-hud-stack">
             <div id="game-hud">
                 <div class="game-hud-item">
@@ -153,7 +153,7 @@
                         </div>
                     </div>
                     <div id="menu-message" class="hidden p-3 mb-4 text-center text-white bg-red-500 rounded-lg"></div>
-                    <!-- 추천 비트맵 카드: js/beat/menu-featured.js가 채움. 공개 채보가 하나도 없거나
+                    <!-- 추천 비트맵 카드: beat/js/menu-featured.js가 채움. 공개 채보가 하나도 없거나
                          로딩 실패면 hidden 상태 그대로 유지된다. -->
                     <div id="menu-featured-beatmap" class="hidden"></div>
                     <div class="space-y-4 mt-4" style="padding-bottom: var(--safe-bottom, 80px);">
@@ -2114,7 +2114,7 @@
              기존 가로/세로 위치 슬라이더 대신, 실제 게임 화면 비율의 미니 스테이지 위에서
              세 요소를 자유롭게 드래그해 배치하고 "저장"을 누르면 그 값이 기존 오프셋
              슬라이더(judgement/combo/countdown-offset-x/y)에 그대로 반영된다.
-             (js/beat/appearance/appearance.js의 setupPositionEditor 참고) -->
+             (beat/js/appearance/appearance.js의 setupPositionEditor 참고) -->
         <div id="position-editor-modal" class="hidden position-editor-modal">
             <div class="position-editor-card">
                 <div class="flex items-center justify-between mb-2">
@@ -2172,58 +2172,58 @@
         </script>
         
         <!-- JavaScript Files -->
-        <script defer src="/js/beat/core/config.js"></script>
-        <script defer src="/js/beat/core/chart-format.js"></script>
-        <script defer src="/js/beat/core/difficulty.js"></script>
-        <script defer src="/js/beat/core/audio.js"></script>
-        <script defer src="/js/beat/core/audio-engine.js"></script>
-        <script defer src="/js/beat/core/youtube-source.js"></script>
-        <script defer src="/js/beat/core/yt-layout.js"></script><!-- YTLayout: YouTube 플레이어 패널 배치(정책 준수) -->
-        <script defer src="/js/beat/core/music-player.js"></script>    
-        <script defer src="/js/beat/core/dom.js"></script>
-        <script defer src="/js/beat/editor/editor-layout.js"></script>
-        <script defer src="/js/beat/core/game-background.js"></script>
-        <script defer src="/js/beat/core/i18n.js"></script>
-        <script defer src="/js/beat/appearance/local-store.js"></script><!-- BeatLocalStore: 커스터마이징 IndexedDB 공용 래퍼 -->
-        <script defer src="/js/beat/appearance/appearance.js"></script>
-        <script defer src="/js/beat/appearance/skin.js"></script><!-- BeatSkin: Appearance.settings를 스킨 단위로 저장/전환 -->
-        <script defer src="/js/beat/appearance/fonts.js"></script><!-- BeatFonts: 폰트 업로드/등록(커스터마이징 계획 1-B단계) -->
-        <script defer src="/js/beat/appearance/skin-images.js"></script><!-- BeatSkinImages: 노트/판정/카운트다운/등급 이미지 스킨(2단계) -->
-        <script defer src="/js/beat/appearance/theme.js"></script>
-        <script defer src="/js/beat/editor/editor-core.js"></script>
-        <script defer src="/js/beat/editor/editor-notes.js"></script>
-        <script defer src="/js/beat/editor/editor-triggers.js"></script>
-        <script defer src="/js/beat/editor/editor-persistence.js"></script>
-        <script defer src="/js/beat/editor/editor-preview.js"></script>
-        <script defer src="/js/beat/editor/editor-input.js"></script>
-        <script defer src="/js/beat/editor/editor-song.js"></script>
-        <script defer src="/js/beat/editor/editor-home.js"></script>
-        <script defer src="/js/beat/editor/osu-import.js"></script>
-        <script defer src="/js/beat/editor/editor-osu-convert.js"></script>
-        <script defer src="/js/beat/game/game.js"></script>
-        <script defer src="/js/beat/game/yt-guard.js"></script><!-- YTGuard: 광고/버퍼링/영상 오류 처리 -->
-        <script defer src="/js/beat/game/ui.js"></script>
-        <script defer src="/js/beat/game/session-history.js"></script>
-        <script defer src="/js/beat/game/calibration.js"></script>
-        <script defer src="/js/beat/game/calibration-presets.js"></script><!-- CalibrationPresets: 설정 > 캘리브레이션 탭 -->
-        <script defer src="/js/beat/cloud/auth.js"></script>
-        <script defer src="/js/beat/profile-preview.js"></script><!-- 닉네임 클릭 프로필 오버레이 -->
-        <script defer src="/js/beat/cloud/customization-sync.js"></script><!-- BeatCustomizationSync: 스킨/폰트/UI테마 계정 동기화(4단계) -->
-        <script defer src="/js/beat/cloud/charts.js"></script>
-        <script defer src="/js/beat/cloud/collab.js"></script><!-- 공동 작업 모달: openSongCollabModal() 정의 (editor-home.js가 호출) -->
-        <script defer src="/js/beat/cloud/inbox.js"></script>
-        <script defer src="/js/beat/cloud/browse.js"></script>
-        <script defer src="/js/beat/cloud/scores.js"></script>
-        <script defer src="/js/beat/cloud/likes.js"></script>
-        <script defer src="/js/beat/cloud/preview.js"></script>
-        <script defer src="/js/beat/multiplayer/rooms.js"></script>
-        <script defer src="/js/beat/multiplayer/realtime.js"></script>
-        <script defer src="/js/beat/cloud/moderation.js"></script><!-- CloudModeration: 신고/모더레이터 -->
-        <script defer src="/js/beat/online.js"></script>
-        <script defer src="/js/beat/moderation-ui.js"></script><!-- ModerationUI: 신고 모달/모더레이터 패널 -->
-        <script defer src="/js/beat/menu-featured.js"></script><!-- 메인 메뉴 추천 비트맵 카드: MenuFeatured (online.js의 _esc 재사용) -->
-        <script defer src="/js/beat/multiplayer/lobby.js"></script>
-        <script defer src="/js/beat/debug/yt-test-temp.js"></script><!-- TEMP: S3 테스트용 임시 버튼 — 테스트 후 이 줄과 파일 삭제 -->
-        <script defer src="/js/beat/main.js"></script>
+        <script defer src="/beat/js/core/config.js"></script>
+        <script defer src="/beat/js/core/chart-format.js"></script>
+        <script defer src="/beat/js/core/difficulty.js"></script>
+        <script defer src="/beat/js/core/audio.js"></script>
+        <script defer src="/beat/js/core/audio-engine.js"></script>
+        <script defer src="/beat/js/core/youtube-source.js"></script>
+        <script defer src="/beat/js/core/yt-layout.js"></script><!-- YTLayout: YouTube 플레이어 패널 배치(정책 준수) -->
+        <script defer src="/beat/js/core/music-player.js"></script>    
+        <script defer src="/beat/js/core/dom.js"></script>
+        <script defer src="/beat/js/editor/editor-layout.js"></script>
+        <script defer src="/beat/js/core/game-background.js"></script>
+        <script defer src="/beat/js/core/i18n.js"></script>
+        <script defer src="/beat/js/appearance/local-store.js"></script><!-- BeatLocalStore: 커스터마이징 IndexedDB 공용 래퍼 -->
+        <script defer src="/beat/js/appearance/appearance.js"></script>
+        <script defer src="/beat/js/appearance/skin.js"></script><!-- BeatSkin: Appearance.settings를 스킨 단위로 저장/전환 -->
+        <script defer src="/beat/js/appearance/fonts.js"></script><!-- BeatFonts: 폰트 업로드/등록(커스터마이징 계획 1-B단계) -->
+        <script defer src="/beat/js/appearance/skin-images.js"></script><!-- BeatSkinImages: 노트/판정/카운트다운/등급 이미지 스킨(2단계) -->
+        <script defer src="/beat/js/appearance/theme.js"></script>
+        <script defer src="/beat/js/editor/editor-core.js"></script>
+        <script defer src="/beat/js/editor/editor-notes.js"></script>
+        <script defer src="/beat/js/editor/editor-triggers.js"></script>
+        <script defer src="/beat/js/editor/editor-persistence.js"></script>
+        <script defer src="/beat/js/editor/editor-preview.js"></script>
+        <script defer src="/beat/js/editor/editor-input.js"></script>
+        <script defer src="/beat/js/editor/editor-song.js"></script>
+        <script defer src="/beat/js/editor/editor-home.js"></script>
+        <script defer src="/beat/js/editor/osu-import.js"></script>
+        <script defer src="/beat/js/editor/editor-osu-convert.js"></script>
+        <script defer src="/beat/js/game/game.js"></script>
+        <script defer src="/beat/js/game/yt-guard.js"></script><!-- YTGuard: 광고/버퍼링/영상 오류 처리 -->
+        <script defer src="/beat/js/game/ui.js"></script>
+        <script defer src="/beat/js/game/session-history.js"></script>
+        <script defer src="/beat/js/game/calibration.js"></script>
+        <script defer src="/beat/js/game/calibration-presets.js"></script><!-- CalibrationPresets: 설정 > 캘리브레이션 탭 -->
+        <script defer src="/beat/js/cloud/auth.js"></script>
+        <script defer src="/beat/js/profile-preview.js"></script><!-- 닉네임 클릭 프로필 오버레이 -->
+        <script defer src="/beat/js/cloud/customization-sync.js"></script><!-- BeatCustomizationSync: 스킨/폰트/UI테마 계정 동기화(4단계) -->
+        <script defer src="/beat/js/cloud/charts.js"></script>
+        <script defer src="/beat/js/cloud/collab.js"></script><!-- 공동 작업 모달: openSongCollabModal() 정의 (editor-home.js가 호출) -->
+        <script defer src="/beat/js/cloud/inbox.js"></script>
+        <script defer src="/beat/js/cloud/browse.js"></script>
+        <script defer src="/beat/js/cloud/scores.js"></script>
+        <script defer src="/beat/js/cloud/likes.js"></script>
+        <script defer src="/beat/js/cloud/preview.js"></script>
+        <script defer src="/beat/js/multiplayer/rooms.js"></script>
+        <script defer src="/beat/js/multiplayer/realtime.js"></script>
+        <script defer src="/beat/js/cloud/moderation.js"></script><!-- CloudModeration: 신고/모더레이터 -->
+        <script defer src="/beat/js/online.js"></script>
+        <script defer src="/beat/js/moderation-ui.js"></script><!-- ModerationUI: 신고 모달/모더레이터 패널 -->
+        <script defer src="/beat/js/menu-featured.js"></script><!-- 메인 메뉴 추천 비트맵 카드: MenuFeatured (online.js의 _esc 재사용) -->
+        <script defer src="/beat/js/multiplayer/lobby.js"></script>
+        <script defer src="/beat/js/debug/yt-test-temp.js"></script><!-- TEMP: S3 테스트용 임시 버튼 — 테스트 후 이 줄과 파일 삭제 -->
+        <script defer src="/beat/js/main.js"></script>
     </body>
 </html>
