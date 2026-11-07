@@ -144,12 +144,13 @@ Object.assign(Editor, {
             
             // 게임 화면 레인 설정 (터치 히트박스 전용 — 실제 렌더링은 Canvas가 담당)
             DOM.lanesContainer.innerHTML = '';
-            DOM.lanesContainer.style.width = `${laneCount * 100}px`;
+            const laneW = Game.canvas.laneWidth();
+            DOM.lanesContainer.style.width = `${laneCount * laneW}px`;
             
             for (let i = 0; i < laneCount; i++) {
                 const lane = document.createElement('div');
                 lane.className = 'lane';
-                lane.style.width = '100px';
+                lane.style.width = `${laneW}px`;
                 lane.dataset.laneIndex = i;
                 if (laneIds && laneIds[i]) {
                     lane.dataset.laneId = laneIds[i]; // 레인 ID 저장

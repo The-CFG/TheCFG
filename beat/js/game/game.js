@@ -119,6 +119,15 @@ const Game = {
         NOTE_CIRCLE_D: 90,  // 원형 노트 지름
         NOTE_RADIUS: 5,     // 바 노트 모서리 둥글기
 
+        // 레인 너비(px). 노트 크기 배율(Appearance.settings.noteSize)에 비례해 줄고 늘어난다.
+        // 캔버스 그리기/DOM 레인/히트박스가 모두 이 값을 써서 항상 같은 너비를 유지한다.
+        // (예전엔 100px 고정이라 노트만 작아지고 레인은 그대로였다. 바 노트는 높이만 작아졌다.)
+        BASE_LANE_W: 100,
+        laneWidth() {
+            const mul = (typeof Appearance !== 'undefined' && Appearance.settings.noteSize) || 1;
+            return Math.max(20, Math.round(this.BASE_LANE_W * mul));
+        },
+
         init() {
             this.el = DOM.gameCanvas;
             this.ctx = this.el.getContext('2d');
@@ -126,7 +135,7 @@ const Game = {
 
         // 레인 수·게임 영역 크기에 맞게 캔버스 크기 동기화
         resize(laneCount) {
-            const laneW = 100;
+            const laneW = this.laneWidth();
             this.w = laneCount * laneW;
             this.h = DOM.lanesContainer.clientHeight || DOM.gameArea.clientHeight;
             // devicePixelRatio 반영으로 Retina/모바일 선명하게
@@ -170,7 +179,7 @@ const Game = {
         // 레인 배경(경계선) + 판정선 그리기
         drawLaneBackground(laneCount, activeLanes) {
             const ctx = this.ctx;
-            const laneW = 100;
+            const laneW = this.laneWidth();
             const jY = this.judgementLineY();
             const isCircle = document.body.classList.contains('circle-notes');
 
@@ -270,7 +279,7 @@ const Game = {
             if (!note._visible) return;
 
             const ctx = this.ctx;
-            const laneW = 100;
+            const laneW = this.laneWidth();
             const laneIndex = note.lane;
             const laneId = laneIdMapping ? laneIdMapping[laneIndex] : null;
             const isCircle = document.body.classList.contains('circle-notes');
@@ -478,15 +487,8 @@ const Game = {
             ? 2 * progress * progress
             : 1 - Math.pow(-2 * progress + 2, 2) / 2;
 
-        // 방어: 트리거 값이 비었거나 NaN/문자열이면 직전 값을 유지 (NaN/문자열 연결로 속도가 깨지는 것 방지)
-        const bpmFrom = Number(from.bpm), bpmTo = Number(target.bpm);
-        const spdFrom = Number(from.fallSpeed), spdTo = Number(target.fallSpeed);
-        if (Number.isFinite(bpmFrom) && Number.isFinite(bpmTo)) {
-            this.state.settings.bpm = bpmFrom + (bpmTo - bpmFrom) * eased;
-        }
-        if (Number.isFinite(spdFrom) && Number.isFinite(spdTo)) {
-            this.state.settings.noteSpeed = spdFrom + (spdTo - spdFrom) * eased;
-        }
+        this.state.settings.bpm       = from.bpm       + (target.bpm       - from.bpm)       * eased;
+        this.state.settings.noteSpeed = from.fallSpeed + (target.fallSpeed - from.fallSpeed) * eased;
     },
 
     resetState() {
@@ -621,10 +623,6 @@ const Game = {
         resetPlayingScreenUI();
 
         if (this.state.settings.mode === 'random') {
-            // 버그 수정: 직전에 플레이한 뮤직 차트의 트리거/기준 하강속도가 state에 그대로 남아,
-            // 연습(랜덤) 모드에서도 applyActiveTrigger()가 매 프레임 noteSpeed를 그 값으로 덮어써
-            // 슬라이더/난이도 설정과 무관하게 속도가 고정되던 문제. 랜덤 모드는 트리거를 쓰지 않으므로 비운다.
-            this.state.triggers = [];
             this.generateRandomNotes();
         } else { // Music Mode
             if (!this.state.chartData) {
@@ -1288,7 +1286,8 @@ const Game = {
 
     setupLanes() {
         DOM.lanesContainer.innerHTML = '';
-        DOM.lanesContainer.style.width = `${this.state.settings.lanes * 100}px`;
+        const laneW = this.canvas.laneWidth();
+        DOM.lanesContainer.style.width = `${this.state.settings.lanes * laneW}px`;
         this.state.activeLanes = Array(this.state.settings.lanes).fill(false);
         const laneCount = this.state.settings.lanes;
         const keyOrder = CONFIG.LANE_KEY_MAPPING_ORDER[laneCount];
@@ -1312,7 +1311,7 @@ const Game = {
         for (let i = 0; i < laneCount; i++) {
             const lane = document.createElement('div');
             lane.className = 'lane';
-            lane.style.width = '100px';
+            lane.style.width = `${laneW}px`;
             lane.dataset.laneIndex = i;
             lane.dataset.laneId = keyOrder[i];
 

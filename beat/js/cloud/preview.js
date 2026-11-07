@@ -103,11 +103,12 @@ const SongPreview = {
 
         // 좌측 게임 화면(레인 히트박스 전용 — 렌더링은 Game.canvas가 담당) 준비
         DOM.lanesContainer.innerHTML = '';
-        DOM.lanesContainer.style.width = `${laneCount * 100}px`;
+        const laneW = Game.canvas.laneWidth();
+        DOM.lanesContainer.style.width = `${laneCount * laneW}px`;
         for (let i = 0; i < laneCount; i++) {
             const lane = document.createElement('div');
             lane.className = 'lane';
-            lane.style.width = '100px';
+            lane.style.width = `${laneW}px`;
             lane.dataset.laneIndex = i;
             if (laneIds[i]) lane.dataset.laneId = laneIds[i];
             DOM.lanesContainer.appendChild(lane);
