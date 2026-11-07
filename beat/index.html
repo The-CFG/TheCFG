@@ -481,10 +481,6 @@
                                         <input id="lane-background-opacity-slider" type="range" min="0" max="100" value="30" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
                                     </div>
                                     <div class="flex items-center justify-between text-gray-300">
-                                        <label for="lane-highlight-toggle" data-i18n="lane_highlight_on_input">입력 시 레인 하이라이트</label>
-                                        <input id="lane-highlight-toggle" type="checkbox" checked class="h-5 w-5 bg-gray-700 rounded border-gray-600 text-blue-500 focus:ring-blue-500">
-                                    </div>
-                                    <div class="flex items-center justify-between text-gray-300">
                                         <label for="auto-hide-ui-toggle" data-i18n="auto_hide_ui_on_play">게임플레이 시 우측 화면 숨기기</label>
                                         <input id="auto-hide-ui-toggle" type="checkbox" class="h-5 w-5 bg-gray-700 rounded border-gray-600 text-blue-500 focus:ring-blue-500">
                                     </div>
@@ -749,6 +745,16 @@
                                             <button data-animation="scale" class="flex-1 py-2 px-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition text-sm">스케일</button>
                                         </div>
                                     </div>
+                                </div>
+
+                                <!-- 레인 하이라이트 (플레이 탭에서 이동). 끄면 실제 플레이와 플레이 전 미리보기 모두 하이라이트가 사라진다. -->
+                                <div class="border-t border-gray-700 pt-4">
+                                    <h3 class="text-lg font-semibold mb-3 text-white">레인 하이라이트</h3>
+                                    <div class="flex items-center justify-between text-gray-300">
+                                        <label for="lane-highlight-toggle" data-i18n="lane_highlight_on_input">입력 시 레인 하이라이트</label>
+                                        <input id="lane-highlight-toggle" type="checkbox" checked class="h-5 w-5 bg-gray-700 rounded border-gray-600 text-blue-500 focus:ring-blue-500">
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-1">끄면 플레이와 미리보기에서 키 입력/자동 연주 시 레인이 밝아지지 않습니다.</p>
                                 </div>
 
                                 <div class="settings-group-label settings-group-label-bordered" data-i18n="settings_group_text_effects">텍스트 &amp; 이펙트</div>
