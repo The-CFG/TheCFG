@@ -256,6 +256,10 @@ const UI = {
         // 읽어 반영한다 — 슬라이더/스킨 전환으로 바뀐 값이 다음 판정부터 바로 적용된다.
         const judgementAnim = (typeof Appearance !== 'undefined') ? (Appearance.settings.judgementAnimation || 'pop') : 'pop';
         DOM.judgementTextEl.className = `judgement-text anim-${judgementAnim}`;
+        // 판정별 글자색(없으면 공통색). 이미지 스킨이 있으면 이미지가 우선이라 색은 영향 없음.
+        if (typeof Appearance !== 'undefined' && Appearance.getJudgementColor) {
+            DOM.judgementTextEl.style.color = Appearance.getJudgementColor(judgement);
+        }
         if (imgUrl) {
             DOM.judgementTextEl.textContent = '';
             const img = document.createElement('img');
@@ -263,7 +267,10 @@ const UI = {
             img.alt = judgement;
             DOM.judgementTextEl.appendChild(img);
         } else {
-            DOM.judgementTextEl.textContent = judgement;
+            // 사용자 지정 문구(예: PERFECT → SICK!)가 있으면 그것을, 없으면 기본 문구를 표시
+            DOM.judgementTextEl.textContent = (typeof Appearance !== 'undefined' && Appearance.getJudgementLabel)
+                ? Appearance.getJudgementLabel(judgement)
+                : judgement;
         }
         void DOM.judgementTextEl.offsetWidth;
         DOM.judgementTextEl.classList.add('show');

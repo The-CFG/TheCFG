@@ -29,6 +29,10 @@ const Appearance = {
         // (applySettings() 참고). 위치(top/left)는 아직 UI가 없어 CSS 쪽 기본값을 그대로
         // 쓰고, 폰트(--judgement-font-family 등)는 1-B단계(BeatFonts)에서 연결 예정.
         judgementTextColor: '#ffffff',
+        // 판정별(PERFECT/GOOD/BAD/MISS) 개별 색상. null이면 위 공통색(judgementTextColor)을 따른다.
+        judgementColors: { perfect: null, good: null, bad: null, miss: null },
+        // 판정별 표시 문구(예: PERFECT → SICK!). null/빈 문자열이면 기본 문구(PERFECT/GOOD/BAD/MISS).
+        judgementLabels: { perfect: null, good: null, bad: null, miss: null },
         judgementTextSize: 4, // rem
         comboTextColor: '#f6e05e',
         comboTextSize: 2.5, // rem
@@ -64,7 +68,8 @@ const Appearance = {
         // 실제 이미지 스킨 등록소는 BeatSkinImages(beat/js/appearance/skin-images.js)가
         // 별도로 관리한다(폰트와 마찬가지로 "몇 번째 노트가 어떤 이미지를 쓰는지"가 아니라
         // 슬롯 3개 고정이라 Appearance.settings에는 크기/애니메이션 값만 둔다).
-        noteSize: 1,       // 배율(0.5~2). 1이면 기존 NOTE_BAR_H/NOTE_CIRCLE_D와 동일.
+        noteSize: 1,       // 배율(0.5~2). 1이면 기존 NOTE_BAR_H/NOTE_CIRCLE_D와 동일. 원형=지름(+레인 너비), 막대형=높이.
+        noteBarWidth: 1,   // 막대형 전용 너비 배율(0.5~2) = 레인 너비. 막대 높이는 noteSize가 따로 조절한다.
         noteAnimation: 'none', // 'none' | 'fade' | 'scale' — 노트가 화면에 나타날 때 인 애니메이션.
         // ── 커스터마이징 계획 1/4단계: 원래 main.js PLAY_SETTINGS_KEYS/Game.state.settings에
         // 있던 시각 항목 3개를 스킨 소유로 이관. 스킨을 바꾸면 이 값들도 함께 바뀐다.
@@ -180,6 +185,16 @@ const Appearance = {
                 });
             }
 
+            // 막대형 노트 너비(= 레인 너비). 높이(noteSize)와 별개로 조절한다.
+            const noteWidthInput = document.getElementById('note-width-slider');
+            if (noteWidthInput) {
+                noteWidthInput.addEventListener('input', (e) => {
+                    this.settings.noteBarWidth = parseFloat(e.target.value);
+                    const label = document.getElementById('note-width-value');
+                    if (label) label.textContent = `${this.settings.noteBarWidth.toFixed(2)}x`;
+                });
+            }
+
             // 노트 애니메이션(커스터마이징 계획 2단계)
             const noteAnimSelector = document.getElementById('note-animation-selector');
             if (noteAnimSelector) {
@@ -226,6 +241,36 @@ const Appearance = {
                     this.settings.judgementLineColor = e.target.value;
                 });
             }
+
+            // 판정별 색상(PERFECT/GOOD/BAD/MISS) — 피커로 개별 지정, "공통색" 버튼으로 해제
+            ['perfect', 'good', 'bad', 'miss'].forEach(key => {
+                const input = document.getElementById(`color-judgement-${key}`);
+                if (input) {
+                    input.addEventListener('input', (e) => {
+                        if (!this.settings.judgementColors) this.settings.judgementColors = {};
+                        this.settings.judgementColors[key] = e.target.value;
+                        this.updateJudgementCssVariables();
+                    });
+                }
+                const resetBtn = document.getElementById(`reset-judgement-color-${key}`);
+                if (resetBtn) {
+                    resetBtn.addEventListener('click', () => {
+                        if (this.settings.judgementColors) this.settings.judgementColors[key] = null;
+                        this.updateJudgementCssVariables();
+                    });
+                }
+            });
+
+            // 판정별 표시 문구 — 입력칸을 비우면 기본 문구로 돌아간다
+            ['perfect', 'good', 'bad', 'miss'].forEach(key => {
+                const input = document.getElementById(`text-judgement-${key}`);
+                if (!input) return;
+                input.addEventListener('input', (e) => {
+                    if (!this.settings.judgementLabels) this.settings.judgementLabels = {};
+                    this.settings.judgementLabels[key] = e.target.value.trim() ? e.target.value : null;
+                    this.updateJudgementLabelUI();
+                });
+            });
 
             // 판정 텍스트 / 콤보 텍스트 / 카운트다운 (색상 + 크기, CSS 변수로 주입)
             [
@@ -531,6 +576,17 @@ const Appearance = {
         buttons.forEach(btn => {
             btn.classList.toggle('active', btn.dataset.shape === this.settings.noteShape);
         });
+        this._syncNoteSizeLabels();
+    },
+
+    // 노트 모양에 따라 크기 슬라이더 의미를 맞춘다:
+    //  원형 → "노트 크기"(지름+레인 너비), 막대형 → "노트 높이" + "노트 너비" 두 슬라이더.
+    _syncNoteSizeLabels() {
+        const isCircle = this.settings.noteShape === 'circle';
+        const sizeLabel = document.getElementById('note-size-label');
+        if (sizeLabel) sizeLabel.textContent = isCircle ? '노트 크기' : '노트 높이';
+        const widthRow = document.getElementById('note-width-row');
+        if (widthRow) widthRow.style.display = isCircle ? 'none' : '';
     },
 
     // 노트 크기 슬라이더 값 + 애니메이션 선택 버튼(커스터마이징 계획 2단계) 초기/갱신 반영.
@@ -540,6 +596,11 @@ const Appearance = {
             if (sizeInput) sizeInput.value = this.settings.noteSize;
             const sizeLabel = document.getElementById('note-size-value');
             if (sizeLabel) sizeLabel.textContent = `${this.settings.noteSize.toFixed(2)}x`;
+            const widthInput = document.getElementById('note-width-slider');
+            if (widthInput) widthInput.value = this.settings.noteBarWidth ?? 1;
+            const widthLabel = document.getElementById('note-width-value');
+            if (widthLabel) widthLabel.textContent = `${(this.settings.noteBarWidth ?? 1).toFixed(2)}x`;
+            this._syncNoteSizeLabels();
 
             const animButtons = document.querySelectorAll('#note-animation-selector button');
             animButtons.forEach(btn => {
@@ -674,9 +735,53 @@ const Appearance = {
 
     // 판정 텍스트/콤보/카운트다운(DOM 기반, beat/css/game.css)에 쓰이는 CSS 변수를
     // 주입한다. updateCSSVariables()/applySettings() 양쪽에서 공용으로 호출.
+    // 판정(PERFECT/GOOD/BAD/MISS)에 쓸 글자색 — 개별 색이 없으면 공통색.
+    getJudgementColor(judgement) {
+        const key = String(judgement || '').toLowerCase();
+        const per = this.settings.judgementColors && this.settings.judgementColors[key];
+        return per || this.settings.judgementTextColor;
+    },
+
+    // 판정(PERFECT/GOOD/BAD/MISS)에 표시할 문구 — 사용자 지정 문구가 없으면 기본 문구.
+    // 저장값은 문자열만 허용하고 길이를 제한한다(스킨/계정에서 들어온 값 방어).
+    getJudgementLabel(judgement) {
+        const key = String(judgement || '').toLowerCase();
+        const custom = this.settings.judgementLabels && this.settings.judgementLabels[key];
+        if (typeof custom === 'string' && custom.trim()) return custom.trim().slice(0, 16);
+        return String(judgement || '');
+    },
+
+    // 설정 화면의 판정별 문구 입력칸/미리보기를 현재 설정에 맞춘다.
+    // (입력 중인 칸의 값은 건드리지 않아 커서가 튀지 않게 한다.)
+    updateJudgementLabelUI() {
+        const previewIds = { perfect: 'preview-judgement-text', good: 'preview-judgement-good', bad: 'preview-judgement-bad', miss: 'preview-judgement-miss' };
+        ['perfect', 'good', 'bad', 'miss'].forEach(key => {
+            const input = document.getElementById(`text-judgement-${key}`);
+            const custom = this.settings.judgementLabels && this.settings.judgementLabels[key];
+            if (input && input !== document.activeElement) input.value = (typeof custom === 'string') ? custom : '';
+            const preview = document.getElementById(previewIds[key]);
+            if (preview) preview.textContent = this.getJudgementLabel(key.toUpperCase());
+        });
+    },
+
+    // 설정 화면의 판정별 색상 피커 값을 현재 설정(개별 색 또는 공통색)에 맞춘다.
+    updateJudgementColorUI() {
+        ['perfect', 'good', 'bad', 'miss'].forEach(key => {
+            const input = document.getElementById(`color-judgement-${key}`);
+            if (input) input.value = this.getJudgementColor(key);
+            const resetBtn = document.getElementById(`reset-judgement-color-${key}`);
+            if (resetBtn) resetBtn.classList.toggle('hidden', !(this.settings.judgementColors && this.settings.judgementColors[key]));
+        });
+    },
+
     updateJudgementCssVariables() {
         const root = document.documentElement.style;
         root.setProperty('--judgement-color', this.settings.judgementTextColor);
+        ['perfect', 'good', 'bad', 'miss'].forEach(key => {
+            root.setProperty(`--judgement-color-${key}`, this.getJudgementColor(key));
+        });
+        this.updateJudgementColorUI();
+        this.updateJudgementLabelUI();
         root.setProperty('--judgement-font-size', `${this.settings.judgementTextSize}rem`);
         root.setProperty('--combo-color', this.settings.comboTextColor);
         root.setProperty('--combo-font-size', `${this.settings.comboTextSize}rem`);
@@ -1008,6 +1113,8 @@ const Appearance = {
                 },
                 judgementLineColor: '#ffffff',
                 judgementTextColor: '#ffffff',
+                judgementColors: { perfect: null, good: null, bad: null, miss: null },
+                judgementLabels: { perfect: null, good: null, bad: null, miss: null },
                 judgementTextSize: 4,
                 comboTextColor: '#f6e05e',
                 comboTextSize: 2.5,
@@ -1024,6 +1131,7 @@ const Appearance = {
                 countdownFontId: null,
                 uiFontId: null,
                 noteSize: 1,
+                noteBarWidth: 1,
                 noteAnimation: 'none',
                 gameplayImageOpacity: 100,
                 laneBackgroundOpacity: 30,

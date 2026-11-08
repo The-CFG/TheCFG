@@ -732,10 +732,18 @@
                                     <h3 class="text-lg font-semibold mb-3 text-white">노트 크기 / 애니메이션</h3>
                                     <div class="mb-4">
                                         <div class="flex justify-between items-center text-gray-300 mb-2">
-                                            <label for="note-size-slider">노트 크기</label>
+                                            <label id="note-size-label" for="note-size-slider">노트 크기</label>
                                             <span id="note-size-value" class="font-mono">1.00x</span>
                                         </div>
                                         <input id="note-size-slider" type="range" min="0.5" max="2" step="0.05" value="1" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                    </div>
+                                    <!-- 막대형 전용: 너비(= 레인 너비)를 높이와 따로 조절. 원형에서는 숨김. -->
+                                    <div class="mb-4" id="note-width-row">
+                                        <div class="flex justify-between items-center text-gray-300 mb-2">
+                                            <label for="note-width-slider">노트 너비</label>
+                                            <span id="note-width-value" class="font-mono">1.00x</span>
+                                        </div>
+                                        <input id="note-width-slider" type="range" min="0.5" max="2" step="0.05" value="1" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
                                     </div>
                                     <div>
                                         <p class="text-gray-300 mb-2">등장 애니메이션</p>
@@ -781,6 +789,42 @@
                                             <div class="flex items-center justify-between mb-2">
                                                 <label class="text-gray-300">판정 텍스트(PERFECT/GOOD 등) 색상</label>
                                                 <input type="color" id="color-judgement-text" value="#ffffff" class="w-16 h-10 rounded cursor-pointer bg-gray-700 border-2 border-gray-600">
+                                            </div>
+                                            <!-- 판정별 개별 색상: 지정하지 않으면(공통색 버튼으로 해제) 위 공통 색상을 따른다 -->
+                                            <div class="mt-3 mb-3 p-3 bg-gray-900/40 rounded-lg space-y-2">
+                                                <p class="text-xs text-gray-500">판정별 문구 / 색상 — 문구를 비우면 기본 문구, 이미지 스킨을 쓰면 이미지가 우선</p>
+                                                <div class="flex items-center justify-between">
+                                                    <span class="text-sm text-gray-400">PERFECT</span>
+                                                    <input type="text" id="text-judgement-perfect" maxlength="16" placeholder="PERFECT" autocomplete="off" class="flex-1 min-w-0 mx-2 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                                    <div class="flex items-center gap-2">
+                                                        <button type="button" id="reset-judgement-color-perfect" class="hidden text-xs text-gray-400 hover:text-white underline">공통색</button>
+                                                        <input type="color" id="color-judgement-perfect" value="#ffffff" class="w-12 h-8 rounded cursor-pointer bg-gray-700 border-2 border-gray-600">
+                                                    </div>
+                                                </div>
+                                                <div class="flex items-center justify-between">
+                                                    <span class="text-sm text-gray-400">GOOD</span>
+                                                    <input type="text" id="text-judgement-good" maxlength="16" placeholder="GOOD" autocomplete="off" class="flex-1 min-w-0 mx-2 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                                    <div class="flex items-center gap-2">
+                                                        <button type="button" id="reset-judgement-color-good" class="hidden text-xs text-gray-400 hover:text-white underline">공통색</button>
+                                                        <input type="color" id="color-judgement-good" value="#ffffff" class="w-12 h-8 rounded cursor-pointer bg-gray-700 border-2 border-gray-600">
+                                                    </div>
+                                                </div>
+                                                <div class="flex items-center justify-between">
+                                                    <span class="text-sm text-gray-400">BAD</span>
+                                                    <input type="text" id="text-judgement-bad" maxlength="16" placeholder="BAD" autocomplete="off" class="flex-1 min-w-0 mx-2 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                                    <div class="flex items-center gap-2">
+                                                        <button type="button" id="reset-judgement-color-bad" class="hidden text-xs text-gray-400 hover:text-white underline">공통색</button>
+                                                        <input type="color" id="color-judgement-bad" value="#ffffff" class="w-12 h-8 rounded cursor-pointer bg-gray-700 border-2 border-gray-600">
+                                                    </div>
+                                                </div>
+                                                <div class="flex items-center justify-between">
+                                                    <span class="text-sm text-gray-400">MISS</span>
+                                                    <input type="text" id="text-judgement-miss" maxlength="16" placeholder="MISS" autocomplete="off" class="flex-1 min-w-0 mx-2 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                                    <div class="flex items-center gap-2">
+                                                        <button type="button" id="reset-judgement-color-miss" class="hidden text-xs text-gray-400 hover:text-white underline">공통색</button>
+                                                        <input type="color" id="color-judgement-miss" value="#ffffff" class="w-12 h-8 rounded cursor-pointer bg-gray-700 border-2 border-gray-600">
+                                                    </div>
+                                                </div>
                                             </div>
                                             <div class="flex justify-between items-center text-gray-300 mb-2">
                                                 <label for="judgement-text-size">판정 텍스트 크기</label>
@@ -1114,7 +1158,10 @@
                                              슬라이더(예: 카운트다운 8rem)를 그대로 쓰면 이 작은 미리보기 박스
                                              안에서 넘쳐버리므로 글자 크기만은 고정된 작은 값을 쓴다. -->
                                         <div id="preview-judgement-combo-countdown" class="flex justify-center items-center flex-wrap gap-x-6 gap-y-2 mt-3 pt-3 border-t border-gray-700">
-                                            <span id="preview-judgement-text" class="font-bold" style="color: var(--judgement-color, white); font-family: var(--judgement-font-family, inherit); font-size: 1.5rem; text-shadow: 0 0 8px rgba(0,0,0,0.5);">PERFECT!</span>
+                                            <span id="preview-judgement-text" class="font-bold" style="color: var(--judgement-color-perfect, var(--judgement-color, white)); font-family: var(--judgement-font-family, inherit); font-size: 1.5rem; text-shadow: 0 0 8px rgba(0,0,0,0.5);">PERFECT!</span>
+                                            <span id="preview-judgement-good" class="font-bold" style="color: var(--judgement-color-good, var(--judgement-color, white)); font-family: var(--judgement-font-family, inherit); font-size: 1.5rem; text-shadow: 0 0 8px rgba(0,0,0,0.5);">GOOD</span>
+                                            <span id="preview-judgement-bad" class="font-bold" style="color: var(--judgement-color-bad, var(--judgement-color, white)); font-family: var(--judgement-font-family, inherit); font-size: 1.5rem; text-shadow: 0 0 8px rgba(0,0,0,0.5);">BAD</span>
+                                            <span id="preview-judgement-miss" class="font-bold" style="color: var(--judgement-color-miss, var(--judgement-color, white)); font-family: var(--judgement-font-family, inherit); font-size: 1.5rem; text-shadow: 0 0 8px rgba(0,0,0,0.5);">MISS</span>
                                             <span id="preview-combo-text" class="font-bold" style="color: var(--combo-color, #f6e05e); font-family: var(--combo-font-family, inherit); font-size: 1.25rem; text-shadow: 0 0 6px rgba(0,0,0,0.5);">COMBO 12</span>
                                             <span id="preview-countdown-text" class="font-bold" style="color: var(--countdown-color, white); font-family: var(--countdown-font-family, inherit); font-size: 1.75rem; text-shadow: 0 0 8px rgba(0,0,0,0.5);">3</span>
                                         </div>
@@ -2134,7 +2181,7 @@
                     <button type="button" class="position-editor-state-tab" data-state="mobile" data-i18n="position_editor_state_mobile">모바일</button>
                 </div>
                 <div id="position-editor-stage" class="position-editor-stage" data-layout="desktop">
-                    <div class="position-editor-item" data-prefix="judgement" style="color:var(--judgement-color,#fff);font-family:var(--judgement-font-family,inherit);">PERFECT</div>
+                    <div class="position-editor-item" data-prefix="judgement" style="color:var(--judgement-color-perfect,var(--judgement-color,#fff));font-family:var(--judgement-font-family,inherit);">PERFECT</div>
                     <div class="position-editor-item" data-prefix="combo" style="color:var(--combo-color,#f6e05e);font-family:var(--combo-font-family,inherit);">128 COMBO</div>
                     <div class="position-editor-item" data-prefix="countdown" style="color:var(--countdown-color,#fff);font-family:var(--countdown-font-family,inherit);">3</div>
                 </div>

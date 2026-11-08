@@ -64,7 +64,7 @@ const CloudBrowse = {
 
         const { data: charts, error: chartsErr } = await _supabase
             .from('beat_charts')
-            .select('id, song_id, lane_count, play_count, difficulty_score')
+            .select('id, song_id, lane_count, play_count, difficulty_score, owner_id')
             .eq('is_public', true)
             .in('song_id', songs.map(s => s.id));
         if (chartsErr) return { data: null, error: chartsErr };
@@ -104,7 +104,7 @@ const CloudBrowse = {
 
         const { data: charts, error: chartsErr } = await _supabase
             .from('beat_charts')
-            .select('id, song_id, lane_count, play_count, difficulty_score')
+            .select('id, song_id, lane_count, play_count, difficulty_score, owner_id')
             .eq('is_public', true)
             .in('song_id', songs.map(s => s.id));
         if (chartsErr) return { data: null, error: chartsErr };
@@ -146,7 +146,7 @@ const CloudBrowse = {
 
         const { data: charts, error: chartsErr } = await _supabase
             .from('beat_charts')
-            .select('id, song_id, lane_count, play_count, difficulty_score')
+            .select('id, song_id, lane_count, play_count, difficulty_score, owner_id')
             .eq('is_public', true)
             .in('song_id', songs.map(s => s.id));
         if (chartsErr) return { data: null, error: chartsErr };
@@ -173,7 +173,7 @@ const CloudBrowse = {
     async _attachBeatmapSummary(songs) {
         const { data: charts, error: chartsErr } = await _supabase
             .from('beat_charts')
-            .select('id, song_id, lane_count, play_count, difficulty_score')
+            .select('id, song_id, lane_count, play_count, difficulty_score, owner_id')
             .eq('is_public', true)
             .in('song_id', songs.map(s => s.id));
         if (chartsErr) return songs.map(s => ({ ...s, beatmapCount: 0, laneCountMin: null, laneCountMax: null, totalPlayCount: 0, totalLikeCount: 0, maxDifficultyScore: null, beatmaps: [] }));
@@ -206,8 +206,10 @@ const CloudBrowse = {
     _buildSummary(charts, likeCountByChartId = {}) {
         const bySongId = {};
         charts.forEach(c => {
-            const cur = bySongId[c.song_id] || { beatmapCount: 0, laneCountMin: null, laneCountMax: null, totalPlayCount: 0, totalLikeCount: 0, minDifficultyScore: null, maxDifficultyScore: null, beatmaps: [] };
+            const cur = bySongId[c.song_id] || { beatmapCount: 0, laneCountMin: null, laneCountMax: null, totalPlayCount: 0, totalLikeCount: 0, minDifficultyScore: null, maxDifficultyScore: null, beatmaps: [], creatorIds: [] };
             cur.beatmapCount += 1;
+            // 라이브러리 카드에 표시할 채보자(난이도 제작자) — 중복 제거, 등장 순서 유지
+            if (c.owner_id && !cur.creatorIds.includes(c.owner_id)) cur.creatorIds.push(c.owner_id);
             cur.totalPlayCount += c.play_count || 0;
             cur.totalLikeCount += likeCountByChartId[c.id] || 0;
             if (typeof c.difficulty_score === 'number') {

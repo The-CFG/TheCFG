@@ -193,6 +193,10 @@ const Online = {
         if (error) { this._setContent(`<p class="text-red-400 text-sm mt-4">${error.message}</p>`); return; }
         this._browseCache = data || [];
         s.totalCount = count || 0;
+        // 카드에 채보자를 표시하기 위해 이 페이지 노래들의 채보자 닉네임을 한 번에 조회
+        const creatorIds = [...new Set(this._browseCache.flatMap(x => x.creatorIds || []))];
+        this._browseNickMap = creatorIds.length ? await CloudAuth._fetchNicknameMap(creatorIds) : {};
+        if (seq !== this._loadSeq) return;
         this._renderBrowse();
     },
 
@@ -318,7 +322,11 @@ const Online = {
     // 노래 카드: 난이도 개수 / 레인 수 범위 / 총 플레이 수 요약만 보여준다.
     // 실제 난이도 선택은 song 상세 화면(_showSongDetail)에서 한다.
     _chartCard(s) {
-        const dateLine = _formatDateLine(s.created_at, s.updated_at);
+        // 날짜 대신 채보자를 표시한다. 여럿이면 앞 2명 + "외 N명".
+        const nickMap = this._browseNickMap || {};
+        const names = (s.creatorIds || []).map(id => nickMap[id] || `${id.slice(0, 8)}…`);
+        const creatorLine = names.length === 0 ? ''
+            : `채보: ${names.slice(0, 2).map(_esc).join(', ')}${names.length > 2 ? ` 외 ${names.length - 2}명` : ''}`;
 
         // 커버 사진이 있으면 카드 오른쪽에 은은하게 걸리도록 배경으로 깐다.
         // 왼쪽(제목/아티스트 텍스트 자리)은 카드 배경색(bg-gray-800 = #1f2937)으로
@@ -340,7 +348,7 @@ const Online = {
                 <div class="flex-1 min-w-0">
                     <p class="font-semibold text-white truncate">${_esc(s.title)}</p>
                     <p class="text-sm text-gray-400 truncate">${_esc(s.artist || '—')}</p>
-                    ${dateLine ? `<p class="text-xs text-gray-500 mt-1">${dateLine}</p>` : ''}
+                    ${creatorLine ? `<p class="text-xs text-gray-500 mt-1 truncate">${creatorLine}</p>` : ''}
                 </div>
                 <div class="flex flex-col items-end space-y-1 ml-2 flex-shrink-0${statsWrapClass}">
                     ${this._difficultyCubesHtml(s.beatmaps)}
@@ -549,8 +557,8 @@ const Online = {
         this._setContent(`
         <button id="detail-back-btn" class="mb-3 text-sm text-gray-400 hover:text-white transition">← 난이도 선택으로</button>
         <div class="p-4 bg-gray-800 rounded-lg mb-3">
-            <h2 class="text-xl font-bold text-white truncate">${_esc(c.title)}${c.difficulty_label ? ` - ${_esc(c.difficulty_label)}` : ''}</h2>
-            <p class="text-gray-400 truncate">${_esc(c.artist || '—')}${c.has_ads ? ' <span class="text-xs text-yellow-400 ml-1" title="이 영상은 재생 시 광고가 나온 적이 있습니다">📺 광고 있을 수 있음</span>' : ''}</p>
+            <h2 class="text-xl font-bold text-white truncate">${_esc(c.difficulty_label || '기본')}</h2>
+            <p class="text-gray-400 truncate">${_esc(c.title)}${c.artist ? ` - ${_esc(c.artist)}` : ''}${c.has_ads ? ' <span class="text-xs text-yellow-400 ml-1" title="이 영상은 재생 시 광고가 나온 적이 있습니다">📺 광고 있을 수 있음</span>' : ''}</p>
             <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-gray-400">
                 ${this._starRatingHtml(c.difficulty_score, 'text-sm')}
                 ${c.bpm             ? `<span>BPM ${c.bpm}</span>` : ''}

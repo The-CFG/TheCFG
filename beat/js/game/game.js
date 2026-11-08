@@ -119,12 +119,17 @@ const Game = {
         NOTE_CIRCLE_D: 90,  // 원형 노트 지름
         NOTE_RADIUS: 5,     // 바 노트 모서리 둥글기
 
-        // 레인 너비(px). 노트 크기 배율(Appearance.settings.noteSize)에 비례해 줄고 늘어난다.
+        // 레인 너비(px).
+        //  - 원형 노트: 노트 크기 배율(Appearance.settings.noteSize)에 비례해 줄고 늘어난다
+        //    (원이 작아지면 레인도 같이 좁아져야 하므로).
+        //  - 막대 노트: 너비 배율(Appearance.settings.noteBarWidth)에 비례. 막대 높이는 noteSize가
+        //    따로 조절한다(너비/높이 독립).
         // 캔버스 그리기/DOM 레인/히트박스가 모두 이 값을 써서 항상 같은 너비를 유지한다.
-        // (예전엔 100px 고정이라 노트만 작아지고 레인은 그대로였다. 바 노트는 높이만 작아졌다.)
         BASE_LANE_W: 100,
         laneWidth() {
-            const mul = (typeof Appearance !== 'undefined' && Appearance.settings.noteSize) || 1;
+            const isCircle = document.body.classList.contains('circle-notes');
+            const st = (typeof Appearance !== 'undefined') ? Appearance.settings : {};
+            const mul = (isCircle ? st.noteSize : st.noteBarWidth) || 1;
             return Math.max(20, Math.round(this.BASE_LANE_W * mul));
         },
 
