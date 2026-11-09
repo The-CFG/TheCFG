@@ -388,6 +388,7 @@ img, video {
     height: 1em;
 }
 .icon {
+    display: inline-block; /* 위쪽 리셋의 svg{display:block}을 덮어써서 글자 옆에 붙게 함 */
     stroke: currentColor;
     fill: none;
     stroke-width: 2;
