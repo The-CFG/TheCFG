@@ -7,7 +7,7 @@
 // 그 외 화면으로 나갈 때 onLeave()를 호출해준다 (여기서 직접 훅을 걸지 않아도 됨).
 //
 // 추천은 세션당 1번만 뽑는다 — 메뉴를 들락날락할 때마다 다른 곡으로 바뀌면 오히려
-// 산만하다. 다른 곡을 보고 싶으면 카드의 "🔀 다른 곡" 버튼으로 수동 재추첨.
+// 산만하다. 다른 곡을 보고 싶으면 카드의 "다른 곡" 버튼으로 수동 재추첨.
 //
 // 환경설정 "플레이" 탭의 "홈 화면 추천 비트맵" 토글로 껐다 켤 수 있다(_isEnabled()/
 // onSettingChanged() 참고) — 꺼두면 onEnter()가 로드/재생 없이 카드를 감춘 채로 끝난다.
@@ -208,15 +208,15 @@ const MenuFeatured = {
             <button id="menu-featured-reroll-btn" type="button"
                 class="menu-featured-reroll-btn absolute top-2 right-2 z-10 p-1.5 rounded-full transition"
                 title="다른 곡 추천" aria-label="다른 곡 추천">
-                <span class="text-sm">🔀</span>
+                <span class="text-sm"><svg class="icon" aria-hidden="true"><use href="/assets/icons.svg#i-shuffle"/></svg></span>
             </button>
             <div class="flex gap-3 items-center">
                 <div class="menu-featured-cover relative flex-shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-lg bg-cover bg-center" style="${coverStyle}">
                     <span id="menu-featured-playing-dot" class="menu-featured-playing-dot absolute -bottom-1 -right-1"></span>
-                    <div id="menu-featured-tap-overlay" class="menu-featured-tap-overlay hidden rounded-lg">🔇 탭해서<br>미리듣기</div>
+                    <div id="menu-featured-tap-overlay" class="menu-featured-tap-overlay hidden rounded-lg">탭해서<br>미리듣기</div>
                 </div>
                 <div class="flex-1 min-w-0">
-                    <p class="text-xs text-teal-400 font-semibold mb-0.5">🎧 추천 비트맵</p>
+                    <p class="text-xs text-teal-400 font-semibold mb-0.5">추천 비트맵</p>
                     <p class="font-bold text-white truncate">${_esc(chart.title || '제목 없음')}</p>
                     <p class="text-sm text-gray-400 truncate">${_esc(chart.artist || '아티스트 미상')}</p>
                     <div class="flex items-center gap-2 mt-1 text-xs text-gray-400 flex-wrap">

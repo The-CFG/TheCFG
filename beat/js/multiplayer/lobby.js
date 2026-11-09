@@ -75,9 +75,7 @@ const MultiplayerLobby = {
         <div class="flex flex-col h-full text-white">
             <div class="flex items-center mb-4 flex-shrink-0">
                 <button id="mp-back-btn" class="p-2 -ml-2 rounded-full hover:bg-gray-700 transition mr-2" aria-label="뒤로">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
-                    </svg>
+                    <svg class="icon h-6 w-6 text-gray-300" aria-hidden="true"><use href="/assets/icons.svg#i-chevron-left"/></svg>
                 </button>
                 <h2 class="text-xl font-bold text-white">멀티플레이</h2>
             </div>
@@ -125,17 +123,17 @@ const MultiplayerLobby = {
         (관전형 — 상대의 플레이가 내 판정에 영향을 주지는 않아요)</p>
         <div class="space-y-4">
             <button id="mp-host-btn" class="w-full py-6 flex flex-col items-center justify-center bg-gray-700 hover:bg-gray-600 rounded-xl transition">
-                <span class="text-3xl mb-1">🎮</span>
+                <span class="text-3xl mb-1"><svg class="icon" aria-hidden="true"><use href="/assets/icons.svg#i-gamepad-2"/></svg></span>
                 <span class="text-xl font-bold text-white">방 만들기</span>
                 <span class="text-sm text-gray-400 mt-0.5">채보를 골라 새 방 열기</span>
             </button>
             <button id="mp-join-btn" class="w-full py-6 flex flex-col items-center justify-center bg-gray-700 hover:bg-gray-600 rounded-xl transition">
-                <span class="text-3xl mb-1">🔑</span>
+                <span class="text-3xl mb-1"><svg class="icon" aria-hidden="true"><use href="/assets/icons.svg#i-key-round"/></svg></span>
                 <span class="text-xl font-bold text-white">코드로 참가</span>
                 <span class="text-sm text-gray-400 mt-0.5">받은 초대 코드로 들어가기</span>
             </button>
             <button id="mp-browse-btn" class="w-full py-6 flex flex-col items-center justify-center bg-gray-700 hover:bg-gray-600 rounded-xl transition">
-                <span class="text-3xl mb-1">📋</span>
+                <span class="text-3xl mb-1"><svg class="icon" aria-hidden="true"><use href="/assets/icons.svg#i-clipboard-list"/></svg></span>
                 <span class="text-xl font-bold text-white">방 목록</span>
                 <span class="text-sm text-gray-400 mt-0.5">공개된 방을 검색해서 들어가기</span>
             </button>
@@ -276,7 +274,7 @@ const MultiplayerLobby = {
             <button class="mp-room-list-item w-full text-left p-3 bg-gray-800 hover:bg-gray-700 rounded-lg transition ${full ? 'opacity-60' : ''}"
                 data-room-id="${_esc(r.id)}" data-has-password="${r.has_password ? '1' : '0'}" ${full ? 'disabled' : ''}>
                 <div class="flex items-center gap-1.5 mb-1">
-                    <span class="text-sm flex-shrink-0">${r.has_password ? '🔒' : '🔓'}</span>
+                    <span class="text-sm text-gray-400 flex-shrink-0" title="비밀번호 필요">${r.has_password ? '<svg class="icon" aria-hidden="true"><use href="/assets/icons.svg#i-lock"/></svg>' : ''}</span>
                     <p class="text-sm font-semibold text-white truncate min-w-0">${chart ? `${_esc(chart.artist || '—')} — ${_esc(chart.title || '(제목 없음)')}` : '채보 정보 없음'}</p>
                 </div>
                 <div class="flex flex-wrap items-center gap-1.5 mb-1.5">
@@ -285,7 +283,7 @@ const MultiplayerLobby = {
                     ${chart ? `<span class="text-xs text-gray-400">${chart.lane_count}키</span>` : ''}
                 </div>
                 <div class="flex items-center justify-between text-xs text-gray-400">
-                    <span>👑 ${hostName}</span>
+                    <span>${hostName}</span>
                     <span class="${full ? 'text-red-400' : ''}">${r.player_count}/${r.max_players}명${full ? ' (가득 참)' : ''}</span>
                 </div>
             </button>`;
@@ -312,7 +310,7 @@ const MultiplayerLobby = {
         const wrapper = document.createElement('div');
         wrapper.className = 'p-3 bg-gray-800 rounded-lg';
         wrapper.innerHTML = `
-            <p class="text-xs text-gray-400 mb-2">🔒 비밀번호가 필요한 방이에요.</p>
+            <p class="text-xs text-gray-400 mb-2">비밀번호가 필요한 방이에요.</p>
             <div class="flex items-center gap-2">
                 <input type="password" class="mp-room-pw-input flex-1 min-w-0 px-2 py-1.5 bg-gray-900 rounded text-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder="비밀번호" autocomplete="off">
                 <button class="mp-room-pw-submit px-3 py-1.5 bg-teal-600 hover:bg-teal-500 rounded text-xs font-bold flex-shrink-0 transition">참가</button>
@@ -728,7 +726,7 @@ const MultiplayerLobby = {
             return `
             <div class="flex items-center justify-between py-2 px-3 rounded-lg text-sm ${isSelf ? 'bg-teal-900 border border-teal-600' : 'bg-gray-800'}">
                 <span class="flex items-center gap-1 text-gray-200 truncate min-w-0">
-                    ${isHostRow ? '<span title="호스트">👑</span>' : ''}
+                    ${isHostRow ? '<span class="text-yellow-400 flex-shrink-0" title="호스트"><svg class="icon" aria-hidden="true"><use href="/assets/icons.svg#i-crown"/></svg></span>' : ''}
                     <span class="truncate">${name}</span>
                     ${isSelf ? '<span class="text-xs text-teal-400 flex-shrink-0">(나)</span>' : ''}
                 </span>
@@ -766,7 +764,7 @@ const MultiplayerLobby = {
         <div class="p-3 bg-gray-800 rounded-lg mb-4">
             <label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer select-none">
                 <input type="checkbox" id="mp-listed-checkbox" ${room.is_listed ? 'checked' : ''} class="w-4 h-4 accent-teal-500 flex-shrink-0">
-                <span>📋 방 목록에 공개 <span class="text-gray-500">(초대 코드 없이 검색해서 들어올 수 있어요)</span></span>
+                <span>방 목록에 공개 <span class="text-gray-500">(초대 코드 없이 검색해서 들어올 수 있어요)</span></span>
             </label>
             <div id="mp-password-row" class="flex items-center gap-2 mt-2.5 ${room.is_listed ? '' : 'hidden'}">
                 <input id="mp-room-password" type="text" maxlength="20" autocomplete="off" spellcheck="false"
@@ -775,7 +773,7 @@ const MultiplayerLobby = {
                 <button id="mp-password-save-btn" class="px-2 py-1.5 bg-gray-700 hover:bg-gray-600 rounded text-xs flex-shrink-0 transition">저장</button>
             </div>
             <p id="mp-password-status" class="text-[11px] mt-1.5 ${room.is_listed ? '' : 'hidden'} ${room.has_password ? 'text-amber-400' : 'text-gray-500'}">
-                ${room.has_password ? '🔒 비밀번호가 걸려 있어요 (비공개)' : '🔓 비밀번호 없이 누구나 참가할 수 있어요 (공개)'}
+                ${room.has_password ? '비밀번호가 걸려 있어요 (비공개)' : '비밀번호 없이 누구나 참가할 수 있어요 (공개)'}
             </p>
         </div>` : ''}
         <div class="flex items-center justify-between mb-2">
@@ -1186,7 +1184,7 @@ const MultiplayerLobby = {
         const total = this._restartVoteTotal();
         if (this._restartVotes.size === 0) {
             btn.disabled = false;
-            btn.textContent = '🔁 재시작';
+            btn.textContent = '재시작';
         } else {
             btn.disabled = true;
             btn.textContent = `재시작 요청됨 (${this._restartVotes.size}/${total})`;

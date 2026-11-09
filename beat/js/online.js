@@ -40,15 +40,15 @@ const Online = {
         const myTabHtml = this._pickMode ? '' : `
                 <button id="online-tab-my" class="flex-1 py-2 rounded-lg text-sm font-semibold transition
                     ${this._subView === 'my' ? 'bg-teal-600' : 'bg-gray-700 hover:bg-gray-600'}">
-                    📁 내 차트
+                    내 차트
                 </button>`;
         el.innerHTML = `
         <div class="flex flex-col h-full text-white">
-            ${this._pickMode ? `<p class="mb-3 text-xs text-teal-400 flex-shrink-0">🎮 ${this._pickMode === 'queue' ? '대기열에 추가할 채보를 골라주세요.' : '멀티플레이 방을 만들 채보를 골라주세요.'}</p>` : ''}
+            ${this._pickMode ? `<p class="mb-3 text-xs text-teal-400 flex-shrink-0">${this._pickMode === 'queue' ? '대기열에 추가할 채보를 골라주세요.' : '멀티플레이 방을 만들 채보를 골라주세요.'}</p>` : ''}
             <div class="flex items-center space-x-2 mb-4 flex-shrink-0">
                 <button id="online-tab-browse" class="flex-1 py-2 rounded-lg text-sm font-semibold transition
                     ${this._subView !== 'my' ? 'bg-teal-600' : 'bg-gray-700 hover:bg-gray-600'}">
-                    🌐 공개 라이브러리
+                    공개 라이브러리
                 </button>
                 ${myTabHtml}
                 <button id="online-back-btn" class="py-2 px-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm flex-shrink-0">
@@ -56,10 +56,7 @@ const Online = {
                 </button>
                 <button id="settings-icon-online" type="button"
                     class="p-2 rounded-full hover:bg-gray-600 transition flex-shrink-0" title="환경설정" aria-label="환경설정">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
+                    <svg class="icon h-6 w-6 text-gray-300" aria-hidden="true"><use href="/assets/icons.svg#i-settings"/></svg>
                 </button>
             </div>
             <div id="online-content" class="flex-1 min-h-0 overflow-y-auto"></div>
@@ -72,7 +69,8 @@ const Online = {
             const b = document.createElement('button');
             b.id = 'online-mod-btn';
             b.className = 'py-2 px-3 bg-red-800 hover:bg-red-700 rounded-lg text-sm flex-shrink-0';
-            b.textContent = '🛡';
+            b.innerHTML = '<svg class="icon" aria-hidden="true"><use href="/assets/icons.svg#i-shield"/></svg>';
+            b.setAttribute('aria-label', '신고 관리');
             b.title = '신고 관리';
             b.addEventListener('click', () => ModerationUI.openPanel());
             back.parentNode.insertBefore(b, back);
@@ -509,7 +507,7 @@ const Online = {
                 const displayName = CloudAuth.linkedName(s.user_id, s.nickname || `${s.user_id.slice(0, 8)}…`, _esc);
                 const acc = (+(s.accuracy) || 0).toFixed(1);
                 const rank = UI.rankFromJudgements(s.judge_perfect, s.judge_good, s.judge_bad, s.judge_miss);
-                const rankBadge = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`;
+                const rankBadge = `${i + 1}`;
                 const rowCls = isMe
                     ? 'bg-teal-900 border border-teal-600 rounded'
                     : 'border-b border-gray-700';
@@ -558,7 +556,7 @@ const Online = {
         <button id="detail-back-btn" class="mb-3 text-sm text-gray-400 hover:text-white transition">← 난이도 선택으로</button>
         <div class="p-4 bg-gray-800 rounded-lg mb-3">
             <h2 class="text-xl font-bold text-white truncate">${_esc(c.difficulty_label || '기본')}</h2>
-            <p class="text-gray-400 truncate">${_esc(c.title)}${c.artist ? ` - ${_esc(c.artist)}` : ''}${c.has_ads ? ' <span class="text-xs text-yellow-400 ml-1" title="이 영상은 재생 시 광고가 나온 적이 있습니다">📺 광고 있을 수 있음</span>' : ''}</p>
+            <p class="text-gray-400 truncate">${_esc(c.title)}${c.artist ? ` - ${_esc(c.artist)}` : ''}${c.has_ads ? ' <span class="text-xs text-yellow-400 ml-1" title="이 영상은 재생 시 광고가 나온 적이 있습니다">광고 있을 수 있음</span>' : ''}</p>
             <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-gray-400">
                 ${this._starRatingHtml(c.difficulty_score, 'text-sm')}
                 ${c.bpm             ? `<span>BPM ${c.bpm}</span>` : ''}
@@ -569,7 +567,7 @@ const Online = {
                 ${creatorName ? `<span>제작자: ${creatorName}</span>` : ''}
             </div>
             ${_formatDateLine(c.created_at, c.updated_at) ? `<div class="mt-1 text-xs text-gray-500">${_formatDateLine(c.created_at, c.updated_at)}</div>` : ''}
-            ${c.use_custom_fall_speed ? `<div class="mt-2 px-2 py-1 bg-blue-950 border border-blue-700 rounded text-xs text-blue-300 inline-block">⚡ 이 비트맵은 전용 하강 속도를 사용합니다.</div>` : ''}
+            ${c.use_custom_fall_speed ? `<div class="mt-2 px-2 py-1 bg-blue-950 border border-blue-700 rounded text-xs text-blue-300 inline-block">이 비트맵은 전용 하강 속도를 사용합니다.</div>` : ''}
         </div>
         <button id="detail-like-btn" data-liked="${like.likedByMe ? '1' : '0'}"
             class="w-full py-2 mb-4 rounded-lg font-semibold transition text-sm
@@ -578,16 +576,16 @@ const Online = {
         </button>
         <button id="detail-play-btn" class="w-full py-3 mb-4 rounded-lg font-bold transition text-lg
             ${this._pickMode === 'queue' ? 'bg-teal-600 hover:bg-teal-500' : (this._pickMode ? 'bg-purple-600 hover:bg-purple-500' : 'bg-blue-600 hover:bg-blue-500')}">
-            ${this._pickMode === 'queue' ? '➕ 대기열에 추가' : (this._pickMode ? '🎮 이 채보로 방 만들기' : '▶ 플레이')}
+            ${this._pickMode === 'queue' ? '대기열에 추가' : (this._pickMode ? '이 채보로 방 만들기' : '▶ 플레이')}
         </button>
         <div class="bg-gray-800 rounded-lg p-3">
-            <h3 class="text-sm font-semibold text-gray-300 mb-2">🏆 리더보드 TOP 10</h3>
+            <h3 class="text-sm font-semibold text-gray-300 mb-2">리더보드 TOP 10</h3>
             <div class="space-y-0.5">${lbRows}</div>
             ${myPanel}
         </div>
         <div class="mt-3 flex justify-end gap-2">
-            <button id="detail-report-btn" class="px-3 py-1 rounded text-xs bg-gray-700 hover:bg-gray-600 text-gray-300">🚩 신고</button>
-            <button id="detail-mod-takedown-btn" class="hidden px-3 py-1 rounded text-xs bg-red-700 hover:bg-red-600 text-white">🛡 삭제 처리</button>
+            <button id="detail-report-btn" class="px-3 py-1 rounded text-xs bg-gray-700 hover:bg-gray-600 text-gray-300">신고</button>
+            <button id="detail-mod-takedown-btn" class="hidden px-3 py-1 rounded text-xs bg-red-700 hover:bg-red-600 text-white">삭제 처리</button>
         </div>
         `);
 
@@ -666,7 +664,7 @@ const Online = {
                 });
             // 이 경우엔 좌측 화면에 노트 미리보기 없이 오디오만 재생되므로, 오버레이에
             // 안내를 계속 남겨둔다 — 다만 로딩이 끝난 확정 상태이므로 스피너는 끈다.
-            UI.showAreaLoading('preview', '🎵 노래 미리듣기만 재생 중입니다.', { spinner: false });
+            UI.showAreaLoading('preview', '노래 미리듣기만 재생 중입니다.', { spinner: false });
         }
     },
 
@@ -806,7 +804,7 @@ const Online = {
         this._setContent(`
         <!-- 로컬 파일로 플레이 -->
         <div class="p-3 bg-gray-800 rounded-lg mb-4 border border-gray-600">
-            <h3 class="text-sm font-semibold text-gray-300 mb-2">📂 로컬 파일로 플레이</h3>
+            <h3 class="text-sm font-semibold text-gray-300 mb-2">로컬 파일로 플레이</h3>
             <div class="flex flex-col space-y-2">
                 <div class="flex space-x-2">
                     <label for="local-chart-file-input" class="cursor-pointer flex-1 text-center py-2 px-3 bg-blue-700 hover:bg-blue-600 rounded text-sm transition">차트 불러오기</label>
@@ -819,10 +817,10 @@ const Online = {
             </div>
         </div>
         <!-- 내 업로드 노래 목록 (song 단위 — 삭제 시 딸린 난이도/오디오까지 함께 삭제) -->
-        <h3 class="text-sm font-semibold text-gray-300 mb-2">🎵 내 업로드 노래</h3>
+        <h3 class="text-sm font-semibold text-gray-300 mb-2">내 업로드 노래</h3>
         <div class="space-y-2 mb-4">${songCards}</div>
         <!-- 내 업로드 차트 목록 -->
-        <h3 class="text-sm font-semibold text-gray-300 mb-2">☁ 내 업로드 차트</h3>
+        <h3 class="text-sm font-semibold text-gray-300 mb-2">내 업로드 차트</h3>
         <div class="space-y-2">${cards}</div>`);
 
         // 로컬 파일 input (hidden, DOM 원본은 practice-screen 안에 있으므로 여기선 별도 생성)
@@ -920,7 +918,7 @@ const Online = {
                 <div class="flex items-center space-x-1 flex-shrink-0">
                     ${pub}
                     ${(s.source_type !== 'youtube' && s.moderation_status !== 'removed')
-                        ? `<button class="my-song-yt-btn py-1 px-2 bg-teal-800 hover:bg-teal-700 rounded text-xs" data-id="${s.id}" title="서버 음원 대신 YouTube 링크로 전환">🔗 YouTube 전환</button>` : ''}
+                        ? `<button class="my-song-yt-btn py-1 px-2 bg-teal-800 hover:bg-teal-700 rounded text-xs" data-id="${s.id}" title="서버 음원 대신 YouTube 링크로 전환">YouTube 전환</button>` : ''}
                     <button class="my-song-delete-btn py-1 px-2 bg-red-800 hover:bg-red-700 rounded text-xs"
                         data-id="${s.id}" data-title="${_esc(s.title || '(제목 없음)')}">삭제</button>
                 </div>
@@ -1071,7 +1069,7 @@ async function submitOnlineScore() {
     }
 
     if (data?.is_new_best) {
-        resultEl.innerHTML = `🏆 새 최고 기록! <strong>${Game.state.score.toLocaleString()}</strong>`;
+        resultEl.innerHTML = `새 최고 기록! <strong>${Game.state.score.toLocaleString()}</strong>`;
         resultEl.className = 'text-sm text-yellow-300 mt-2 font-semibold';
     } else {
         resultEl.textContent = `기존 최고 기록(${(data?.best_score || 0).toLocaleString()})이 더 높습니다.`;

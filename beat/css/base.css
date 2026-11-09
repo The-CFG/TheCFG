@@ -379,3 +379,20 @@ img, video {
     user-select: none;
 }
 .position-editor-advanced summary:hover { color: var(--tb-text-primary); }
+
+/* ── 아이콘 (assets/icons.svg 스프라이트, Lucide) ──
+   색은 글자색(currentColor), 크기는 글자 크기(1em)를 따라간다.
+   크기를 바꾸려면 부모의 font-size 또는 .icon에 width/height를 지정. */
+:where(.icon) {
+    width: 1em;
+    height: 1em;
+}
+.icon {
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    vertical-align: -0.125em;
+    flex-shrink: 0;
+}

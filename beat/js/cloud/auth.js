@@ -1258,7 +1258,7 @@ function setupAuthUI() {
     const title      = document.getElementById('auth-title');
     const executeBtn = document.getElementById('btn-auth-execute');
     const switchBtn  = document.getElementById('auth-switch');
-    const closeBtn   = document.getElementById('btn-auth-close');
+    const closeBtn   = document.getElementById('btn-auth-close-x'); // 우상단 ✕ 버튼 (예전의 하단 "닫기" 버튼 기능을 이관)
     const openBtn    = document.getElementById('account-icon-menu');
     const discordBtn = document.getElementById('btn-auth-discord');
     const authForm   = document.getElementById('auth-form');
