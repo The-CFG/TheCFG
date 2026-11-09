@@ -87,7 +87,7 @@ const EditorHome = {
         if (sharedSongs.length > 0) {
             const header = document.createElement('h3');
             header.className = 'text-sm font-semibold text-gray-300 mt-4 mb-2';
-            header.textContent = '🤝 공유받은 노래';
+            header.replaceChildren(Icon.el('handshake'), ' 공유받은 노래');
             container.appendChild(header);
 
             sharedSongs.forEach(song => {
@@ -111,9 +111,13 @@ const EditorHome = {
 
         const meta = document.createElement('p');
         meta.className = 'text-xs text-gray-400';
-        const statusLabel = song.is_public ? '🌐 공개' : '🔒 비공개(서버 저장)';
-        const roleLabel = myRole === 'editor' ? ' · ✏️ 편집자' : myRole === 'viewer' ? ' · 👁 뷰어' : '';
-        meta.textContent = `${song.artist || '—'} · 난이도 ${song.beatmapCount}개 · ${statusLabel}${roleLabel}`;
+        meta.append(
+            `${song.artist || '—'} · 난이도 ${song.beatmapCount}개 · `,
+            Icon.el(song.is_public ? 'globe' : 'lock'),
+            song.is_public ? ' 공개' : ' 비공개(서버 저장)'
+        );
+        if (myRole === 'editor') meta.append(' · ', Icon.el('pencil'), ' 편집자');
+        else if (myRole === 'viewer') meta.append(' · ', Icon.el('eye'), ' 뷰어');
 
         openBtn.append(title, meta);
         openBtn.addEventListener('click', () => this.open(song.id));
@@ -124,9 +128,9 @@ const EditorHome = {
         const collabBtn = document.createElement('button');
         collabBtn.type = 'button';
         collabBtn.className = 'flex-shrink-0 py-1.5 px-2 bg-gray-700 hover:bg-gray-600 rounded text-xs';
-        collabBtn.textContent = myRole === 'owner' ? '👥 공동 작업'
-            : myRole === 'editor' ? '👥 편집자로 참여 중'
-            : '👥 뷰어로 참여 중';
+        collabBtn.replaceChildren(Icon.el('users'), myRole === 'owner' ? ' 공동 작업'
+            : myRole === 'editor' ? ' 편집자로 참여 중'
+            : ' 뷰어로 참여 중');
         collabBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             openSongCollabModal(song.id, song.title || '(제목 없음)', ownerId || song.owner_id, myRole);

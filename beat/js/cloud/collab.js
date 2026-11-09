@@ -26,7 +26,7 @@ async function openSongCollabModal(songId, songTitle, ownerId, myRole) {
     modal.innerHTML = `
         <div class="collab-dialog">
             <div class="collab-header">
-                <span class="collab-title">👥 공동 작업 — ${_esc(songTitle)}</span>
+                <span class="collab-title">${Icon.html('users')} 공동 작업 — ${_esc(songTitle)}</span>
                 <button class="collab-close" title="닫기">✕</button>
             </div>
 
@@ -47,8 +47,8 @@ async function openSongCollabModal(songId, songTitle, ownerId, myRole) {
                         <input type="text" id="collab-invite-email"
                             class="collab-input" placeholder="이메일 또는 아이디">
                         <select id="collab-invite-role" class="collab-select">
-                            <option value="editor">✏️ 편집자</option>
-                            <option value="viewer">👁 뷰어</option>
+                            <option value="editor">편집자</option>
+                            <option value="viewer">뷰어</option>
                         </select>
                         <button id="collab-invite-btn" class="collab-btn-primary">초대</button>
                     </div>
@@ -150,10 +150,10 @@ function _makeSongMemberCard({ member_id, role, nickname, isSelf, isOwner, canMa
     const selfLabel   = isSelf ? ' <span class="collab-self-badge">(나)</span>' : '';
 
     const roleBadge = isOwner
-        ? '<span class="collab-role-badge role-owner">👑 소유자</span>'
+        ? `<span class="collab-role-badge role-owner">${Icon.html('crown')} 소유자</span>`
         : role === 'editor'
-            ? '<span class="collab-role-badge role-editor">✏️ 편집자</span>'
-            : '<span class="collab-role-badge role-viewer">👁 뷰어</span>';
+            ? `<span class="collab-role-badge role-editor">${Icon.html('pencil')} 편집자</span>`
+            : `<span class="collab-role-badge role-viewer">${Icon.html('eye')} 뷰어</span>`;
 
     card.innerHTML = `
         <div class="collab-member-info">
@@ -172,8 +172,8 @@ function _makeSongMemberCard({ member_id, role, nickname, isSelf, isOwner, canMa
         const roleSelect = document.createElement('select');
         roleSelect.className = 'collab-select collab-select-sm';
         roleSelect.innerHTML = `
-            <option value="editor" ${role === 'editor' ? 'selected' : ''}>✏️ 편집자</option>
-            <option value="viewer" ${role === 'viewer' ? 'selected' : ''}>👁 뷰어</option>
+            <option value="editor" ${role === 'editor' ? 'selected' : ''}>편집자</option>
+            <option value="viewer" ${role === 'viewer' ? 'selected' : ''}>뷰어</option>
         `;
         roleSelect.addEventListener('change', async () => {
             try {
@@ -246,7 +246,7 @@ async function _renderSongSentInvites(modal, songId) {
     for (const inv of pending) {
         const row = document.createElement('div');
         row.className = 'collab-invite-row';
-        const roleLabel = inv.role === 'editor' ? '✏️ 편집자' : '👁 뷰어';
+        const roleLabel = inv.role === 'editor' ? `${Icon.html('pencil')} 편집자` : `${Icon.html('eye')} 뷰어`;
         row.innerHTML = `
             <span class="collab-invite-email">${_esc(inv.invited_label)}</span>
             <span class="collab-role-badge ${inv.role === 'editor' ? 'role-editor' : 'role-viewer'}" style="font-size:11px;">${roleLabel}</span>
@@ -288,7 +288,7 @@ function _setupSongInviteForm(modal, songId) {
         try {
             const result = await CloudCharts.inviteToSong(songId, identifier, role);
             if (result.ok) {
-                _setSongInviteResult(resultEl, `✅ ${identifier}에 초대를 보냈습니다.`, 'success');
+                _setSongInviteResult(resultEl, `${identifier}에 초대를 보냈습니다.`, 'success');
                 emailInput.value = '';
                 await _renderSongSentInvites(modal, songId);
             } else {

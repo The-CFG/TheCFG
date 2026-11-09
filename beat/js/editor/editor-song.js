@@ -73,9 +73,9 @@ const EditorSong = {
             if (!song.cloudSongId) {
                 DOM.editorSong.cloudStatusEl.textContent = '아직 서버에 저장되지 않음';
             } else if (song.isPublic) {
-                DOM.editorSong.cloudStatusEl.textContent = '🌐 라이브러리에 공개됨';
+                DOM.editorSong.cloudStatusEl.replaceChildren(Icon.el('globe'), ' 라이브러리에 공개됨');
             } else {
-                DOM.editorSong.cloudStatusEl.textContent = '🔒 서버에 비공개로 저장됨';
+                DOM.editorSong.cloudStatusEl.replaceChildren(Icon.el('lock'), ' 서버에 비공개로 저장됨');
             }
         }
 
@@ -119,10 +119,11 @@ const EditorSong = {
             info.className = 'flex-1 min-w-0';
             const label = document.createElement('p');
             label.className = 'font-semibold truncate';
-            const cloudBadge = bm.cloudChartId
-                ? (bm._cloudDirty ? ' ☁·수정됨' : (Editor.state.song.isPublic ? ' 🌐' : ' 🔒'))
-                : '';
-            label.textContent = `${bm.difficultyLabel || '기본'}${cloudBadge}`;
+            label.textContent = `${bm.difficultyLabel || '기본'}`;
+            if (bm.cloudChartId) {
+                if (bm._cloudDirty) label.append(' ', Icon.el('cloud'), '·수정됨');
+                else label.append(' ', Icon.el(Editor.state.song.isPublic ? 'globe' : 'lock'));
+            }
             const meta = document.createElement('p');
             meta.className = 'text-xs text-gray-400';
             const noteCountLabel = bm._loaded === false ? '노트 —' : `노트 ${(bm.notes || []).length}개`;
@@ -1005,11 +1006,11 @@ const EditorSong = {
         } finally {
             if (DOM.editorSong.uploadCloudBtn) {
                 DOM.editorSong.uploadCloudBtn.disabled = false;
-                DOM.editorSong.uploadCloudBtn.textContent = '🌐 라이브러리에 공개';
+                DOM.editorSong.uploadCloudBtn.replaceChildren(Icon.el('globe'), ' 라이브러리에 공개');
             }
             if (DOM.editorSong.saveDraftBtn) {
                 DOM.editorSong.saveDraftBtn.disabled = false;
-                DOM.editorSong.saveDraftBtn.textContent = '🔒 서버에 저장 (비공개)';
+                DOM.editorSong.saveDraftBtn.replaceChildren(Icon.el('lock'), ' 서버에 저장 (비공개)');
             }
         }
     },

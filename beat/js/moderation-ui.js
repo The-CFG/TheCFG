@@ -26,7 +26,7 @@ const ModerationUI = {
         const reasonOpts = Object.entries(CloudModeration.REASONS)
             .map(([k, v]) => `<option value="${k}">${_esc(v)}</option>`).join('');
         const box = this._open(`
-            <h3 class="text-lg font-bold mb-1">🚩 신고하기</h3>
+            <h3 class="text-lg font-bold mb-1">${Icon.html('flag')} 신고하기</h3>
             <p class="text-xs text-gray-400 mb-3 truncate">${_esc(title)}</p>
             <label class="block text-sm text-gray-300 mb-1">사유</label>
             <select id="rep-reason" class="w-full mb-3 p-2 rounded bg-gray-700 border border-gray-600 text-sm">${reasonOpts}</select>
@@ -70,8 +70,8 @@ const ModerationUI = {
             ? `<p class="text-red-400 text-sm">${_esc(error)}</p>`
             : (data.length === 0 ? `<p class="text-center text-gray-500 py-6 text-sm">항목이 없습니다.</p>` : data.map(r => this._rowHtml(r)).join(''));
         box.innerHTML = `
-            <div class="flex items-center justify-between mb-3"><h3 class="text-lg font-bold">🛡 신고 관리</h3>
-                <div class="flex gap-2"><button id="mod-legacy" class="px-3 py-1 rounded bg-teal-700 hover:bg-teal-600 text-sm">🔗 링크 일괄 첨부</button>
+            <div class="flex items-center justify-between mb-3"><h3 class="text-lg font-bold">${Icon.html('shield')} 신고 관리</h3>
+                <div class="flex gap-2"><button id="mod-legacy" class="px-3 py-1 rounded bg-teal-700 hover:bg-teal-600 text-sm">${Icon.html('link')} 링크 일괄 첨부</button>
                 <button id="mod-close" class="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 text-sm">닫기</button></div></div>
             <div class="flex gap-2 mb-3">${tabs}</div>
             <div class="space-y-3">${rows}</div>`;
@@ -171,12 +171,12 @@ const ModerationUI = {
             CloudModeration.listLegacySongs(lg.q, 20, lg.offset), CloudModeration.purgeCount(),
         ]);
         const rows = error ? `<p class="text-red-400 text-sm">${_esc(error)}</p>`
-            : (data.length === 0 ? `<p class="text-center text-gray-500 py-6 text-sm">첨부할 legacy 곡이 없습니다. 🎉</p>`
+            : (data.length === 0 ? `<p class="text-center text-gray-500 py-6 text-sm">첨부할 legacy 곡이 없습니다. ${Icon.html('party-popper')}</p>`
                 : data.map(r => `<button data-song="${r.song_id}" class="lg-row w-full text-left p-3 bg-gray-900 hover:bg-gray-700 rounded-lg text-sm">
                     <div class="font-semibold truncate">${_esc(r.title)} <span class="text-gray-400 font-normal">— ${_esc(r.artist || '—')}</span></div>
                     <div class="text-xs text-gray-500">소유자 ${_esc(r.owner_handle || '—')} · 차트 ${r.chart_count}개 · ${r.is_public ? '공개' : '비공개'}</div></button>`).join(''));
         box.innerHTML = `
-            <div class="flex items-center justify-between mb-3"><h3 class="text-lg font-bold">🔗 링크 일괄 첨부 <span class="text-sm text-gray-400">(남은 ${total}곡)</span></h3>
+            <div class="flex items-center justify-between mb-3"><h3 class="text-lg font-bold">${Icon.html('link')} 링크 일괄 첨부 <span class="text-sm text-gray-400">(남은 ${total}곡)</span></h3>
                 <button id="lg-back" class="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 text-sm">← 신고 관리</button></div>
             <div class="flex gap-2 mb-3"><input id="lg-q" value="${_esc(lg.q)}" placeholder="제목/아티스트 검색" class="flex-1 p-2 rounded bg-gray-700 border border-gray-600 text-sm">
                 <button id="lg-search" class="px-3 py-1 rounded bg-gray-600 hover:bg-gray-500 text-sm">검색</button></div>

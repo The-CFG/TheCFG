@@ -207,8 +207,8 @@
                                 <div class="mt-2">
                                     <p class="text-xs text-gray-500 mb-1" data-i18n="drill_section_title">실전형 드릴</p>
                                     <div class="flex space-x-2 btn-group" id="drill-selector">
-                                        <button data-difficulty="drillSpeed" class="w-full py-3 px-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition" data-i18n="drill_speed">순발력</button>
-                                        <button data-difficulty="drillComplex" class="w-full py-3 px-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition" data-i18n="drill_complex">복합 패턴</button>
+                                        <button data-difficulty="drillSpeed" class="w-full py-3 px-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition" ><svg class="icon" aria-hidden="true"><use href="/assets/icons.svg#i-zap"/></svg> <span data-i18n="drill_speed">순발력</span></button>
+                                        <button data-difficulty="drillComplex" class="w-full py-3 px-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition" ><svg class="icon" aria-hidden="true"><use href="/assets/icons.svg#i-target"/></svg> <span data-i18n="drill_complex">복합 패턴</span></button>
                                     </div>
                                 </div>
                                 <!-- 내 프리셋: 커스텀 슬라이더 조합을 이름 붙여 저장/불러오기 (연습모드-개선계획.md 1번) -->
@@ -521,7 +521,7 @@
                                         <input id="yt-input-offset-slider" type="range" min="-300" max="300" step="5" value="0" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
                                         <p class="text-xs text-gray-500 mt-1">YouTube로 재생되는 곡에서만 위 보정값에 추가로 더해집니다. 소리 출력 지연이 일반 곡과 달라서 YouTube 곡만 판정이 계속 빠르거나 느리게 나올 때 조절하세요. 선택한 프리셋에 함께 저장됩니다.</p>
                                     </div>
-                                    <button id="open-calibration-btn" class="w-full py-2 bg-purple-700 hover:bg-purple-600 rounded-lg text-sm font-semibold" data-i18n="calibration_open_btn">탭 타이밍 자동 보정 (다시 측정)</button>
+                                    <button id="open-calibration-btn" class="w-full py-2 bg-purple-700 hover:bg-purple-600 rounded-lg text-sm font-semibold" ><svg class="icon" aria-hidden="true"><use href="/assets/icons.svg#i-target"/></svg> <span data-i18n="calibration_open_btn">탭 타이밍 자동 보정 (다시 측정)</span></button>
                                 </div>
                             </div>
                             <div id="tab-content-appearance" class="tab-content hidden space-y-6">
@@ -756,7 +756,7 @@
                                         </div>
                                     </div>
                                     <div class="mt-4">
-                                        <button id="open-position-editor-btn" type="button" class="w-full py-2 bg-teal-700 hover:bg-teal-600 rounded-lg text-sm font-semibold" data-i18n="position_editor_open_btn">판정 / 콤보 / 카운트다운 위치 드래그로 편집</button>
+                                        <button id="open-position-editor-btn" type="button" class="w-full py-2 bg-teal-700 hover:bg-teal-600 rounded-lg text-sm font-semibold" ><svg class="icon" aria-hidden="true"><use href="/assets/icons.svg#i-hand"/></svg> <span data-i18n="position_editor_open_btn">판정 / 콤보 / 카운트다운 위치 드래그로 편집</span></button>
                                         <p class="text-xs text-gray-500 mt-2 mb-1" data-i18n="position_editor_state_desc">화면 배치별로 #game-area 크기가 달라서, 위치는 아래 3가지를 각각 따로 저장합니다. 지금 편집할 대상을 골라주세요.</p>
                                         <div id="position-editor-state-tabs-outer" class="position-editor-state-tabs">
                                             <button type="button" class="position-editor-state-tab active" data-state="desktop" data-i18n="position_editor_state_desktop">데스크톱(펼침)</button>
@@ -1805,11 +1805,11 @@
                         </p>
                         <div class="space-y-3 mb-4">
                             <button id="calibration-mode-general-btn" data-mode="general" class="calibration-mode-btn w-full p-4 bg-gray-800 hover:bg-gray-700 rounded-lg text-left transition">
-                                <div class="font-semibold" data-i18n="calibration_mode_general">⌨️ 키보드 / 마우스</div>
+                                <div class="font-semibold"><svg class="icon" aria-hidden="true"><use href="/assets/icons.svg#i-keyboard"/></svg> <span data-i18n="calibration_mode_general">키보드 / 마우스</span></div>
                                 <div class="text-xs text-gray-400 mt-1" data-i18n="calibration_mode_general_desc">평소 플레이하는 키를 누르거나 화면을 클릭해서 박자에 맞춰 탭합니다.</div>
                             </button>
                             <button id="calibration-mode-touch-btn" data-mode="touch" class="calibration-mode-btn w-full p-4 bg-gray-800 hover:bg-gray-700 rounded-lg text-left transition">
-                                <div class="font-semibold" data-i18n="calibration_mode_touch">터치</div>
+                                <div class="font-semibold"><svg class="icon" aria-hidden="true"><use href="/assets/icons.svg#i-pointer"/></svg> <span data-i18n="calibration_mode_touch">터치</span></div>
                                 <div class="text-xs text-gray-400 mt-1" data-i18n="calibration_mode_touch_desc">화면을 손가락으로 직접 두드려서 박자에 맞춰 탭합니다.</div>
                             </button>
                         </div>
@@ -2201,6 +2201,7 @@
         
         <!-- JavaScript Files -->
         <script defer src="/beat/js/core/config.js"></script>
+        <script defer src="/beat/js/core/icons.js"></script><!-- Icon: 스프라이트 아이콘 헬퍼 -->
         <script defer src="/beat/js/core/chart-format.js"></script>
         <script defer src="/beat/js/core/difficulty.js"></script>
         <script defer src="/beat/js/core/audio.js"></script>

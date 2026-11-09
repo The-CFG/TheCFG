@@ -195,7 +195,7 @@ const Editor = {
         const cloudChart = this.state.cloudChart;
         if (statusEl) {
             if (cloudChart) {
-                statusEl.textContent = `✏️ "${cloudChart.title}" 편집 중 — 업로드 시 기존 차트가 업데이트됩니다.`;
+                statusEl.replaceChildren(Icon.el('pencil'), ` "${cloudChart.title}" 편집 중 — 업로드 시 기존 차트가 업데이트됩니다.`);
                 statusEl.classList.remove('hidden');
             } else {
                 statusEl.textContent = '';
@@ -203,7 +203,7 @@ const Editor = {
             }
         }
         if (uploadBtn) {
-            uploadBtn.textContent = cloudChart ? '☁ 차트 업데이트' : '☁ 서버에 업로드';
+            uploadBtn.replaceChildren(Icon.el('cloud'), cloudChart ? ' 차트 업데이트' : ' 서버에 업로드');
         }
     },
 

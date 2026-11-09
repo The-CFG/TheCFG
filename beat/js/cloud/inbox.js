@@ -65,7 +65,7 @@ function _inboxEmptyHtml(text) {
 
 // 카드 하나(초대 1건) 렌더링
 function _inboxInviteCardHtml(inv) {
-    const roleLabel = inv.role === 'editor' ? '✏️ 편집자' : '👁 뷰어';
+    const roleLabel = inv.role === 'editor' ? `${Icon.html('pencil')} 편집자` : `${Icon.html('eye')} 뷰어`;
     const songLabel = inv.song_title ? _inboxEsc(inv.song_title) : '(제목 없음)';
     const artistLabel = inv.song_artist ? `<span class="text-gray-400 font-normal"> — ${_inboxEsc(inv.song_artist)}</span>` : '';
     const ownerLabel = inv.owner_id
@@ -73,7 +73,7 @@ function _inboxInviteCardHtml(inv) {
         : '알 수 없음';
     return `
         <div class="bg-gray-700/60 rounded-lg p-3" data-invite-id="${_inboxEsc(inv.id)}">
-            <p class="text-sm text-white font-semibold truncate">🤝 ${songLabel}${artistLabel}</p>
+            <p class="text-sm text-white font-semibold truncate">${Icon.html('handshake')} ${songLabel}${artistLabel}</p>
             <p class="text-xs text-gray-400 mt-0.5">소유자: ${ownerLabel} · ${roleLabel}로 초대</p>
             <div class="flex gap-2 mt-2">
                 <button type="button" class="inbox-accept-btn flex-1 py-1.5 bg-teal-600 hover:bg-teal-500 rounded text-xs font-semibold text-white transition">수락</button>
@@ -120,7 +120,7 @@ async function _openInboxPopover() {
     pop.className = 'absolute right-0 mt-2 w-80 max-w-[90vw] bg-gray-800 border border-gray-600 rounded-lg shadow-xl z-50';
     pop.innerHTML = `
         <div class="px-3 py-2.5 border-b border-gray-700">
-            <span class="text-sm font-bold text-white">📥 알림함</span>
+            <span class="text-sm font-bold text-white">${Icon.html('inbox')} 알림함</span>
         </div>
         <div id="inbox-list-body" class="max-h-80 overflow-y-auto p-2 space-y-2">
             ${_inboxEmptyHtml('불러오는 중...')}

@@ -205,7 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (UI.currentScreen === 'editorSong') {
             UI.showMessage('editorSong', '회색 카드 영역 안에 놓아주세요 (오디오/이미지/json 파일 자동 인식됩니다)');
         } else if (UI.currentScreen === 'editor') {
-            UI.showMessage('editor', '🎵 음악 설정 박스 안에 놓아주세요');
+            UI.showMessage('editor', '음악 설정 박스 안에 놓아주세요');
         }
     });
 

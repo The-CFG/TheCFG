@@ -14,7 +14,7 @@
     document.head.appendChild(css);
 
     const btn = document.createElement('button');
-    btn.id = 'yt-test-btn'; btn.textContent = '🧪 YT'; btn.type = 'button';
+    btn.id = 'yt-test-btn'; btn.replaceChildren(Icon.el('flask-conical'), ' YT'); btn.type = 'button';
     const panel = document.createElement('div');
     panel.id = 'yt-test-panel';
     panel.innerHTML =
