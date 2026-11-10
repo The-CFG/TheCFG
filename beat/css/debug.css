@@ -1,0 +1,179 @@
+/* 디버그 오버레이 (js/debug/debugger.js) — 원래 editor.css에 섞여 있던 블록을 그대로 옮김 */
+#debug-overlay {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    width: min(450px, calc(100vw - 20px));
+    max-height: 60vh;
+    background-color: rgba(0, 0, 0, 0.85);
+    border: 1px solid #4a5568;
+    border-radius: 8px;
+    z-index: 1000;
+    color: white;
+    font-family: monospace;
+    font-size: 12px;
+    backdrop-filter: blur(2px);
+}
+
+#debug-overlay .title {
+    padding: 8px;
+    background-color: #2d3748;
+    border-bottom: 1px solid #4a5568;
+    font-weight: bold;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    flex-shrink: 0;
+}
+
+.debug-content-area {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex-grow: 1;
+}
+
+.debug-section {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-bottom: 1px dashed #4a5568;
+    min-height: 0;
+}
+.debug-section:last-child {
+    border-bottom: none;
+    flex: 1; /* 마지막(에러 로그) 섹션: 나머지 모든 공간을 차지 — 도구가 중간에 섹션을 끼워도 유지됨 */
+}
+.debug-section[hidden] {
+    display: none;
+}
+.debug-section:nth-child(1) { 
+    flex: 0 0 80px; /* 성능 섹션: 80px 고정 높이 (기존과 동일) */
+}
+.debug-section:nth-child(2) { 
+    flex: 0 0 150px; /* 게임 상태 섹션: 150px 고정 높이로 변경 */
+}
+.debug-tool-section { /* Debugger.registerTool 도구가 끼우는 섹션 (예: YT 시계) */
+    flex: 0 0 auto;
+}
+.debug-tool-section .debug-container {
+    overflow: visible;
+}
+.debug-tool-section pre {
+    margin: 0;
+    font-size: 11px;
+}
+
+
+.debug-section-title {
+    padding: 4px 8px;
+    background-color: rgba(74, 85, 104, 0.5);
+    font-weight: bold;
+    font-size: 11px;
+    flex-shrink: 0;
+}
+
+.debug-container {
+    padding: 8px;
+    /* [핵심 수정] Y축(세로)으로 내용이 넘칠 경우 자동으로 스크롤바를 생성합니다. */
+    overflow-y: auto; 
+    flex-grow: 1;
+}
+.debug-container pre {
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+#debug-log-container p {
+    margin-bottom: 4px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #2d3748;
+    word-break: break-all;
+}
+#debug-log-container .error-context { color: #f6e05e; }
+#debug-log-container .error-message { color: #fca5a5; }
+
+#debug-perf-container p {
+    margin: 0;
+    padding: 1px 0;
+}
+
+/* ── YouTube 플레이 테스트 폼 (설정 > 디버그 카드, js/debug/yt-tools.js) ── */
+#debug-yt-tools {
+    margin-top: 12px;
+}
+.debug-yt {
+    background: var(--tb-bg-surface-soft, rgba(55, 65, 81, 0.5));
+    border: 1px solid var(--tb-border, #4b5563);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 13px;
+    color: var(--tb-text-primary, #e5e7eb);
+}
+.debug-yt > summary {
+    cursor: pointer;
+    font-weight: 600;
+}
+.debug-yt-note {
+    margin: 6px 0 0;
+    font-size: 12px;
+    color: var(--tb-text-secondary, #9ca3af);
+}
+.debug-yt label {
+    display: block;
+    margin-top: 8px;
+    color: var(--tb-text-secondary, #9ca3af);
+}
+.debug-yt input[type="text"],
+.debug-yt input[type="number"],
+.debug-yt select {
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 2px;
+    padding: 6px 8px;
+    font: inherit;
+    color: var(--tb-text-primary, #fff);
+    background: var(--tb-bg-surface, #374151);
+    border: 1px solid var(--tb-border, #4b5563);
+    border-radius: 6px;
+}
+.debug-yt-row {
+    display: flex;
+    gap: 6px;
+    align-items: stretch;
+}
+.debug-yt-row input {
+    flex: 1;
+    min-width: 0;
+}
+.debug-yt .debug-yt-check {
+    display: flex;
+    gap: 6px;
+    align-items: flex-start;
+}
+.debug-yt .debug-yt-check input {
+    margin-top: 3px;
+}
+.debug-yt button {
+    padding: 8px 10px;
+    border: 0;
+    border-radius: 6px;
+    color: #fff;
+    background: #4b5563;
+    cursor: pointer;
+}
+.debug-yt button:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+.debug-yt .debug-yt-start {
+    width: 100%;
+    margin-top: 10px;
+    font-weight: 600;
+    background: #0d9488;
+}
+.debug-yt-msg {
+    margin-top: 6px;
+    min-height: 14px;
+    font-size: 12px;
+    color: #fca5a5;
+}

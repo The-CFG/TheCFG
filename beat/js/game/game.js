@@ -939,6 +939,7 @@ const Game = {
             if (this.state.gameState === 'playing' || this.state.gameState === 'countdown') {
                 Debugger.updatePerf(timestamp);
                 Debugger.updateState(this.state);
+                Debugger.updateTools(timestamp);
             }
         }
     },
