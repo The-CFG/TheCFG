@@ -1036,7 +1036,7 @@ async function _openAccountPopover(user) {
         <p class="account-popover-nickname">현재 계정: ${CloudAuth.linkedName(user.id, nickname, escapeHtml)}</p>
         <p class="account-popover-email">${escapeHtml(user.email || '')}</p>
         <hr class="account-popover-divider">
-        <a href="/accounts" class="account-popover-link">계정 설정</a>
+        <a href="/accounts?from=hoi4" class="account-popover-link">계정 설정</a>
         <button type="button" id="account-popover-logout" class="account-popover-btn">로그아웃</button>
     `;
     wrap.appendChild(pop);

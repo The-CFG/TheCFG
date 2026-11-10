@@ -6,6 +6,22 @@
     margin: 0 auto;
     padding: 88px 0 96px;
 }
+/* ?from= 으로 들어왔을 때 맨 위에 보이는 "← 프로젝트로 돌아가기" 링크 */
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 20px;
+    font-size: .88rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color .15s ease;
+}
+.back-link:hover,
+.back-link:focus-visible { color: var(--accent-h); }
+.back-link[hidden] { display: none; }
+
 .accounts-title {
     margin: 0 0 8px;
     font-size: clamp(1.8rem, 4vw, 2.3rem);

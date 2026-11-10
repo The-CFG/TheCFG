@@ -425,6 +425,23 @@ function _setupProfileSection() {
     });
 }
 
+// ?from=beat|hoi4 로 들어오면 맨 위에 "← (프로젝트)로 돌아가기" 링크를 보여준다.
+// 허용 목록에 있는 값만 쓰고 이동 경로도 고정이라, from에 임의 주소를 넣어도 리다이렉트로 악용할 수 없다.
+const _BACK_TARGETS = {
+    beat: { href: '/beat', name: 'TheBeat' },
+    hoi4: { href: '/hoi4', name: 'HOI4 Mod Editor' },
+};
+function _setupBackLink() {
+    const key = new URLSearchParams(location.search).get('from');
+    const target = Object.prototype.hasOwnProperty.call(_BACK_TARGETS, key) ? _BACK_TARGETS[key] : null;
+    const el = document.getElementById('back-link');
+    if (!el || !target) return;
+    el.href = target.href;
+    el.textContent = `← ${target.name}로 돌아가기`;
+    el.hidden = false;
+}
+
+_setupBackLink();
 _setupAuthForm();
 _setupProfileSection();
 _refreshView();
