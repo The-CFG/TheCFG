@@ -24,7 +24,6 @@ const Audio = {
             await Tone.start();
             this.initializeSynths();
             Audio.isReady = true;
-            console.log("Audio context started and synths initialized");
         } catch (err) {
             Debugger.logError(err, 'Audio.start');
             console.error("Could not start audio context", err);

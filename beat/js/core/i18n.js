@@ -191,6 +191,15 @@ const I18n = {
             'preset_saved': '프리셋에 저장되었습니다.',
             'key_saved': '키 설정이 저장되었습니다.',
             'language_changed': '언어가 변경되었습니다.',
+
+            // 접근성(아이콘 전용 버튼 이름)
+            'aria_settings': '설정',
+            'aria_back': '뒤로 가기',
+            'aria_toggle_details': '세부 정보 펼치기/접기',
+
+            // 네트워크 상태
+            'offline_banner': '오프라인 상태예요. 온라인 라이브러리·저장·멀티플레이는 연결이 필요해요.',
+            'online_restored': '다시 연결되었어요.',
         },
         
         en: {
@@ -382,6 +391,15 @@ const I18n = {
             'preset_saved': 'Preset saved.',
             'key_saved': 'Key settings saved.',
             'language_changed': 'Language changed.',
+
+            // Accessibility (icon-only button names)
+            'aria_settings': 'Settings',
+            'aria_back': 'Back',
+            'aria_toggle_details': 'Expand/collapse details',
+
+            // Network status
+            'offline_banner': "You're offline. The online library, saving and multiplayer need a connection.",
+            'online_restored': 'Back online.',
         }
     },
     
@@ -390,6 +408,13 @@ const I18n = {
         const savedLang = localStorage.getItem('theBeat_language');
         if (savedLang && this.translations[savedLang]) {
             this.currentLang = savedLang;
+        } else {
+            // 첫 방문: 브라우저 언어(navigator.languages)에서 지원하는 첫 언어를 사용한다.
+            // 저장하지는 않는다 — 사용자가 언어 버튼을 직접 눌렀을 때만 기억한다.
+            const detected = (navigator.languages || [navigator.language || ''])
+                .map(l => String(l).toLowerCase().split('-')[0])
+                .find(l => this.translations[l]);
+            if (detected) this.currentLang = detected;
         }
         
         // 초기 번역 적용
@@ -422,12 +447,37 @@ const I18n = {
         UI.showMessage('settings', this.t('language_changed'));
     },
     
+    // 현재 언어에 키가 없으면 ko로 폴백한다. 둘 다 없으면 undefined.
+    _get(key) {
+        const cur = this.translations[this.currentLang] || {};
+        if (cur[key] !== undefined && cur[key] !== '') return cur[key];
+        const ko = this.translations.ko[key];
+        if (ko !== undefined && ko !== '') {
+            this._warnMissing(key, `${this.currentLang}에 없어 ko로 대체`);
+            return ko;
+        }
+        this._warnMissing(key, '모든 언어에 없음');
+        return undefined;
+    },
+
+    // 누락 키 경고 — 키당 한 번만 콘솔에 남긴다(번역 누락 점검용).
+    _missingLogged: new Set(),
+    _warnMissing(key, reason) {
+        const id = `${this.currentLang}:${key}`;
+        if (this._missingLogged.has(id)) return;
+        this._missingLogged.add(id);
+        console.warn(`[i18n] 번역 누락: "${key}" (${reason})`);
+    },
+
     applyTranslations() {
+        // 스크린리더/번역 도구/검색엔진이 현재 언어를 알 수 있게 <html lang> 갱신
+        document.documentElement.lang = this.currentLang;
+
         // data-i18n 속성을 가진 모든 요소 번역
         const elements = document.querySelectorAll('[data-i18n]');
         elements.forEach(el => {
             const key = el.getAttribute('data-i18n');
-            const translation = this.translations[this.currentLang][key];
+            const translation = this._get(key);
             if (translation) {
                 // 입력 요소의 placeholder
                 if (el.tagName === 'INPUT' && el.hasAttribute('placeholder')) {
@@ -438,12 +488,25 @@ const I18n = {
             }
         });
 
+        // 속성 번역: data-i18n-attr="aria-label:키; title:키2" — 지정한 속성을 번역값으로 갱신
+        // (아이콘 전용 버튼의 aria-label처럼 텍스트 노드가 없는 곳용)
+        document.querySelectorAll('[data-i18n-attr]').forEach(el => {
+            el.getAttribute('data-i18n-attr').split(';').forEach(pair => {
+                const idx = pair.indexOf(':');
+                if (idx < 0) return;
+                const attr = pair.slice(0, idx).trim();
+                const key = pair.slice(idx + 1).trim();
+                const translation = this._get(key);
+                if (attr && translation) el.setAttribute(attr, translation);
+            });
+        });
+
         // ?-아이콘 툴팁(data-tooltip)도 언어에 맞게 갱신 — data-i18n-tooltip에 번역 키를 지정한
         // 요소만 대상으로 하고, 나머지 개별 슬라이더 툴팁은 아직 한국어 텍스트만 있다.
         const tooltipElements = document.querySelectorAll('[data-i18n-tooltip]');
         tooltipElements.forEach(el => {
             const key = el.getAttribute('data-i18n-tooltip');
-            const translation = this.translations[this.currentLang][key];
+            const translation = this._get(key);
             if (translation) {
                 el.setAttribute('data-tooltip', translation);
             }
@@ -467,7 +530,7 @@ const I18n = {
     
     // params: { name: 'value', ... } — 번역 문자열 안의 {name} 같은 자리표시자를 치환한다.
     t(key, params) {
-        const text = this.translations[this.currentLang][key] || key;
+        const text = this._get(key) ?? key;
         if (!params) return text;
         return Object.keys(params).reduce((acc, k) => acc.split(`{${k}}`).join(params[k]), text);
     }

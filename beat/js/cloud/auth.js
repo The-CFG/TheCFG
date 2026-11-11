@@ -628,7 +628,6 @@ const CloudAuth = {
                     .upsert(stubRows.slice(i, i + 200), { onConflict: 'user_id,project_name,file_path' });
                 if (error) console.error('stub 행 등록 오류:', error.message);
             }
-            console.log(`[클라우드] stub 파일 ${stubEntries.length}개 행 등록`);
         }
         const textEntries = Object.entries(files).filter(([, fd]) =>
             fd && fd.type !== 'dds' && fd.type !== 'image'
@@ -753,7 +752,6 @@ const CloudAuth = {
         }
 
         report(100, '저장 완료!');
-        console.log(`[클라우드] "${projectName}" 저장 완료 (텍스트 ${rows.length}개, 이미지 ${imgUploads.length}개)`);
     },
 
     // ── 프로젝트 파일 목록만 조회 (지연 로딩용) ─────────────
@@ -787,7 +785,6 @@ const CloudAuth = {
                     const ext  = filePath.split('.').pop().toLowerCase();
                     const type = ext === 'dds' ? 'dds' : 'image';
                     files[filePath] = { type, _stub: true };
-                    console.log(`[레거시] Storage에서 발견: ${filePath}`);
                 }
             }
         } catch(e) {
@@ -796,7 +793,6 @@ const CloudAuth = {
 
         if (!Object.keys(files).length) return null;
 
-        console.log(`[클라우드] "${projectName}" 목록 로드 (${Object.keys(files).length}개 파일)`);
         return { name: projectName, files };
     },
 
@@ -1013,7 +1009,6 @@ const CloudAuth = {
         }
 
         report(100, '불러오기 완료!');
-        console.log(`[클라우드] "${projectName}" 로드 완료 (파일 ${Object.keys(files).length}개)`);
         return { name: projectName, files };
     },
 
@@ -1047,7 +1042,6 @@ const CloudAuth = {
             .eq('file_path',    filePath);
 
         if (error) console.error('project_files 행 삭제 오류:', error.message);
-        else       console.log(`[클라우드] 파일 삭제 완료: ${filePath}`);
     },
 
     // ── 프로젝트 삭제 ────────────────────────────────────────
@@ -1081,7 +1075,6 @@ const CloudAuth = {
             .eq('user_id', user.id)
             .eq('name', projectName);
 
-        console.log(`[클라우드] "${projectName}" 삭제 완료`);
     },
 
     // ── 단일 파일 저장 ────────────────────────────────────────
@@ -1139,7 +1132,6 @@ const CloudAuth = {
         }
 
         await this._saveProjectMeta(ownerId, projectName);
-        console.log(`[클라우드] 파일 저장: ${filePath}`);
     }
 };
 
@@ -1173,7 +1165,6 @@ async function _listStorageRecursive(bucket, prefix) {
             results.push(fullPath);
         }
     }
-    console.log(`[Storage list] ${prefix} → ${results.length}개`);
     return results;
 }
 

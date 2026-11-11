@@ -2,13 +2,34 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <!-- 핀치 줌 허용(WCAG 1.4.4): maximum-scale/user-scalable=no 제거. 게임 영역(#game-area)은 touch-none이라 플레이 중 멀티터치가 줌으로 번지지 않는다. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>TheCFG TheBeat</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- 링크 미리보기(Discord/SNS)·검색용 메타 -->
+    <meta name="description" content="브라우저에서 바로 즐기는 리듬 게임 TheBeat. 채보를 직접 만들고, 온라인 라이브러리에 공유하고, 친구와 멀티플레이로 겨뤄보세요.">
+    <meta name="theme-color" content="#2d3748">
+    <link rel="canonical" href="https://thecfg.netlify.app/beat/">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="TheCFG">
+    <meta property="og:title" content="TheBeat — 웹 리듬 게임">
+    <meta property="og:description" content="브라우저에서 바로 즐기는 리듬 게임. 채보 제작, 온라인 라이브러리, 멀티플레이.">
+    <meta property="og:url" content="https://thecfg.netlify.app/beat/">
+    <meta property="og:image" content="https://thecfg.netlify.app/assets/TheBeat.png">
+    <meta property="og:image:width" content="1920">
+    <meta property="og:image:height" content="1080">
+    <meta property="og:locale" content="ko_KR">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="TheBeat — 웹 리듬 게임">
+    <meta name="twitter:description" content="브라우저에서 바로 즐기는 리듬 게임. 채보 제작, 온라인 라이브러리, 멀티플레이.">
+    <meta name="twitter:image" content="https://thecfg.netlify.app/assets/TheBeat.png">
+    <link rel="manifest" href="/beat/manifest.webmanifest">
+    <link rel="apple-touch-icon" href="/assets/favicon.png">
+    <!-- defer: 첫 렌더를 막지 않는다. 앱 스크립트도 전부 defer라 문서 순서대로 실행되어 Tone/supabase가 먼저 준비된다. -->
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="icon" href="/assets/favicon.png" type="image/png">
     <link rel="stylesheet" href="/beat/css/base.css">
     <link rel="stylesheet" href="/beat/css/utilities.css"><!-- Tailwind 걷어내기 Phase 2 -->
@@ -141,12 +162,12 @@
                                     <svg class="icon h-6 w-6 text-gray-300 transition" aria-hidden="true"><use href="/assets/icons.svg#i-user"/></svg>
                                 </button>
                             </div>
-                            <button id="settings-icon-menu" class="p-2 rounded-full hover:bg-gray-600 transition">
+                            <button id="settings-icon-menu" class="p-2 rounded-full hover:bg-gray-600 transition" aria-label="설정" data-i18n-attr="aria-label:aria_settings">
                                 <svg class="icon h-6 w-6 text-gray-300" aria-hidden="true"><use href="/assets/icons.svg#i-settings"/></svg>
                             </button>
                         </div>
                     </div>
-                    <div id="menu-message" class="hidden p-3 mb-4 text-center text-white bg-red-500 rounded-lg"></div>
+                    <div id="menu-message" role="status" aria-live="polite" class="hidden p-3 mb-4 text-center text-white bg-red-500 rounded-lg"></div>
                     <!-- 추천 비트맵 카드: beat/js/menu-featured.js가 채움. 공개 채보가 하나도 없거나
                          로딩 실패면 hidden 상태 그대로 유지된다. -->
                     <div id="menu-featured-beatmap" class="hidden"></div>
@@ -176,12 +197,12 @@
                 <!-- Practice Screen -->
                 <div id="practice-screen" class="hidden flex flex-col flex-shrink-0">
                     <div class="flex items-center mb-6">
-                        <button id="practice-back-btn" class="p-2 rounded-full hover:bg-gray-600 transition mr-3">
+                        <button id="practice-back-btn" class="p-2 rounded-full hover:bg-gray-600 transition mr-3" aria-label="뒤로 가기" data-i18n-attr="aria-label:aria_back">
                             <svg class="icon h-6 w-6 text-gray-300" aria-hidden="true"><use href="/assets/icons.svg#i-chevron-left"/></svg>
                         </button>
                         <h2 class="text-2xl font-bold text-white">연습</h2>
                     </div>
-                    <div id="practice-message" class="hidden p-3 mb-4 text-center text-white bg-red-500 rounded-lg"></div>
+                    <div id="practice-message" role="status" aria-live="polite" class="hidden p-3 mb-4 text-center text-white bg-red-500 rounded-lg"></div>
                     <!-- 최근 성적 기반 드릴 추천 배너 (연습모드-개선계획.md 3번 후속) -->
                     <div id="drill-recommendation-banner" class="hidden mb-4 p-3 bg-purple-900/40 border border-purple-700 rounded-lg text-sm text-purple-100"></div>
                     <div class="space-y-6">
@@ -193,7 +214,7 @@
                             <div>
                                 <div class="flex justify-between items-center mb-2">
                                     <h3 class="text-xl text-gray-300" data-i18n="difficulty">난이도</h3>
-                                    <button id="toggle-details-btn" class="p-1 rounded-full hover:bg-gray-600 transition">
+                                    <button id="toggle-details-btn" class="p-1 rounded-full hover:bg-gray-600 transition" aria-label="세부 정보 펼치기/접기" data-i18n-attr="aria-label:aria_toggle_details">
                                         <svg class="icon h-5 w-5 text-gray-400 transition-transform" aria-hidden="true"><use href="/assets/icons.svg#i-chevron-down"/></svg>
                                     </button>
                                 </div>
@@ -376,7 +397,7 @@
                     <div style="flex:1 0 auto;">
                         <div class="flex justify-between items-center mb-4">
                             <h2 id="playing-status-label" class="text-3xl font-bold text-white" data-i18n="playing">플레이 중</h2>
-                            <button id="settings-icon-playing" class="p-2 rounded-full hover:bg-gray-600 transition">
+                            <button id="settings-icon-playing" class="p-2 rounded-full hover:bg-gray-600 transition" aria-label="설정" data-i18n-attr="aria-label:aria_settings">
                                 <svg class="icon h-6 w-6 text-gray-300" aria-hidden="true"><use href="/assets/icons.svg#i-settings"/></svg>
                             </button>
                         </div>
@@ -418,7 +439,7 @@
                                 <svg class="icon w-7 h-7" aria-hidden="true"><use href="/assets/icons.svg#i-x"/></svg>
                             </button>
                         </div>
-                        <p id="settings-message" class="hidden text-center text-yellow-400 mb-4 py-2 bg-gray-700 rounded"></p>
+                        <p id="settings-message" role="status" aria-live="polite" class="hidden text-center text-yellow-400 mb-4 py-2 bg-gray-700 rounded"></p>
                         <div id="settings-tabs" class="flex border-b border-gray-600 mb-4">
                             <button data-tab="volume" class="tab-btn py-2 px-4 text-gray-300 hover:text-white transition active" data-i18n="play_tab">플레이</button>
                             <button data-tab="calibration" class="tab-btn py-2 px-4 text-gray-300 hover:text-white transition">캘리브레이션</button>
@@ -1770,7 +1791,7 @@
                         <h2 class="text-3xl font-bold">.osu 파일 변환</h2>
                         <button id="osu-convert-back-btn" class="flex-shrink-0 py-2 px-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm">← 에디터 홈</button>
                     </div>
-                    <div id="osu-convert-message" class="hidden p-3 mb-4 text-center bg-red-500 rounded-lg"></div>
+                    <div id="osu-convert-message" role="status" aria-live="polite" class="hidden p-3 mb-4 text-center bg-red-500 rounded-lg"></div>
                     <div class="p-3 mb-4 bg-yellow-900/40 border border-yellow-700 rounded-lg text-xs text-yellow-200">
                         ⚠ 베타 기능입니다. 구간별 BPM 변화는 변환되지 않고 전체 평균 BPM 하나로 적용됩니다. 변환 후 노트 싱크를 꼭 확인하세요.
                     </div>
@@ -1850,7 +1871,7 @@
                         <h2 class="text-3xl font-bold truncate" id="editor-song-title">종합 창</h2>
                         <button id="editor-song-back-btn" class="flex-shrink-0 py-2 px-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm">← 에디터 홈</button>
                     </div>
-                    <div id="editor-song-message" class="hidden p-3 mb-4 text-center bg-red-500 rounded-lg"></div>
+                    <div id="editor-song-message" role="status" aria-live="polite" class="hidden p-3 mb-4 text-center bg-red-500 rounded-lg"></div>
                     <div id="editor-song-readonly-banner" class="hidden collab-readonly-banner">뷰어 권한입니다. 편집할 수 없습니다.</div>
                     <div id="editor-song-info-card" class="p-4 bg-gray-800 rounded-lg mb-4 space-y-2">
                         <div class="flex items-center gap-2">
@@ -1953,7 +1974,7 @@
                         </div>
                     </div>
                     <div class="flex-shrink-0 touch-auto">
-                        <div id="editor-message" class="hidden p-3 mb-4 text-center bg-red-500 rounded-lg"></div>
+                        <div id="editor-message" role="status" aria-live="polite" class="hidden p-3 mb-4 text-center bg-red-500 rounded-lg"></div>
                         <!-- 상단 컨트롤 영역 — 채보 찍는 영역(#editor-container)이 데스크톱에서 좌측
                              #game-area로 옮겨간 뒤로 이 영역은 우측 #ui-area(좁은 폭)에 남는다.
                              그래서 그리드가 아니라 세로 스택으로 배치해 폭에 상관없이 넉넉하게
@@ -2216,6 +2237,7 @@
         <script defer src="/beat/js/editor/editor-layout.js"></script>
         <script defer src="/beat/js/core/game-background.js"></script>
         <script defer src="/beat/js/core/i18n.js"></script>
+        <script defer src="/beat/js/core/network-status.js"></script><!-- 오프라인 배너 -->
         <script defer src="/beat/js/appearance/local-store.js"></script><!-- BeatLocalStore: 커스터마이징 IndexedDB 공용 래퍼 -->
         <script defer src="/beat/js/appearance/appearance.js"></script>
         <script defer src="/beat/js/appearance/skin.js"></script><!-- BeatSkin: Appearance.settings를 스킨 단위로 저장/전환 -->

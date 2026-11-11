@@ -181,7 +181,8 @@ const SessionHistory = {
                 const targetBtn = document.querySelector(`#drill-selector button[data-difficulty="${rec.drill}"]`);
                 if (targetBtn) {
                     targetBtn.click();
-                    targetBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    // 동작 줄이기 설정이면 부드러운 스크롤 대신 즉시 이동 (JS가 명시한 behavior는 CSS scroll-behavior로 덮어쓸 수 없다)
+                    targetBtn.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
                 }
             });
         }

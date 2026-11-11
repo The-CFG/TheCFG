@@ -663,3 +663,15 @@ body {
     .menu-btn { animation: none; }
     .menu-btn:hover .menu-btn-icon { transform: none; }
 }
+
+/* ── 동작 줄이기: 판정/콤보/카운트다운의 "튀어오르는" 등장 애니메이션 ──
+   기본 상태가 scale(0.3)이고 키프레임이 scale(1)로 키워 주므로, 애니메이션만 끄면 글자가 작게 남는다.
+   그래서 애니메이션을 끄는 대신 최종 상태(scale(1))로 바로 보여준다. 플레이 피드백(판정 문구)은 유지. */
+@media (prefers-reduced-motion: reduce) {
+    .judgement-text.anim-bounce.show,
+    .combo-text.anim-bounce.show,
+    .countdown-text.anim-bounce.show {
+        animation: none;
+        transform: translate(-50%, -50%) scale(1);
+    }
+}

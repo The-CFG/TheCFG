@@ -817,3 +817,12 @@ const Editor = {
     },
 
 };
+
+// 에디터에서 저장하지 않은 변경사항이 있을 때 새로고침/탭 닫기를 한 번 막는다(브라우저 기본 확인창).
+// 에디터를 벗어난 뒤에는 isDirty가 남아 있어도 경고하지 않도록 에디터 관련 화면에서만 동작한다.
+window.addEventListener('beforeunload', (e) => {
+    if (!Editor.state || !Editor.state.isDirty) return;
+    if (!['editor', 'editorSong', 'editorHome'].includes(UI.currentScreen)) return;
+    e.preventDefault();
+    e.returnValue = ''; // 일부 브라우저는 returnValue 설정이 있어야 확인창을 띄운다
+});

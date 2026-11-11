@@ -22,7 +22,7 @@
 //     예전 알고리즘으로 계산된 것까지 전부 다시 하려면 false로.
 
 const { createClient } = require('@supabase/supabase-js');
-const Difficulty = require('./difficulty.js');
+const Difficulty = require('../beat/js/core/difficulty.js');
 
 const SUPABASE_URL = 'https://uzokrwwzksgunrcdjlug.supabase.co';
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;

@@ -1252,6 +1252,15 @@ const Game = {
         }
     },
 
+    // 탭/앱 전환·화면 잠금 등으로 페이지가 숨겨질 때 자동 일시정지 (main.js의 visibilitychange에서 호출).
+    // 멀티플레이는 다른 참가자와 동시에 진행 중이라 혼자 멈추면 방 상태와 어긋나므로 제외한다.
+    // 돌아왔을 때는 일시정지 상태 그대로 두고 사용자가 직접 재개한다.
+    autoPauseIfHidden() {
+        if (this.state.isPaused || this.state._multiplayerActive) return;
+        if (this.state.gameState !== 'playing' && this.state.gameState !== 'countdown') return;
+        this.togglePause();
+    },
+
     togglePause() {
         if (this.state.gameState !== 'playing' && this.state.gameState !== 'countdown') return;
         this.state.isPaused = !this.state.isPaused;

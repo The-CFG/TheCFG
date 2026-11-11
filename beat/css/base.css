@@ -397,3 +397,59 @@ img, video {
     vertical-align: -0.125em;
     flex-shrink: 0;
 }
+
+/* ── 키보드 포커스 표시 (접근성) ──
+   :focus-visible이라 마우스/터치로 누를 때는 안 보이고 Tab 키 이동 시에만 보인다.
+   입력창은 각자 focus:ring 스타일이 있고(.focus\:outline-none이 더 우선), 게임 영역은 제외한다. */
+button:focus-visible,
+a:focus-visible,
+summary:focus-visible,
+select:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:not([tabindex="-1"]):focus-visible,
+input[type="checkbox"]:focus-visible,
+input[type="radio"]:focus-visible,
+input[type="range"]:focus-visible {
+    outline: 2px solid var(--tb-accent, #4299e1);
+    outline-offset: 2px;
+}
+#game-area :focus-visible { outline: none; }
+
+
+/* ── 오프라인 배너 (js/core/network-status.js) ── 화면 위쪽 중앙의 작은 알림. 클릭을 가로채지 않는다. */
+.network-banner {
+    position: fixed;
+    /* --announce-h: 상단 공지 배너 높이(assets/announcement.js가 설정, 없으면 0) */
+    top: calc(env(safe-area-inset-top, 0px) + var(--announce-h, 0px) + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9000;
+    max-width: min(92vw, 520px);
+    padding: 8px 14px;
+    border-radius: 9999px;
+    font-size: 0.85rem;
+    line-height: 1.3;
+    text-align: center;
+    color: #fff;
+    background: #b45309;               /* 경고(오프라인) */
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+    pointer-events: none;
+}
+.network-banner--ok { background: #15803d; } /* 복구됨 */
+.network-banner.hidden { display: none; }
+
+/* ── 동작 줄이기 (prefers-reduced-motion) — 게임 영역 밖의 UI ──
+   OS에서 "동작 줄이기"를 켠 사용자는 메뉴/설정/에디터/도움말의 전환·페이드·슬라이드를 거의 즉시로 처리한다.
+   - 시간을 0.01ms로 줄일 뿐 transitionend/animationend 이벤트는 그대로 발생해서 JS 흐름이 깨지지 않는다.
+   - 게임 영역(#game-area)은 제외: 판정 피드백 등 플레이 정보는 game.css에서 따로 처리한다.
+   - 이미 개별로 끈 것(메뉴 버튼 등장, 스피너 등)은 각 파일의 기존 규칙이 그대로 적용된다. */
+@media (prefers-reduced-motion: reduce) {
+    body :not(#game-area, #game-area *),
+    body :not(#game-area, #game-area *)::before,
+    body :not(#game-area, #game-area *)::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}

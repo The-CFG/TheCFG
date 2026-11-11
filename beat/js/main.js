@@ -83,6 +83,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function setupEventListeners() {
+        // 탭 전환/앱 전환/화면 잠금 시 플레이 자동 일시정지.
+        // blur는 쓰지 않는다 — 우측 패널의 YouTube iframe을 클릭하면 창 blur가 발생해 오작동하기 때문.
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) Game.autoPauseIfHidden();
+        });
+
         window.addEventListener('keydown', (e) => {
             if (isListeningForKey) {
                 handleKeyBinding(e);
