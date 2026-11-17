@@ -81,7 +81,7 @@ Object.assign(Editor, {
                 triggerEl.style.top = `${yPosition}px`;
                 
                 triggerEl.dataset.time = trigger.time;
-                triggerEl.title = `클릭: 수정 / 우클릭: 삭제\nBPM: ${trigger.bpm}, 하강: ${trigger.fallSpeed}, 전환: ${((trigger.transitionMs ?? 700) / 1000).toFixed(1)}s`;
+                triggerEl.title = I18n.t("j_click_edit_right_click_delete", {a: trigger.bpm, b: trigger.fallSpeed, c: ((trigger.transitionMs ?? 700) / 1000).toFixed(1)});
                 
                 // 좌클릭 — 이 트리거를 수정하는 모달을 연다 (배치 클릭이 아래로 전파되는 것도 막는다).
                 // 우클릭(컨텍스트 메뉴) — 삭제. 도구와 무관하게 항상 동작한다.

@@ -99,13 +99,13 @@ const YouTubeSource = {
             if (!document.querySelector('script[src*="youtube.com/iframe_api"]')) {
                 const s = document.createElement('script');
                 s.src = 'https://www.youtube.com/iframe_api';
-                s.onerror = () => reject(new Error('YouTube IFrame API 로드 실패'));
+                s.onerror = () => reject(new Error(I18n.t("j_failed_to_load_the_youtube")));
                 document.head.appendChild(s);
             }
             const t0 = Date.now();
             const poll = setInterval(() => {
                 if (window.YT && window.YT.Player) { clearInterval(poll); resolve(); }
-                else if (Date.now() - t0 > 15000) { clearInterval(poll); reject(new Error('YouTube IFrame API 타임아웃')); }
+                else if (Date.now() - t0 > 15000) { clearInterval(poll); reject(new Error(I18n.t("j_youtube_iframe_api_timed_out"))); }
             }, 200);
         });
         this._apiPromise.catch(() => { this._apiPromise = null; });
@@ -299,16 +299,16 @@ const YouTubeSource = {
 
     _onError(code) {
         const reasons = {
-            2: '잘못된 영상 ID', 5: 'HTML5 플레이어 오류', 100: '삭제되었거나 비공개인 영상',
-            101: '임베드가 금지되었거나 이 지역에서 재생할 수 없는 영상', 150: '임베드가 금지되었거나 이 지역에서 재생할 수 없는 영상',
-            153: 'Referer 없음(file:// 로 열었거나 Referrer-Policy 확인)'
+            2: I18n.t("j_invalid_video_id"), 5: I18n.t("j_html5_player_error"), 100: I18n.t("j_video_was_deleted_or_is"),
+            101: I18n.t("j_embedding_is_disabled_or_the"), 150: I18n.t("j_embedding_is_disabled_or_the"),
+            153: I18n.t("j_no_referer_opened_via_file")
         };
-        this._fail(code, reasons[code] || ('YouTube 오류 ' + code));
+        this._fail(code, reasons[code] || (I18n.t("j_youtube_error", {a: code})));
     },
     _fail(ytCode, message) {
         // unavailable: 영상 자체를 쓸 수 없는 경우(삭제/비공개/임베드 금지/지역 차단) — UI에서 "영상 사용 불가"로 표시
         const unavailable = [100, 101, 150].includes(ytCode);
-        this.error = { code: 4, message: unavailable ? '영상 사용 불가: ' + message : message, ytCode, unavailable };
+        this.error = { code: 4, message: unavailable ? I18n.t("j_video_unavailable", {a: message}) : message, ytCode, unavailable };
         this._wantPlay = false;
         this._playing = false;
         this._flushPlayWaiters(false);

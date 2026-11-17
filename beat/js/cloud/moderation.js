@@ -5,10 +5,11 @@
  */
 const CloudModeration = {
     REASONS: {
-        copyright: '저작권 침해',
-        inappropriate: '부적절한 콘텐츠',
-        spam: '스팸/도배',
-        other: '기타',
+        // 사용 시점에 번역되도록 getter로 정의 (키 이름은 서버에 저장되는 사유 코드)
+        get copyright() { return I18n.t("j_copyright_infringement"); },
+        get inappropriate() { return I18n.t("j_inappropriate_content"); },
+        get spam() { return I18n.t("j_spam_flooding"); },
+        get other() { return I18n.t("j_other"); },
     },
     _modCache: { uid: null, value: false },
 
@@ -25,18 +26,18 @@ const CloudModeration = {
 
     _errMsg(error) {
         const m = (error && (error.message || '')) || '';
-        if (error && error.code === '23505') return '이미 접수된 신고입니다. 처리될 때까지 기다려 주세요.';
-        if (/too many reports/i.test(m)) return '하루에 접수할 수 있는 신고 수를 넘었습니다.';
-        if (/song not found/i.test(m)) return '대상 곡을 찾을 수 없습니다.';
-        if (/forbidden/i.test(m) || (error && error.code === '42501')) return '권한이 없습니다.';
-        return m || '요청에 실패했습니다.';
+        if (error && error.code === '23505') return I18n.t("j_this_has_already_been_reported");
+        if (/too many reports/i.test(m)) return I18n.t("j_you_have_reached_the_daily");
+        if (/song not found/i.test(m)) return I18n.t("j_could_not_find_the_target");
+        if (/forbidden/i.test(m) || (error && error.code === '42501')) return I18n.t("j_you_don_t_have_permission");
+        return m || I18n.t("j_the_request_failed");
     },
 
     // 신고 접수. 반환: { ok, error }
     async reportSong({ songId, chartId = null, reason, detail = '' }) {
         const user = await CloudAuth.getUser();
-        if (!user) return { ok: false, error: '신고하려면 로그인이 필요합니다.' };
-        if (!this.REASONS[reason]) return { ok: false, error: '신고 사유를 선택해 주세요.' };
+        if (!user) return { ok: false, error: I18n.t("j_you_need_to_log_in_2") };
+        if (!this.REASONS[reason]) return { ok: false, error: I18n.t("j_please_select_a_reason_for") };
         const { error } = await _supabase.from('beat_reports').insert({
             song_id: songId,
             chart_id: chartId,

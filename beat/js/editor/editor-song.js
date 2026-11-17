@@ -19,7 +19,7 @@ const EditorSong = {
     // "새 노래 만들기" — 에디터 홈의 "+ 새 노래 만들기" 버튼에서 호출.
     newSong() {
         if (Editor.state.beatmaps.length > 0 &&
-            !confirm('현재 작업 중인 노래가 있습니다. 새 노래를 만들면 저장하지 않은 내용은 사라집니다. 계속할까요?')) {
+            !confirm(I18n.t("j_you_are_currently_working_on_2"))) {
             return;
         }
         Editor.resetSongState();
@@ -50,12 +50,12 @@ const EditorSong = {
         if (DOM.editorSong.audioNameEl) {
             DOM.editorSong.audioNameEl.textContent = song.audioFileObject
                 ? song.audioFileName
-                : (song.audioUrl ? `${song.audioFileName || '원본 음악'} (서버에서 자동 로드됨)` : '선택된 파일 없음');
+                : (song.audioUrl ? I18n.t("j_auto_loaded_from_the_server", {a: song.audioFileName || I18n.t("j_original_music")}) : I18n.t("b_no_file_selected"));
         }
         if (DOM.editorSong.coverNameEl) {
             DOM.editorSong.coverNameEl.textContent = song.coverFileObject
                 ? song.coverFileName
-                : (song.coverUrl ? `${song.coverFileName || '커버 이미지'} (서버에서 자동 로드됨)` : '선택된 파일 없음 (선택)');
+                : (song.coverUrl ? I18n.t("j_auto_loaded_from_the_server", {a: song.coverFileName || I18n.t("j_cover_image")}) : I18n.t("b_no_file_selected_optional"));
         }
         if (DOM.editorSong.previewStartInput) {
             DOM.editorSong.previewStartInput.value = song.previewStartSec || 0;
@@ -67,15 +67,15 @@ const EditorSong = {
             DOM.editorSong.timingStartInput.value = song.timingStartSec || 0;
         }
         if (DOM.editorSong.titleHeading) {
-            DOM.editorSong.titleHeading.textContent = song.title ? song.title : '종합 창';
+            DOM.editorSong.titleHeading.textContent = song.title ? song.title : I18n.t("b_overview_window_2");
         }
         if (DOM.editorSong.cloudStatusEl) {
             if (!song.cloudSongId) {
-                DOM.editorSong.cloudStatusEl.textContent = '아직 서버에 저장되지 않음';
+                DOM.editorSong.cloudStatusEl.textContent = I18n.t("b_not_saved_to_the_server");
             } else if (song.isPublic) {
-                DOM.editorSong.cloudStatusEl.replaceChildren(Icon.el('globe'), ' 라이브러리에 공개됨');
+                DOM.editorSong.cloudStatusEl.replaceChildren(Icon.el('globe'), I18n.t("j_published_to_library"));
             } else {
-                DOM.editorSong.cloudStatusEl.replaceChildren(Icon.el('lock'), ' 서버에 비공개로 저장됨');
+                DOM.editorSong.cloudStatusEl.replaceChildren(Icon.el('lock'), I18n.t("j_saved_privately_on_the_server"));
             }
         }
 
@@ -100,7 +100,7 @@ const EditorSong = {
         if (Editor.state.beatmaps.length === 0) {
             const empty = document.createElement('p');
             empty.className = 'text-gray-400 text-sm text-center mt-4';
-            empty.textContent = '난이도가 없습니다. "+ 새 난이도 추가"로 만들어보세요.';
+            empty.textContent = I18n.t("j_no_difficulties_yet_create_one");
             container.appendChild(empty);
             return;
         }
@@ -121,31 +121,31 @@ const EditorSong = {
             label.className = 'font-semibold truncate';
             label.textContent = `${bm.difficultyLabel || '기본'}`;
             if (bm.cloudChartId) {
-                if (bm._cloudDirty) label.append(' ', Icon.el('cloud'), '·수정됨');
+                if (bm._cloudDirty) label.append(' ', Icon.el('cloud'), I18n.t("j_modified"));
                 else label.append(' ', Icon.el(Editor.state.song.isPublic ? 'globe' : 'lock'));
             }
             const meta = document.createElement('p');
             meta.className = 'text-xs text-gray-400';
-            const noteCountLabel = bm._loaded === false ? '노트 —' : `노트 ${(bm.notes || []).length}개`;
-            meta.textContent = `${bm.laneCount || 4}레인 · BPM ${bm.bpm || 120} · ${noteCountLabel}`;
+            const noteCountLabel = bm._loaded === false ? I18n.t("j_notes") : I18n.t("j_notes_2", {a: (bm.notes || []).length});
+            meta.textContent = I18n.t("j_lanes_bpm", {a: bm.laneCount || 4, b: bm.bpm || 120, c: noteCountLabel});
             info.append(label, meta);
 
             if (bm.updatedAt) {
                 const updated = document.createElement('p');
                 updated.className = 'text-xs text-gray-500';
-                updated.textContent = `최근 수정: ${this._formatUpdatedAt(bm.updatedAt)}`;
+                updated.textContent = I18n.t("j_last_modified", {a: this._formatUpdatedAt(bm.updatedAt)});
                 info.append(updated);
             }
 
             const btns = document.createElement('div');
             btns.className = 'flex gap-1 flex-shrink-0';
             const readOnly = this._isReadOnly();
-            btns.appendChild(this._makeBtn(readOnly ? '보기' : '편집', 'bg-teal-600 hover:bg-teal-500', () => this.editBeatmap(i)));
+            btns.appendChild(this._makeBtn(readOnly ? I18n.t("j_view") : I18n.t("b_edit"), 'bg-teal-600 hover:bg-teal-500', () => this.editBeatmap(i)));
             if (!readOnly) {
                 btns.append(
-                    this._makeBtn('복제', 'bg-gray-600 hover:bg-gray-500', () => this.duplicateBeatmap(i)),
-                    this._makeBtn('이름변경', 'bg-gray-600 hover:bg-gray-500', () => this.renameBeatmap(i)),
-                    this._makeBtn('삭제', 'bg-red-700 hover:bg-red-600', () => this.deleteBeatmap(i)),
+                    this._makeBtn(I18n.t("j_duplicate"), 'bg-gray-600 hover:bg-gray-500', () => this.duplicateBeatmap(i)),
+                    this._makeBtn(I18n.t("j_rename"), 'bg-gray-600 hover:bg-gray-500', () => this.renameBeatmap(i)),
+                    this._makeBtn(I18n.t("b_delete"), 'bg-red-700 hover:bg-red-600', () => this.deleteBeatmap(i)),
                 );
             }
 
@@ -160,8 +160,8 @@ const EditorSong = {
         const handle = document.createElement('div');
         handle.className = 'drag-handle flex-shrink-0 self-stretch flex items-center px-1 -ml-1 cursor-grab text-gray-500 hover:text-gray-300';
         handle.draggable = true;
-        handle.setAttribute('aria-label', '난이도 순서 변경 핸들');
-        handle.title = '끌어서 순서 변경';
+        handle.setAttribute('aria-label', I18n.t("j_difficulty_reorder_handle"));
+        handle.title = I18n.t("j_drag_to_reorder");
         handle.innerHTML = `
             <svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                 <circle cx="2" cy="2" r="1.5"/><circle cx="8" cy="2" r="1.5"/>
@@ -258,7 +258,7 @@ const EditorSong = {
     // ── 난이도 카드 액션 ──────────────────────────────────────────────
     addBeatmap() {
         if (this._isReadOnly()) return; // 뷰어 방어(버튼은 이미 disabled지만 다른 경로 호출 대비)
-        const label = prompt('새 난이도 이름을 입력하세요.', `난이도 ${Editor.state.beatmaps.length + 1}`);
+        const label = prompt(I18n.t("j_enter_a_name_for_the"), I18n.t("j_difficulty", {a: Editor.state.beatmaps.length + 1}));
         if (label === null) return; // 취소
         const bm = Editor.createDefaultBeatmap(label.trim() || '기본');
         Editor.state.beatmaps.push(bm);
@@ -269,7 +269,7 @@ const EditorSong = {
         if (this._isReadOnly()) return;
         const bm = Editor.state.beatmaps[index];
         if (!bm) return;
-        const label = prompt('난이도 이름을 입력하세요.', bm.difficultyLabel || '');
+        const label = prompt(I18n.t("j_enter_a_difficulty_name"), bm.difficultyLabel || '');
         if (label === null) return;
         bm.difficultyLabel = label.trim() || '기본';
         if (bm.cloudChartId) bm._cloudDirty = true; // 이미 올라간 난이도면 다음 업로드 시 메타를 다시 보내야 함
@@ -289,7 +289,7 @@ const EditorSong = {
         copy.cloudChartId = null;
         copy.updatedAt = null;
         copy._loaded = true;
-        copy.difficultyLabel = `${bm.difficultyLabel || '기본'} 사본`;
+        copy.difficultyLabel = I18n.t("j_copy", {a: bm.difficultyLabel || '기본'});
         Editor.state.beatmaps.splice(index + 1, 0, copy);
         this.render();
     },
@@ -299,13 +299,13 @@ const EditorSong = {
         const bm = Editor.state.beatmaps[index];
         if (!bm) return;
         if (Editor.state.beatmaps.length <= 1) {
-            UI.showMessage('editorSong', '난이도는 최소 1개 이상 있어야 합니다.');
+            UI.showMessage('editorSong', I18n.t("j_there_must_be_at_least"));
             return;
         }
         const cloudNote = bm.cloudChartId
-            ? '\n(이 난이도는 클라우드에도 올라가 있습니다. 목록에서만 제거되며 클라우드 데이터는 남습니다.)'
+            ? I18n.t("j_this_difficulty_is_also_on")
             : '';
-        if (!confirm(`"${bm.difficultyLabel || '기본'}" 난이도를 삭제할까요? 되돌릴 수 없습니다.${cloudNote}`)) return;
+        if (!confirm(I18n.t("j_delete_the_difficulty_this_cannot", {a: bm.difficultyLabel || '기본', b: cloudNote}))) return;
         Editor.state.beatmaps.splice(index, 1);
         if (Editor.state.activeBeatmapIndex >= Editor.state.beatmaps.length) {
             Editor.state.activeBeatmapIndex = Editor.state.beatmaps.length - 1;
@@ -335,7 +335,7 @@ const EditorSong = {
     onTitleInput(value) {
         Editor.state.song.title = value;
         if (DOM.editorSong.titleHeading) {
-            DOM.editorSong.titleHeading.textContent = value ? value : '종합 창';
+            DOM.editorSong.titleHeading.textContent = value ? value : I18n.t("b_overview_window_2");
         }
     },
 
@@ -432,14 +432,14 @@ const EditorSong = {
         if (d.termsCheck) d.termsCheck.checked = !!song.termsVersion;
         if (src === 'youtube') {
             if (song.youtubeId && song.ytDurationMs) {
-                this._setYtStatus(`✔ 영상 ${song.youtubeId} · 길이 ${this._formatDuration(song.ytDurationMs)}`);
+                this._setYtStatus(I18n.t("j_video_length", {a: song.youtubeId, b: this._formatDuration(song.ytDurationMs)}));
             } else if (song.youtubeId) {
-                this._setYtStatus('아직 확인되지 않았습니다. "확인"을 눌러주세요.');
+                this._setYtStatus(I18n.t("j_not_verified_yet_press_verify"));
             } else {
                 this._setYtStatus('');
             }
         }
-        if (d.ytPreviewBtn) d.ytPreviewBtn.textContent = this._ytPreviewing ? '■ 정지' : '▶ 미리듣기';
+        if (d.ytPreviewBtn) d.ytPreviewBtn.textContent = this._ytPreviewing ? I18n.t("j_stop") : I18n.t("b_preview");
     },
 
     onSourceChange(value) {
@@ -475,9 +475,9 @@ const EditorSong = {
             this._ytVerifiedId = null;
         }
         if (!value.trim()) this._setYtStatus('');
-        else if (!id) this._setYtStatus('올바른 YouTube 링크 또는 영상 ID가 아닙니다.', true);
-        else if (Editor.state.song.cloudSongId && id !== Editor.state.song.savedYoutubeId) this._setYtStatus('"확인"을 눌러 영상을 검증하세요. 영상을 바꾸면 오프셋도 새 영상에 맞게 다시 조정해야 합니다.');
-        else this._setYtStatus('"확인"을 눌러 영상을 검증해주세요.');
+        else if (!id) this._setYtStatus(I18n.t("j_not_a_valid_youtube_link"), true);
+        else if (Editor.state.song.cloudSongId && id !== Editor.state.song.savedYoutubeId) this._setYtStatus(I18n.t("j_press_verify_to_check_the"));
+        else this._setYtStatus(I18n.t("j_press_verify_to_check_the_2"));
     },
 
     onYtOffsetInput(value) {
@@ -497,11 +497,11 @@ const EditorSong = {
         if (this._isReadOnly()) return;
         const song = Editor.state.song;
         const id = song.youtubeId;
-        if (!id) { this._setYtStatus('올바른 YouTube 링크 또는 영상 ID가 아닙니다.', true); return; }
+        if (!id) { this._setYtStatus(I18n.t("j_not_a_valid_youtube_link"), true); return; }
 
         const btn = DOM.editorSong.ytCheckBtn;
         if (btn) btn.disabled = true;
-        this._setYtStatus('영상 확인 중…');
+        this._setYtStatus(I18n.t("j_checking_video"));
         try {
             // ① oEmbed — 404: 없는/비공개 영상, 401/403: 임베드 불가
             let info = null;
@@ -512,8 +512,8 @@ const EditorSong = {
                     `https://www.youtube.com/oembed?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${id}`)}&format=json`,
                     { signal: ctrl.signal });
                 clearTimeout(timer);
-                if (res.status === 404) throw new Error('영상을 찾을 수 없습니다 (삭제됨/비공개).');
-                if (res.status === 401 || res.status === 403) throw new Error('이 영상은 임베드가 허용되지 않아 사용할 수 없습니다.');
+                if (res.status === 404) throw new Error(I18n.t("j_couldn_t_find_the_video"));
+                if (res.status === 401 || res.status === 403) throw new Error(I18n.t("j_this_video_can_t_be"));
                 if (res.ok) info = await res.json();
             } catch (err) {
                 if (err.name !== 'AbortError' && /영상/.test(err.message)) throw err;
@@ -522,7 +522,7 @@ const EditorSong = {
             if (id !== song.youtubeId) return; // 확인 중 입력이 바뀜
 
             // ② 재생기로 로드해서 길이를 얻는다 (좌측 하단에 플레이어가 잠깐 보인다)
-            this._setYtStatus('영상 길이 확인 중…');
+            this._setYtStatus(I18n.t("j_checking_video_length"));
             const durationMs = await this._probeYoutubeDuration(id);
             if (id !== song.youtubeId) return;
 
@@ -535,11 +535,11 @@ const EditorSong = {
                 if (DOM.editorSong.titleInput) DOM.editorSong.titleInput.value = info.title;
                 if (DOM.editorSong.titleHeading) DOM.editorSong.titleHeading.textContent = info.title;
             }
-            this._setYtStatus(`✔ ${info?.title ? info.title + ' · ' : ''}길이 ${this._formatDuration(durationMs)}`);
+            this._setYtStatus(I18n.t("j_length", {a: info?.title ? info.title + ' · ' : '', b: this._formatDuration(durationMs)}));
         } catch (err) {
             this._ytVerifiedId = null;
             song.ytDurationMs = null;
-            this._setYtStatus(err.message || '영상을 확인하지 못했습니다.', true);
+            this._setYtStatus(err.message || I18n.t("j_couldn_t_verify_the_video"), true);
         } finally {
             if (btn) btn.disabled = false;
         }
@@ -560,8 +560,8 @@ const EditorSong = {
                 try { player.pause(); } catch (e) { /* 무시 */ }
                 fn(val);
             };
-            const onErr = () => finish(reject, new Error(player.error?.message || '영상을 재생할 수 없습니다 (삭제/임베드 금지/지역 차단).'));
-            const timer = setTimeout(() => finish(reject, new Error('영상 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.')), 12000);
+            const onErr = () => finish(reject, new Error(player.error?.message || I18n.t("j_the_video_can_t_be")));
+            const timer = setTimeout(() => finish(reject, new Error(I18n.t("j_couldn_t_load_video_info"))), 12000);
             player.addEventListener('error', onErr);
             player.onloadedmetadata = () => {
                 const ms = Math.round((player.duration || 0) * 1000);
@@ -575,28 +575,28 @@ const EditorSong = {
     async toggleYtPreview() {
         const song = Editor.state.song;
         if (this._ytPreviewing) { this.stopYtPreview(); return; }
-        if (!song.youtubeId) { this._setYtStatus('먼저 YouTube 링크를 입력해주세요.', true); return; }
+        if (!song.youtubeId) { this._setYtStatus(I18n.t("j_please_enter_a_youtube_link"), true); return; }
         try {
             DOM.musicPlayer.ytOffsetMs = song.ytOffsetMs || 0;
             if (DOM.musicPlayer.src !== `yt:${song.youtubeId}`) {
                 DOM.musicPlayer.src = `yt:${song.youtubeId}`;
             }
             const ready = await DOM.musicPlayer.whenReady();
-            if (!ready) throw new Error('영상을 재생할 수 없습니다.');
+            if (!ready) throw new Error(I18n.t("j_the_video_can_t_be_2"));
             DOM.musicPlayer.currentTime = 0; // 곡 시간 0초 = 영상 오프셋 지점
             await DOM.musicPlayer.play();
             this._ytPreviewing = true;
         } catch (err) {
             this._ytPreviewing = false;
-            this._setYtStatus(err.message || '미리듣기에 실패했습니다.', true);
+            this._setYtStatus(err.message || I18n.t("j_preview_failed"), true);
         }
-        if (DOM.editorSong.ytPreviewBtn) DOM.editorSong.ytPreviewBtn.textContent = this._ytPreviewing ? '■ 정지' : '▶ 미리듣기';
+        if (DOM.editorSong.ytPreviewBtn) DOM.editorSong.ytPreviewBtn.textContent = this._ytPreviewing ? I18n.t("j_stop") : I18n.t("b_preview");
     },
 
     stopYtPreview() {
         if (this._ytPreviewing) { try { DOM.musicPlayer.pause(); } catch (e) { /* 무시 */ } }
         this._ytPreviewing = false;
-        if (DOM.editorSong.ytPreviewBtn) DOM.editorSong.ytPreviewBtn.textContent = '▶ 미리듣기';
+        if (DOM.editorSong.ytPreviewBtn) DOM.editorSong.ytPreviewBtn.textContent = I18n.t("b_preview");
     },
 
     // local 곡의 파일 검증용 해시(SHA-256 hex). 실패하면 null.
@@ -633,7 +633,7 @@ const EditorSong = {
     async saveLocal() {
         try {
             if (Editor.state.beatmaps.length === 0) {
-                UI.showMessage('editorSong', '저장할 난이도가 없습니다.');
+                UI.showMessage('editorSong', I18n.t("j_there_is_no_difficulty_to"));
                 return;
             }
             const unloaded = Editor.state.beatmaps.filter(bm => bm._loaded === false);
@@ -656,7 +656,7 @@ const EditorSong = {
             a.remove();
         } catch (err) {
             Debugger.logError(err, 'EditorSong.saveLocal');
-            UI.showMessage('editorSong', `저장 실패: ${err.message}`);
+            UI.showMessage('editorSong', I18n.t("j_save_failed", {a: err.message}));
         }
     },
 
@@ -667,7 +667,7 @@ const EditorSong = {
         const files = Array.from(fileList || []);
         if (files.length === 0) return;
         if (Editor.state.beatmaps.length > 0 &&
-            !confirm('현재 작업 중인 노래가 있습니다. 불러오면 저장하지 않은 내용은 사라집니다. 계속할까요?')) {
+            !confirm(I18n.t("j_you_are_currently_working_on_3"))) {
             return;
         }
 
@@ -677,10 +677,10 @@ const EditorSong = {
                 try {
                     resolve({ file, raw: JSON.parse(e.target.result) });
                 } catch (err) {
-                    reject(new Error(`${file.name}: JSON 해석 실패`));
+                    reject(new Error(I18n.t("j_failed_to_parse_json", {a: file.name})));
                 }
             };
-            reader.onerror = () => reject(new Error(`${file.name}: 파일을 읽을 수 없습니다.`));
+            reader.onerror = () => reject(new Error(I18n.t("j_couldn_t_read_the_file_2", {a: file.name})));
             reader.readAsText(file);
         });
 
@@ -693,7 +693,7 @@ const EditorSong = {
 
             results.forEach((result) => {
                 if (result.status !== 'fulfilled') {
-                    failed.push(result.reason?.message || '알 수 없는 오류');
+                    failed.push(result.reason?.message || I18n.t("j_unknown_error"));
                     return;
                 }
                 const { file, raw } = result.value;
@@ -719,11 +719,11 @@ const EditorSong = {
             this.render();
 
             if (totalBeatmaps === 0) {
-                UI.showMessage('editorSong', `불러오기 실패: ${failed.join(', ') || '유효한 난이도가 없습니다.'}`);
+                UI.showMessage('editorSong', I18n.t("j_failed_to_load", {a: failed.join(', ') || I18n.t("j_no_valid_difficulties")}));
                 return;
             }
-            const suffix = failed.length > 0 ? ` (실패 ${failed.length}개: ${failed.join(', ')})` : '';
-            UI.showMessage('editorSong', `파일 ${files.length}개에서 난이도 ${totalBeatmaps}개를 불러왔습니다. 오디오는 따로 선택해주세요.${suffix}`);
+            const suffix = failed.length > 0 ? I18n.t("j_failed", {a: failed.length, b: failed.join(', ')}) : '';
+            UI.showMessage('editorSong', I18n.t("j_loaded_difficulties_from_files_select", {a: files.length, b: totalBeatmaps, c: suffix}));
         });
     },
 
@@ -746,15 +746,12 @@ const EditorSong = {
     // 문구는 그대로 써도 무방하다.
     _handleSaveConflict() {
         const reload = confirm(
-            '다른 곳에서 이 사이 먼저 저장했습니다.\n' +
-            '지금 저장하면 그 변경사항을 덮어쓰게 됩니다.\n\n' +
-            '확인: 최신 내용을 새로 불러옵니다 (지금 화면의 변경사항은 사라집니다)\n' +
-            '취소: 아무것도 하지 않습니다 (필요하면 직접 백업 후 다시 시도해주세요)'
+            I18n.t("j_someone_else_saved_in_the_2")
         );
         if (reload) {
             Editor.reloadFromCloud();
         } else {
-            UI.showMessage('editorSong', '저장하지 않았습니다. 최신 내용을 불러오려면 다시 시도해주세요.');
+            UI.showMessage('editorSong', I18n.t("j_not_saved_please_try_again"));
         }
     },
 
@@ -763,11 +760,11 @@ const EditorSong = {
         try {
             const user = await CloudAuth.getUser();
             if (!user) {
-                UI.showMessage('editorSong', '로그인이 필요합니다. 우측 상단 계정 아이콘을 클릭해주세요.');
+                UI.showMessage('editorSong', I18n.t("j_you_need_to_log_in_3"));
                 return;
             }
             if (!(Editor.state.song.title || '').trim()) {
-                UI.showMessage('editorSong', '노래 제목을 입력해주세요.');
+                UI.showMessage('editorSong', I18n.t("j_please_enter_a_song_title"));
                 return;
             }
             const isNewSong = !Editor.state.song.cloudSongId;
@@ -781,45 +778,45 @@ const EditorSong = {
                 : [];
             const srcType = Editor.state.song.sourceType || 'hosted';
             if (isNewSong && srcType === 'youtube' && !Editor.state.song.youtubeId) {
-                UI.showMessage('editorSong', '먼저 YouTube 링크를 입력해주세요.');
+                UI.showMessage('editorSong', I18n.t("j_please_enter_a_youtube_link"));
                 return;
             }
             // 저장된 곡의 영상 링크/오프셋 변경 감지 (난이도 변경이 없어도 노래 메타로 저장해야 한다)
             const ytLinkChanged = !isNewSong && srcType === 'youtube' && Editor.state.song.youtubeId !== Editor.state.song.savedYoutubeId;
             const ytDirty = ytLinkChanged || (!isNewSong && srcType === 'youtube' && (Editor.state.song.ytOffsetMs || 0) !== (Editor.state.song.savedYtOffsetMs || 0));
             if (ytLinkChanged && !Editor.state.song.youtubeId) {
-                UI.showMessage('editorSong', 'YouTube 링크를 입력해주세요.');
+                UI.showMessage('editorSong', I18n.t("j_please_enter_a_youtube_link_2"));
                 return;
             }
             if (ytLinkChanged && this._ytVerifiedId !== Editor.state.song.youtubeId) {
-                UI.showMessage('editorSong', '바뀐 YouTube 링크를 "확인"해서 영상이 사용 가능한지 검증해주세요.');
+                UI.showMessage('editorSong', I18n.t("j_please_verify_the_changed_youtube"));
                 return;
             }
             if (isNewSong && srcType === 'youtube' && this._ytVerifiedId !== Editor.state.song.youtubeId) {
-                UI.showMessage('editorSong', 'YouTube 링크를 "확인"해서 영상이 사용 가능한지 검증해주세요.');
+                UI.showMessage('editorSong', I18n.t("j_please_verify_the_youtube_link"));
                 return;
             }
             if (isNewSong && srcType !== 'youtube' && !Editor.state.song.audioFileObject) {
                 // hosted/local — 편집·해시 계산에 오디오 파일이 필요 (local은 서버에 올리지 않음)
-                UI.showMessage('editorSong', '먼저 오디오 파일을 선택해주세요.');
+                UI.showMessage('editorSong', I18n.t("j_please_choose_an_audio_file"));
                 return;
             }
             if (isNewSong && srcType === 'hosted' && !(Editor.state.song.originalDeclared && Editor.state.song.termsVersion)) {
-                UI.showMessage('editorSong', '서버 업로드는 창작곡 선언과 약관 동의가 필요합니다. 상용곡은 YouTube 링크를 사용해주세요.');
+                UI.showMessage('editorSong', I18n.t("j_uploading_to_the_server_requires"));
                 return;
             }
             // 난이도 변경사항이 없어도, 이미 클라우드에 있는 노래라면 제목/가수/미리듣기 시작 시각이
             // 바뀌었을 수 있으니 아래로 계속 진행해서 노래 메타는 항상 갱신한다.
             const noBeatmapChanges = pendingBeatmaps.length === 0 && dirtyBeatmaps.length === 0 && publicSyncBeatmaps.length === 0;
             if (noBeatmapChanges && !isNewSong && !publicStateChanged && !ytDirty) {
-                UI.showMessage('editorSong', '이미 모든 난이도가 클라우드와 동기화되어 있습니다.');
+                UI.showMessage('editorSong', I18n.t("j_all_difficulties_are_already_in"));
                 return;
             }
 
             const busyBtns = [DOM.editorSong.uploadCloudBtn, DOM.editorSong.saveDraftBtn].filter(Boolean);
             const activeBtn = publish ? DOM.editorSong.uploadCloudBtn : DOM.editorSong.saveDraftBtn;
             busyBtns.forEach(btn => { btn.disabled = true; });
-            if (activeBtn) activeBtn.innerHTML = UI.loadingInlineHtml(publish ? '공개 업로드 중…' : '저장 중…');
+            if (activeBtn) activeBtn.innerHTML = UI.loadingInlineHtml(publish ? I18n.t("j_uploading_publicly") : I18n.t("j_saving"));
 
             // 1) 노래 자체가 아직 클라우드에 없으면 먼저 생성
             const previewStartMs = Math.round((Editor.state.song.previewStartSec || 0) * 1000);
@@ -844,7 +841,7 @@ const EditorSong = {
                     Editor.state.song.coverFileObject
                 );
                 if (error) {
-                    UI.showMessage('editorSong', `노래 업로드 실패: ${error.message}`);
+                    UI.showMessage('editorSong', I18n.t("j_failed_to_upload_song", {a: error.message}));
                     return;
                 }
                 Editor.state.song.cloudSongId = data.id;
@@ -871,7 +868,7 @@ const EditorSong = {
                     return;
                 }
                 if (metaErr) {
-                    UI.showMessage('editorSong', `노래 정보 갱신 실패: ${metaErr.message}`);
+                    UI.showMessage('editorSong', I18n.t("j_failed_to_update_song_info", {a: metaErr.message}));
                     return;
                 }
                 // 성공 시 스냅샷 갱신 — 이어서 아래 난이도들을 저장할 때, 그리고 같은 세션에서
@@ -985,32 +982,32 @@ const EditorSong = {
             if (failure) {
                 // 실패 전에 일부는 성공했을 수 있으니 진행 상황도 같이 알려준다.
                 const progressParts = [];
-                if (addedCount > 0) progressParts.push(`신규 ${addedCount}개`);
-                if (updatedCount > 0) progressParts.push(`수정 ${updatedCount}개`);
-                if (publicSyncedCount > 0) progressParts.push(`공개상태 갱신 ${publicSyncedCount}개`);
-                const progressNote = progressParts.length > 0 ? ` (이전에 ${progressParts.join(', ')} 성공)` : '';
-                UI.showMessage('editorSong', `"${failure.label}" 저장 실패: ${failure.message}${progressNote}`);
+                if (addedCount > 0) progressParts.push(I18n.t("j_new", {a: addedCount}));
+                if (updatedCount > 0) progressParts.push(I18n.t("j_updated", {a: updatedCount}));
+                if (publicSyncedCount > 0) progressParts.push(I18n.t("j_visibility_updated", {a: publicSyncedCount}));
+                const progressNote = progressParts.length > 0 ? I18n.t("j_earlier_succeeded", {a: progressParts.join(', ')}) : '';
+                UI.showMessage('editorSong', I18n.t("j_failed_to_save", {a: failure.label, b: failure.message, c: progressNote}));
             } else if (publish) {
                 const parts = [];
-                if (addedCount > 0) parts.push(`신규 ${addedCount}개`);
-                if (updatedCount > 0) parts.push(`수정 ${updatedCount}개`);
+                if (addedCount > 0) parts.push(I18n.t("j_new", {a: addedCount}));
+                if (updatedCount > 0) parts.push(I18n.t("j_updated", {a: updatedCount}));
                 UI.showMessage('editorSong', parts.length > 0
-                    ? `라이브러리에 공개했습니다. (${parts.join(', ')})`
-                    : '라이브러리에 공개했습니다.');
+                    ? I18n.t("j_published_to_the_library", {a: parts.join(', ')})
+                    : I18n.t("j_published_to_the_library_2"));
             } else {
-                UI.showMessage('editorSong', '서버에 비공개로 저장했습니다. 라이브러리에는 노출되지 않으며, "에디터 홈"에서 다시 열어 이어서 작업하거나 나중에 공개할 수 있습니다.');
+                UI.showMessage('editorSong', I18n.t("j_saved_privately_on_the_server_2"));
             }
         } catch (err) {
             Debugger.logError(err, 'EditorSong.uploadToCloud');
-            UI.showMessage('editorSong', `저장 중 오류: ${err.message}`);
+            UI.showMessage('editorSong', I18n.t("j_error_while_saving", {a: err.message}));
         } finally {
             if (DOM.editorSong.uploadCloudBtn) {
                 DOM.editorSong.uploadCloudBtn.disabled = false;
-                DOM.editorSong.uploadCloudBtn.replaceChildren(Icon.el('globe'), ' 라이브러리에 공개');
+                DOM.editorSong.uploadCloudBtn.replaceChildren(Icon.el('globe'), I18n.t("j_publish_to_library"));
             }
             if (DOM.editorSong.saveDraftBtn) {
                 DOM.editorSong.saveDraftBtn.disabled = false;
-                DOM.editorSong.saveDraftBtn.replaceChildren(Icon.el('lock'), ' 서버에 저장 (비공개)');
+                DOM.editorSong.saveDraftBtn.replaceChildren(Icon.el('lock'), I18n.t("j_save_to_server_private"));
             }
         }
     },

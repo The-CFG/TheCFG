@@ -65,19 +65,19 @@ function _inboxEmptyHtml(text) {
 
 // 카드 하나(초대 1건) 렌더링
 function _inboxInviteCardHtml(inv) {
-    const roleLabel = inv.role === 'editor' ? `${Icon.html('pencil')} 편집자` : `${Icon.html('eye')} 뷰어`;
-    const songLabel = inv.song_title ? _inboxEsc(inv.song_title) : '(제목 없음)';
+    const roleLabel = inv.role === 'editor' ? I18n.t("j_editor_2", {a: Icon.html('pencil')}) : I18n.t("j_viewer_2", {a: Icon.html('eye')});
+    const songLabel = inv.song_title ? _inboxEsc(inv.song_title) : I18n.t("j_untitled");
     const artistLabel = inv.song_artist ? `<span class="text-gray-400 font-normal"> — ${_inboxEsc(inv.song_artist)}</span>` : '';
     const ownerLabel = inv.owner_id
         ? CloudAuth.linkedName(inv.owner_id, inv.owner_nickname || `${inv.owner_id.slice(0, 8)}…`, _inboxEsc)
-        : '알 수 없음';
+        : I18n.t("j_unknown_2");
     return `
         <div class="bg-gray-700/60 rounded-lg p-3" data-invite-id="${_inboxEsc(inv.id)}">
             <p class="text-sm text-white font-semibold truncate">${Icon.html('handshake')} ${songLabel}${artistLabel}</p>
-            <p class="text-xs text-gray-400 mt-0.5">소유자: ${ownerLabel} · ${roleLabel}로 초대</p>
+            <p class="text-xs text-gray-400 mt-0.5">${I18n.t("j_owner_invited_as", {a: ownerLabel, b: roleLabel})}</p>
             <div class="flex gap-2 mt-2">
-                <button type="button" class="inbox-accept-btn flex-1 py-1.5 bg-teal-600 hover:bg-teal-500 rounded text-xs font-semibold text-white transition">수락</button>
-                <button type="button" class="inbox-decline-btn flex-1 py-1.5 bg-gray-600 hover:bg-gray-500 rounded text-xs font-semibold text-white transition">거절</button>
+                <button type="button" class="inbox-accept-btn flex-1 py-1.5 bg-teal-600 hover:bg-teal-500 rounded text-xs font-semibold text-white transition">${I18n.t("j_accept")}</button>
+                <button type="button" class="inbox-decline-btn flex-1 py-1.5 bg-gray-600 hover:bg-gray-500 rounded text-xs font-semibold text-white transition">${I18n.t("j_decline")}</button>
             </div>
         </div>`;
 }
@@ -91,7 +91,7 @@ async function _handleInviteAction(btn, action) {
     const body = card.parentElement;
     const isAccept = action === 'accept';
     btn.disabled = true;
-    btn.textContent = '처리 중...';
+    btn.textContent = I18n.t("j_processing");
 
     try {
         if (isAccept) await CloudCharts.acceptInvite(inviteId);
@@ -100,12 +100,12 @@ async function _handleInviteAction(btn, action) {
         card.remove();
         await Inbox.refreshBadge();
         if (body && !body.querySelector('[data-invite-id]')) {
-            body.innerHTML = _inboxEmptyHtml('새 알림이 없습니다.');
+            body.innerHTML = _inboxEmptyHtml(I18n.t("j_no_new_notifications"));
         }
     } catch (err) {
-        alert((isAccept ? '초대 수락 오류: ' : '초대 거절 오류: ') + (err?.message || '알 수 없는 오류'));
+        alert((isAccept ? I18n.t("j_error_accepting_invite") : I18n.t("j_error_declining_invite")) + (err?.message || I18n.t("j_unknown_error")));
         btn.disabled = false;
-        btn.textContent = isAccept ? '수락' : '거절';
+        btn.textContent = isAccept ? I18n.t("j_accept") : I18n.t("j_decline");
     }
 }
 
@@ -120,10 +120,10 @@ async function _openInboxPopover() {
     pop.className = 'absolute right-0 mt-2 w-80 max-w-[90vw] bg-gray-800 border border-gray-600 rounded-lg shadow-xl z-50';
     pop.innerHTML = `
         <div class="px-3 py-2.5 border-b border-gray-700">
-            <span class="text-sm font-bold text-white">${Icon.html('inbox')} 알림함</span>
+            <span class="text-sm font-bold text-white">${I18n.t("j_inbox", {a: Icon.html('inbox')})}</span>
         </div>
         <div id="inbox-list-body" class="max-h-80 overflow-y-auto p-2 space-y-2">
-            ${_inboxEmptyHtml('불러오는 중...')}
+            ${_inboxEmptyHtml(I18n.t("j_loading"))}
         </div>`;
     wrap.appendChild(pop);
 
@@ -134,10 +134,10 @@ async function _openInboxPopover() {
     if (!body) return;
 
     const user = await CloudAuth.getUser();
-    if (!user) { body.innerHTML = _inboxEmptyHtml('로그인 후 알림을 확인할 수 있습니다.'); return; }
+    if (!user) { body.innerHTML = _inboxEmptyHtml(I18n.t("j_log_in_to_see_your")); return; }
 
     const invites = await Inbox._fetchInvites();
-    if (invites.length === 0) { body.innerHTML = _inboxEmptyHtml('새 알림이 없습니다.'); return; }
+    if (invites.length === 0) { body.innerHTML = _inboxEmptyHtml(I18n.t("j_no_new_notifications")); return; }
 
     body.innerHTML = invites.map(_inboxInviteCardHtml).join('');
     body.querySelectorAll('.inbox-accept-btn').forEach(btn =>

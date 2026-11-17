@@ -73,7 +73,7 @@ const CloudAuth = {
     // RPC 함수가 없는 경우에도 사용자 데이터(projects/project_files)는 정리하고 로그아웃합니다.
     async deleteAccount() {
         const user = await this.getUser();
-        if (!user) throw new Error('로그인 상태가 아닙니다.');
+        if (!user) throw new Error(I18n.t("j_you_re_not_logged_in"));
 
         // 1) 사용자 데이터 정리 (프로젝트 / 파일 / Storage)
         try {
@@ -373,23 +373,23 @@ const CloudAuth = {
     async inviteMember(ownerUserId, projectName, identifier, role = 'editor') {
         const user = await this.getUser();
         if (!user || user.id !== ownerUserId)
-            return { ok: false, error: '소유자만 초대할 수 있습니다.' };
+            return { ok: false, error: I18n.t("j_only_the_owner_can_invite") };
 
         const trimmed = (identifier || '').trim();
-        if (!trimmed) return { ok: false, error: '이메일 또는 아이디를 입력해주세요.' };
+        if (!trimmed) return { ok: false, error: I18n.t("j_please_enter_an_email_or") };
 
         let invitedEmail = null;
         let invitedUserId = null;
 
         if (trimmed.includes('@')) {
-            if (trimmed === user.email) return { ok: false, error: '본인은 초대할 수 없습니다.' };
+            if (trimmed === user.email) return { ok: false, error: I18n.t("j_you_can_t_invite_yourself") };
             invitedEmail = trimmed;
         } else {
             const { data: targetUserId, error: lookupError } = await _supabase
                 .rpc('get_user_id_by_handle', { p_handle: trimmed });
             if (lookupError) return { ok: false, error: lookupError.message };
-            if (!targetUserId) return { ok: false, error: `"${trimmed}" 아이디를 가진 사용자를 찾을 수 없습니다.` };
-            if (targetUserId === user.id) return { ok: false, error: '본인은 초대할 수 없습니다.' };
+            if (!targetUserId) return { ok: false, error: I18n.t("j_no_user_found_with_the", {a: trimmed}) };
+            if (targetUserId === user.id) return { ok: false, error: I18n.t("j_you_can_t_invite_yourself") };
             invitedUserId = targetUserId;
         }
 
@@ -509,7 +509,7 @@ const CloudAuth = {
         const nickMap = idTargets.length ? await this._fetchNicknameMap(idTargets) : {};
         return invites.map(inv => ({
             ...inv,
-            invited_label: inv.invited_email || nickMap[inv.invited_user_id] || '(알 수 없음)',
+            invited_label: inv.invited_email || nickMap[inv.invited_user_id] || I18n.t("j_unknown"),
         }));
     },
 
@@ -597,14 +597,14 @@ const CloudAuth = {
 
         const report = (pct, detail) => onProgress?.(Math.round(pct), detail);
 
-        report(0, '프로젝트 메타 저장 중...');
+        report(0, I18n.t("j_saving_project_metadata"));
         await this._saveProjectMeta(user.id, projectName);
 
         const rows       = [];
         const imgUploads = []; // { filePath, fd, storagePath }
 
         // ── 1. 텍스트 파일 행 수집 + 이미지 PNG 변환 ────────
-        report(2, '이미지 변환 중...');
+        report(2, I18n.t("j_converting_images"));
         const imgEntries = Object.entries(files).filter(([, fd]) =>
             fd && (fd.type === 'dds' || fd.type === 'image') && fd.base64
         );
@@ -640,7 +640,7 @@ const CloudAuth = {
         for (let i = 0; i < imgEntries.length; i += PARA) {
             const batch = imgEntries.slice(i, i + PARA);
             report(2 + (i / imgEntries.length) * 13,
-                `이미지 변환 중... (${i + 1}–${Math.min(i + PARA, imgEntries.length)} / ${imgEntries.length})`);
+                I18n.t("j_converting_images_2", {a: i + 1, b: Math.min(i + PARA, imgEntries.length), c: imgEntries.length}));
             await Promise.all(batch.map(async ([filePath, fd], bi) => {
                 const ext = filePath.split('.').pop().toLowerCase();
                 let finalBase64 = fd.base64; // 기본값: 원본 그대로
@@ -705,7 +705,7 @@ const CloudAuth = {
         for (let i = 0; i < rows.length; i += CHUNK) {
             const chunk = rows.slice(i, i + CHUNK);
             report(15 + (done / total) * 70,
-                `텍스트 저장 중... (${Math.min(i + CHUNK, rows.length)} / ${rows.length})`);
+                I18n.t("j_saving_text", {a: Math.min(i + CHUNK, rows.length), b: rows.length}));
             const { error } = await _supabase
                 .from('project_files')
                 .upsert(chunk, { onConflict: 'user_id,project_name,file_path' });
@@ -718,7 +718,7 @@ const CloudAuth = {
         for (let i = 0; i < imgUploads.length; i += PARA) {
             const batch = imgUploads.slice(i, i + PARA);
             report(15 + (done / total) * 70,
-                `이미지 업로드 중... (${i + 1}–${Math.min(i + PARA, imgUploads.length)} / ${imgUploads.length})`);
+                I18n.t("j_uploading_images", {a: i + 1, b: Math.min(i + PARA, imgUploads.length), c: imgUploads.length}));
             await Promise.all(batch.map(async ({ filePath, storagePath, base64, type }) => {
                 try {
                     const b64clean = base64.replace(/^data:[^;]+;base64,/, '');
@@ -751,7 +751,7 @@ const CloudAuth = {
             done += batch.length;
         }
 
-        report(100, '저장 완료!');
+        report(100, I18n.t("j_save_complete"));
     },
 
     // ── 프로젝트 파일 목록만 조회 (지연 로딩용) ─────────────
@@ -946,7 +946,7 @@ const CloudAuth = {
 
         const report = (pct, detail) => onProgress?.(Math.round(pct), detail);
 
-        report(5, '파일 목록 조회 중...');
+        report(5, I18n.t("j_fetching_file_list"));
         const { data, error } = await _supabase
             .from('project_files')
             .select('file_path, file_type, content, storage_path')
@@ -965,7 +965,7 @@ const CloudAuth = {
         // 텍스트 파일 복원
         for (const row of textRows) {
             const { file_path, file_type, content } = row;
-            report(10 + (done / total) * 70, `텍스트 파일 복원 중... ${file_path.split('/').pop()}`);
+            report(10 + (done / total) * 70, I18n.t("j_restoring_text_files", {a: file_path.split('/').pop()}));
             if (file_type === 'national_focus' || file_type === 'localisation'
                 || file_type === 'gfx_define'  || file_type === 'gui'
                 || file_type === 'ideas'
@@ -985,7 +985,7 @@ const CloudAuth = {
         for (let i = 0; i < imgRows.length; i += PARA) {
             const batch = imgRows.slice(i, i + PARA);
             report(10 + (done / total) * 70,
-                `이미지 다운로드 중... (${i + 1}–${Math.min(i + PARA, imgRows.length)} / ${imgRows.length})`);
+                I18n.t("j_downloading_images", {a: i + 1, b: Math.min(i + PARA, imgRows.length), c: imgRows.length}));
             await Promise.all(batch.map(async ({ file_path, file_type, storage_path }) => {
                 try {
                     const { data: blob, error: dlErr } = await _supabase.storage
@@ -1008,7 +1008,7 @@ const CloudAuth = {
             done += batch.length;
         }
 
-        report(100, '불러오기 완료!');
+        report(100, I18n.t("j_load_complete"));
         return { name: projectName, files };
     },
 
@@ -1082,7 +1082,7 @@ const CloudAuth = {
     // targetUserId: 공유 프로젝트 편집자가 소유자 파일을 덮어쓸 때 소유자 ID 전달
     async saveOneFile(projectName, filePath, fd, targetUserId = null) {
         const user = await this.getUser();
-        if (!user) throw new Error('로그인이 필요합니다.');
+        if (!user) throw new Error(I18n.t("j_you_need_to_log_in"));
         const ownerId = targetUserId || user.id;
 
         const isImage = fd.type === 'dds' || fd.type === 'image';
@@ -1183,8 +1183,8 @@ function _updateAuthStatus(user) {
     const btn = document.getElementById('account-icon-menu');
     if (!btn) return;
     btn.classList.toggle('is-logged-in', !!user);
-    btn.title = user ? `${user.email} (클릭하여 계정 메뉴 열기)` : '로그인';
-    btn.setAttribute('aria-label', user ? '계정 메뉴' : '로그인');
+    btn.title = user ? I18n.t("j_click_to_open_the_account", {a: user.email}) : I18n.t("b_log_in");
+    btn.setAttribute('aria-label', user ? I18n.t("j_account_menu") : I18n.t("b_log_in"));
 }
 
 // ── 계정 팝오버 ──────────────────────────────────────────
@@ -1207,17 +1207,17 @@ async function _openAccountPopover(user) {
     const wrap = document.getElementById('account-icon-wrap');
     if (!wrap) return;
 
-    const nickname = user.user_metadata?.display_name || '(닉네임 미설정)';
+    const nickname = user.user_metadata?.display_name || I18n.t("j_no_nickname_set");
     await CloudAuth._fetchNicknameMap([user.id]); // 핸들 캐시 warm-up (프로필 링크용)
     const pop = document.createElement('div');
     pop.id = 'account-popover';
     pop.className = 'account-popover';
     pop.innerHTML = `
-        <p class="account-popover-nickname">현재 계정: ${CloudAuth.linkedName(user.id, nickname, escapeHtml)}</p>
+        <p class="account-popover-nickname">${I18n.t("j_current_account", {a: CloudAuth.linkedName(user.id, nickname, escapeHtml)})}</p>
         <p class="account-popover-email">${escapeHtml(user.email || '')}</p>
         <hr class="account-popover-divider">
-        <a href="/accounts?from=beat" class="account-popover-link">계정 설정</a>
-        <button type="button" id="account-popover-logout" class="account-popover-btn">로그아웃</button>
+        <a href="/accounts?from=beat" class="account-popover-link">${I18n.t("j_account_settings")}</a>
+        <button type="button" id="account-popover-logout" class="account-popover-btn">${I18n.t("j_log_out")}</button>
     `;
     wrap.appendChild(pop);
 
@@ -1268,7 +1268,7 @@ function setupAuthUI() {
             // 성공 시 Discord로 리다이렉트되므로 이후 로직은 실행되지 않는다.
         } catch (err) {
             console.error('디스코드 로그인 오류:', err);
-            alert('디스코드 로그인 오류: ' + (err?.message || '알 수 없는 오류'));
+            alert(I18n.t("j_discord_login_error", {a: err?.message || I18n.t("j_unknown_error")}));
             discordBtn.disabled = false;
         }
     });
@@ -1283,9 +1283,9 @@ function setupAuthUI() {
                 : await _openAccountPopover(user);
         } else {
             isSignUpMode = false;
-            if (title)      title.textContent     = '서버 로그인';
-            if (executeBtn) executeBtn.textContent = '로그인';
-            if (switchBtn)  switchBtn.textContent  = '계정이 없으신가요? 회원가입';
+            if (title)      title.textContent     = I18n.t("b_server_log_in");
+            if (executeBtn) executeBtn.textContent = I18n.t("b_log_in");
+            if (switchBtn)  switchBtn.textContent  = I18n.t("b_don_t_have_an_account");
             _openModal();
         }
     });
@@ -1296,11 +1296,11 @@ function setupAuthUI() {
     // 로그인 ↔ 회원가입 전환
     switchBtn?.addEventListener('click', () => {
         isSignUpMode = !isSignUpMode;
-        if (title)      title.textContent     = isSignUpMode ? '서버 계정 생성' : '서버 로그인';
-        if (executeBtn) executeBtn.textContent = isSignUpMode ? '가입하기'       : '로그인';
+        if (title)      title.textContent     = isSignUpMode ? I18n.t("j_create_server_account") : I18n.t("b_server_log_in");
+        if (executeBtn) executeBtn.textContent = isSignUpMode ? I18n.t("j_sign_up")       : I18n.t("b_log_in");
         if (switchBtn)  switchBtn.textContent  = isSignUpMode
-            ? '이미 계정이 있나요? 로그인'
-            : '계정이 없으신가요? 회원가입';
+            ? I18n.t("j_already_have_an_account_log")
+            : I18n.t("b_don_t_have_an_account");
     });
 
     // 실행 (로그인 / 회원가입)
@@ -1311,10 +1311,10 @@ function setupAuthUI() {
         e.preventDefault();
         const email = document.getElementById('auth-email')?.value?.trim();
         const pw    = document.getElementById('auth-password')?.value;
-        if (!email || !pw) { alert('이메일과 비밀번호를 입력해주세요.'); return; }
+        if (!email || !pw) { alert(I18n.t("j_please_enter_your_email_and")); return; }
 
         executeBtn.disabled    = true;
-        executeBtn.textContent = '처리 중...';
+        executeBtn.textContent = I18n.t("j_processing");
 
         try {
             const { data, error } = isSignUpMode
@@ -1326,15 +1326,15 @@ function setupAuthUI() {
             if (isSignUpMode) {
                 if (data?.session) {
                     _updateAuthStatus(data.session.user);
-                    alert('회원가입 및 로그인 완료!');
+                    alert(I18n.t("j_signed_up_and_logged_in"));
                     _closeModal();
                     if (typeof renderRecentList === 'function') renderRecentList();
                 } else {
-                    alert('가입 신청 완료!\nSupabase 대시보드에서 이메일 인증을 비활성화하면 바로 로그인할 수 있습니다.');
+                    alert(I18n.t("j_sign_up_submitted_disable_email"));
                 }
             } else {
                 _updateAuthStatus(data.user);
-                alert('로그인 완료! 서버 동기화가 활성화됩니다.');
+                alert(I18n.t("j_logged_in_server_sync_is"));
                 _closeModal();
                 if (typeof renderRecentList === 'function') renderRecentList();  // 클라우드 프로젝트 목록 즉시 갱신(hoi4 전용)
             }
@@ -1346,25 +1346,19 @@ function setupAuthUI() {
 
             if (msg?.includes('Email not confirmed')) {
                 alert(
-                    '이메일 인증이 필요합니다.\n\n해결 방법:\n' +
-                    '① Supabase 대시보드 → Authentication → Providers → Email → "Confirm email" 비활성화\n' +
-                    '② 또는 가입 시 받은 인증 메일에서 링크 클릭 후 다시 로그인'
+                    I18n.t("j_email_confirmation_is_required_how")
                 );
             } else if (msg) {
-                alert('인증 오류: ' + msg);
+                alert(I18n.t("j_authentication_error", {a: msg}));
             } else {
                 // 필드에 담기지 않는 네트워크/CORS 레벨 오류 등
                 alert(
-                    '인증 오류: 서버에 연결하지 못했습니다.\n\n' +
-                    '가능한 원인:\n' +
-                    '① 인터넷 연결 또는 방화벽/광고 차단기가 Supabase 요청을 막고 있음\n' +
-                    '② Supabase 프로젝트가 일시 중지(pause)되었거나 URL/API 키가 잘못됨\n\n' +
-                    '(콘솔에 원본 에러가 출력되었습니다)'
+                    I18n.t("j_authentication_error_couldn_t_connect")
                 );
             }
         } finally {
             executeBtn.disabled    = false;
-            executeBtn.textContent = isSignUpMode ? '가입하기' : '로그인';
+            executeBtn.textContent = isSignUpMode ? I18n.t("j_sign_up") : I18n.t("b_log_in");
         }
     });
 

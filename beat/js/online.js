@@ -40,22 +40,22 @@ const Online = {
         const myTabHtml = this._pickMode ? '' : `
                 <button id="online-tab-my" class="flex-1 py-2 rounded-lg text-sm font-semibold transition
                     ${this._subView === 'my' ? 'bg-teal-600' : 'bg-gray-700 hover:bg-gray-600'}">
-                    내 차트
+                    ${I18n.t("j_my_charts")}
                 </button>`;
         el.innerHTML = `
         <div class="flex flex-col h-full text-white">
-            ${this._pickMode ? `<p class="mb-3 text-xs text-teal-400 flex-shrink-0">${this._pickMode === 'queue' ? '대기열에 추가할 채보를 골라주세요.' : '멀티플레이 방을 만들 채보를 골라주세요.'}</p>` : ''}
+            ${this._pickMode ? `<p class="mb-3 text-xs text-teal-400 flex-shrink-0">${this._pickMode === 'queue' ? I18n.t("j_pick_a_chart_to_add") : I18n.t("j_pick_a_chart_to_create")}</p>` : ''}
             <div class="flex items-center space-x-2 mb-4 flex-shrink-0">
                 <button id="online-tab-browse" class="flex-1 py-2 rounded-lg text-sm font-semibold transition
                     ${this._subView !== 'my' ? 'bg-teal-600' : 'bg-gray-700 hover:bg-gray-600'}">
-                    공개 라이브러리
+                    ${I18n.t("j_public_library")}
                 </button>
                 ${myTabHtml}
                 <button id="online-back-btn" class="py-2 px-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm flex-shrink-0">
-                    ${this._pickMode === 'queue' ? '← 대기실' : (this._pickMode ? '← 멀티플레이' : '← 메뉴')}
+                    ${this._pickMode === 'queue' ? I18n.t("j_lobby") : (this._pickMode ? I18n.t("j_multiplayer_2") : I18n.t("j_menu"))}
                 </button>
                 <button id="settings-icon-online" type="button"
-                    class="p-2 rounded-full hover:bg-gray-600 transition flex-shrink-0" title="환경설정" aria-label="환경설정">
+                    class="p-2 rounded-full hover:bg-gray-600 transition flex-shrink-0" title="${I18n.t("j_settings")}" aria-label="${I18n.t("j_settings")}">
                     <svg class="icon h-6 w-6 text-gray-300" aria-hidden="true"><use href="/assets/icons.svg#i-settings"/></svg>
                 </button>
             </div>
@@ -70,8 +70,8 @@ const Online = {
             b.id = 'online-mod-btn';
             b.className = 'py-2 px-3 bg-red-800 hover:bg-red-700 rounded-lg text-sm flex-shrink-0';
             b.innerHTML = '<svg class="icon" aria-hidden="true"><use href="/assets/icons.svg#i-shield"/></svg>';
-            b.setAttribute('aria-label', '신고 관리');
-            b.title = '신고 관리';
+            b.setAttribute('aria-label', I18n.t("j_report_management_3"));
+            b.title = I18n.t("j_report_management_3");
             b.addEventListener('click', () => ModerationUI.openPanel());
             back.parentNode.insertBefore(b, back);
         });
@@ -134,7 +134,7 @@ const Online = {
         const gradFaint = `linear-gradient(90deg, ${this._rgba(colorMin, 0.13)}, ${this._rgba(colorMax, 0.13)})`;
 
         return `
-        <span class="inline-flex items-center gap-1 ${sizeCls} flex-shrink-0" title="공개 난이도 별점 범위 (최저~최고, 채보 지표 기반)">
+        <span class="inline-flex items-center gap-1 ${sizeCls} flex-shrink-0" title="${I18n.t("j_public_difficulty_star_range_lowest")}">
             <span class="font-mono font-bold px-1.5 py-0.5 rounded" style="background:${gradFaint}; border:1px solid ${this._rgba(colorMax, 0.4)};">
                 <span style="background:${gradSolid}; -webkit-background-clip:text; background-clip:text; color:transparent;">[ ★ ${minRating.toFixed(2)}-${maxRating.toFixed(2)} ]</span>
             </span>
@@ -179,7 +179,7 @@ const Online = {
         const s = this._browseState;
         if (reset) s.page = 0;
         this._setContent(UI.listSkeletonHtml());
-        UI.showAreaLoading('online', '라이브러리 불러오는 중…');
+        UI.showAreaLoading('online', I18n.t("j_loading_library"));
         const seq = ++this._loadSeq;
 
         const { data, error, count } = await CloudBrowse.listPublicSongs({
@@ -202,20 +202,20 @@ const Online = {
         const s = this._browseState;
         const items = this._browseCache;
         const cards = items.length === 0
-            ? '<p class="text-gray-400 text-sm mt-8 text-center">차트가 없습니다.</p>'
+            ? I18n.t("j_no_charts")
             : items.map(c => this._chartCard(c)).join('');
 
         this._setContent(`
         <div class="flex space-x-2 mb-4">
-            <input id="online-search" type="text" placeholder="제목 / 아티스트 검색…" value="${_esc(s.search)}"
+            <input id="online-search" type="text" placeholder="${I18n.t("j_search_title_artist_2")}" value="${_esc(s.search)}"
                 class="flex-1 p-2 bg-gray-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-teal-500">
             <select id="online-sort" class="px-2 py-2 bg-gray-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-teal-500">
-                <option value="newest" ${s.sort === 'newest' ? 'selected' : ''}>최신순</option>
-                <option value="popular" ${s.sort === 'popular' ? 'selected' : ''}>인기순</option>
-                <option value="likes" ${s.sort === 'likes' ? 'selected' : ''}>좋아요순</option>
-                <option value="difficulty" ${s.sort === 'difficulty' ? 'selected' : ''}>난이도순</option>
+                <option value="newest" ${s.sort === 'newest' ? 'selected' : ''}>${I18n.t("j_newest")}</option>
+                <option value="popular" ${s.sort === 'popular' ? 'selected' : ''}>${I18n.t("j_popular")}</option>
+                <option value="likes" ${s.sort === 'likes' ? 'selected' : ''}>${I18n.t("j_most_liked")}</option>
+                <option value="difficulty" ${s.sort === 'difficulty' ? 'selected' : ''}>${I18n.t("j_by_difficulty")}</option>
             </select>
-            <button id="online-search-btn" class="px-3 py-2 bg-teal-600 hover:bg-teal-500 rounded-lg text-sm">검색</button>
+            <button id="online-search-btn" class="px-3 py-2 bg-teal-600 hover:bg-teal-500 rounded-lg text-sm">${I18n.t("j_search")}</button>
         </div>
         <div id="browse-list" class="space-y-2">${cards}</div>
         ${this._paginationHtml()}
@@ -306,7 +306,7 @@ const Online = {
         let lastLaneCount = null;
         beatmaps.forEach(({ laneCount, score }) => {
             if (laneCount !== lastLaneCount) {
-                html += `<span class="font-mono font-bold" style="${labelStyle}background:#4b5563;color:#e5e7eb;" title="${laneCount}키">${laneCount}키</span>`;
+                html += `<span class="font-mono font-bold" style="${labelStyle}background:#4b5563;color:#e5e7eb;" title="${I18n.t("j_keys", {a: laneCount})}">${I18n.t("j_keys", {a: laneCount})}</span>`;
                 lastLaneCount = laneCount;
             }
             const rating = Difficulty.toRating(score);
@@ -314,7 +314,7 @@ const Online = {
             const intRating = Math.round(rating);
             html += `<span class="font-mono font-bold" style="${cubeStyle}background:${this._rgba(color, 1)};color:#000;" title="★ ${rating.toFixed(2)}">${intRating}</span>`;
         });
-        return `<span class="inline-flex flex-wrap justify-end items-center gap-0.5 max-w-[152px]" title="공개 난이도 목록 (레인 수별, 낮은 별점순)">${html}</span>`;
+        return `<span class="inline-flex flex-wrap justify-end items-center gap-0.5 max-w-[152px]" title="${I18n.t("j_public_difficulty_list_by_lane")}">${html}</span>`;
     },
 
     // 노래 카드: 난이도 개수 / 레인 수 범위 / 총 플레이 수 요약만 보여준다.
@@ -324,7 +324,7 @@ const Online = {
         const nickMap = this._browseNickMap || {};
         const names = (s.creatorIds || []).map(id => nickMap[id] || `${id.slice(0, 8)}…`);
         const creatorLine = names.length === 0 ? ''
-            : `채보: ${names.slice(0, 2).map(_esc).join(', ')}${names.length > 2 ? ` 외 ${names.length - 2}명` : ''}`;
+            : I18n.t("j_chart_3", {a: names.slice(0, 2).map(_esc).join(', '), b: names.length > 2 ? I18n.t("j_and_more", {a: names.length - 2}) : ''});
 
         // 커버 사진이 있으면 카드 오른쪽에 은은하게 걸리도록 배경으로 깐다.
         // 왼쪽(제목/아티스트 텍스트 자리)은 카드 배경색(bg-gray-800 = #1f2937)으로
@@ -362,7 +362,7 @@ const Online = {
     async _showSongDetail(songId) {
         this._currentSongId = songId;
         this._setContent(UI.staticSkeletonHtml());
-        UI.showAreaLoading('online', '노래 정보 불러오는 중…');
+        UI.showAreaLoading('online', I18n.t("j_loading_song_info_2"));
         const seq = ++this._loadSeq;
 
         const { data, error } = await CloudBrowse.getSongDetail(songId);
@@ -380,17 +380,17 @@ const Online = {
         const { data: likeInfo } = await CloudLikes.getLikeInfo(beatmaps.map(bm => bm.id));
         if (seq !== this._loadSeq) return;
         const cards = beatmaps.length === 0
-            ? '<p class="text-gray-400 text-sm text-center mt-8">등록된 난이도가 없습니다.</p>'
+            ? I18n.t("j_no_difficulties_registered")
             : beatmaps.map(bm => this._beatmapCard(bm, nickMap, likeInfo || {})).join('');
 
         this._setContent(`
-        <button id="song-back-btn" class="mb-3 text-sm text-gray-400 hover:text-white transition">← 목록으로</button>
+        <button id="song-back-btn" class="mb-3 text-sm text-gray-400 hover:text-white transition">${I18n.t("j_back_to_list")}</button>
         <div class="p-4 bg-gray-800 rounded-lg mb-4">
             <h2 class="text-xl font-bold text-white truncate">${_esc(song.title)}</h2>
             <p class="text-gray-400 truncate">${_esc(song.artist || '—')}</p>
             ${_formatDateLine(song.created_at, song.updated_at) ? `<p class="text-xs text-gray-500 mt-1">${_formatDateLine(song.created_at, song.updated_at)}</p>` : ''}
         </div>
-        <h3 class="text-sm font-semibold text-gray-300 mb-2">난이도 선택</h3>
+        <h3 class="text-sm font-semibold text-gray-300 mb-2">${I18n.t("j_select_difficulty")}</h3>
         <div class="space-y-2">${cards}</div>
         `);
 
@@ -417,7 +417,7 @@ const Online = {
         const previewAudioUrl = CloudCharts.getHostedAudioUrl(song)
             || (song.source_type === 'youtube' ? CloudCharts.getSongAudioSrc(song) : null);
         if (previewAudioUrl) {
-            UI.showAreaLoading('preview', '노래 불러오는 중…');
+            UI.showAreaLoading('preview', I18n.t("j_loading_song"));
             const stopTracking = UI.trackAudioDownloadProgress('preview');
             SongPreview.playAudio(previewAudioUrl, song.preview_start_ms || 0, song.yt_offset_ms || 0)
                 .catch(() => {}) // 실패(제스처 대기 타임아웃 등)해도 아래 정리는 항상 수행 — 여기선 결과를 따로 다루지 않음
@@ -429,7 +429,7 @@ const Online = {
     },
 
     _beatmapCard(bm, nickMap = {}, likeInfo = {}) {
-        const laneBadge = `<span class="text-xs px-1.5 py-0.5 bg-gray-600 rounded flex-shrink-0">${bm.lane_count}키</span>`;
+        const laneBadge = `<span class="text-xs px-1.5 py-0.5 bg-gray-600 rounded flex-shrink-0">${I18n.t("j_keys", {a: bm.lane_count})}</span>`;
         const label = bm.difficulty_label ? _esc(bm.difficulty_label) : '기본';
         const creatorName = bm.owner_id
             ? CloudAuth.linkedName(bm.owner_id, nickMap[bm.owner_id] || `${bm.owner_id.slice(0, 8)}…`, _esc)
@@ -447,12 +447,12 @@ const Online = {
                     ${this._starRatingHtml(bm.difficulty_score)}
                 </div>
                 <div class="flex items-center space-x-2 flex-shrink-0 text-xs text-gray-400">
-                    <span>${bm.note_count}노트</span>
+                    <span>${I18n.t("j_notes_3", {a: bm.note_count})}</span>
                     <span>▶ ${bm.play_count}</span>
                     <span>♥ ${likeCount}</span>
                 </div>
             </div>
-            ${creatorName ? `<div class="mt-1 text-xs text-gray-500 truncate">제작자: ${creatorName}</div>` : ''}
+            ${creatorName ? `<div class="mt-1 text-xs text-gray-500 truncate">${I18n.t("j_creator", {a: creatorName})}</div>` : ''}
             ${dateLine ? `<div class="mt-0.5 text-xs text-gray-500 truncate">${dateLine}</div>` : ''}
         </button>`;
     },
@@ -463,7 +463,7 @@ const Online = {
     async _showDetail(chartId) {
         this._currentChartId = chartId;
         this._setContent(UI.staticSkeletonHtml());
-        UI.showAreaLoading('online', '채보 정보 불러오는 중…');
+        UI.showAreaLoading('online', I18n.t("j_loading_chart_info"));
         const seq = ++this._loadSeq;
 
         const [detailRes, lbRes, myRes, currentUser, likeRes] = await Promise.all([
@@ -501,7 +501,7 @@ const Online = {
 
         // 리더보드 행 렌더링
         const lbRows = lb.length === 0
-            ? '<p class="text-gray-500 text-xs text-center py-4">아직 기록이 없습니다.</p>'
+            ? I18n.t("j_no_records_yet")
             : lb.map((s, i) => {
                 const isMe = !!(currentUser && s.user_id === currentUser.id);
                 const displayName = CloudAuth.linkedName(s.user_id, s.nickname || `${s.user_id.slice(0, 8)}…`, _esc);
@@ -514,20 +514,20 @@ const Online = {
                 return `
                 <div class="flex items-center justify-between py-2 px-2 ${rowCls} text-sm ${isMe ? 'text-teal-200' : 'text-gray-300'}">
                     <span class="w-7 text-center font-bold flex-shrink-0">${rankBadge}</span>
-                    <span class="flex-1 px-2 truncate font-medium">${displayName}${isMe ? ' <span class="text-xs text-teal-400 ml-1">(나)</span>' : ''}</span>
+                    <span class="flex-1 px-2 truncate font-medium">${displayName}${isMe ? I18n.t("j_you_5") : ''}</span>
                     <span class="${_rankGradeClass(rank)} font-bold w-6 text-center flex-shrink-0">${rank}</span>
                     <span class="font-mono font-bold w-20 text-right flex-shrink-0">${s.score.toLocaleString()}</span>
                     <span class="text-xs text-gray-500 w-12 text-right flex-shrink-0">${acc}%</span>
-                    <span class="text-xs text-gray-500 w-14 text-right flex-shrink-0">${s.max_combo}콤보</span>
+                    <span class="text-xs text-gray-500 w-14 text-right flex-shrink-0">${I18n.t("j_combo", {a: s.max_combo})}</span>
                 </div>`;
             }).join('');
 
         // 내 기록 패널
         let myPanel = '';
         if (!currentUser) {
-            myPanel = `<p class="mt-3 text-xs text-gray-500 text-center">로그인 후 플레이하면 기록이 등록됩니다.</p>`;
+            myPanel = `<p class="mt-3 text-xs text-gray-500 text-center">${I18n.t("j_play_while_logged_in_to")}</p>`;
         } else if (myScore) {
-            const rankTxt = myRank ? `${myRank}위` : `TOP ${lb.length} 밖`;
+            const rankTxt = myRank ? I18n.t("j_text", {a: myRank}) : I18n.t("j_outside_top", {a: lb.length});
             const myGrade = UI.rankFromJudgements(myScore.judge_perfect, myScore.judge_good, myScore.judge_bad, myScore.judge_miss);
             const p = myScore.judge_perfect || 0;
             const g = myScore.judge_good    || 0;
@@ -536,56 +536,56 @@ const Online = {
             myPanel = `
             <div class="mt-3 p-3 bg-teal-950 border border-teal-700 rounded-lg">
                 <div class="flex justify-between items-center text-sm text-teal-200">
-                    <span class="font-semibold">내 최고 기록 <span class="text-xs text-teal-400">(${rankTxt})</span></span>
+                    <span class="font-semibold">${I18n.t("j_my_best_record")} <span class="text-xs text-teal-400">(${rankTxt})</span></span>
                     <span class="flex items-center gap-2">
                         <span class="${_rankGradeClass(myGrade)} font-bold text-base">${myGrade}</span>
                         <span class="font-mono font-bold text-base">${myScore.score.toLocaleString()}</span>
                     </span>
                 </div>
                 <div class="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 text-xs text-teal-400">
-                    <span>정확도 ${(+(myScore.accuracy) || 0).toFixed(1)}%</span>
-                    <span>최대 콤보 ${myScore.max_combo}</span>
+                    <span>${I18n.t("j_accuracy", {a: (+(myScore.accuracy) || 0).toFixed(1)})}</span>
+                    <span>${I18n.t("j_max_combo", {a: myScore.max_combo})}</span>
                     <span>P ${p} / G ${g} / B ${b} / M ${m}</span>
                 </div>
             </div>`;
         } else {
-            myPanel = `<p class="mt-3 text-xs text-gray-500 text-center">아직 이 차트를 플레이하지 않았습니다.</p>`;
+            myPanel = `<p class="mt-3 text-xs text-gray-500 text-center">${I18n.t("j_you_haven_t_played_this")}</p>`;
         }
 
         this._setContent(`
-        <button id="detail-back-btn" class="mb-3 text-sm text-gray-400 hover:text-white transition">← 난이도 선택으로</button>
+        <button id="detail-back-btn" class="mb-3 text-sm text-gray-400 hover:text-white transition">${I18n.t("j_back_to_difficulty_select")}</button>
         <div class="p-4 bg-gray-800 rounded-lg mb-3">
             <h2 class="text-xl font-bold text-white truncate">${_esc(c.difficulty_label || '기본')}</h2>
-            <p class="text-gray-400 truncate">${_esc(c.title)}${c.artist ? ` - ${_esc(c.artist)}` : ''}${c.has_ads ? ' <span class="text-xs text-yellow-400 ml-1" title="이 영상은 재생 시 광고가 나온 적이 있습니다">광고 있을 수 있음</span>' : ''}</p>
+            <p class="text-gray-400 truncate">${_esc(c.title)}${c.artist ? ` - ${_esc(c.artist)}` : ''}${c.has_ads ? I18n.t("j_may_have_ads") : ''}</p>
             <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-gray-400">
                 ${this._starRatingHtml(c.difficulty_score, 'text-sm')}
                 ${c.bpm             ? `<span>BPM ${c.bpm}</span>` : ''}
                 ${this._formatDuration(c.duration_seconds) ? `<span>${this._formatDuration(c.duration_seconds)}</span>` : ''}
-                <span>${c.lane_count}키</span>
-                <span>${c.note_count}노트</span>
-                <span>▶ ${c.play_count}회</span>
-                ${creatorName ? `<span>제작자: ${creatorName}</span>` : ''}
+                <span>${I18n.t("j_keys", {a: c.lane_count})}</span>
+                <span>${I18n.t("j_notes_3", {a: c.note_count})}</span>
+                <span>${I18n.t("j_plays", {a: c.play_count})}</span>
+                ${creatorName ? `<span>${I18n.t("j_creator", {a: creatorName})}</span>` : ''}
             </div>
             ${_formatDateLine(c.created_at, c.updated_at) ? `<div class="mt-1 text-xs text-gray-500">${_formatDateLine(c.created_at, c.updated_at)}</div>` : ''}
-            ${c.use_custom_fall_speed ? `<div class="mt-2 px-2 py-1 bg-blue-950 border border-blue-700 rounded text-xs text-blue-300 inline-block">이 비트맵은 전용 하강 속도를 사용합니다.</div>` : ''}
+            ${c.use_custom_fall_speed ? `<div class="mt-2 px-2 py-1 bg-blue-950 border border-blue-700 rounded text-xs text-blue-300 inline-block">${I18n.t("j_this_beatmap_uses_its_own")}</div>` : ''}
         </div>
         <button id="detail-like-btn" data-liked="${like.likedByMe ? '1' : '0'}"
             class="w-full py-2 mb-4 rounded-lg font-semibold transition text-sm
             ${like.likedByMe ? 'bg-pink-700 hover:bg-pink-600 text-white' : 'bg-gray-700 hover:bg-gray-600 text-gray-200'}">
-            <span id="detail-like-icon">${like.likedByMe ? '♥' : '♡'}</span> 좋아요 <span id="detail-like-count">${like.count}</span>
+            <span id="detail-like-icon">${like.likedByMe ? '♥' : '♡'}</span> ${I18n.t("b_like")} <span id="detail-like-count">${like.count}</span>
         </button>
         <button id="detail-play-btn" class="w-full py-3 mb-4 rounded-lg font-bold transition text-lg
             ${this._pickMode === 'queue' ? 'bg-teal-600 hover:bg-teal-500' : (this._pickMode ? 'bg-purple-600 hover:bg-purple-500' : 'bg-blue-600 hover:bg-blue-500')}">
-            ${this._pickMode === 'queue' ? '대기열에 추가' : (this._pickMode ? '이 채보로 방 만들기' : '▶ 플레이')}
+            ${this._pickMode === 'queue' ? I18n.t("j_add_to_queue") : (this._pickMode ? I18n.t("j_create_room_with_this_chart") : I18n.t("j_play"))}
         </button>
         <div class="bg-gray-800 rounded-lg p-3">
-            <h3 class="text-sm font-semibold text-gray-300 mb-2">리더보드 TOP 10</h3>
+            <h3 class="text-sm font-semibold text-gray-300 mb-2">${I18n.t("j_leaderboard_top_10")}</h3>
             <div class="space-y-0.5">${lbRows}</div>
             ${myPanel}
         </div>
         <div class="mt-3 flex justify-end gap-2">
-            <button id="detail-report-btn" class="px-3 py-1 rounded text-xs bg-gray-700 hover:bg-gray-600 text-gray-300">신고</button>
-            <button id="detail-mod-takedown-btn" class="hidden px-3 py-1 rounded text-xs bg-red-700 hover:bg-red-600 text-white">삭제 처리</button>
+            <button id="detail-report-btn" class="px-3 py-1 rounded text-xs bg-gray-700 hover:bg-gray-600 text-gray-300">${I18n.t("j_report_2")}</button>
+            <button id="detail-mod-takedown-btn" class="hidden px-3 py-1 rounded text-xs bg-red-700 hover:bg-red-600 text-white">${I18n.t("j_take_down")}</button>
         </div>
         `);
 
@@ -627,7 +627,7 @@ const Online = {
 
     async _startDetailPreview(c) {
         const seq = this._loadSeq; // _showDetail이 이미 발급해 둔 토큰을 그대로 이어받는다
-        UI.showAreaLoading('preview', '미리보기 불러오는 중…');
+        UI.showAreaLoading('preview', I18n.t("j_loading_preview"));
         // SongPreview.start()/playAudio() 둘 다 결국 DOM.musicPlayer.src = audioUrl로 오디오를
         // 받아오므로, 여기서 실제 다운로드 진행률을 프로그레스 바에 연결해둔다.
         const stopTracking = UI.trackAudioDownloadProgress('preview');
@@ -664,7 +664,7 @@ const Online = {
                 });
             // 이 경우엔 좌측 화면에 노트 미리보기 없이 오디오만 재생되므로, 오버레이에
             // 안내를 계속 남겨둔다 — 다만 로딩이 끝난 확정 상태이므로 스피너는 끈다.
-            UI.showAreaLoading('preview', '노래 미리듣기만 재생 중입니다.', { spinner: false });
+            UI.showAreaLoading('preview', I18n.t("j_only_the_song_preview_is"), { spinner: false });
         }
     },
 
@@ -673,7 +673,7 @@ const Online = {
         SongPreview.stop();
         const btn = document.getElementById('detail-play-btn');
         btn.disabled = true;
-        btn.innerHTML = UI.loadingInlineHtml('방 만드는 중…');
+        btn.innerHTML = UI.loadingInlineHtml(I18n.t("j_creating_room"));
         this._pickMode = false;
         GameBackground.clear();
         await MultiplayerLobby.hostRoom(c);
@@ -686,7 +686,7 @@ const Online = {
         SongPreview.stop();
         const btn = document.getElementById('detail-play-btn');
         btn.disabled = true;
-        btn.innerHTML = UI.loadingInlineHtml('추가하는 중…');
+        btn.innerHTML = UI.loadingInlineHtml(I18n.t("j_adding"));
         this._pickMode = false;
         GameBackground.clear();
         await MultiplayerLobby.addToQueue(c.id);
@@ -709,7 +709,7 @@ const Online = {
             const audioUrl = CloudCharts.getSongAudioSrc(c);
             if (!audioUrl) {
                 // local 곡: 서버에 음원이 없다 — 내 파일로 재생하는 흐름은 아직 연결 전
-                throw new Error('이 곡은 서버에 음원이 없습니다. (직접 파일 재생은 아직 지원되지 않습니다)');
+                throw new Error(I18n.t("j_this_song_has_no_audio_2"));
             }
             // (시계 통일: 영상 오프셋은 MusicPlayer.ytOffsetMs가 흡수하므로 여기서는 더하지 않는다 — 모든 시간은 곡 시간)
 
@@ -730,7 +730,7 @@ const Online = {
             // 넘어간다 — 채보 JSON은 이미 위에서 기다렸으니, 이제 노래까지 확실히 준비된
             // 상태에서만 "플레이"가 시작되게 한다(예전엔 오디오는 카운트다운 4초 동안 몰래
             // 디코딩되길 기대했는데, 느린 회선/큰 파일이면 그 안에 안 끝날 수 있었다).
-            UI.showAreaLoading('startPlay', '노래 불러오는 중…');
+            UI.showAreaLoading('startPlay', I18n.t("j_loading_song"));
             const stopTracking = UI.trackAudioDownloadProgress('startPlay');
             DOM.musicPlayer.expectedDurationMs = c.source_type === 'youtube' ? (c.yt_duration_ms || 0) : 0;
             DOM.musicPlayer.ytOffsetMs = c.source_type === 'youtube' ? (c.yt_offset_ms || 0) : 0;
@@ -738,7 +738,7 @@ const Online = {
             const audioReady = await DOM.musicPlayer.whenReady();
             stopTracking();
             UI.hideAreaLoading('startPlay');
-            if (!audioReady) throw new Error((DOM.musicPlayer.error && DOM.musicPlayer.error.message) || '노래를 불러오지 못했습니다.');
+            if (!audioReady) throw new Error((DOM.musicPlayer.error && DOM.musicPlayer.error.message) || I18n.t("j_couldn_t_load_the_song"));
 
             // Game.start()가 내부에서 UI.showScreen('playing')을 호출하므로 별도 화면 전환은
             // 필요 없다. 예전엔 여기서 UI.showScreen('menu')를 먼저 거쳤는데, showScreen()이
@@ -753,9 +753,9 @@ const Online = {
             }, 100);
         } catch (err) {
             UI.hideAreaLoading('startPlay');
-            alert('플레이 오류: ' + err.message);
+            alert(I18n.t("j_play_error", {a: err.message}));
             btn.disabled = false;
-            btn.textContent = '▶ 플레이';
+            btn.textContent = I18n.t("j_play");
         }
     },
 
@@ -765,7 +765,7 @@ const Online = {
     async _loadMyCharts() {
         GameBackground.clear();
         this._setContent(UI.listSkeletonHtml());
-        UI.showAreaLoading('online', '내 차트 불러오는 중…');
+        UI.showAreaLoading('online', I18n.t("j_loading_my_charts"));
         const seq = ++this._loadSeq;
 
         const user = await CloudAuth.getUser();
@@ -774,8 +774,8 @@ const Online = {
             UI.hideAreaLoading('online');
             this._setContent(`
             <div class="text-center mt-10">
-                <p class="text-gray-400 mb-4">내 차트를 보려면 로그인이 필요합니다.</p>
-                <button id="my-login-btn" class="py-2 px-6 bg-teal-600 hover:bg-teal-500 rounded-lg">로그인</button>
+                <p class="text-gray-400 mb-4">${I18n.t("j_you_need_to_log_in_4")}</p>
+                <button id="my-login-btn" class="py-2 px-6 bg-teal-600 hover:bg-teal-500 rounded-lg">${I18n.t("b_log_in")}</button>
             </div>`);
             document.getElementById('my-login-btn')?.addEventListener('click', () => {
                 if (typeof _openLoginModal === 'function') _openLoginModal();
@@ -794,33 +794,33 @@ const Online = {
         if (songsError) { this._setContent(`<p class="text-red-400 text-sm">${songsError.message}</p>`); return; }
 
         const songCards = (songs || []).length === 0
-            ? '<p class="text-gray-400 text-sm text-center mt-4">업로드한 노래가 없습니다.</p>'
+            ? I18n.t("j_no_uploaded_songs")
             : (songs || []).map(s => this._mySongCard(s)).join('');
 
         const cards = (data || []).length === 0
-            ? '<p class="text-gray-400 text-sm text-center mt-8">업로드한 차트가 없습니다.</p>'
+            ? I18n.t("j_no_uploaded_charts")
             : (data || []).map(c => this._myChartCard(c)).join('');
 
         this._setContent(`
         <!-- 로컬 파일로 플레이 -->
         <div class="p-3 bg-gray-800 rounded-lg mb-4 border border-gray-600">
-            <h3 class="text-sm font-semibold text-gray-300 mb-2">로컬 파일로 플레이</h3>
+            <h3 class="text-sm font-semibold text-gray-300 mb-2">${I18n.t("j_play_from_local_files")}</h3>
             <div class="flex flex-col space-y-2">
                 <div class="flex space-x-2">
-                    <label for="local-chart-file-input" class="cursor-pointer flex-1 text-center py-2 px-3 bg-blue-700 hover:bg-blue-600 rounded text-sm transition">차트 불러오기</label>
-                    <label for="local-music-file-input" class="cursor-pointer flex-1 text-center py-2 px-3 bg-teal-700 hover:bg-teal-600 rounded text-sm transition">음악 불러오기</label>
+                    <label for="local-chart-file-input" class="cursor-pointer flex-1 text-center py-2 px-3 bg-blue-700 hover:bg-blue-600 rounded text-sm transition">${I18n.t("j_load_chart")}</label>
+                    <label for="local-music-file-input" class="cursor-pointer flex-1 text-center py-2 px-3 bg-teal-700 hover:bg-teal-600 rounded text-sm transition">${I18n.t("j_load_music")}</label>
                 </div>
                 <p id="local-chart-name" class="text-xs text-gray-400 truncate hidden"></p>
                 <p id="local-music-name" class="text-xs text-gray-400 truncate hidden"></p>
                 <p id="local-required-name" class="text-xs text-yellow-400 truncate hidden"></p>
-                <button id="local-play-btn" class="w-full py-2 bg-green-700 hover:bg-green-600 rounded text-sm font-semibold transition disabled:opacity-40" disabled>▶ 플레이</button>
+                <button id="local-play-btn" class="w-full py-2 bg-green-700 hover:bg-green-600 rounded text-sm font-semibold transition disabled:opacity-40" disabled>${I18n.t("j_play")}</button>
             </div>
         </div>
         <!-- 내 업로드 노래 목록 (song 단위 — 삭제 시 딸린 난이도/오디오까지 함께 삭제) -->
-        <h3 class="text-sm font-semibold text-gray-300 mb-2">내 업로드 노래</h3>
+        <h3 class="text-sm font-semibold text-gray-300 mb-2">${I18n.t("j_my_uploaded_songs")}</h3>
         <div class="space-y-2 mb-4">${songCards}</div>
         <!-- 내 업로드 차트 목록 -->
-        <h3 class="text-sm font-semibold text-gray-300 mb-2">내 업로드 차트</h3>
+        <h3 class="text-sm font-semibold text-gray-300 mb-2">${I18n.t("j_my_uploaded_charts")}</h3>
         <div class="space-y-2">${cards}</div>`);
 
         // 로컬 파일 input (hidden, DOM 원본은 practice-screen 안에 있으므로 여기선 별도 생성)
@@ -839,21 +839,21 @@ const Online = {
                     const rawChartData = JSON.parse(ev.target.result);
                     const normalized = ChartFormat.normalize(rawChartData);
                     if (normalized.beatmapCount > 1) {
-                        UI.showMessage('online', `이 파일에는 난이도가 ${normalized.beatmapCount}개 있습니다. 첫 번째 난이도로 플레이합니다.`);
+                        UI.showMessage('online', I18n.t("j_this_file_has_difficulties_playing", {a: normalized.beatmapCount}));
                     }
                     const chartData = { songName: normalized.songName, ...normalized.beatmap };
                     Game.loadChartNotes(chartData);
                     Game.state.settings.mode = 'music';
                     Game.state.settings.songStartOffset = 0;
-                    document.getElementById('local-chart-name').textContent = `차트: ${file.name}`;
+                    document.getElementById('local-chart-name').textContent = I18n.t("j_chart", {a: file.name});
                     document.getElementById('local-chart-name').classList.remove('hidden');
                     if (chartData.songName) {
-                        document.getElementById('local-required-name').textContent = `필요 음악: ${chartData.songName}`;
+                        document.getElementById('local-required-name').textContent = I18n.t("j_required_music", {a: chartData.songName});
                         document.getElementById('local-required-name').classList.remove('hidden');
                         Game.state.settings.requiredSongName = chartData.songName;
                     }
                     this._checkLocalPlayReady();
-                } catch { UI.showMessage('online', '차트 파일을 읽을 수 없습니다.'); }
+                } catch { UI.showMessage('online', I18n.t("j_couldn_t_read_the_chart")); }
             };
             reader.readAsText(file);
         });
@@ -863,7 +863,7 @@ const Online = {
             Game.state.settings.musicFileObject = file;
             Game.state.settings.musicSrc = URL.createObjectURL(file);
             DOM.musicPlayer.src = Game.state.settings.musicSrc;
-            document.getElementById('local-music-name').textContent = `음악: ${file.name}`;
+            document.getElementById('local-music-name').textContent = I18n.t("j_music", {a: file.name});
             document.getElementById('local-music-name').classList.remove('hidden');
             this._checkLocalPlayReady();
         });
@@ -906,21 +906,21 @@ const Online = {
 
     _mySongCard(s) {
         const pub = s.is_public
-            ? '<span class="text-xs text-green-400">공개</span>'
-            : '<span class="text-xs text-gray-500">비공개</span>';
+            ? I18n.t("j_public_2")
+            : I18n.t("j_private");
         return `
         <div class="p-3 bg-gray-800 rounded-lg">
             <div class="flex items-center space-x-2">
                 <div class="flex-1 min-w-0">
-                    <p class="font-semibold text-white truncate">${_esc(s.title || '(제목 없음)')}</p>
-                    <p class="text-xs text-gray-400 truncate">${_esc(s.artist || '—')} · 난이도 ${s.beatmapCount}개</p>
+                    <p class="font-semibold text-white truncate">${_esc(s.title || I18n.t("j_untitled"))}</p>
+                    <p class="text-xs text-gray-400 truncate">${I18n.t("j_difficulties_2", {a: _esc(s.artist || '—'), b: s.beatmapCount})}</p>
                 </div>
                 <div class="flex items-center space-x-1 flex-shrink-0">
                     ${pub}
                     ${(s.source_type !== 'youtube' && s.moderation_status !== 'removed')
-                        ? `<button class="my-song-yt-btn py-1 px-2 bg-teal-800 hover:bg-teal-700 rounded text-xs" data-id="${s.id}" title="서버 음원 대신 YouTube 링크로 전환">YouTube 전환</button>` : ''}
+                        ? `<button class="my-song-yt-btn py-1 px-2 bg-teal-800 hover:bg-teal-700 rounded text-xs" data-id="${s.id}" title="${I18n.t("j_switch_to_a_youtube_link")}">${I18n.t("j_switch_to_youtube")}</button>` : ''}
                     <button class="my-song-delete-btn py-1 px-2 bg-red-800 hover:bg-red-700 rounded text-xs"
-                        data-id="${s.id}" data-title="${_esc(s.title || '(제목 없음)')}">삭제</button>
+                        data-id="${s.id}" data-title="${_esc(s.title || I18n.t("j_untitled"))}">${I18n.t("b_delete")}</button>
                 </div>
             </div>
         </div>`;
@@ -928,20 +928,20 @@ const Online = {
 
     _myChartCard(c) {
         const pub = c.is_public
-            ? '<span class="text-xs text-green-400">공개</span>'
-            : '<span class="text-xs text-gray-500">비공개</span>';
+            ? I18n.t("j_public_2")
+            : I18n.t("j_private");
         return `
         <div class="p-3 bg-gray-800 rounded-lg">
             <div class="flex items-center space-x-2">
                 <div class="flex-1 min-w-0">
                     <p class="font-semibold text-white truncate">${_esc(c.title)}</p>
-                    <p class="text-xs text-gray-400 truncate">${_esc(c.artist || '—')} · ${c.lane_count}키 · ▶ ${c.play_count}</p>
+                    <p class="text-xs text-gray-400 truncate">${I18n.t("j_keys_2", {a: _esc(c.artist || '—'), b: c.lane_count, c: c.play_count})}</p>
                 </div>
                 <div class="flex items-center space-x-1 flex-shrink-0">
                     ${pub}
-                    <button class="my-lb-btn py-1 px-2 bg-gray-700 hover:bg-gray-600 rounded text-xs" data-id="${c.id}">랭킹</button>
+                    <button class="my-lb-btn py-1 px-2 bg-gray-700 hover:bg-gray-600 rounded text-xs" data-id="${c.id}">${I18n.t("j_ranking")}</button>
                     <button class="my-delete-btn py-1 px-2 bg-red-800 hover:bg-red-700 rounded text-xs"
-                        data-id="${c.id}" data-title="${_esc(c.title)}">삭제</button>
+                        data-id="${c.id}" data-title="${_esc(c.title)}">${I18n.t("b_delete")}</button>
                 </div>
             </div>
         </div>`;
@@ -956,16 +956,16 @@ const Online = {
     },
 
     async _deleteMyChart(chartId, title) {
-        if (!confirm(`"${title}" 을(를) 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) return;
+        if (!confirm(I18n.t("j_delete_this_cannot_be_undone", {a: title}))) return;
         const { error } = await CloudCharts.deleteChart(chartId);
-        if (error) { alert('삭제 오류: ' + error.message); return; }
+        if (error) { alert(I18n.t("j_delete_error", {a: error.message})); return; }
         await this._loadMyCharts();
     },
 
     async _deleteMySong(songId, title) {
-        if (!confirm(`"${title}" 노래를 삭제하시겠습니까?\n이 노래에 속한 모든 난이도와 음악 파일이 함께 삭제되며, 되돌릴 수 없습니다.`)) return;
+        if (!confirm(I18n.t("j_delete_the_song_all_difficulties", {a: title}))) return;
         const { error } = await CloudCharts.deleteSong(songId);
-        if (error) { alert('삭제 오류: ' + error.message); return; }
+        if (error) { alert(I18n.t("j_delete_error", {a: error.message})); return; }
         await this._loadMyCharts();
     },
 
@@ -976,7 +976,7 @@ const Online = {
 
         const user = await CloudAuth.getUser();
         if (!user) {
-            UI.showMessage('online', '로그인이 필요합니다. 우측 상단 계정 아이콘을 클릭해주세요.');
+            UI.showMessage('online', I18n.t("j_you_need_to_log_in_3"));
             return;
         }
 
@@ -984,7 +984,7 @@ const Online = {
         btn.disabled = true;
         const { error } = await CloudLikes.toggle(chartId, currentlyLiked);
         btn.disabled = false;
-        if (error) { alert('좋아요 처리 오류: ' + error.message); return; }
+        if (error) { alert(I18n.t("j_error_processing_like", {a: error.message})); return; }
 
         const nowLiked = !currentlyLiked;
         btn.dataset.liked = nowLiked ? '1' : '0';
@@ -1019,8 +1019,8 @@ function _formatDateLine(createdAt, updatedAt) {
     if (!uploaded) return '';
     const updated = _formatShortDate(updatedAt);
     return (updated && updated !== uploaded)
-        ? `업로드 ${uploaded} · 수정 ${updated}`
-        : `업로드 ${uploaded}`;
+        ? I18n.t("j_uploaded_updated", {a: uploaded, b: updated})
+        : I18n.t("j_uploaded", {a: uploaded});
 }
 
 // ── 랭크(S/A/B/C) 등급별 색상 클래스 ──────────────────────────────────────────
@@ -1063,16 +1063,16 @@ async function submitOnlineScore() {
     resultEl.classList.remove('hidden');
 
     if (error) {
-        resultEl.textContent = '점수 등록 실패: ' + error.message;
+        resultEl.textContent = I18n.t("j_failed_to_register_score", {a: error.message});
         resultEl.className = 'text-sm text-red-400 mt-2';
         return;
     }
 
     if (data?.is_new_best) {
-        resultEl.innerHTML = `새 최고 기록! <strong>${Game.state.score.toLocaleString()}</strong>`;
+        resultEl.innerHTML = `${I18n.t("j_new_best_record")} <strong>${Game.state.score.toLocaleString()}</strong>`;
         resultEl.className = 'text-sm text-yellow-300 mt-2 font-semibold';
     } else {
-        resultEl.textContent = `기존 최고 기록(${(data?.best_score || 0).toLocaleString()})이 더 높습니다.`;
+        resultEl.textContent = I18n.t("j_your_existing_best_record_is", {a: (data?.best_score || 0).toLocaleString()});
         resultEl.className = 'text-sm text-gray-400 mt-2';
     }
 

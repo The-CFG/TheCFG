@@ -79,7 +79,7 @@ const GameBackground = {
         // 로딩 중임을 좌측 game-area에 표시(사진 불러오는 중…) — 다른 곡으로
         // 다시 바뀌기 전까지(또는 로드 완료/실패 시) 유지된다.
         // 로딩 동안에는 현재 배경(기본 배경 또는 이전 커버)을 그대로 유지한다.
-        UI.showAreaLoading('cover', '사진 불러오는 중…');
+        UI.showAreaLoading('cover', I18n.t("j_loading_photo"));
         const img = new Image();
         img.onload = () => {
             if (this._currentUrl !== url) return; // 로딩 도중 다른 곡으로 바뀌었으면 무시

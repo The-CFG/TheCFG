@@ -82,7 +82,7 @@ const UI = {
     },
     // 화면/영역 전체를 "불러오는 중" 상태로 채울 때 쓰는 블록(스피너 + 문구, 세로 중앙 정렬).
     // 목록/상세 화면이 데이터를 받아오는 동안 this._setContent(UI.loadingBlockHtml())처럼 통째로 넣는 용도.
-    loadingBlockHtml(text = '불러오는 중…') {
+    loadingBlockHtml(text = I18n.t("j_loading_2")) {
         return `<div class="flex flex-col items-center gap-2 mt-8 text-gray-400 text-sm">
             ${this.spinnerHtml('w-6 h-6')}
             <span>${text}</span>
@@ -90,7 +90,7 @@ const UI = {
     },
     // 버튼/인라인 한 줄 안에 스피너+문구를 나란히 넣을 때 쓰는 조각.
     // 예: btn.innerHTML = UI.loadingInlineHtml('업로드 중…')
-    loadingInlineHtml(text = '불러오는 중…') {
+    loadingInlineHtml(text = I18n.t("j_loading_2")) {
         return `<span class="inline-flex items-center justify-center gap-2">${this.spinnerHtml('w-4 h-4', 'border-current')}${text}</span>`;
     },
     // ── 스켈레톤(자리 채움) 마크업 ──────────────────────────────────
@@ -170,7 +170,7 @@ const UI = {
     // 안 넘기면(대부분의 경우 — 다운로드 진행률을 알 수 없음) 계속 움직이는 불확정 진행률
     // 바를 문구 아래 프로그레스 바 오버레이에 그린다. opts.label로 바 좌상단 라벨을 직접
     // 지정할 수 있고, 안 주면 text에서 "~불러오는 중…" → "~불러오기" 식으로 자동 추출한다.
-    showAreaLoading(key, text = '불러오는 중…', opts = {}) {
+    showAreaLoading(key, text = I18n.t("j_loading_2"), opts = {}) {
         this._areaLoads[key] = {
             text,
             spinner: opts.spinner !== false,
@@ -362,7 +362,7 @@ const UI = {
             if (total === 0) {
                 DOM.finalEarlyLateEl.textContent = '-';
             } else {
-                DOM.finalEarlyLateEl.textContent = `${I18n.t ? I18n.t('early') : '빠름'} ${el.early} / ${I18n.t ? I18n.t('late') : '느림'} ${el.late}`;
+                DOM.finalEarlyLateEl.textContent = `${I18n.t ? I18n.t('early') : I18n.t("j_early")} ${el.early} / ${I18n.t ? I18n.t('late') : I18n.t("j_late")} ${el.late}`;
             }
         }
 
@@ -490,7 +490,7 @@ const UI = {
             const missRate = s.total > 0 ? (s.miss / s.total) * 100 : 0;
             rows.push(`
                 <div class="flex items-center gap-2 text-sm">
-                    <span class="w-14 flex-shrink-0 text-gray-400">${I18n.t ? I18n.t('lane') : '레인'} ${lane + 1}</span>
+                    <span class="w-14 flex-shrink-0 text-gray-400">${I18n.t ? I18n.t('lane') : I18n.t("j_lane")} ${lane + 1}</span>
                     <div class="flex-1 h-3 bg-gray-600 rounded-full overflow-hidden">
                         <div class="h-full bg-red-500" style="width: ${missRate.toFixed(1)}%"></div>
                     </div>
@@ -498,7 +498,7 @@ const UI = {
                 </div>`);
         }
         container.innerHTML = `
-            <p class="text-sm font-semibold text-gray-300 mb-2">${I18n.t ? I18n.t('lane_miss_rate') : '레인별 미스율'}</p>
+            <p class="text-sm font-semibold text-gray-300 mb-2">${I18n.t ? I18n.t('lane_miss_rate') : I18n.t("j_miss_rate_by_lane")}</p>
             <div class="space-y-1.5">${rows.join('')}</div>`;
         container.classList.remove('hidden');
     },
@@ -540,7 +540,7 @@ const UI = {
         }
         DOM.spectateHudEl.innerHTML = rows.map(o => `
             <div class="mp-spectate-row${o.self ? ' mp-spectate-self' : ''}" data-user-id="${_esc(o.user_id)}">
-                <span class="mp-spectate-name">${_esc(o.nickname || o.user_id.slice(0, 8))}${o.self ? ' (나)' : ''}</span>
+                <span class="mp-spectate-name">${_esc(o.nickname || o.user_id.slice(0, 8))}${o.self ? I18n.t("j_you_2") : ''}</span>
                 <span class="mp-spectate-score" data-score="0">0</span>
                 <span class="mp-spectate-combo">0 combo</span>
             </div>`).join('');
@@ -580,7 +580,7 @@ const UI = {
             const offline = !onlineIds.has(o.user_id);
             row.classList.toggle('mp-spectate-offline', offline);
             const comboEl = row.querySelector('.mp-spectate-combo');
-            if (comboEl) comboEl.textContent = offline ? '연결 끊김' : `${comboEl.dataset.combo || 0} combo`;
+            if (comboEl) comboEl.textContent = offline ? I18n.t("j_disconnected") : `${comboEl.dataset.combo || 0} combo`;
         });
     },
     hideSpectateHud() {
@@ -604,8 +604,8 @@ const UI = {
             const r = results ? results[p.user_id] : null;
             return {
                 user_id: p.user_id,
-                nickname: p.isSelf ? '나' : (p.nickname ? p.nickname : `${String(p.user_id).slice(0, 8)}…`),
-                nameHtml: p.isSelf ? '나' : CloudAuth.linkedName(p.user_id, p.nickname || `${String(p.user_id).slice(0, 8)}…`, _esc),
+                nickname: p.isSelf ? I18n.t("j_you_3") : (p.nickname ? p.nickname : `${String(p.user_id).slice(0, 8)}…`),
+                nameHtml: p.isSelf ? I18n.t("j_you_3") : CloudAuth.linkedName(p.user_id, p.nickname || `${String(p.user_id).slice(0, 8)}…`, _esc),
                 isSelf: !!p.isSelf,
                 finished: !!r,
                 finalScore: r ? r.finalScore : null,
@@ -626,16 +626,16 @@ const UI = {
         list.innerHTML = entries.map((e, i) => `
             <div class="flex items-center justify-between py-2 px-3 rounded-lg text-sm ${e.isSelf ? 'bg-teal-900 border border-teal-600' : 'bg-gray-700'}">
                 <span class="flex items-center gap-2 text-gray-200 truncate min-w-0">
-                    ${e.finished ? `<span class="text-xs text-gray-400 flex-shrink-0">${i + 1}위</span>` : ''}
+                    ${e.finished ? `<span class="text-xs text-gray-400 flex-shrink-0">${I18n.t("j_text", {a: i + 1})}</span>` : ''}
                     <span class="truncate">${e.nameHtml}</span>
-                    ${e.isSelf ? '<span class="text-xs text-teal-400 flex-shrink-0">(나)</span>' : ''}
+                    ${e.isSelf ? I18n.t("j_you_4") : ''}
                 </span>
                 ${e.finished ? `
                 <span class="flex items-center gap-2 flex-shrink-0">
                     ${e.rank ? `<span class="text-xs text-gray-400">${e.rank}</span>` : ''}
                     <span class="font-bold text-white">${Math.round(e.finalScore).toLocaleString()}</span>
                 </span>` : `
-                <span class="text-xs text-gray-500 flex-shrink-0">플레이 중…</span>`}
+                <span class="text-xs text-gray-500 flex-shrink-0">${I18n.t("j_playing_2")}</span>`}
             </div>`).join('');
 
         container.classList.remove('hidden');
@@ -658,7 +658,7 @@ const UI = {
         if (!appShell) return;
         appShell.classList.toggle('ui-collapsed', collapsed);
         if (btn) {
-            const label = collapsed ? '패널 펼치기' : '패널 접기';
+            const label = collapsed ? I18n.t("j_expand_panel") : I18n.t("b_collapse_panel");
             btn.setAttribute('aria-label', label);
             btn.title = label;
         }
@@ -697,7 +697,7 @@ const UI = {
         appShell.classList.toggle('mobile-panel-open', open);
         if (icon) icon.innerHTML = open ? this._mobilePanelIconClose : this._mobilePanelIconHamburger;
         if (btn) {
-            const label = open ? '메뉴 닫기' : '메뉴 열기';
+            const label = open ? I18n.t("j_close_menu") : I18n.t("j_open_menu");
             btn.setAttribute('aria-label', label);
             btn.title = label;
         }
@@ -717,6 +717,6 @@ const UI = {
 function resetPlayingScreenUI() {
     DOM.pauseGameBtn.classList.remove('hidden');
     DOM.resumeGameBtn.classList.add('hidden');
-    DOM.playingStatusLabel.textContent = '플레이 중';
+    DOM.playingStatusLabel.textContent = I18n.t("j_playing");
     DOM.settings.iconPlaying.classList.add('hidden');
 }

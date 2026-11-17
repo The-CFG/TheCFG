@@ -63,7 +63,7 @@ const CloudLikes = {
     // ── 좋아요 누르기 ─────────────────────────────────────────────────────
     async like(chartId) {
         const user = await CloudAuth.getUser();
-        if (!user) return { error: new Error('로그인이 필요합니다.') };
+        if (!user) return { error: new Error(I18n.t("j_you_need_to_log_in")) };
 
         const { error } = await _supabase
             .from('beat_chart_likes')
@@ -77,7 +77,7 @@ const CloudLikes = {
     // ── 좋아요 취소 ───────────────────────────────────────────────────────
     async unlike(chartId) {
         const user = await CloudAuth.getUser();
-        if (!user) return { error: new Error('로그인이 필요합니다.') };
+        if (!user) return { error: new Error(I18n.t("j_you_need_to_log_in")) };
 
         const { error } = await _supabase
             .from('beat_chart_likes')

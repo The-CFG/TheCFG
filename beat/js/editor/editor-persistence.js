@@ -22,7 +22,7 @@ Object.assign(Editor, {
     saveChart() {
         try {
             if (!this.state.audioFileName) {
-                UI.showMessage('editor', '음악 파일을 로딩해주세요!');
+                UI.showMessage('editor', I18n.t("j_please_load_a_music_file"));
                 return;
             }
             let chartFilename = DOM.editor.chartFilenameInput.value.trim();
@@ -57,7 +57,7 @@ Object.assign(Editor, {
             this.setDirty(false);
         } catch (err) {
             Debugger.logError(err, 'Editor.saveChart');
-            UI.showMessage('editor', `저장 실패: ${err.message}`);
+            UI.showMessage('editor', I18n.t("j_save_failed", {a: err.message}));
         }
     },
 
@@ -65,7 +65,7 @@ Object.assign(Editor, {
         try {
             const normalized = ChartFormat.normalize(rawChartData);
             if (normalized.beatmapCount > 1) {
-                UI.showMessage('editor', `이 파일에는 난이도가 ${normalized.beatmapCount}개 있습니다. 지금 에디터는 첫 번째 난이도만 불러옵니다 (다중 난이도 관리는 다음 업데이트 예정).`);
+                UI.showMessage('editor', I18n.t("j_this_file_has_difficulties_the", {a: normalized.beatmapCount}));
             }
             const chartData = { songName: normalized.songName, ...normalized.beatmap };
 
@@ -106,7 +106,7 @@ Object.assign(Editor, {
             this.state.previewSeekSec = this.state.song.startOffsetSec || 0;
             DOM.editor.startTimeInput.value = this.state.previewSeekSec;
             if (DOM.editor.timingStartInput) DOM.editor.timingStartInput.value = this.state.song.timingStartSec || 0;
-            DOM.editor.audioFileNameEl.textContent = `요구 파일: ${chartData.songName || '없음'}`;
+            DOM.editor.audioFileNameEl.textContent = I18n.t("j_required_file", {a: chartData.songName || I18n.t("b_none")});
             if (loadedFileName) {
                 DOM.editor.chartFilenameInput.value = loadedFileName.split('.').slice(0, -1).join('.');
             }
@@ -121,7 +121,7 @@ Object.assign(Editor, {
             this.setDirty(false);
         } catch (err) {
             Debugger.logError(err, 'Editor.loadChart');
-            UI.showMessage('editor', `차트 해석 오류: ${err.message}`);
+            UI.showMessage('editor', I18n.t("j_chart_parsing_error", {a: err.message}));
         }
     },
 
@@ -250,12 +250,12 @@ Object.assign(Editor, {
         if (!this.state.song.cloudSongId) return;
         const { data, error } = await CloudCharts.getSongWithBeatmaps(this.state.song.cloudSongId);
         if (error) {
-            UI.showMessage('editorSong', `다시 불러오기 실패: ${error.message}`);
+            UI.showMessage('editorSong', I18n.t("j_reload_failed", {a: error.message}));
             return;
         }
         this.applySongData(data);
         EditorSong.render();
-        UI.showMessage('editorSong', '최신 내용을 다시 불러왔습니다.');
+        UI.showMessage('editorSong', I18n.t("j_reloaded_the_latest_version"));
     },
 
     // Phase 3d: 클라우드에서 불러온 노래는 getSongWithBeatmaps()로 난이도 "메타"만 받아오고
@@ -267,11 +267,11 @@ Object.assign(Editor, {
             Debugger.logError(new Error('chartStoragePath 없음'), 'Editor.ensureBeatmapLoaded');
             return false;
         }
-        UI.showAreaLoading('chart', '채보 데이터 불러오는 중…');
+        UI.showAreaLoading('chart', I18n.t("j_loading_chart_data"));
         const { data, error } = await CloudCharts.downloadChartData(bm.chartStoragePath);
         UI.hideAreaLoading('chart');
         if (error) {
-            UI.showMessage('editorSong', `난이도 데이터 다운로드 실패: ${error.message}`);
+            UI.showMessage('editorSong', I18n.t("j_failed_to_download_difficulty_data", {a: error.message}));
             return false;
         }
         bm.notes = data.notes || [];
@@ -334,7 +334,7 @@ Object.assign(Editor, {
             } else if (this.state.song.audioUrl) {
                 this.loadAudioFromUrl(this.state.song.audioUrl, this.state.song.audioFileName);
             } else {
-                DOM.editor.audioFileNameEl.textContent = '선택된 파일 없음';
+                DOM.editor.audioFileNameEl.textContent = I18n.t("b_no_file_selected");
             }
 
             DOM.editor.bpmInput.value = this.state.bpm;
@@ -406,10 +406,10 @@ Object.assign(Editor, {
         try {
             this.saveFlatStateToBeatmap();
             this.setDirty(false);
-            UI.showMessage('editor', '현재 난이도를 저장했습니다. (종합 창에서 "로컬에 저장"/"클라우드에 업로드"로 전체 반영)');
+            UI.showMessage('editor', I18n.t("j_saved_the_current_difficulty_to"));
         } catch (err) {
             Debugger.logError(err, 'Editor.quickSaveBeatmap');
-            UI.showMessage('editor', `저장 실패: ${err.message}`);
+            UI.showMessage('editor', I18n.t("j_save_failed", {a: err.message}));
         }
     },
 

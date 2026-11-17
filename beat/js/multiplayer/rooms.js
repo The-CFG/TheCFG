@@ -13,7 +13,7 @@ const MultiplayerRooms = {
     // 방 생성 + host를 플레이어로 자동 join. 실패 시 { error }.
     async createRoom(chartId) {
         const user = await CloudAuth.getUser();
-        if (!user) return { error: new Error('로그인이 필요합니다.') };
+        if (!user) return { error: new Error(I18n.t("j_you_need_to_log_in")) };
 
         const { data: room, error: roomErr } = await _supabase
             .from('beat_rooms')
@@ -31,7 +31,7 @@ const MultiplayerRooms = {
     // 이미 존재하는 방에 참가(자기 자신을 beat_room_players에 insert).
     async joinRoom(roomId) {
         const user = await CloudAuth.getUser();
-        if (!user) return { error: new Error('로그인이 필요합니다.') };
+        if (!user) return { error: new Error(I18n.t("j_you_need_to_log_in")) };
 
         const nickname = user.user_metadata?.display_name || null;
 
@@ -43,7 +43,7 @@ const MultiplayerRooms = {
 
     async leaveRoom(roomId) {
         const user = await CloudAuth.getUser();
-        if (!user) return { error: new Error('로그인이 필요합니다.') };
+        if (!user) return { error: new Error(I18n.t("j_you_need_to_log_in")) };
 
         const { error } = await _supabase
             .from('beat_room_players')
@@ -89,14 +89,14 @@ const MultiplayerRooms = {
         if (error) return { error };
         // RPC가 boolean으로 실제 갱신 성공 여부를 돌려준다 — false면 DB의 host_id는
         // 안 바뀐 것이므로 성공으로 착각해 broadcast하면 안 된다(로컬 상태와 DB가 어긋남).
-        if (!ok) return { data: null, error: new Error('호스트 위임에 실패했습니다.') };
+        if (!ok) return { data: null, error: new Error(I18n.t("j_failed_to_transfer_host")) };
         return { error: null, data: next };
     },
 
     // 오디오/채보 로드 완료 시 ready 플래그 갱신.
     async setReady(roomId, ready) {
         const user = await CloudAuth.getUser();
-        if (!user) return { error: new Error('로그인이 필요합니다.') };
+        if (!user) return { error: new Error(I18n.t("j_you_need_to_log_in")) };
 
         const { error } = await _supabase
             .from('beat_room_players')
@@ -120,7 +120,7 @@ const MultiplayerRooms = {
     // 종료 시 각자 자기 결과를 기록 (관전용 표시에만 쓰임 — 정식 리더보드는 CloudScores.submitScore 그대로 사용).
     async setFinalResult(roomId, finalScore, finalCombo) {
         const user = await CloudAuth.getUser();
-        if (!user) return { error: new Error('로그인이 필요합니다.') };
+        if (!user) return { error: new Error(I18n.t("j_you_need_to_log_in")) };
 
         const { error } = await _supabase
             .from('beat_room_players')

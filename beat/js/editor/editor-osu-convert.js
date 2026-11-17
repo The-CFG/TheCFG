@@ -48,7 +48,7 @@ const EditorOsuConvert = {
         const readAsText = (file) => new Promise((resolve) => {
             const reader = new FileReader();
             reader.onload = (e) => resolve({ file, text: e.target.result, readError: null });
-            reader.onerror = () => resolve({ file, text: null, readError: '파일을 읽을 수 없습니다.' });
+            reader.onerror = () => resolve({ file, text: null, readError: I18n.t("j_couldn_t_read_the_file") });
             reader.readAsText(file);
         });
 
@@ -85,7 +85,7 @@ const EditorOsuConvert = {
         if (this._results.length === 0) {
             const p = document.createElement('p');
             p.className = 'text-gray-400 text-sm text-center mt-8';
-            p.textContent = '.osu 파일을 선택하면 여기 결과가 표시됩니다.';
+            p.textContent = I18n.t("b_results_will_appear_here_after");
             container.appendChild(p);
             if (DOM.osuConvert.importBtn) DOM.osuConvert.importBtn.disabled = true;
             return;
@@ -109,20 +109,20 @@ const EditorOsuConvert = {
                 const meta = document.createElement('p');
                 meta.className = 'text-xs text-gray-400 truncate';
                 const titleArtist = [result.data.songName, result.data.artist].filter(Boolean).join(' - ');
-                meta.textContent = `${titleArtist || '(제목 없음)'} · ${bm.difficultyLabel} · ${bm.laneCount}레인 · BPM ${bm.bpm} · 노트 ${(bm.notes || []).length}개`;
+                meta.textContent = I18n.t("j_lanes_bpm_notes", {a: titleArtist || I18n.t("j_untitled"), b: bm.difficultyLabel, c: bm.laneCount, d: bm.bpm, e: (bm.notes || []).length});
                 info.appendChild(meta);
 
                 // 대상 난이도 선택: 현재 작업 중인 노래의 기존 난이도를 덮어쓰거나, 새 난이도로 추가.
                 const targetLabel = document.createElement('p');
                 targetLabel.className = 'text-xs text-gray-500 mt-1';
-                targetLabel.textContent = '이 osu 채보로 덮어씌울 난이도를 선택하세요.';
+                targetLabel.textContent = I18n.t("j_choose_the_difficulty_to_overwrite");
                 info.appendChild(targetLabel);
 
                 const select = document.createElement('select');
                 select.className = 'mt-1 w-full text-xs bg-gray-700 border border-gray-600 rounded px-1 py-1';
                 const newOpt = document.createElement('option');
                 newOpt.value = 'new';
-                newOpt.textContent = '+ 새 난이도 만들기';
+                newOpt.textContent = I18n.t("j_create_new_difficulty");
                 select.appendChild(newOpt);
                 (Editor.state.beatmaps || []).forEach((existingBm, bmIndex) => {
                     const opt = document.createElement('option');
@@ -140,7 +140,7 @@ const EditorOsuConvert = {
 
                 const dlBtn = document.createElement('button');
                 dlBtn.type = 'button';
-                dlBtn.textContent = 'JSON 다운로드';
+                dlBtn.textContent = I18n.t("j_download_json");
                 dlBtn.className = 'py-1 px-2 text-xs rounded whitespace-nowrap bg-blue-600 hover:bg-blue-500 flex-shrink-0 self-start';
                 dlBtn.addEventListener('click', () => this._downloadJson(i));
 
@@ -183,7 +183,7 @@ const EditorOsuConvert = {
 
         const overwriteCount = succeeded.filter(r => r.targetIndex !== 'new').length;
         if (overwriteCount > 0 &&
-            !confirm(`기존 난이도 ${overwriteCount}개를 osu 채보로 덮어씁니다. 저장하지 않은 편집 내용은 사라집니다. 계속할까요?`)) {
+            !confirm(I18n.t("j_this_will_overwrite_existing_difficult", {a: overwriteCount}))) {
             return;
         }
 
@@ -233,9 +233,9 @@ const EditorOsuConvert = {
         EditorSong.render();
         const newCount = succeeded.length - overwriteCount;
         const parts = [];
-        if (newCount > 0) parts.push(`새 난이도 ${newCount}개 추가`);
-        if (overwriteCount > 0) parts.push(`기존 난이도 ${overwriteCount}개 덮어씀`);
-        UI.showMessage('editorSong', `.osu 파일 ${succeeded.length}개 처리 완료 (${parts.join(', ')}). 오디오는 따로 선택해주세요.`);
+        if (newCount > 0) parts.push(I18n.t("j_added_new_difficulties", {a: newCount}));
+        if (overwriteCount > 0) parts.push(I18n.t("j_overwrote_existing_difficulties", {a: overwriteCount}));
+        UI.showMessage('editorSong', I18n.t("j_processed_osu_files_select_the", {a: succeeded.length, b: parts.join(', ')}));
     },
 };
 

@@ -68,7 +68,7 @@ const MultiplayerRealtime = {
                     this._channel = channel;
                     resolve();
                 } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-                    reject(err || new Error(`Realtime 채널 연결 실패: ${status}`));
+                    reject(err || new Error(I18n.t("j_realtime_channel_connection_failed", {a: status})));
                 }
             });
         });

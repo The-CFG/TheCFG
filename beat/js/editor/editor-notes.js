@@ -3,14 +3,14 @@
 Object.assign(Editor, {
     handleReset() {
         const confirmMessage = this.state.isDirty
-            ? '저장하지 않은 변경사항이 있습니다. 모든 노트를 삭제하고 재설정하시겠습니까?'
-            : '모든 노트를 삭제합니다. 정말로 재설정하시겠습니까?';
+            ? I18n.t("j_you_have_unsaved_changes_delete")
+            : I18n.t("j_this_will_delete_all_notes");
 
         if (confirm(confirmMessage)) {
             this._saveStateForUndo();
             this.state.notes = [];
             this.renderNotes();
-            UI.showMessage('editor', '모든 노트를 삭제했습니다.');
+            UI.showMessage('editor', I18n.t("j_all_notes_deleted"));
             this.setDirty(true);
         }
     },
@@ -44,7 +44,7 @@ Object.assign(Editor, {
             const laneId = this._xToLaneId(e.clientX);
             const timeInMs = this._yToSnappedRelativeTimeMs(y);
             if (timeInMs < this._minAllowedRelativeTimeMs()) {
-                UI.showMessage('editor', '시작 지점 또는 타이밍 시작보다 앞에는 노트를 찍을 수 없습니다.');
+                UI.showMessage('editor', I18n.t("j_you_can_t_place_notes"));
                 return;
             }
 
@@ -85,7 +85,7 @@ Object.assign(Editor, {
         try {
             if (this.state.isPlaying) return;
             if (!this.state.selectedNotes.length) {
-                UI.showMessage('editor', '삭제할 노트를 먼저 선택해주세요 (편집 도구로 탭).');
+                UI.showMessage('editor', I18n.t("j_select_a_note_to_delete"));
                 return;
             }
             this.setDirty(true);
@@ -279,7 +279,7 @@ Object.assign(Editor, {
             this.state.selectedNotes = originals.map(o => ({ time: o.ref.time, lane: o.ref.lane }));
             // 취소된 이동이라 undo 스냅샷도 의미가 없으니 방금 저장한 것을 버린다.
             this.state.history.pop();
-            UI.showMessage('editor', '다른 노트와 겹쳐서 이동을 취소했습니다.');
+            UI.showMessage('editor', I18n.t("j_move_cancelled_because_it_overlaps"));
             this.renderNotes();
             return;
         }
@@ -331,7 +331,7 @@ Object.assign(Editor, {
             .filter(note => selectedKeys.has(`${note.time}|${note.lane}`))
             .map(note => ({ ...note }));
         if (DOM.editor.statusLabel) {
-            DOM.editor.statusLabel.textContent = `${this.state.clipboardNotes.length}개 노트를 복사했습니다.`;
+            DOM.editor.statusLabel.textContent = I18n.t("j_copied_notes", {a: this.state.clipboardNotes.length});
         }
     },
 
@@ -342,7 +342,7 @@ Object.assign(Editor, {
     pasteNotes() {
         try {
             if (!this.state.clipboardNotes.length) {
-                UI.showMessage('editor', '복사된 노트가 없습니다. 먼저 Ctrl+C로 복사하세요.');
+                UI.showMessage('editor', I18n.t("j_no_notes_copied_copy_with"));
                 return;
             }
 
@@ -361,7 +361,7 @@ Object.assign(Editor, {
             // 전체를 취소한다 — 일부만 잘려서 붙여넣어지면 오히려 헷갈리기 때문.
             const minAllowedMs = this._minAllowedRelativeTimeMs();
             if (newNotes.some(n => n.time < minAllowedMs)) {
-                UI.showMessage('editor', '재생헤드 위치가 너무 앞이라 붙여넣을 수 없습니다 (시작 지점 또는 타이밍 시작보다 앞).');
+                UI.showMessage('editor', I18n.t("j_the_playhead_is_too_early"));
                 return;
             }
 
@@ -370,7 +370,7 @@ Object.assign(Editor, {
             const toInsert = newNotes.filter(n => !existingKeys.has(`${n.time}|${n.lane}`));
 
             if (!toInsert.length) {
-                UI.showMessage('editor', '붙여넣을 자리에 이미 노트가 있습니다.');
+                UI.showMessage('editor', I18n.t("j_there_is_already_a_note"));
                 return;
             }
 
@@ -383,8 +383,8 @@ Object.assign(Editor, {
             const skipped = newNotes.length - toInsert.length;
             if (DOM.editor.statusLabel) {
                 DOM.editor.statusLabel.textContent = skipped > 0
-                    ? `${toInsert.length}개 붙여넣음 (${skipped}개는 자리가 겹쳐서 건너뜀)`
-                    : `${toInsert.length}개 노트를 붙여넣었습니다.`;
+                    ? I18n.t("j_pasted_notes_skipped_due_to", {a: toInsert.length, b: skipped})
+                    : I18n.t("j_pasted_notes", {a: toInsert.length});
             }
         } catch (err) {
             Debugger.logError(err, 'Editor.pasteNotes');
@@ -407,14 +407,14 @@ Object.assign(Editor, {
             // (끝 지점을 찍어 실제로 노트가 추가되는) 단계에서만 저장한다.
             this.state.longNoteStart = { time, lane: laneId };
             this.state.isPlacingLongNote = true;
-            DOM.editor.statusLabel.textContent = '롱노트의 끝 지점을 지정해주세요.';
+            DOM.editor.statusLabel.textContent = I18n.t("j_specify_the_end_point_of");
         } else {
             if (laneId !== this.state.longNoteStart.lane) {
-                UI.showMessage('editor', '시작 지점과 같은 레인을 선택해주세요.');
+                UI.showMessage('editor', I18n.t("j_select_the_same_lane_as"));
                 return;
             }
             if (time <= this.state.longNoteStart.time) {
-                UI.showMessage('editor', '끝 지점은 시작 지점보다 뒤에 있어야 합니다.');
+                UI.showMessage('editor', I18n.t("j_the_end_point_must_be"));
                 return;
             }
             this._saveStateForUndo();
@@ -424,7 +424,7 @@ Object.assign(Editor, {
             this.state.notes.push({ ...this.state.longNoteStart, duration, type: 'long_head', measure });
             this.renderNotes();
             this.resetLongNotePlacement();
-            DOM.editor.statusLabel.textContent = '롱노트의 시작 지점을 지정해주세요.';
+            DOM.editor.statusLabel.textContent = I18n.t("j_specify_the_start_point_of");
         }
     },
 
@@ -538,7 +538,7 @@ Object.assign(Editor, {
             this.renderNotes();
         }
         if (tool === 'edit') {
-            DOM.editor.statusLabel.textContent = '드래그 또는 클릭으로 노트를 선택하세요. (Ctrl+C: 복사, Ctrl+V: 붙여넣기)';
+            DOM.editor.statusLabel.textContent = I18n.t("j_drag_or_click_to_select");
         } else if (DOM.editor.statusLabel) {
             DOM.editor.statusLabel.textContent = '';
         }
@@ -572,7 +572,7 @@ Object.assign(Editor, {
             this.drawGrid();
             this.renderNotes();
             if (DOM.editor.statusLabel) {
-                DOM.editor.statusLabel.textContent = `스냅 분할: 1/${newDivision}`;
+                DOM.editor.statusLabel.textContent = I18n.t("j_snap_division_1", {a: newDivision});
             }
         } catch (err) {
             Debugger.logError(err, 'Editor.adjustSnapDivision');
@@ -584,7 +584,7 @@ Object.assign(Editor, {
         this.updateNoteTypeUI();
         if (type === 'long') {
             this.state.isPlacingLongNote = false;
-            DOM.editor.statusLabel.textContent = '롱노트의 시작 지점을 지정해주세요.';
+            DOM.editor.statusLabel.textContent = I18n.t("j_specify_the_start_point_of");
         } else {
             this.resetLongNotePlacement();
         }

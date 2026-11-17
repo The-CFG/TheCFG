@@ -8,7 +8,7 @@ const CloudScores = {
     // 기존 최고 기록보다 낮으면 서버에서 자동으로 무시됨 (is_new_best: false 반환)
     async submitScore({ chartId, score, accuracy, maxCombo, judgePerfect, judgeGood, judgeBad, judgeMiss }) {
         const user = await CloudAuth.getUser();
-        if (!user) return { error: new Error('로그인이 필요합니다.') };
+        if (!user) return { error: new Error(I18n.t("j_you_need_to_log_in")) };
 
         const { data, error } = await _supabase.rpc('submit_score', {
             p_chart_id:      chartId,

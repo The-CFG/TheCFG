@@ -22,7 +22,7 @@ const ProfilePreview = {
         modal.className = 'profile-preview-overlay hidden';
         modal.innerHTML = `
             <div class="profile-preview-dialog">
-                <button type="button" class="profile-preview-close" title="닫기" aria-label="닫기">✕</button>
+                <button type="button" class="profile-preview-close" title="${I18n.t("b_close")}" aria-label="${I18n.t("b_close")}">✕</button>
                 <div class="profile-preview-body"></div>
             </div>
         `;
@@ -42,30 +42,30 @@ const ProfilePreview = {
         const seq = ++this._seq;
         const modal = this._ensureModal();
         const body = modal.querySelector('.profile-preview-body');
-        body.innerHTML = '<div class="profile-preview-loading">불러오는 중...</div>';
+        body.innerHTML = I18n.t("j_loading_4");
         modal.classList.remove('hidden');
 
         const header = await CloudAuth.getProfileHeader(userId);
         if (seq !== this._seq || modal.classList.contains('hidden')) return; // 그 사이 닫혔거나 새 요청이 왔으면 무시
 
         if (!header) {
-            body.innerHTML = '<p class="profile-preview-error">프로필을 불러올 수 없습니다.</p>';
+            body.innerHTML = I18n.t("j_couldn_t_load_the_profile");
             return;
         }
 
         const initial = (header.nickname || header.handle || '?').trim().charAt(0).toUpperCase();
         const joined = header.created_at ? new Date(header.created_at) : null;
-        const joinedStr = joined ? `${joined.getFullYear()}년 ${joined.getMonth() + 1}월 가입` : '';
+        const joinedStr = joined ? I18n.t("j_joined", {a: joined.getFullYear(), b: joined.getMonth() + 1}) : '';
 
         body.innerHTML = `
             <div class="profile-preview-avatar">${this._esc(initial)}</div>
-            <div class="profile-preview-nickname">${this._esc(header.nickname || '(닉네임 없음)')}</div>
+            <div class="profile-preview-nickname">${this._esc(header.nickname || I18n.t("j_no_nickname"))}</div>
             ${header.handle ? `<div class="profile-preview-handle">@${this._esc(header.handle)}</div>` : ''}
             ${joinedStr ? `<div class="profile-preview-joined">${this._esc(joinedStr)}</div>` : ''}
             ${header.bio && header.bio.trim() ? `<p class="profile-preview-bio">${this._esc(header.bio)}</p>` : ''}
             ${header.handle
-                ? `<a class="profile-preview-detail-btn" href="/profiles?u=${encodeURIComponent(header.handle)}">자세히 보기</a>`
-                : '<p class="profile-preview-nohandle">아직 아이디가 설정되지 않았습니다.</p>'}
+                ? `<a class="profile-preview-detail-btn" href="/profiles?u=${encodeURIComponent(header.handle)}">${I18n.t("j_view_details")}</a>`
+                : I18n.t("j_no_id_has_been_set")}
         `;
     },
 };

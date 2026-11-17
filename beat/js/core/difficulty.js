@@ -299,7 +299,7 @@ const Difficulty = {
         const rating = this.toRating(difficultyScore);
         const color = this.ratingColorRgb(rating);
         return `
-        <span class="inline-flex items-center gap-1 ${sizeCls} flex-shrink-0" title="산정 난이도 (채보 지표 기반, 플레이 기록과 무관)">
+        <span class="inline-flex items-center gap-1 ${sizeCls} flex-shrink-0" title="${I18n.t("j_computed_difficulty_based_on_chart")}">
             <span class="font-mono font-bold px-1.5 py-0.5 rounded" style="background:${this.rgba(color, 0.13)};color:${this.rgba(color, 1)};border:1px solid ${this.rgba(color, 0.4)};">★ ${rating.toFixed(2)}</span>
         </span>`;
     },

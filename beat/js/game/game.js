@@ -631,11 +631,11 @@ const Game = {
             this.generateRandomNotes();
         } else { // Music Mode
             if (!this.state.chartData) {
-                UI.showMessage('menu', '뮤직 모드를 시작하려면 차트 파일을 먼저 불러와주세요.');
+                UI.showMessage('menu', I18n.t("j_load_a_chart_file_first"));
                 return;
             }
             if (!this.state.settings.musicFileObject && !this.state.settings.musicSrc) {
-                UI.showMessage('menu', '뮤직 모드를 시작하려면 음악 파일을 먼저 불러와주세요.');
+                UI.showMessage('menu', I18n.t("j_load_a_music_file_first"));
                 return;
             }
             this.prepareNotesFromChartData();
@@ -785,7 +785,7 @@ const Game = {
             if (this.state._onlineChartId) {
                 const resultEl = document.getElementById('online-score-result');
                 if (resultEl) {
-                    resultEl.textContent = '점수 등록 중…';
+                    resultEl.textContent = I18n.t("j_submitting_score");
                     resultEl.className = 'text-sm text-gray-400 mt-2';
                     resultEl.classList.remove('hidden');
                 }
@@ -1271,7 +1271,7 @@ const Game = {
             if (this.state.settings.mode === 'music') DOM.musicPlayer.pause();
             DOM.pauseGameBtn.classList.add('hidden');
             DOM.resumeGameBtn.classList.remove('hidden');
-            DOM.playingStatusLabel.textContent = '일시 정지 중';
+            DOM.playingStatusLabel.textContent = I18n.t("j_paused");
             DOM.settings.iconPlaying.classList.remove('hidden');
             // 자동 숨김 설정과 무관하게, 일시정지 중에는 우측 패널을 잠깐 다시 보여준다.
             UI.setPanelCollapsed(false);
@@ -1281,7 +1281,7 @@ const Game = {
         } else {
             DOM.pauseGameBtn.classList.remove('hidden');
             DOM.resumeGameBtn.classList.add('hidden');
-            DOM.playingStatusLabel.textContent = '플레이 중';
+            DOM.playingStatusLabel.textContent = I18n.t("j_playing");
             DOM.settings.iconPlaying.classList.add('hidden');
             // 카운트다운이 게임 화면(game-area) 위에서 보이도록, 재개 누르는 즉시(카운트다운
             // 끝나길 기다리지 않고) 모바일 오버레이부터 닫는다.
@@ -1495,13 +1495,13 @@ const Game = {
             this.state.gameState = 'countdown';
             this.state.audioReady = false;
             const setLabel = (t) => { if (DOM.playingStatusLabel) DOM.playingStatusLabel.textContent = t; };
-            setLabel('영상 준비 중…');
+            setLabel(I18n.t("j_preparing_video"));
             const warmed = await DOM.musicPlayer.warmUp(120000);
             if (!warmed || this.state.gameState !== 'countdown') { this._abortBarrier(); return false; }
-            setLabel('다른 플레이어를 기다리는 중…');
+            setLabel(I18n.t("j_waiting_for_other_players"));
             const target = await awaitTarget();
             if (!(target > 0) || this.state.gameState !== 'countdown') { this._abortBarrier(); return false; }
-            setLabel('플레이 중');
+            setLabel(I18n.t("j_playing"));
             targetPerfTime = target;
         }
 
@@ -1700,7 +1700,7 @@ const Game = {
             const playerLaneCount = this.state.settings.lanes;
             const requiredLaneIds = CONFIG.LANE_KEY_MAPPING_ORDER[playerLaneCount];
             if (!requiredLaneIds) {
-                throw new Error(`${playerLaneCount}레인에 대한 키 매핑 정보가 없습니다.`);
+                throw new Error(I18n.t("j_no_key_mapping_for_lanes", {a: playerLaneCount}));
             }
             const processedNotes = [];
             let noteIdCounter = 0;
@@ -1724,7 +1724,7 @@ const Game = {
             return true;
         } catch (err) {
             Debugger.logError(err, 'Game.loadChartNotes');
-            UI.showMessage('menu', `차트 로딩 오류: ${err.message}`);
+            UI.showMessage('menu', I18n.t("j_chart_loading_error", {a: err.message}));
             return false;
         }
     },

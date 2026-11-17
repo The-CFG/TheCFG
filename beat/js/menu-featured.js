@@ -135,7 +135,7 @@ const MenuFeatured = {
         // "노래 불러오는 중…" 오버레이 + 실제 다운로드 진행률 바를 띄운다(진행률을 알 수
         // 없으면 불확정 바로 자동 대체됨). 재생 가능해지거나 자동재생이 막혀 실패해도
         // 항상 정리한다.
-        UI.showAreaLoading('preview', '노래 불러오는 중…');
+        UI.showAreaLoading('preview', I18n.t("j_loading_song"));
         const stopTracking = UI.trackAudioDownloadProgress('preview');
         SongPreview.playAudio(previewUrl, chart.preview_start_ms || 0)
             .then(() => this._hideTapOverlay())
@@ -199,7 +199,7 @@ const MenuFeatured = {
         GameBackground.set(coverUrl); // 좌측 게임 화면(game-area)에도 같은 커버를 반투명 배경으로
         const creatorName = chart.owner_id
             ? CloudAuth.linkedName(chart.owner_id, chart.owner_nickname || `${chart.owner_id.slice(0, 8)}…`, _esc)
-            : '알 수 없음';
+            : I18n.t("j_unknown_2");
         const difficultyLabel = chart.difficulty_label ? _esc(chart.difficulty_label) : '기본';
 
         el.classList.remove('hidden');
@@ -207,20 +207,20 @@ const MenuFeatured = {
         <div class="menu-featured-card relative rounded-xl bg-gray-800 p-3 mb-4">
             <button id="menu-featured-reroll-btn" type="button"
                 class="menu-featured-reroll-btn absolute top-2 right-2 z-10 p-1.5 rounded-full transition"
-                title="다른 곡 추천" aria-label="다른 곡 추천">
+                title="${I18n.t("j_suggest_another_song")}" aria-label="${I18n.t("j_suggest_another_song")}">
                 <span class="text-sm"><svg class="icon" aria-hidden="true"><use href="/assets/icons.svg#i-shuffle"/></svg></span>
             </button>
             <div class="flex gap-3 items-center">
                 <div class="menu-featured-cover relative flex-shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-lg bg-cover bg-center" style="${coverStyle}">
                     <span id="menu-featured-playing-dot" class="menu-featured-playing-dot absolute -bottom-1 -right-1"></span>
-                    <div id="menu-featured-tap-overlay" class="menu-featured-tap-overlay hidden rounded-lg">탭해서<br>미리듣기</div>
+                    <div id="menu-featured-tap-overlay" class="menu-featured-tap-overlay hidden rounded-lg">${I18n.t("j_tap_to")}<br>${I18n.t("j_preview")}</div>
                 </div>
                 <div class="flex-1 min-w-0">
-                    <p class="text-xs text-teal-400 font-semibold mb-0.5">추천 비트맵</p>
-                    <p class="font-bold text-white truncate">${_esc(chart.title || '제목 없음')}</p>
-                    <p class="text-sm text-gray-400 truncate">${_esc(chart.artist || '아티스트 미상')}</p>
+                    <p class="text-xs text-teal-400 font-semibold mb-0.5">${I18n.t("j_featured_beatmap")}</p>
+                    <p class="font-bold text-white truncate">${_esc(chart.title || I18n.t("j_untitled_2"))}</p>
+                    <p class="text-sm text-gray-400 truncate">${_esc(chart.artist || I18n.t("j_unknown_artist"))}</p>
                     <div class="flex items-center gap-2 mt-1 text-xs text-gray-400 flex-wrap">
-                        <span class="truncate">채보: ${creatorName}</span>
+                        <span class="truncate">${I18n.t("j_chart_2", {a: creatorName})}</span>
                         <span class="flex-shrink-0">${difficultyLabel}</span>
                         ${Difficulty.starRatingHtml(chart.difficulty_score)}
                     </div>
@@ -228,7 +228,7 @@ const MenuFeatured = {
             </div>
             <button id="menu-featured-play-btn" type="button"
                 class="menu-featured-play-btn w-full mt-3 py-2.5 rounded-lg font-semibold text-white transition">
-                ▶ 이 맵 플레이하러 가기
+                ${I18n.t("j_play_this_map")}
             </button>
         </div>`;
 

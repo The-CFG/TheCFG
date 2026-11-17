@@ -375,9 +375,9 @@ const BeatSkin = {
     // 시작한다(switchTo()가 호출하는 BeatSkinImages.switchTo()가 새 id 소유 이미지가
     // 없으므로 자연히 빈 상태로 로드됨).
     async createSkin(name) {
-        if (!this.state) return { ok: false, error: '스킨 시스템이 아직 준비되지 않았습니다.' };
+        if (!this.state) return { ok: false, error: I18n.t("j_the_skin_system_is_not") };
         const trimmed = (name || '').trim();
-        if (!trimmed) return { ok: false, error: '스킨 이름을 입력해 주세요.' };
+        if (!trimmed) return { ok: false, error: I18n.t("j_please_enter_a_skin_name") };
 
         const id = this._genId();
         this.state.skins[id] = { name: trimmed, settings: this._cloneSettings(Appearance.settings) };
@@ -386,9 +386,9 @@ const BeatSkin = {
     },
 
     async renameSkin(id, name) {
-        if (!this.state || !this.state.skins[id]) return { ok: false, error: '존재하지 않는 스킨입니다.' };
+        if (!this.state || !this.state.skins[id]) return { ok: false, error: I18n.t("j_that_skin_doesn_t_exist") };
         const trimmed = (name || '').trim();
-        if (!trimmed) return { ok: false, error: '스킨 이름을 입력해 주세요.' };
+        if (!trimmed) return { ok: false, error: I18n.t("j_please_enter_a_skin_name") };
         this.state.skins[id].name = trimmed;
         await BeatLocalStore.set(this.STORE_NAME, this.STATE_KEY, this.state);
         return { ok: true };
@@ -397,9 +397,9 @@ const BeatSkin = {
     // 마지막 남은 스킨은 삭제할 수 없다(항상 최소 1개는 활성 상태여야 하므로).
     // 삭제된 스킨이 활성 스킨이었다면 "기본" 스킨(있으면) 또는 남은 스킨 중 하나로 전환.
     async deleteSkin(id) {
-        if (!this.state || !this.state.skins[id]) return { ok: false, error: '존재하지 않는 스킨입니다.' };
+        if (!this.state || !this.state.skins[id]) return { ok: false, error: I18n.t("j_that_skin_doesn_t_exist") };
         if (Object.keys(this.state.skins).length <= 1) {
-            return { ok: false, error: '마지막 남은 스킨은 삭제할 수 없습니다.' };
+            return { ok: false, error: I18n.t("j_you_can_t_delete_the") };
         }
 
         const wasActive = this.state.activeId === id;
@@ -456,19 +456,19 @@ const BeatSkin = {
                     if (!select.value || !this.state || select.value === this.state.activeId) return;
                     const name = this.state.skins[select.value] ? this.state.skins[select.value].name : select.value;
                     await this.switchTo(select.value);
-                    setStatus(`"${name}" 스킨으로 전환했습니다.`, false);
+                    setStatus(I18n.t("j_switched_to_the_skin", {a: name}), false);
                     if (typeof BeatCustomizationSync !== 'undefined') BeatCustomizationSync.schedulePush();
                 });
             }
 
             if (newBtn) {
                 newBtn.addEventListener('click', async () => {
-                    const name = (prompt('새 스킨 이름을 입력하세요') || '').trim();
+                    const name = (prompt(I18n.t("j_enter_a_new_skin_name")) || '').trim();
                     if (!name) return;
                     const result = await this.createSkin(name);
                     if (!result.ok) { setStatus(result.error, true); return; }
                     this._refreshSelect();
-                    setStatus(`"${name}" 스킨을 만들고 전환했습니다.`, false);
+                    setStatus(I18n.t("j_created_and_switched_to_the", {a: name}), false);
                     if (typeof BeatCustomizationSync !== 'undefined') BeatCustomizationSync.schedulePush();
                 });
             }
@@ -477,12 +477,12 @@ const BeatSkin = {
                 renameBtn.addEventListener('click', async () => {
                     if (!select.value || !this.state) return;
                     const current = this.state.skins[select.value];
-                    const name = (prompt('새 이름을 입력하세요', current ? current.name : '') || '').trim();
+                    const name = (prompt(I18n.t("j_enter_a_new_name"), current ? current.name : '') || '').trim();
                     if (!name) return;
                     const result = await this.renameSkin(select.value, name);
                     if (!result.ok) { setStatus(result.error, true); return; }
                     this._refreshSelect();
-                    setStatus('스킨 이름을 변경했습니다.', false);
+                    setStatus(I18n.t("j_skin_renamed"), false);
                     if (typeof BeatCustomizationSync !== 'undefined') BeatCustomizationSync.schedulePush();
                 });
             }
@@ -491,11 +491,11 @@ const BeatSkin = {
                 deleteBtn.addEventListener('click', async () => {
                     if (!select.value || !this.state) return;
                     const current = this.state.skins[select.value];
-                    if (!confirm(`"${current ? current.name : ''}" 스킨을 삭제할까요?`)) return;
+                    if (!confirm(I18n.t("j_delete_the_skin", {a: current ? current.name : ''}))) return;
                     const result = await this.deleteSkin(select.value);
                     if (!result.ok) { setStatus(result.error, true); return; }
                     this._refreshSelect();
-                    setStatus('스킨을 삭제했습니다.', false);
+                    setStatus(I18n.t("j_skin_deleted"), false);
                     if (typeof BeatCustomizationSync !== 'undefined') BeatCustomizationSync.schedulePush();
                 });
             }

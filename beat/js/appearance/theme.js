@@ -37,11 +37,11 @@ const BEAT_THEME_TOKEN_VARS = [
 
 // 사용자가 직접 고르는 5개 기본 토큰. blue 테마 값을 출발점 기본값으로 둔다.
 const BEAT_CUSTOM_THEME_TOKENS = [
-    { key: 'accent',      cssVar: '--tb-accent',       label: '강조색',            default: '#4299e1' },
-    { key: 'bgPrimary',   cssVar: '--tb-bg-primary',   label: '배경(기본)',        default: '#2d3748' },
-    { key: 'textPrimary', cssVar: '--tb-text-primary', label: '글자(기본)',        default: '#e2e8f0' },
-    { key: 'bgSurface',   cssVar: '--tb-bg-surface',   label: '카드/패널 배경',     default: '#374151' },
-    { key: 'bgSurfaceAlt',cssVar: '--tb-bg-surface-alt', label: '카드/패널 배경(강조)', default: '#1f2937' },
+    { key: 'accent',      cssVar: '--tb-accent',       get label() { return I18n.t("b_accent_color"); }, default: '#4299e1' },
+    { key: 'bgPrimary',   cssVar: '--tb-bg-primary',   get label() { return I18n.t("b_background_default"); }, default: '#2d3748' },
+    { key: 'textPrimary', cssVar: '--tb-text-primary', get label() { return I18n.t("b_text_default"); }, default: '#e2e8f0' },
+    { key: 'bgSurface',   cssVar: '--tb-bg-surface',   get label() { return I18n.t("b_card_panel_background"); }, default: '#374151' },
+    { key: 'bgSurfaceAlt',cssVar: '--tb-bg-surface-alt', get label() { return I18n.t("b_card_panel_background_accent"); }, default: '#1f2937' },
 ];
 
 // HEX 색상 밝기 보정. appearance.js의 Appearance.adjustColor()와 같은 알고리즘이지만,
@@ -298,7 +298,7 @@ const BeatTheme = {
                 }
                 this.applyFromSettings('custom', staged);
                 if (typeof UI !== 'undefined' && UI.showMessage) {
-                    UI.showMessage('settings', '커스텀 테마를 적용했습니다.');
+                    UI.showMessage('settings', I18n.t("j_custom_theme_applied"));
                 }
                 if (typeof BeatCustomizationSync !== 'undefined') BeatCustomizationSync.schedulePush();
             });

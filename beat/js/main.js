@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const inputEl = resolveTarget(file);
             if (!inputEl) {
-                if (messageType) UI.showMessage(messageType, unsupportedMessage || '지원하지 않는 파일 형식입니다.');
+                if (messageType) UI.showMessage(messageType, unsupportedMessage || I18n.t("j_unsupported_file_type"));
                 return;
             }
 
@@ -76,9 +76,9 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('drop', (e) => {
         e.preventDefault();
         if (UI.currentScreen === 'editorSong') {
-            UI.showMessage('editorSong', '회색 카드 영역 안에 놓아주세요 (오디오/이미지/json 파일 자동 인식됩니다)');
+            UI.showMessage('editorSong', I18n.t("j_drop_it_inside_the_gray"));
         } else if (UI.currentScreen === 'editor') {
-            UI.showMessage('editor', '음악 설정 박스 안에 놓아주세요');
+            UI.showMessage('editor', I18n.t("j_drop_it_inside_the_music"));
         }
     });
 
@@ -286,7 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return null;
             },
             'editorSong',
-            '오디오/이미지/json(로컬 채보) 파일만 끌어다 놓을 수 있습니다.'
+            I18n.t("j_you_can_only_drop_audio")
         );
 
         // ── Phase 3d/5a: 종합 창 클라우드 저장 — 공개(라이브러리 노출) / 비공개(서버 저장만) ──
@@ -432,7 +432,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 Game.state.settings.maxSimultaneousNotes = currentLanes;
                 DOM.difficulty.maxSimultaneousSlider.value = currentLanes;
                 DOM.difficulty.maxSimultaneousValue.textContent = currentLanes;
-                UI.showMessage('menu', `최대 동시타 개수가 지정된 레인 수(${currentLanes})를 넘어 자동으로 ${currentLanes}개로 조정되었습니다.`);
+                UI.showMessage('menu', I18n.t("j_the_max_simultaneous_hits_exceeded", {a: currentLanes, b: currentLanes}));
             } else {
                 Game.state.settings.maxSimultaneousNotes = requestedMax;
                 DOM.difficulty.maxSimultaneousValue.textContent = requestedMax;
@@ -495,7 +495,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 Game.state.settings.maxSimultaneousNotes = newLanes;
                 DOM.difficulty.maxSimultaneousSlider.value = newLanes;
                 DOM.difficulty.maxSimultaneousValue.textContent = newLanes;
-                UI.showMessage('menu', `레인 수가 ${newLanes}개로 변경되어 최대 동시타 개수도 ${newLanes}개로 조정되었습니다.`);
+                UI.showMessage('menu', I18n.t("j_the_lane_count_changed_to", {a: newLanes, b: newLanes}));
             }
             saveLastPracticeSettings();
         });
@@ -509,19 +509,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     const rawChartData = JSON.parse(event.target.result);
                     const normalized = ChartFormat.normalize(rawChartData);
                     if (normalized.beatmapCount > 1) {
-                        UI.showMessage('menu', `이 파일에는 난이도가 ${normalized.beatmapCount}개 있습니다. 첫 번째 난이도로 플레이합니다.`);
+                        UI.showMessage('menu', I18n.t("j_this_file_has_difficulties_playing", {a: normalized.beatmapCount}));
                     }
                     const chartData = { songName: normalized.songName, ...normalized.beatmap };
                     if (Game.loadChartNotes(chartData)) {
-                        DOM.chartFileNameEl.textContent = `차트: ${file.name}`;
+                        DOM.chartFileNameEl.textContent = I18n.t("j_chart", {a: file.name});
                         if (Game.state.settings.requiredSongName) {
-                            DOM.requiredMusicFileNameEl.textContent = `요구 음악 파일: ${Game.state.settings.requiredSongName}`;
+                            DOM.requiredMusicFileNameEl.textContent = I18n.t("j_required_music_file", {a: Game.state.settings.requiredSongName});
                         } else {
                             DOM.requiredMusicFileNameEl.textContent = '';
                         }
                     }
                 } catch (error) {
-                    UI.showMessage('menu', '잘못된 차트 파일 형식입니다.');
+                    UI.showMessage('menu', I18n.t("j_invalid_chart_file_format"));
                 }
             };
             reader.readAsText(file);
@@ -533,7 +533,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (file) {
                 Game.state.settings.musicFileObject = file;
                 Game.state.settings.musicSrc = null;
-                DOM.musicFileNameEl.textContent = `음악: ${file.name}`;
+                DOM.musicFileNameEl.textContent = I18n.t("j_music", {a: file.name});
             }
             e.target.value = null;
         });
@@ -876,7 +876,7 @@ document.addEventListener('DOMContentLoaded', () => {
         currentBindingElement = element;
         element.classList.add('listening');
         element.textContent = '...';
-        DOM.settings.controls.statusLabel.textContent = '지정을 원하는 키를 입력하세요.';
+        DOM.settings.controls.statusLabel.textContent = I18n.t("j_press_the_key_you_want");
     }
 
     function handleKeyBinding(e) {
@@ -925,10 +925,10 @@ document.addEventListener('DOMContentLoaded', () => {
             console.warn('키 설정 저장 실패:', err);
         }
         saveRestartHotkey();
-        UI.showMessage('settings', '키 설정이 저장되었습니다.');
-        DOM.settings.controls.statusLabel.textContent = '저장되었습니다!';
+        UI.showMessage('settings', I18n.t("j_key_settings_saved"));
+        DOM.settings.controls.statusLabel.textContent = I18n.t("j_saved");
         setTimeout(() => {
-            if (DOM.settings.controls.statusLabel.textContent === '저장되었습니다!') {
+            if (DOM.settings.controls.statusLabel.textContent === I18n.t("j_saved")) {
                 DOM.settings.controls.statusLabel.textContent = '';
             }
         }, 2000);
@@ -948,7 +948,7 @@ document.addEventListener('DOMContentLoaded', () => {
         isListeningForRestartKey = true;
         DOM.settings.controls.restartHotkeyBox.classList.add('listening');
         DOM.settings.controls.restartHotkeyBox.textContent = '...';
-        DOM.settings.controls.statusLabel.textContent = '지정을 원하는 키를 입력하세요.';
+        DOM.settings.controls.statusLabel.textContent = I18n.t("j_press_the_key_you_want");
     }
 
     function cancelRestartKeyBinding() {
@@ -977,7 +977,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return laneKeyName === codeToKeyLabel(code) || laneKeyName === code;
         });
         if (conflictLaneId) {
-            DOM.settings.controls.statusLabel.textContent = '이미 레인 조작에 쓰는 키입니다.';
+            DOM.settings.controls.statusLabel.textContent = I18n.t("j_that_key_is_already_used");
             return;
         }
         tempRestartHotkeyCode = code;
@@ -1115,7 +1115,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderEditorToolKeybindRows() {
         const container = DOM.settings.editorTab.toolKeyRows;
         container.innerHTML = '';
-        [['create', '생성 도구'], ['edit', '편집 도구']].forEach(([toolId, labelText]) => {
+        [['create', I18n.t("j_create_tool")], ['edit', I18n.t("j_edit_tool")]].forEach(([toolId, labelText]) => {
             const row = document.createElement('div');
             row.className = 'flex justify-between items-center p-2 rounded-lg hover:bg-gray-700';
 
@@ -1139,7 +1139,7 @@ document.addEventListener('DOMContentLoaded', () => {
         currentEditorBindingKind = kind;
         element.classList.add('listening');
         element.textContent = '...';
-        DOM.settings.editorTab.statusLabel.textContent = '지정을 원하는 키를 입력하세요.';
+        DOM.settings.editorTab.statusLabel.textContent = I18n.t("j_press_the_key_you_want");
     }
 
     function handleEditorKeyBinding(e) {
@@ -1154,7 +1154,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const laneId = currentEditorBindingElement.dataset.laneId;
             const conflictLane = Object.entries(tempEditorLaneKeys).find(([id, c]) => id !== laneId && c === code);
             if (conflictLane) {
-                DOM.settings.editorTab.statusLabel.textContent = `이미 ${KEYBIND_LABEL_I18N[conflictLane[0]] ? I18n.t(KEYBIND_LABEL_I18N[conflictLane[0]]) : conflictLane[0]} 레인에서 쓰는 키입니다.`;
+                DOM.settings.editorTab.statusLabel.textContent = I18n.t("j_that_key_is_already_used_2", {a: KEYBIND_LABEL_I18N[conflictLane[0]] ? I18n.t(KEYBIND_LABEL_I18N[conflictLane[0]]) : conflictLane[0]});
                 return;
             }
             tempEditorLaneKeys[laneId] = code;
@@ -1164,7 +1164,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const toolId = currentEditorBindingElement.dataset.toolId;
             const otherToolId = toolId === 'create' ? 'edit' : 'create';
             if (tempEditorToolKeys[otherToolId] === key) {
-                DOM.settings.editorTab.statusLabel.textContent = '이미 다른 도구에서 쓰는 키입니다.';
+                DOM.settings.editorTab.statusLabel.textContent = I18n.t("j_that_key_is_already_used_3");
                 return;
             }
             tempEditorToolKeys[toolId] = key;
@@ -1202,9 +1202,9 @@ document.addEventListener('DOMContentLoaded', () => {
         CONFIG.EDITOR_TOOL_KEYS.create = tempEditorToolKeys.create;
         CONFIG.EDITOR_TOOL_KEYS.edit = tempEditorToolKeys.edit;
         persistEditorSettings();
-        DOM.settings.editorTab.statusLabel.textContent = '저장되었습니다!';
+        DOM.settings.editorTab.statusLabel.textContent = I18n.t("j_saved");
         setTimeout(() => {
-            if (DOM.settings.editorTab.statusLabel.textContent === '저장되었습니다!') {
+            if (DOM.settings.editorTab.statusLabel.textContent === I18n.t("j_saved")) {
                 DOM.settings.editorTab.statusLabel.textContent = '';
             }
         }, 2000);
@@ -1217,9 +1217,9 @@ document.addEventListener('DOMContentLoaded', () => {
         CONFIG.EDITOR_TOOL_KEYS.edit = CONFIG.EDITOR_DEFAULT_TOOL_KEYS.edit;
         persistEditorSettings();
         populateEditorKeybindUI();
-        DOM.settings.editorTab.statusLabel.textContent = '기본값으로 복원되었습니다.';
+        DOM.settings.editorTab.statusLabel.textContent = I18n.t("j_restored_to_defaults");
         setTimeout(() => {
-            if (DOM.settings.editorTab.statusLabel.textContent === '기본값으로 복원되었습니다.') {
+            if (DOM.settings.editorTab.statusLabel.textContent === I18n.t("j_restored_to_defaults")) {
                 DOM.settings.editorTab.statusLabel.textContent = '';
             }
         }, 2000);
@@ -1233,9 +1233,9 @@ document.addEventListener('DOMContentLoaded', () => {
         CONFIG.EDITOR_DEFAULT_SETTINGS.snapDivision = snapDivision;
         CONFIG.EDITOR_DEFAULT_SETTINGS.fallSpeed = fallSpeed;
         persistEditorSettings();
-        DOM.settings.editorTab.defaultsStatusLabel.textContent = '저장되었습니다!';
+        DOM.settings.editorTab.defaultsStatusLabel.textContent = I18n.t("j_saved");
         setTimeout(() => {
-            if (DOM.settings.editorTab.defaultsStatusLabel.textContent === '저장되었습니다!') {
+            if (DOM.settings.editorTab.defaultsStatusLabel.textContent === I18n.t("j_saved")) {
                 DOM.settings.editorTab.defaultsStatusLabel.textContent = '';
             }
         }, 2000);
@@ -1247,9 +1247,9 @@ document.addEventListener('DOMContentLoaded', () => {
         DOM.settings.editorTab.defaultBpmInput.value = CONFIG.EDITOR_DEFAULT_SETTINGS.bpm;
         DOM.settings.editorTab.defaultSnapSelect.value = CONFIG.EDITOR_DEFAULT_SETTINGS.snapDivision;
         DOM.settings.editorTab.defaultFallSpeedInput.value = CONFIG.EDITOR_DEFAULT_SETTINGS.fallSpeed;
-        DOM.settings.editorTab.defaultsStatusLabel.textContent = '기본값으로 복원되었습니다.';
+        DOM.settings.editorTab.defaultsStatusLabel.textContent = I18n.t("j_restored_to_defaults");
         setTimeout(() => {
-            if (DOM.settings.editorTab.defaultsStatusLabel.textContent === '기본값으로 복원되었습니다.') {
+            if (DOM.settings.editorTab.defaultsStatusLabel.textContent === I18n.t("j_restored_to_defaults")) {
                 DOM.settings.editorTab.defaultsStatusLabel.textContent = '';
             }
         }, 2000);

@@ -5,7 +5,7 @@ Object.assign(Editor, {
         try {
             const isMusicLoaded = !!DOM.musicPlayer.src;
             if (!isMusicLoaded && this.state.notes.length === 0) {
-                UI.showMessage('editor', '음악을 불러오거나 노트를 추가해주세요.');
+                UI.showMessage('editor', I18n.t("j_load_music_or_add_some"));
                 return;
             }
 
@@ -36,11 +36,11 @@ Object.assign(Editor, {
                         // play()가 시작 직후 중단(AbortError)되거나 브라우저 정책으로
                         // 거부(NotAllowedError)된 경우를 구분해서 보여준다.
                         Debugger.logError(playErr, 'Editor.handlePlayPause:play');
-                        UI.showMessage('editor', `음악 재생 실패 (${playErr.name || 'Error'}): ${playErr.message || ''}`);
+                        UI.showMessage('editor', I18n.t("j_music_playback_failed", {a: playErr.name || 'Error', b: playErr.message || ''}));
                         return;
                     }
                 }
-                DOM.editor.playBtn.textContent = "일시정지";
+                DOM.editor.playBtn.textContent = I18n.t("b_paused");
                 this.state.isPlaying = true;
 
                 // 좌측 오버레이로 옮겨진 채보 편집 UI라면(데스크톱, editor-layout.js) 재생 시작과
@@ -55,7 +55,7 @@ Object.assign(Editor, {
             } else {
                 this.state.timeWhenPaused = performance.now() - this.state.playbackStartTime;
                 if (isMusicLoaded) DOM.musicPlayer.pause();
-                DOM.editor.playBtn.textContent = "재생";
+                DOM.editor.playBtn.textContent = I18n.t("b_play");
                 this.state.isPlaying = false;
                 cancelAnimationFrame(this.state.animationFrameId);
 
@@ -70,7 +70,7 @@ Object.assign(Editor, {
             }
         } catch (err) {
             Debugger.logError(err, 'Editor.handlePlayPause');
-            UI.showMessage('editor', '음악을 재생할 수 없습니다.');
+            UI.showMessage('editor', I18n.t("j_couldn_t_play_the_music_2"));
         }
     },
 
@@ -95,7 +95,7 @@ Object.assign(Editor, {
                 DOM.musicPlayer.pause();
                 DOM.musicPlayer.currentTime = this.state.previewSeekSec || 0;
             }
-            DOM.editor.playBtn.textContent = "재생";
+            DOM.editor.playBtn.textContent = I18n.t("b_play");
             const playheadPosition = this._secondsToY(this.state.previewSeekSec || 0);
             this._setPlayheadTop(playheadPosition);
             DOM.editor.container.scrollTop = playheadPosition - DOM.editor.container.clientHeight / 2;

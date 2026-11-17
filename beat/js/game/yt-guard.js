@@ -7,8 +7,8 @@
  * 플레이어 위에는 아무것도 얹지 않는다(문구는 우측 패널의 상태 라벨).
  */
 const YTGuard = {
-    _TEXT_AD: '광고 재생 중 — 종료를 기다리는 중…',
-    _TEXT_BUF: '버퍼링 중…',
+    get _TEXT_AD() { return I18n.t("j_an_ad_is_playing_waiting"); },
+    get _TEXT_BUF() { return I18n.t("j_buffering"); },
 
     _isYtPlaying() {
         const g = typeof Game !== 'undefined' ? Game : null;
@@ -19,7 +19,7 @@ const YTGuard = {
     _restoreLabel() {
         const el = DOM.playingStatusLabel;
         if (el && (el.textContent === this._TEXT_AD || el.textContent === this._TEXT_BUF)) {
-            el.textContent = Game.state.isPaused ? '일시 정지 중' : '플레이 중';
+            el.textContent = Game.state.isPaused ? I18n.t("j_paused") : I18n.t("j_playing");
         }
     },
 
@@ -58,7 +58,7 @@ const YTGuard = {
 
         DOM.musicPlayer.addEventListener('error', () => {
             if (!this._isYtPlaying()) return;
-            this.abort((DOM.musicPlayer.error && DOM.musicPlayer.error.message) || '영상을 재생할 수 없습니다.');
+            this.abort((DOM.musicPlayer.error && DOM.musicPlayer.error.message) || I18n.t("j_the_video_can_t_be_2"));
         });
     },
 

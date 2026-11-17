@@ -72,7 +72,7 @@ const OsuImport = {
             }
         }
         if (beatLenMs === null) {
-            throw new Error(`${fileName ? fileName + ': ' : ''}BPM 타이밍 포인트를 찾을 수 없습니다 (모든 타이밍 포인트가 SV 포인트).`);
+            throw new Error(I18n.t("j_no_bpm_timing_point_found", {a: fileName ? fileName + ': ' : ''}));
         }
         const bpm = Math.round(60000.0 / beatLenMs);
 

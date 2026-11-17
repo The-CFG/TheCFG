@@ -63,7 +63,7 @@ const CalibrationPresets = {
         try {
             if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
                 navigator.mediaDevices.addEventListener('devicechange', () => {
-                    this._notice = '오디오 출력 장치가 바뀐 것 같습니다. 지금 환경에 맞는 프리셋을 골라 보세요.';
+                    this._notice = I18n.t("j_the_audio_output_device_seems");
                     this.render();
                 });
             }
@@ -93,7 +93,7 @@ const CalibrationPresets = {
     },
     _suggestName() {
         const ua = navigator.userAgent || '';
-        const os = /Android/i.test(ua) ? 'Android' : /iPhone|iPad|iPod/i.test(ua) ? 'iOS' : /Windows/i.test(ua) ? 'Windows' : /Mac/i.test(ua) ? 'Mac' : /Linux|X11/i.test(ua) ? 'Linux' : '기기';
+        const os = /Android/i.test(ua) ? 'Android' : /iPhone|iPad|iPod/i.test(ua) ? 'iOS' : /Windows/i.test(ua) ? 'Windows' : /Mac/i.test(ua) ? 'Mac' : /Linux|X11/i.test(ua) ? 'Linux' : I18n.t("j_device");
         const br = /Edg\//.test(ua) ? 'Edge' : /Firefox\//.test(ua) ? 'Firefox' : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : '';
         return `${os} ${br}`.trim();
     },
@@ -137,7 +137,7 @@ const CalibrationPresets = {
             this.presets = cloud.filter(p => this._valid(p)).slice(0, this.MAX_PRESETS);
             if (!this.presets.some(p => p.id === this.activeId)) {
                 this.activeId = null;
-                this._notice = '이 기기에 적용된 프리셋이 없습니다. 아래에서 고르거나, 이 기기의 현재 값을 새 프리셋으로 저장하세요.';
+                this._notice = I18n.t("j_no_preset_is_applied_to");
             }
             this._saveLocal();
         } else {
@@ -170,15 +170,15 @@ const CalibrationPresets = {
     saveToActive() {
         const p = this.active();
         if (!p) return;
-        if (!confirm(`"${p.name}" 프리셋을 현재 값으로 덮어쓸까요?`)) return;
+        if (!confirm(I18n.t("j_overwrite_the_preset_with_the", {a: p.name}))) return;
         Object.assign(p, this.live(), { updatedAt: new Date().toISOString() });
         this._saveLocal();
         this._upsertCloud(p);
         this.render();
     },
     createFromLive() {
-        if (this.presets.length >= this.MAX_PRESETS) { alert(`프리셋은 최대 ${this.MAX_PRESETS}개까지 만들 수 있습니다.`); return; }
-        const name = (prompt('새 프리셋 이름 (예: 태블릿 + 블루투스)', this._suggestName()) || '').trim().slice(0, 30);
+        if (this.presets.length >= this.MAX_PRESETS) { alert(I18n.t("j_you_can_create_up_to", {a: this.MAX_PRESETS})); return; }
+        const name = (prompt(I18n.t("j_new_preset_name_e_g"), this._suggestName()) || '').trim().slice(0, 30);
         if (!name) return;
         const p = this._make(name);
         this.presets.push(p);
@@ -191,7 +191,7 @@ const CalibrationPresets = {
     renameActive() {
         const p = this.active();
         if (!p) return;
-        const name = (prompt('프리셋 이름', p.name) || '').trim().slice(0, 30);
+        const name = (prompt(I18n.t("j_preset_name"), p.name) || '').trim().slice(0, 30);
         if (!name || name === p.name) return;
         p.name = name;
         p.updatedAt = new Date().toISOString();
@@ -202,11 +202,11 @@ const CalibrationPresets = {
     removeActive() {
         const p = this.active();
         if (!p) return;
-        if (this.presets.length <= 1) { alert('마지막 프리셋은 삭제할 수 없습니다.'); return; }
-        if (!confirm(`"${p.name}" 프리셋을 삭제할까요? (이 계정의 모든 기기에서 사라집니다)`)) return;
+        if (this.presets.length <= 1) { alert(I18n.t("j_you_can_t_delete_the_2")); return; }
+        if (!confirm(I18n.t("j_delete_the_preset_it_will", {a: p.name}))) return;
         this.presets = this.presets.filter(x => x.id !== p.id);
         this.activeId = null; // 값은 그대로 유지, 활성 프리셋만 해제
-        this._notice = '프리셋이 삭제되었습니다. 현재 값은 그대로이며, 다른 프리셋을 고를 수 있습니다.';
+        this._notice = I18n.t("j_preset_deleted_your_current_values");
         this._saveLocal();
         this._removeCloud(p.id);
         this.render();
@@ -219,8 +219,8 @@ const CalibrationPresets = {
         if (!sel) return;
         const dirty = this.isDirty();
         const esc = (typeof _esc === 'function') ? _esc : (t) => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-        sel.innerHTML = (this.activeId ? '' : '<option value="">(선택 안 함 — 이 기기의 현재 값 사용 중)</option>')
-            + this.presets.map(p => `<option value="${esc(p.id)}">${esc(p.name)}${p.id === this.activeId && dirty ? ' (수정됨)' : ''}</option>`).join('');
+        sel.innerHTML = (this.activeId ? '' : I18n.t("j_none_selected_using_this_device"))
+            + this.presets.map(p => `<option value="${esc(p.id)}">${esc(p.name)}${p.id === this.activeId && dirty ? I18n.t("j_modified_2") : ''}</option>`).join('');
         sel.value = this.activeId || '';
         const has = !!this.active();
         const set = (id, disabled) => { const el = $(id); if (el) { el.disabled = disabled; el.classList.toggle('opacity-40', disabled); } };
@@ -234,8 +234,8 @@ const CalibrationPresets = {
         if (notice) { notice.textContent = this._notice; notice.classList.toggle('hidden', !this._notice); }
         const sync = $('cal-sync-note');
         if (sync) sync.textContent = this._userId
-            ? '프리셋은 계정에 저장되어 모든 기기에서 불러올 수 있습니다. 어떤 프리셋을 쓰는지는 기기마다 따로 기억합니다.'
-            : '로그아웃 상태라 프리셋이 이 기기에만 저장됩니다. 로그인하면 계정에 저장됩니다.';
+            ? I18n.t("j_presets_are_saved_to_your")
+            : I18n.t("j_you_re_logged_out_so");
     },
 };
 

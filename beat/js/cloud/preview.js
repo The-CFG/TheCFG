@@ -53,7 +53,7 @@ const SongPreview = {
             await Promise.race([
                 DOM.musicPlayer.resumeContext(),
                 new Promise((_, reject) => {
-                    const timeoutErr = new Error('오디오 재생 제스처 대기 시간 초과');
+                    const timeoutErr = new Error(I18n.t("j_timed_out_waiting_for_an"));
                     timeoutErr.isGestureTimeout = true; // 진짜 예외와 구분해서 로그 여부를 가르는 데 사용
                     setTimeout(() => reject(timeoutErr), 1500);
                 }),
@@ -127,7 +127,7 @@ const SongPreview = {
             await Promise.race([
                 DOM.musicPlayer.resumeContext(),
                 new Promise((_, reject) => {
-                    const timeoutErr = new Error('오디오 재생 제스처 대기 시간 초과');
+                    const timeoutErr = new Error(I18n.t("j_timed_out_waiting_for_an"));
                     timeoutErr.isGestureTimeout = true;
                     setTimeout(() => reject(timeoutErr), 1500);
                 }),

@@ -71,10 +71,10 @@ const BeatFonts = {
     _validate(file) {
         const ext = (file.name.split('.').pop() || '').toLowerCase();
         if (!this.ALLOWED_EXTENSIONS.includes(ext)) {
-            return { ok: false, error: `지원하지 않는 폰트 형식입니다 (.${this.ALLOWED_EXTENSIONS.join(', .')}만 가능)` };
+            return { ok: false, error: I18n.t("j_unsupported_font_format_only_allowed", {a: this.ALLOWED_EXTENSIONS.join(', .')}) };
         }
         if (file.size > this.MAX_SIZE_BYTES) {
-            return { ok: false, error: `폰트 파일은 ${Math.round(this.MAX_SIZE_BYTES / (1024 * 1024))}MB 이하만 업로드할 수 있습니다.` };
+            return { ok: false, error: I18n.t("j_font_files_must_be_mb", {a: Math.round(this.MAX_SIZE_BYTES / (1024 * 1024))}) };
         }
         return { ok: true, ext };
     },
@@ -104,14 +104,14 @@ const BeatFonts = {
 
         const familyName = await this._registerFace(id, file);
         if (!familyName) {
-            return { ok: false, error: '폰트를 불러오는 중 오류가 발생했습니다. 파일이 손상되지 않았는지 확인해 주세요.' };
+            return { ok: false, error: I18n.t("j_an_error_occurred_while_loading") };
         }
 
         const saved = await BeatLocalStore.set(this.STORE_NAME, id, { name, format: check.ext, blob: file });
         if (!saved) {
             document.fonts.delete(this._faces[id]);
             delete this._faces[id];
-            return { ok: false, error: '폰트를 저장하지 못했습니다.' };
+            return { ok: false, error: I18n.t("j_couldn_t_save_the_font") };
         }
 
         this.fonts[id] = { name, format: check.ext };
@@ -151,13 +151,13 @@ const BeatFonts = {
             return { ok: true, id, name: this.fonts[id].name, familyName: this.FONT_FAMILY_PREFIX + id };
         }
         const familyName = await this._registerFace(id, blob);
-        if (!familyName) return { ok: false, error: '폰트를 등록하지 못했습니다.' };
+        if (!familyName) return { ok: false, error: I18n.t("j_couldn_t_register_the_font") };
 
         const saved = await BeatLocalStore.set(this.STORE_NAME, id, { name, format, blob });
         if (!saved) {
             document.fonts.delete(this._faces[id]);
             delete this._faces[id];
-            return { ok: false, error: '폰트를 저장하지 못했습니다.' };
+            return { ok: false, error: I18n.t("j_couldn_t_save_the_font") };
         }
         this.fonts[id] = { name, format };
         return { ok: true, id, name, familyName };
@@ -229,7 +229,7 @@ const BeatFonts = {
                     if (list.length === 0) {
                         const empty = document.createElement('p');
                         empty.className = 'text-xs text-gray-500';
-                        empty.textContent = '업로드된 폰트가 없습니다.';
+                        empty.textContent = I18n.t("j_no_fonts_uploaded");
                         listEl.appendChild(empty);
                     } else {
                         list.forEach(f => {
@@ -241,11 +241,11 @@ const BeatFonts = {
                             const delBtn = document.createElement('button');
                             delBtn.type = 'button';
                             delBtn.className = 'text-red-400 hover:text-red-300 text-xs shrink-0 ml-2';
-                            delBtn.textContent = '삭제';
+                            delBtn.textContent = I18n.t("b_delete");
                             delBtn.addEventListener('click', async () => {
                                 await this.deleteFont(f.id);
                                 await refreshSelects();
-                                setStatus(`"${f.name}" 폰트를 삭제했습니다.`, false);
+                                setStatus(I18n.t("j_deleted_the_font", {a: f.name}), false);
                                 if (typeof BeatCustomizationSync !== 'undefined') BeatCustomizationSync.schedulePush();
                             });
                             row.appendChild(label);
@@ -263,11 +263,11 @@ const BeatFonts = {
                 uploadBtn.addEventListener('click', async () => {
                     const file = fileInput.files && fileInput.files[0];
                     if (!file) {
-                        setStatus('업로드할 폰트 파일을 선택해 주세요.', true);
+                        setStatus(I18n.t("j_please_choose_a_font_file"), true);
                         return;
                     }
                     uploadBtn.disabled = true;
-                    setStatus('폰트를 불러오는 중…', false);
+                    setStatus(I18n.t("j_loading_font"), false);
                     const result = await this.uploadFont(file, nameInput ? nameInput.value : '');
                     uploadBtn.disabled = false;
                     if (!result.ok) {
@@ -276,7 +276,7 @@ const BeatFonts = {
                     }
                     fileInput.value = '';
                     if (nameInput) nameInput.value = '';
-                    setStatus(`"${result.name}" 폰트를 추가했습니다.`, false);
+                    setStatus(I18n.t("j_added_the_font", {a: result.name}), false);
                     await refreshSelects();
                     if (typeof BeatCustomizationSync !== 'undefined') BeatCustomizationSync.schedulePush();
                 });

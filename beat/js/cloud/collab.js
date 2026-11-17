@@ -26,31 +26,31 @@ async function openSongCollabModal(songId, songTitle, ownerId, myRole) {
     modal.innerHTML = `
         <div class="collab-dialog">
             <div class="collab-header">
-                <span class="collab-title">${Icon.html('users')} 공동 작업 — ${_esc(songTitle)}</span>
-                <button class="collab-close" title="닫기">✕</button>
+                <span class="collab-title">${I18n.t("j_collaboration", {a: Icon.html('users'), b: _esc(songTitle)})}</span>
+                <button class="collab-close" title="${I18n.t("b_close")}">✕</button>
             </div>
 
             <div class="collab-body">
                 <!-- 멤버 목록 -->
                 <section class="collab-section">
-                    <h3 class="collab-section-title">멤버</h3>
+                    <h3 class="collab-section-title">${I18n.t("j_members")}</h3>
                     <div id="collab-member-list" class="collab-member-list">
-                        <div class="collab-loading">불러오는 중...</div>
+                        <div class="collab-loading">${I18n.t("j_loading")}</div>
                     </div>
                 </section>
 
                 ${isOwnerUser ? `
                 <!-- 초대 (소유자만) -->
                 <section class="collab-section">
-                    <h3 class="collab-section-title">멤버 초대</h3>
+                    <h3 class="collab-section-title">${I18n.t("j_invite_member")}</h3>
                     <div class="collab-invite-form">
                         <input type="text" id="collab-invite-email"
-                            class="collab-input" placeholder="이메일 또는 아이디">
+                            class="collab-input" placeholder="${I18n.t("j_email_or_id")}">
                         <select id="collab-invite-role" class="collab-select">
-                            <option value="editor">편집자</option>
-                            <option value="viewer">뷰어</option>
+                            <option value="editor">${I18n.t("j_editor")}</option>
+                            <option value="viewer">${I18n.t("j_viewer")}</option>
                         </select>
-                        <button id="collab-invite-btn" class="collab-btn-primary">초대</button>
+                        <button id="collab-invite-btn" class="collab-btn-primary">${I18n.t("j_invite")}</button>
                     </div>
                     <div id="collab-invite-result" style="font-size:12px;min-height:18px;margin-top:4px;"></div>
                     <div id="collab-sent-invites" class="collab-sent-invites" style="margin-top:12px;"></div>
@@ -90,7 +90,7 @@ async function _renderSongMemberList(modal, songId, ownerId, myRole, currentUser
     try {
         members = await CloudCharts.listSongMembers(songId);
     } catch (e) {
-        listEl.innerHTML = '<p class="collab-empty">멤버 목록을 불러올 수 없습니다.</p>';
+        listEl.innerHTML = I18n.t("j_couldn_t_load_the_member");
         return;
     }
 
@@ -119,7 +119,7 @@ async function _renderSongMemberList(modal, songId, ownerId, myRole, currentUser
     if (!members.length) {
         const empty = document.createElement('p');
         empty.className = 'collab-empty';
-        empty.textContent = '공유된 멤버가 없습니다.';
+        empty.textContent = I18n.t("j_no_members_are_sharing_this");
         listEl.appendChild(empty);
         return;
     }
@@ -147,13 +147,13 @@ function _makeSongMemberCard({ member_id, role, nickname, isSelf, isOwner, canMa
 
     const displayName = nickname || member_id.slice(0, 8) + '…';
     const nameHtml    = CloudAuth.linkedName(member_id, displayName, _esc);
-    const selfLabel   = isSelf ? ' <span class="collab-self-badge">(나)</span>' : '';
+    const selfLabel   = isSelf ? I18n.t("j_you") : '';
 
     const roleBadge = isOwner
-        ? `<span class="collab-role-badge role-owner">${Icon.html('crown')} 소유자</span>`
+        ? `<span class="collab-role-badge role-owner">${I18n.t("j_owner", {a: Icon.html('crown')})}</span>`
         : role === 'editor'
-            ? `<span class="collab-role-badge role-editor">${Icon.html('pencil')} 편집자</span>`
-            : `<span class="collab-role-badge role-viewer">${Icon.html('eye')} 뷰어</span>`;
+            ? `<span class="collab-role-badge role-editor">${I18n.t("j_editor_2", {a: Icon.html('pencil')})}</span>`
+            : `<span class="collab-role-badge role-viewer">${I18n.t("j_viewer_2", {a: Icon.html('eye')})}</span>`;
 
     card.innerHTML = `
         <div class="collab-member-info">
@@ -172,15 +172,15 @@ function _makeSongMemberCard({ member_id, role, nickname, isSelf, isOwner, canMa
         const roleSelect = document.createElement('select');
         roleSelect.className = 'collab-select collab-select-sm';
         roleSelect.innerHTML = `
-            <option value="editor" ${role === 'editor' ? 'selected' : ''}>편집자</option>
-            <option value="viewer" ${role === 'viewer' ? 'selected' : ''}>뷰어</option>
+            <option value="editor" ${role === 'editor' ? 'selected' : ''}>${I18n.t("j_editor")}</option>
+            <option value="viewer" ${role === 'viewer' ? 'selected' : ''}>${I18n.t("j_viewer")}</option>
         `;
         roleSelect.addEventListener('change', async () => {
             try {
                 await CloudCharts.updateMemberRole(songId, member_id, roleSelect.value);
                 onUpdate();
             } catch (e) {
-                alert('역할 변경 실패: ' + e.message);
+                alert(I18n.t("j_failed_to_change_role", {a: e.message}));
                 roleSelect.value = role;
             }
         });
@@ -188,14 +188,14 @@ function _makeSongMemberCard({ member_id, role, nickname, isSelf, isOwner, canMa
 
         const kickBtn = document.createElement('button');
         kickBtn.className = 'collab-btn-danger collab-btn-sm';
-        kickBtn.textContent = '강퇴';
+        kickBtn.textContent = I18n.t("j_remove");
         kickBtn.addEventListener('click', async () => {
-            if (!confirm(`${displayName}을(를) 강퇴하시겠습니까?`)) return;
+            if (!confirm(I18n.t("j_remove_from_this_song", {a: displayName}))) return;
             try {
                 await CloudCharts.removeMember(songId, member_id);
                 onUpdate();
             } catch (e) {
-                alert('강퇴 실패: ' + e.message);
+                alert(I18n.t("j_failed_to_remove", {a: e.message}));
             }
         });
         actionsEl.appendChild(kickBtn);
@@ -204,9 +204,9 @@ function _makeSongMemberCard({ member_id, role, nickname, isSelf, isOwner, canMa
         // 본인(멤버)은 나가기만
         const leaveBtn = document.createElement('button');
         leaveBtn.className = 'collab-btn-secondary collab-btn-sm';
-        leaveBtn.textContent = '나가기';
+        leaveBtn.textContent = I18n.t("j_leave");
         leaveBtn.addEventListener('click', async () => {
-            if (!confirm('이 노래의 공동 작업에서 나가시겠습니까?')) return;
+            if (!confirm(I18n.t("j_leave_collaboration_on_this_song"))) return;
             try {
                 await CloudCharts.removeMember(songId, member_id);
                 document.getElementById('collab-modal')?.remove();
@@ -215,7 +215,7 @@ function _makeSongMemberCard({ member_id, role, nickname, isSelf, isOwner, canMa
                     EditorHome.renderHome();
                 }
             } catch (e) {
-                alert('나가기 실패: ' + e.message);
+                alert(I18n.t("j_failed_to_leave", {a: e.message}));
             }
         });
         actionsEl.appendChild(leaveBtn);
@@ -240,17 +240,17 @@ async function _renderSongSentInvites(modal, songId) {
 
     const title = document.createElement('p');
     title.style.cssText = 'font-size:12px;font-weight:600;color:var(--tb-gray-400);margin-bottom:6px;';
-    title.textContent = '대기 중인 초대';
+    title.textContent = I18n.t("j_pending_invites");
     el.appendChild(title);
 
     for (const inv of pending) {
         const row = document.createElement('div');
         row.className = 'collab-invite-row';
-        const roleLabel = inv.role === 'editor' ? `${Icon.html('pencil')} 편집자` : `${Icon.html('eye')} 뷰어`;
+        const roleLabel = inv.role === 'editor' ? I18n.t("j_editor_2", {a: Icon.html('pencil')}) : I18n.t("j_viewer_2", {a: Icon.html('eye')});
         row.innerHTML = `
             <span class="collab-invite-email">${_esc(inv.invited_label)}</span>
             <span class="collab-role-badge ${inv.role === 'editor' ? 'role-editor' : 'role-viewer'}" style="font-size:11px;">${roleLabel}</span>
-            <button class="collab-btn-danger collab-btn-sm inv-cancel" data-id="${inv.id}">취소</button>
+            <button class="collab-btn-danger collab-btn-sm inv-cancel" data-id="${inv.id}">${I18n.t("b_cancel")}</button>
         `;
         row.querySelector('.inv-cancel').addEventListener('click', async (e) => {
             const btn = e.currentTarget;
@@ -259,7 +259,7 @@ async function _renderSongSentInvites(modal, songId) {
                 await CloudCharts.cancelInvite(inv.id);
                 row.remove();
             } catch (err) {
-                alert('초대 취소 실패: ' + err.message);
+                alert(I18n.t("j_failed_to_cancel_invite", {a: err.message}));
                 btn.disabled = false;
             }
         });
@@ -279,16 +279,16 @@ function _setupSongInviteForm(modal, songId) {
     inviteBtn.addEventListener('click', async () => {
         const identifier = emailInput.value.trim();
         const role  = roleSelect.value;
-        if (!identifier) { _setSongInviteResult(resultEl, '이메일 또는 아이디를 입력해주세요.', 'error'); return; }
+        if (!identifier) { _setSongInviteResult(resultEl, I18n.t("j_please_enter_an_email_or"), 'error'); return; }
 
         inviteBtn.disabled    = true;
-        inviteBtn.textContent = '초대 중...';
+        inviteBtn.textContent = I18n.t("j_inviting");
         _setSongInviteResult(resultEl, '', '');
 
         try {
             const result = await CloudCharts.inviteToSong(songId, identifier, role);
             if (result.ok) {
-                _setSongInviteResult(resultEl, `${identifier}에 초대를 보냈습니다.`, 'success');
+                _setSongInviteResult(resultEl, I18n.t("j_invitation_sent_to", {a: identifier}), 'success');
                 emailInput.value = '';
                 await _renderSongSentInvites(modal, songId);
             } else {
@@ -298,7 +298,7 @@ function _setupSongInviteForm(modal, songId) {
             _setSongInviteResult(resultEl, '⚠ ' + e.message, 'error');
         } finally {
             inviteBtn.disabled    = false;
-            inviteBtn.textContent = '초대';
+            inviteBtn.textContent = I18n.t("j_invite");
         }
     });
 

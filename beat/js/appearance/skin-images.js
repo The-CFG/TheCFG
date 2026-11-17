@@ -47,14 +47,15 @@ const BeatSkinImages = {
     // 색상 미리보기가 쓰는 라벨 집합과도 동일하게 맞춤).
     LANE_IDS: ['L4', 'L3', 'L2', 'L1', 'C1', 'R1', 'R2', 'R3', 'R4'],
     LANE_LABELS: {
-        L4: '왼쪽 4', L3: '왼쪽 3', L2: '왼쪽 2', L1: '왼쪽 1',
-        C1: '가운데',
-        R1: '오른쪽 1', R2: '오른쪽 2', R3: '오른쪽 3', R4: '오른쪽 4',
+        // 로드 시점이 아니라 사용 시점에 번역되도록 getter로 정의
+        get L4() { return I18n.t("j_left_4"); }, get L3() { return I18n.t("j_left_3"); }, get L2() { return I18n.t("j_left_2"); }, get L1() { return I18n.t("j_left_1"); },
+        get C1() { return I18n.t("j_center"); },
+        get R1() { return I18n.t("j_right_1"); }, get R2() { return I18n.t("j_right_2"); }, get R3() { return I18n.t("j_right_3"); }, get R4() { return I18n.t("j_right_4"); },
     },
     NOTE_TYPE_BASES: [
-        { id: 'note-tap',   label: '탭 노트' },
-        { id: 'note-long',  label: '롱 노트' },
-        { id: 'note-false', label: '가짜 노트' },
+        { id: 'note-tap',   get label() { return I18n.t("b_tap_note_2"); } },
+        { id: 'note-long',  get label() { return I18n.t("b_long_note"); } },
+        { id: 'note-false', get label() { return I18n.t("b_false_note"); } },
     ],
 
     // 레인별 오버라이드 슬롯 id를 만든다("note-tap@L2" 형식). 렌더링(game.js)이 노트를
@@ -68,15 +69,15 @@ const BeatSkinImages = {
     // 27개(3종류 × 9레인) + 판정 텍스트 4 + 카운트다운 4 + 결과 등급 4 = 총 42개.
     SLOTS: (function() {
         const noteBases = [
-            { id: 'note-tap',   group: 'note', label: '탭 노트' },
-            { id: 'note-long',  group: 'note', label: '롱 노트' },
-            { id: 'note-false', group: 'note', label: '가짜 노트' },
+            { id: 'note-tap',   group: 'note', label: I18n.t("b_tap_note_2") },
+            { id: 'note-long',  group: 'note', label: I18n.t("b_long_note") },
+            { id: 'note-false', group: 'note', label: I18n.t("b_false_note") },
         ];
         const laneIds = ['L4', 'L3', 'L2', 'L1', 'C1', 'R1', 'R2', 'R3', 'R4'];
         const laneLabels = {
-            L4: '왼쪽 4', L3: '왼쪽 3', L2: '왼쪽 2', L1: '왼쪽 1',
-            C1: '가운데',
-            R1: '오른쪽 1', R2: '오른쪽 2', R3: '오른쪽 3', R4: '오른쪽 4',
+            L4: I18n.t("j_left_4"), L3: I18n.t("j_left_3"), L2: I18n.t("j_left_2"), L1: I18n.t("j_left_1"),
+            C1: I18n.t("j_center"),
+            R1: I18n.t("j_right_1"), R2: I18n.t("j_right_2"), R3: I18n.t("j_right_3"), R4: I18n.t("j_right_4"),
         };
         const laneSlots = [];
         noteBases.forEach(base => {
@@ -224,16 +225,16 @@ const BeatSkinImages = {
     _validate(file) {
         const ext = (file.name.split('.').pop() || '').toLowerCase();
         if (!this.ALLOWED_EXTENSIONS.includes(ext)) {
-            return { ok: false, error: `지원하지 않는 이미지 형식입니다 (.${this.ALLOWED_EXTENSIONS.join(', .')}만 가능)` };
+            return { ok: false, error: I18n.t("j_unsupported_image_format_only_allowed", {a: this.ALLOWED_EXTENSIONS.join(', .')}) };
         }
         if (file.size > this.MAX_SIZE_BYTES) {
-            return { ok: false, error: `이미지 파일은 ${(this.MAX_SIZE_BYTES / (1024 * 1024)).toFixed(1)}MB 이하만 업로드할 수 있습니다.` };
+            return { ok: false, error: I18n.t("j_image_files_must_be_mb", {a: (this.MAX_SIZE_BYTES / (1024 * 1024)).toFixed(1)}) };
         }
         return { ok: true };
     },
 
     async uploadImage(slotId, file) {
-        if (!this.isValidSlot(slotId)) return { ok: false, error: '알 수 없는 이미지 슬롯입니다.' };
+        if (!this.isValidSlot(slotId)) return { ok: false, error: I18n.t("j_unknown_image_slot") };
         const check = this._validate(file);
         if (!check.ok) return { ok: false, error: check.error };
 
@@ -245,7 +246,7 @@ const BeatSkinImages = {
         const saved = await BeatLocalStore.set(this.STORE_NAME, this._key(this._activeSkinId, slotId), { name, blob: file });
         if (!saved) {
             this._revoke(slotId);
-            return { ok: false, error: '이미지를 저장하지 못했습니다.' };
+            return { ok: false, error: I18n.t("j_couldn_t_save_the_image") };
         }
         return { ok: true, slotId, name };
     },
@@ -344,7 +345,7 @@ const BeatSkinImages = {
                         }
                         refreshStatus();
                         if (typeof UI !== 'undefined' && UI.showMessage) {
-                            UI.showMessage('settings', `${slot.label} 이미지를 적용했습니다.`);
+                            UI.showMessage('settings', I18n.t("j_applied_the_image", {a: slot.label}));
                         }
                         if (typeof BeatCustomizationSync !== 'undefined') BeatCustomizationSync.schedulePush();
                     });
@@ -427,7 +428,7 @@ const BeatSkinImages = {
             const overrides = this.SLOTS.filter(s => s.group === 'note-lane' && this._entries[s.id]);
             listEl.innerHTML = '';
             if (overrides.length === 0) {
-                listEl.innerHTML = '<p class="text-xs text-gray-500">설정된 레인별 이미지가 없습니다.</p>';
+                listEl.innerHTML = I18n.t("j_no_per_lane_images_set");
                 return;
             }
             overrides.forEach(s => {
@@ -439,7 +440,7 @@ const BeatSkinImages = {
                 const del = document.createElement('button');
                 del.type = 'button';
                 del.className = 'text-red-400 hover:text-red-300 ml-2 flex-shrink-0';
-                del.textContent = '삭제';
+                del.textContent = I18n.t("b_delete");
                 del.addEventListener('click', async () => {
                     await this.deleteImage(s.id);
                     refreshStatus();
@@ -479,7 +480,7 @@ const BeatSkinImages = {
                     refreshStatus();
                     refreshList();
                     if (typeof UI !== 'undefined' && UI.showMessage) {
-                        UI.showMessage('settings', `${row.label} 이미지를 적용했습니다.`);
+                        UI.showMessage('settings', I18n.t("j_applied_the_image", {a: row.label}));
                     }
                     if (typeof BeatCustomizationSync !== 'undefined') BeatCustomizationSync.schedulePush();
                 });

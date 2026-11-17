@@ -26,7 +26,7 @@ const CloudCharts = {
     // ── 내 차트 목록 ─────────────────────────────────────────────────────────
     async listMyCharts() {
         const user = await CloudAuth.getUser();
-        if (!user) return { data: null, error: new Error('로그인이 필요합니다.') };
+        if (!user) return { data: null, error: new Error(I18n.t("j_you_need_to_log_in")) };
 
         return await _supabase
             .from('beat_charts')
@@ -39,7 +39,7 @@ const CloudCharts = {
     // "편집" 흐름에서 차트 JSON/오디오를 다시 받아오기 위해 전체 컬럼이 필요하다.
     async getMyChartDetail(chartId) {
         const user = await CloudAuth.getUser();
-        if (!user) return { data: null, error: new Error('로그인이 필요합니다.') };
+        if (!user) return { data: null, error: new Error(I18n.t("j_you_need_to_log_in")) };
 
         const { data, error } = await _supabase
             .from('beat_charts')
@@ -57,8 +57,8 @@ const CloudCharts = {
     // audioFile: File 객체
     async uploadChart(meta, chartData, audioFile) {
         const user = await CloudAuth.getUser();
-        if (!user) return { error: new Error('로그인이 필요합니다.') };
-        if (!audioFile) return { error: new Error('음악 파일을 선택해주세요.') };
+        if (!user) return { error: new Error(I18n.t("j_you_need_to_log_in")) };
+        if (!audioFile) return { error: new Error(I18n.t("j_please_choose_a_music_file")) };
 
         // 1) 메타 행을 먼저 INSERT해서 chart_id 확보
         const noteCount = Array.isArray(chartData.notes)
@@ -121,7 +121,7 @@ const CloudCharts = {
     // audioFile, chartData 는 null 이면 교체 안 함
     async updateChart(chartId, meta, chartData = null, audioFile = null) {
         const user = await CloudAuth.getUser();
-        if (!user) return { error: new Error('로그인이 필요합니다.') };
+        if (!user) return { error: new Error(I18n.t("j_you_need_to_log_in")) };
 
         // 기존 행 조회 (경로 확인용)
         const { data: existing, error: fetchErr } = await _supabase
@@ -130,7 +130,7 @@ const CloudCharts = {
             .eq('id', chartId)
             .single();
         if (fetchErr) return { error: fetchErr };
-        if (existing.owner_id !== user.id) return { error: new Error('권한이 없습니다.') };
+        if (existing.owner_id !== user.id) return { error: new Error(I18n.t("j_you_don_t_have_permission")) };
 
         const updates = { ...meta };
 
@@ -177,7 +177,7 @@ const CloudCharts = {
     // ── 차트 삭제 (Storage + DB) ──────────────────────────────────────────────
     async deleteChart(chartId) {
         const user = await CloudAuth.getUser();
-        if (!user) return { error: new Error('로그인이 필요합니다.') };
+        if (!user) return { error: new Error(I18n.t("j_you_need_to_log_in")) };
 
         const { data: existing, error: fetchErr } = await _supabase
             .from('beat_charts')
@@ -185,7 +185,7 @@ const CloudCharts = {
             .eq('id', chartId)
             .single();
         if (fetchErr) return { error: fetchErr };
-        if (existing.owner_id !== user.id) return { error: new Error('권한이 없습니다.') };
+        if (existing.owner_id !== user.id) return { error: new Error(I18n.t("j_you_don_t_have_permission")) };
 
         // Storage 삭제
         await _supabase.storage.from('beat-files')
@@ -285,19 +285,19 @@ const CloudCharts = {
     // is_public: false로 넘기면 공개 라이브러리에는 노출되지 않고 "내 노래" 목록(서버 저장)에만 보인다.
     async uploadSong(meta, audioFile, coverFile) {
         const user = await CloudAuth.getUser();
-        if (!user) return { error: new Error('로그인이 필요합니다.') };
+        if (!user) return { error: new Error(I18n.t("j_you_need_to_log_in")) };
 
         const sourceType = meta.source_type || 'hosted';
         if (!['youtube', 'local', 'hosted'].includes(sourceType)) {
-            return { error: new Error('알 수 없는 음원 종류입니다.') };
+            return { error: new Error(I18n.t("j_unknown_audio_source_type")) };
         }
         if (sourceType === 'youtube' && !/^[A-Za-z0-9_-]{11}$/.test(meta.youtube_id || '')) {
-            return { error: new Error('올바른 YouTube 링크가 필요합니다.') };
+            return { error: new Error(I18n.t("j_a_valid_youtube_link_is")) };
         }
         if (sourceType === 'hosted') {
-            if (!audioFile) return { error: new Error('음악 파일을 선택해주세요.') };
+            if (!audioFile) return { error: new Error(I18n.t("j_please_choose_a_music_file")) };
             if (meta.original_declared !== true || !meta.terms_version) {
-                return { error: new Error('서버 호스팅은 창작곡 선언과 약관 동의가 필요합니다. 상용곡은 YouTube 링크를 사용해주세요.') };
+                return { error: new Error(I18n.t("j_server_hosting_requires_an_original")) };
             }
         }
 
@@ -370,7 +370,7 @@ const CloudCharts = {
     // 넘기지 않으면(null) 기존과 동일하게 잠금 없이 그냥 덮어쓴다.
     async updateSongMeta(songId, meta, coverFile, expectedUpdatedAt = null) {
         const user = await CloudAuth.getUser();
-        if (!user) return { error: new Error('로그인이 필요합니다.') };
+        if (!user) return { error: new Error(I18n.t("j_you_need_to_log_in")) };
 
         const updatePayload = {
             title: meta.title,
@@ -407,7 +407,7 @@ const CloudCharts = {
         const { data, error } = await query.select().single();
 
         if (error && expectedUpdatedAt && this._isOptimisticLockConflict(error)) {
-            return { error: { conflict: true, message: '다른 곳에서 이 사이 먼저 저장했습니다.' } };
+            return { error: { conflict: true, message: I18n.t("j_someone_else_saved_in_the") } };
         }
         return { data, error };
     },
@@ -420,12 +420,12 @@ const CloudCharts = {
     // chartData: { bpm, startTimeOffset, laneCount, notes, triggers } (Editor의 flat 상태에서 뽑아낸 것)
     async addBeatmapToSong(songId, meta, chartData) {
         const user = await CloudAuth.getUser();
-        if (!user) return { error: new Error('로그인이 필요합니다.') };
+        if (!user) return { error: new Error(I18n.t("j_you_need_to_log_in")) };
 
         // 소유자/editor 둘 다 허용 (RLS로도 막히겠지만 명확한 에러 메시지를 위해 먼저 확인).
         // 예전엔 owner_id 단독 체크였는데, 공동 작업(editor 역할) 도입으로 beat_song_role 기반으로 바뀜.
         const role = await this.getMyRoleForSong(songId);
-        if (role !== 'owner' && role !== 'editor') return { error: new Error('권한이 없습니다.') };
+        if (role !== 'owner' && role !== 'editor') return { error: new Error(I18n.t("j_you_don_t_have_permission")) };
 
         const chartId = crypto.randomUUID();
         const chartPath = `${user.id}/songs/${songId}/beatmaps/${chartId}/chart.json`;
@@ -483,7 +483,7 @@ const CloudCharts = {
     // (예전 project_members 무한 재귀 RLS 교훈 반영).
     async listMySongs() {
         const user = await CloudAuth.getUser();
-        if (!user) return { data: null, error: new Error('로그인이 필요합니다.') };
+        if (!user) return { data: null, error: new Error(I18n.t("j_you_need_to_log_in")) };
 
         const { data: songs, error: songsErr } = await _supabase
             .from('beat_songs')
@@ -531,7 +531,7 @@ const CloudCharts = {
     // 난이도의 차트 JSON과 오디오/커버 이미지가 한꺼번에 삭제된다.
     async deleteSong(songId) {
         const user = await CloudAuth.getUser();
-        if (!user) return { error: new Error('로그인이 필요합니다.') };
+        if (!user) return { error: new Error(I18n.t("j_you_need_to_log_in")) };
 
         const { data: song, error: songFetchErr } = await _supabase
             .from('beat_songs')
@@ -539,7 +539,7 @@ const CloudCharts = {
             .eq('id', songId)
             .single();
         if (songFetchErr) return { error: songFetchErr };
-        if (song.owner_id !== user.id) return { error: new Error('권한이 없습니다.') };
+        if (song.owner_id !== user.id) return { error: new Error(I18n.t("j_you_don_t_have_permission")) };
 
         // 이 노래에 속한 모든 난이도의 차트 JSON 경로 수집
         const { data: beatmaps, error: bmFetchErr } = await _supabase
@@ -575,7 +575,7 @@ const CloudCharts = {
     // 실제 notes/triggers는 여기서 안 받아온다 — 편집 진입 시 downloadChartData()로 필요할 때만 받는다.
     async getSongWithBeatmaps(songId) {
         const user = await CloudAuth.getUser();
-        if (!user) return { data: null, error: new Error('로그인이 필요합니다.') };
+        if (!user) return { data: null, error: new Error(I18n.t("j_you_need_to_log_in")) };
 
         // owner_id 단독 필터 제거 — 공동 작업 도입으로 RLS(songs_member_select/charts_member_select)가
         // owner 아닌 editor/viewer 멤버의 조회도 허용하므로, 클라이언트에서 미리 owner로 좁히면
@@ -606,7 +606,7 @@ const CloudCharts = {
     // 넘기면 그 사이 다른 곳에서 먼저 저장된 경우 { error: { conflict: true } }를 반환하고 아무것도 바꾸지 않는다.
     async updateBeatmap(chartId, meta, chartData = null, expectedUpdatedAt = null) {
         const user = await CloudAuth.getUser();
-        if (!user) return { error: new Error('로그인이 필요합니다.') };
+        if (!user) return { error: new Error(I18n.t("j_you_need_to_log_in")) };
 
         const { data: existing, error: fetchErr } = await _supabase
             .from('beat_charts')
@@ -616,7 +616,7 @@ const CloudCharts = {
         if (fetchErr) return { error: fetchErr };
         // owner_id 단독 체크 → beat_song_role 기반으로 변경 (addBeatmapToSong과 동일한 이유).
         const role = await this.getMyRoleForSong(existing.song_id);
-        if (role !== 'owner' && role !== 'editor') return { error: new Error('권한이 없습니다.') };
+        if (role !== 'owner' && role !== 'editor') return { error: new Error(I18n.t("j_you_don_t_have_permission")) };
 
         const updates = { ...meta };
 
@@ -643,7 +643,7 @@ const CloudCharts = {
 
         if (dbErr) {
             if (expectedUpdatedAt && this._isOptimisticLockConflict(dbErr)) {
-                return { error: { conflict: true, message: '다른 곳에서 이 사이 먼저 저장했습니다.' } };
+                return { error: { conflict: true, message: I18n.t("j_someone_else_saved_in_the") } };
             }
             return { error: dbErr };
         }
@@ -665,7 +665,7 @@ const CloudCharts = {
                 // 예전 그대로인 상태 — 흔치 않지만 생기면 재저장을 유도해야 하므로 구분해서 알려준다.
                 return {
                     data,
-                    error: { storageOnly: true, message: `메타는 저장됐지만 노트 데이터 업로드에 실패했습니다: ${chartErr.message}. 다시 저장해주세요.` },
+                    error: { storageOnly: true, message: I18n.t("j_the_metadata_was_saved_but", {a: chartErr.message}) },
                 };
             }
         }
@@ -705,23 +705,23 @@ const CloudCharts = {
     // 반환: { ok: true } | { ok: false, error: string }
     async inviteToSong(songId, identifier, role = 'editor') {
         const user = await CloudAuth.getUser();
-        if (!user) return { ok: false, error: '로그인이 필요합니다.' };
+        if (!user) return { ok: false, error: I18n.t("j_you_need_to_log_in") };
 
         const trimmed = (identifier || '').trim();
-        if (!trimmed) return { ok: false, error: '이메일 또는 아이디를 입력해주세요.' };
+        if (!trimmed) return { ok: false, error: I18n.t("j_please_enter_an_email_or") };
 
         let invitedEmail = null;
         let invitedUserId = null;
 
         if (trimmed.includes('@')) {
-            if (trimmed === user.email) return { ok: false, error: '본인은 초대할 수 없습니다.' };
+            if (trimmed === user.email) return { ok: false, error: I18n.t("j_you_can_t_invite_yourself") };
             invitedEmail = trimmed;
         } else {
             const { data: targetUserId, error: lookupError } = await _supabase
                 .rpc('get_user_id_by_handle', { p_handle: trimmed });
             if (lookupError) return { ok: false, error: lookupError.message };
-            if (!targetUserId) return { ok: false, error: `"${trimmed}" 아이디를 가진 사용자를 찾을 수 없습니다.` };
-            if (targetUserId === user.id) return { ok: false, error: '본인은 초대할 수 없습니다.' };
+            if (!targetUserId) return { ok: false, error: I18n.t("j_no_user_found_with_the", {a: trimmed}) };
+            if (targetUserId === user.id) return { ok: false, error: I18n.t("j_you_can_t_invite_yourself") };
             invitedUserId = targetUserId;
         }
 
@@ -789,7 +789,7 @@ const CloudCharts = {
         const nickMap = idTargets.length ? await CloudAuth._fetchNicknameMap(idTargets) : {};
         return invites.map(inv => ({
             ...inv,
-            invited_label: inv.invited_email || nickMap[inv.invited_user_id] || '(알 수 없음)',
+            invited_label: inv.invited_email || nickMap[inv.invited_user_id] || I18n.t("j_unknown"),
         }));
     },
 
@@ -849,7 +849,7 @@ const CloudCharts = {
     // 반환: [{ id, title, artist, owner_id, is_public, created_at, updated_at, beatmapCount, myRole }]
     async listSharedSongs() {
         const user = await CloudAuth.getUser();
-        if (!user) return { data: null, error: new Error('로그인이 필요합니다.') };
+        if (!user) return { data: null, error: new Error(I18n.t("j_you_need_to_log_in")) };
 
         const { data: memberships, error: memErr } = await _supabase
             .from('beat_song_members')

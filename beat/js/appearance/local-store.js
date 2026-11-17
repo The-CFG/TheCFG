@@ -27,7 +27,7 @@ const BeatLocalStore = {
 
         this._dbPromise = new Promise((resolve, reject) => {
             if (!window.indexedDB) {
-                reject(new Error('이 브라우저는 IndexedDB를 지원하지 않습니다.'));
+                reject(new Error(I18n.t("j_this_browser_doesn_t_support")));
                 return;
             }
             const req = indexedDB.open(this.DB_NAME, this.DB_VERSION);

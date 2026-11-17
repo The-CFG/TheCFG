@@ -116,9 +116,9 @@ const Editor = {
                     };
                     const name = codeNames[mediaError.code] || `code ${mediaError.code}`;
                     console.error('[music-player error]', name, mediaError.message);
-                    UI.showMessage('editor', `음악 파일을 재생할 수 없습니다 (${name}). 다른 파일로 시도해보세요.`);
+                    UI.showMessage('editor', I18n.t("j_couldn_t_play_the_music", {a: name}));
                     this.state.isPlaying = false;
-                    DOM.editor.playBtn.textContent = "재생";
+                    DOM.editor.playBtn.textContent = I18n.t("b_play");
                 });
 
                 // 별다른 동작 없이 재생이 끊기면(예: 버퍼링 중단) 콘솔에 남겨 진단에 활용한다.
@@ -167,7 +167,7 @@ const Editor = {
             this.state.previewSeekSec = this.state.song.startOffsetSec || 0;
             DOM.editor.startTimeInput.value = this.state.previewSeekSec;
             if (DOM.editor.timingStartInput) DOM.editor.timingStartInput.value = this.state.song.timingStartSec || 0;
-            DOM.editor.audioFileNameEl.textContent = '선택된 파일 없음';
+            DOM.editor.audioFileNameEl.textContent = I18n.t("b_no_file_selected");
             DOM.editor.chartFilenameInput.value = '';
 
             this.updateNoteTypeUI();
@@ -195,7 +195,7 @@ const Editor = {
         const cloudChart = this.state.cloudChart;
         if (statusEl) {
             if (cloudChart) {
-                statusEl.replaceChildren(Icon.el('pencil'), ` "${cloudChart.title}" 편집 중 — 업로드 시 기존 차트가 업데이트됩니다.`);
+                statusEl.replaceChildren(Icon.el('pencil'), I18n.t("j_editing_uploading_will_update_the", {a: cloudChart.title}));
                 statusEl.classList.remove('hidden');
             } else {
                 statusEl.textContent = '';
@@ -203,7 +203,7 @@ const Editor = {
             }
         }
         if (uploadBtn) {
-            uploadBtn.replaceChildren(Icon.el('cloud'), cloudChart ? ' 차트 업데이트' : ' 서버에 업로드');
+            uploadBtn.replaceChildren(Icon.el('cloud'), cloudChart ? I18n.t("j_update_chart") : I18n.t("j_upload_to_server"));
         }
     },
 
@@ -219,7 +219,7 @@ const Editor = {
             this.state.isPlaying = false;
             cancelAnimationFrame(this.state.animationFrameId);
 
-            UI.showAreaLoading('audio', '음악 불러오는 중…');
+            UI.showAreaLoading('audio', I18n.t("j_loading_music"));
             DOM.musicPlayer.src = URL.createObjectURL(blob);
             DOM.musicPlayer.load();
 
@@ -247,7 +247,7 @@ const Editor = {
             this.state.isPlaying = false;
             cancelAnimationFrame(this.state.animationFrameId);
 
-            UI.showAreaLoading('audio', '음악 불러오는 중…');
+            UI.showAreaLoading('audio', I18n.t("j_loading_music"));
             // 실제 다운로드 바이트 진행률을 프로그레스 바에 그대로 반영 (AudioEngine이 지원하면).
             const stopTracking = UI.trackAudioDownloadProgress('audio');
             let settled = false;
@@ -363,7 +363,7 @@ const Editor = {
             this.state.previewAnimationId = null;
         }
         if (DOM.musicPlayer.src) DOM.musicPlayer.pause();
-        DOM.editor.playBtn.textContent = "재생";
+        DOM.editor.playBtn.textContent = I18n.t("b_play");
     },
 
     // "미리보기 시작(초)"(=state.song.startOffsetSec)을 바꾼다. 이제 이 값은 종합 창의
@@ -560,7 +560,7 @@ const Editor = {
         this._updateDirtyIndicator();
     },
 
-    _confirmDiscardChanges(message = '저장하지 않은 변경사항이 있습니다. 정말로 나가시겠습니까?') {
+    _confirmDiscardChanges(message = I18n.t("j_you_have_unsaved_changes_are")) {
         if (!this.state.isDirty) {
             return true;
         }
@@ -584,7 +584,7 @@ const Editor = {
         this.setDirty(true);
         this.state.notes = [];
         this.renderNotes();
-        UI.showMessage('editor', '모든 노트를 삭제했습니다.');
+        UI.showMessage('editor', I18n.t("j_all_notes_deleted"));
     },
 
     addMeasure() {
@@ -781,14 +781,14 @@ const Editor = {
             const reader = new FileReader();
             reader.onerror = () => {
                 Debugger.logError(reader.error || new Error('FileReader error'), 'Editor.handleAudioLoad:read');
-                UI.showMessage('editor', '파일을 읽는 중 오류가 발생했습니다.');
+                UI.showMessage('editor', I18n.t("j_an_error_occurred_while_reading"));
             };
             reader.onload = () => {
                 try {
                     const arrayBuffer = reader.result;
                     const typedBlob = new Blob([arrayBuffer], { type: mimeType });
 
-                    UI.showAreaLoading('audio', '음악 불러오는 중…');
+                    UI.showAreaLoading('audio', I18n.t("j_loading_music"));
                     DOM.musicPlayer.src = URL.createObjectURL(typedBlob);
                     // 새 소스를 명시적으로 로드해 이전 상태(readyState)를 깨끗하게 리셋한다.
                     DOM.musicPlayer.load();

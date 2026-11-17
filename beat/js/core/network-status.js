@@ -33,15 +33,16 @@ const NetworkStatus = {
         const el = this._el;
         if (isOffline) {
             el.classList.remove('network-banner--ok');
-            el.textContent = this._text('offline_banner', '오프라인 상태예요. 온라인 라이브러리·저장·멀티플레이는 연결이 필요해요.');
+            el.textContent = this._text('offline_banner', I18n.t("j_you_re_offline_the_online"));
             // 오프라인인 동안에만 화면 전환을 감시해서, 플레이 중에는 배너를 숨긴다
             const sync = () => el.classList.toggle('hidden', typeof UI !== 'undefined' && UI.currentScreen === 'playing');
             sync();
             this._watchTimer = setInterval(sync, 1000);
         } else {
             el.classList.add('network-banner--ok');
-            el.textContent = this._text('online_restored', '다시 연결되었어요.');
-            el.classList.remove('hidden');
+            el.textContent = this._text('online_restored', I18n.t("j_back_online"));
+            // 플레이 중에는 "복구됨" 안내도 게임을 가리지 않게 띄우지 않는다
+            el.classList.toggle('hidden', typeof UI !== 'undefined' && UI.currentScreen === 'playing');
             this._hideTimer = setTimeout(() => el.classList.add('hidden'), 3000);
         }
     },

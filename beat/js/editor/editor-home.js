@@ -14,12 +14,12 @@
 const EditorHome = {
     async refresh() {
         this._renderSkeleton();
-        UI.showAreaLoading('editorHome', '내 노래 목록 불러오는 중…');
+        UI.showAreaLoading('editorHome', I18n.t("j_loading_my_songs"));
 
         const user = await CloudAuth.getUser();
         if (!user) {
             UI.hideAreaLoading('editorHome');
-            this._renderMessage('로그인 후 클라우드에 저장된 노래가 여기 표시됩니다.');
+            this._renderMessage(I18n.t("j_after_logging_in_songs_saved"));
             return;
         }
 
@@ -30,13 +30,13 @@ const EditorHome = {
         ]);
         UI.hideAreaLoading('editorHome');
         if (error) {
-            this._renderMessage(`불러오기 실패: ${error.message}`);
+            this._renderMessage(I18n.t("j_failed_to_load", {a: error.message}));
             return;
         }
         if (sharedError) console.warn('listSharedSongs 오류:', sharedError.message);
 
         if ((!data || data.length === 0) && (!shared || shared.length === 0)) {
-            this._renderMessage('아직 업로드한 노래가 없습니다. "+ 새 노래 만들기"로 시작해보세요.');
+            this._renderMessage(I18n.t("j_you_haven_t_uploaded_any"));
             return;
         }
 
@@ -75,7 +75,7 @@ const EditorHome = {
         if (songs.length === 0 && sharedSongs.length > 0) {
             const p = document.createElement('p');
             p.className = 'text-gray-400 text-sm text-center mt-2 mb-2';
-            p.textContent = '아직 직접 업로드한 노래가 없습니다.';
+            p.textContent = I18n.t("j_you_haven_t_uploaded_any_2");
             container.appendChild(p);
         } else {
             songs.forEach(song => {
@@ -87,7 +87,7 @@ const EditorHome = {
         if (sharedSongs.length > 0) {
             const header = document.createElement('h3');
             header.className = 'text-sm font-semibold text-gray-300 mt-4 mb-2';
-            header.replaceChildren(Icon.el('handshake'), ' 공유받은 노래');
+            header.replaceChildren(Icon.el('handshake'), I18n.t("j_shared_with_me"));
             container.appendChild(header);
 
             sharedSongs.forEach(song => {
@@ -107,17 +107,17 @@ const EditorHome = {
 
         const title = document.createElement('p');
         title.className = 'font-semibold truncate';
-        title.textContent = song.title || '(제목 없음)';
+        title.textContent = song.title || I18n.t("j_untitled");
 
         const meta = document.createElement('p');
         meta.className = 'text-xs text-gray-400';
         meta.append(
-            `${song.artist || '—'} · 난이도 ${song.beatmapCount}개 · `,
+            I18n.t("j_difficulties", {a: song.artist || '—', b: song.beatmapCount}),
             Icon.el(song.is_public ? 'globe' : 'lock'),
-            song.is_public ? ' 공개' : ' 비공개(서버 저장)'
+            song.is_public ? I18n.t("j_public") : I18n.t("j_private_saved_on_server")
         );
-        if (myRole === 'editor') meta.append(' · ', Icon.el('pencil'), ' 편집자');
-        else if (myRole === 'viewer') meta.append(' · ', Icon.el('eye'), ' 뷰어');
+        if (myRole === 'editor') meta.append(' · ', Icon.el('pencil'), I18n.t("j_editor_3"));
+        else if (myRole === 'viewer') meta.append(' · ', Icon.el('eye'), I18n.t("j_viewer_3"));
 
         openBtn.append(title, meta);
         openBtn.addEventListener('click', () => this.open(song.id));
@@ -128,12 +128,12 @@ const EditorHome = {
         const collabBtn = document.createElement('button');
         collabBtn.type = 'button';
         collabBtn.className = 'flex-shrink-0 py-1.5 px-2 bg-gray-700 hover:bg-gray-600 rounded text-xs';
-        collabBtn.replaceChildren(Icon.el('users'), myRole === 'owner' ? ' 공동 작업'
-            : myRole === 'editor' ? ' 편집자로 참여 중'
-            : ' 뷰어로 참여 중');
+        collabBtn.replaceChildren(Icon.el('users'), myRole === 'owner' ? I18n.t("j_collaboration_2")
+            : myRole === 'editor' ? I18n.t("j_joined_as_editor")
+            : I18n.t("j_joined_as_viewer"));
         collabBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            openSongCollabModal(song.id, song.title || '(제목 없음)', ownerId || song.owner_id, myRole);
+            openSongCollabModal(song.id, song.title || I18n.t("j_untitled"), ownerId || song.owner_id, myRole);
         });
         card.appendChild(collabBtn);
 
@@ -142,15 +142,15 @@ const EditorHome = {
 
     async open(songId) {
         if (Editor.state.beatmaps.length > 0 &&
-            !confirm('현재 작업 중인 노래가 있습니다. 클라우드 노래를 열면 저장하지 않은 내용은 사라집니다. 계속할까요?')) {
+            !confirm(I18n.t("j_you_are_currently_working_on"))) {
             return;
         }
 
-        this._renderMessage('노래 정보를 불러오는 중…', true);
+        this._renderMessage(I18n.t("j_loading_song_info"), true);
 
         const { data, error } = await CloudCharts.getSongWithBeatmaps(songId);
         if (error) {
-            this._renderMessage(`불러오기 실패: ${error.message}`);
+            this._renderMessage(I18n.t("j_failed_to_load", {a: error.message}));
             return;
         }
 
@@ -166,6 +166,6 @@ const EditorHome = {
         UI.showScreen('editorSong');
         EditorSong.render();
 
-        UI.showMessage('editorSong', '노래를 불러왔습니다.');
+        UI.showMessage('editorSong', I18n.t("j_song_loaded"));
     },
 };

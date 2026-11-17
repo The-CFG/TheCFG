@@ -404,7 +404,7 @@ const Appearance = {
                 applyBtn.addEventListener('click', () => {
                     this.saveSettings();
                     this.applySettings();
-                    UI.showMessage('settings', '모양 설정이 적용되었습니다.');
+                    UI.showMessage('settings', I18n.t("j_settings_applied"));
                     // 지금 활성 스킨(색상/모양/판정 텍스트/폰트 참조 등)이 바뀐 것이므로
                     // 클라우드 동기화 대상(계획 4단계)이다.
                     if (typeof BeatCustomizationSync !== 'undefined') BeatCustomizationSync.schedulePush();
@@ -415,10 +415,10 @@ const Appearance = {
             const resetBtn = document.getElementById('reset-appearance-btn');
             if (resetBtn) {
                 resetBtn.addEventListener('click', () => {
-                    if (confirm('모든 모양 설정을 초기화하시겠습니까?')) {
+                    if (confirm(I18n.t("j_reset_all_appearance_settings"))) {
                         this.resetSettings();
                         this.updatePreview();
-                        UI.showMessage('settings', '모양 설정이 초기화되었습니다.');
+                        UI.showMessage('settings', I18n.t("j_settings_reset"));
                     }
                 });
             }
@@ -584,7 +584,7 @@ const Appearance = {
     _syncNoteSizeLabels() {
         const isCircle = this.settings.noteShape === 'circle';
         const sizeLabel = document.getElementById('note-size-label');
-        if (sizeLabel) sizeLabel.textContent = isCircle ? '노트 크기' : '노트 높이';
+        if (sizeLabel) sizeLabel.textContent = isCircle ? I18n.t("b_note_size") : I18n.t("j_note_height");
         const widthRow = document.getElementById('note-width-row');
         if (widthRow) widthRow.style.display = isCircle ? 'none' : '';
     },

@@ -19,12 +19,12 @@ const ChartFormat = {
     // 신/구버전 아무 차트 파일이나 받아서 { songName, artist, beatmapCount, beatmap } 형태로 통일해 돌려준다.
     normalize(raw) {
         if (!raw || typeof raw !== 'object') {
-            throw new Error('빈 차트 데이터입니다.');
+            throw new Error(I18n.t("j_empty_chart_data"));
         }
 
         if (raw.formatVersion === 2 && Array.isArray(raw.beatmaps)) {
             if (raw.beatmaps.length === 0) {
-                throw new Error('차트에 난이도(비트맵)가 없습니다.');
+                throw new Error(I18n.t("j_the_chart_has_no_difficulty"));
             }
             const bm = raw.beatmaps[0];
             return {
@@ -93,12 +93,12 @@ const ChartFormat = {
     // 형태로 통일해 돌려준다. normalize()와 달리 beatmaps[0]만 꺼내지 않고 배열 전체를 유지한다.
     normalizeAll(raw) {
         if (!raw || typeof raw !== 'object') {
-            throw new Error('빈 차트 데이터입니다.');
+            throw new Error(I18n.t("j_empty_chart_data"));
         }
 
         if (raw.formatVersion === 2 && Array.isArray(raw.beatmaps)) {
             if (raw.beatmaps.length === 0) {
-                throw new Error('차트에 난이도(비트맵)가 없습니다.');
+                throw new Error(I18n.t("j_the_chart_has_no_difficulty"));
             }
             return {
                 songName: raw.songName || '',
@@ -147,7 +147,7 @@ const ChartFormat = {
     // song은 Editor.state.song(title/artist 필드) 또는 { songName, artist } 형태를 모두 받는다.
     wrapAll(song, beatmaps) {
         if (!Array.isArray(beatmaps) || beatmaps.length === 0) {
-            throw new Error('저장할 난이도(비트맵)가 없습니다.');
+            throw new Error(I18n.t("j_there_is_no_difficulty_beatmap"));
         }
         return {
             formatVersion: this.CURRENT_VERSION,

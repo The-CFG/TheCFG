@@ -26,17 +26,17 @@ const ModerationUI = {
         const reasonOpts = Object.entries(CloudModeration.REASONS)
             .map(([k, v]) => `<option value="${k}">${_esc(v)}</option>`).join('');
         const box = this._open(`
-            <h3 class="text-lg font-bold mb-1">${Icon.html('flag')} 신고하기</h3>
+            <h3 class="text-lg font-bold mb-1">${I18n.t("j_report", {a: Icon.html('flag')})}</h3>
             <p class="text-xs text-gray-400 mb-3 truncate">${_esc(title)}</p>
-            <label class="block text-sm text-gray-300 mb-1">사유</label>
+            <label class="block text-sm text-gray-300 mb-1">${I18n.t("j_reason")}</label>
             <select id="rep-reason" class="w-full mb-3 p-2 rounded bg-gray-700 border border-gray-600 text-sm">${reasonOpts}</select>
-            <label class="block text-sm text-gray-300 mb-1">상세 내용 (선택, 최대 1000자)</label>
-            <textarea id="rep-detail" rows="4" maxlength="1000" class="w-full mb-2 p-2 rounded bg-gray-700 border border-gray-600 text-sm" placeholder="어떤 점이 문제인지 알려 주세요. (저작권 신고라면 원 저작물 정보)"></textarea>
-            <p class="text-xs text-gray-500 mb-3">신고는 접수만 되며, 모더레이터가 검토한 뒤 처리합니다. 허위 신고를 반복하면 제한될 수 있습니다.</p>
+            <label class="block text-sm text-gray-300 mb-1">${I18n.t("j_details_optional_up_to_1000")}</label>
+            <textarea id="rep-detail" rows="4" maxlength="1000" class="w-full mb-2 p-2 rounded bg-gray-700 border border-gray-600 text-sm" placeholder="${I18n.t("j_tell_us_what_the_problem")}"></textarea>
+            <p class="text-xs text-gray-500 mb-3">${I18n.t("j_reports_are_only_submitted_here")}</p>
             <p id="rep-msg" class="text-sm text-red-400 mb-2 hidden"></p>
             <div class="flex justify-end gap-2">
-                <button id="rep-cancel" class="px-4 py-2 rounded bg-gray-700 hover:bg-gray-600 text-sm">취소</button>
-                <button id="rep-submit" class="px-4 py-2 rounded bg-red-600 hover:bg-red-500 text-sm font-semibold">신고 접수</button>
+                <button id="rep-cancel" class="px-4 py-2 rounded bg-gray-700 hover:bg-gray-600 text-sm">${I18n.t("b_cancel")}</button>
+                <button id="rep-submit" class="px-4 py-2 rounded bg-red-600 hover:bg-red-500 text-sm font-semibold">${I18n.t("j_submit_report")}</button>
             </div>`);
         const msg = box.querySelector('#rep-msg');
         box.querySelector('#rep-cancel').addEventListener('click', () => this._close());
@@ -53,8 +53,8 @@ const ModerationUI = {
                 msg.textContent = res.error; msg.classList.remove('hidden'); submit.disabled = false;
                 return;
             }
-            box.innerHTML = `<p class="text-center py-6">신고가 접수되었습니다. 검토 후 처리됩니다.</p>
-                <div class="flex justify-center"><button id="rep-done" class="px-4 py-2 rounded bg-gray-700 hover:bg-gray-600 text-sm">닫기</button></div>`;
+            box.innerHTML = `<p class="text-center py-6">${I18n.t("j_your_report_has_been_submitted")}</p>
+                <div class="flex justify-center"><button id="rep-done" class="px-4 py-2 rounded bg-gray-700 hover:bg-gray-600 text-sm">${I18n.t("b_close")}</button></div>`;
             box.querySelector('#rep-done').addEventListener('click', () => this._close());
         });
     },
@@ -62,17 +62,17 @@ const ModerationUI = {
     // ── 모더레이터 패널 ────────────────────────────────────────────────────
     async openPanel(status = 'open') {
         if (!(await CloudModeration.isModerator())) return;
-        const box = this._open(`<p class="text-center text-gray-400 py-6">불러오는 중…</p>`);
+        const box = this._open(`<p class="text-center text-gray-400 py-6">${I18n.t("j_loading_2")}</p>`);
         const { data, error } = await CloudModeration.listReports(status, 100);
-        const tabs = [['open', '대기'], ['actioned', '삭제 처리됨'], ['dismissed', '기각']]
+        const tabs = [['open', I18n.t("j_pending")], ['actioned', I18n.t("j_taken_down")], ['dismissed', I18n.t("j_dismissed")]]
             .map(([k, v]) => `<button data-st="${k}" class="mod-tab flex-1 py-1.5 rounded text-sm ${k === status ? 'bg-teal-600' : 'bg-gray-700 hover:bg-gray-600'}">${v}</button>`).join('');
         const rows = error
             ? `<p class="text-red-400 text-sm">${_esc(error)}</p>`
-            : (data.length === 0 ? `<p class="text-center text-gray-500 py-6 text-sm">항목이 없습니다.</p>` : data.map(r => this._rowHtml(r)).join(''));
+            : (data.length === 0 ? `<p class="text-center text-gray-500 py-6 text-sm">${I18n.t("j_no_items")}</p>` : data.map(r => this._rowHtml(r)).join(''));
         box.innerHTML = `
-            <div class="flex items-center justify-between mb-3"><h3 class="text-lg font-bold">${Icon.html('shield')} 신고 관리</h3>
-                <div class="flex gap-2"><button id="mod-legacy" class="px-3 py-1 rounded bg-teal-700 hover:bg-teal-600 text-sm">${Icon.html('link')} 링크 일괄 첨부</button>
-                <button id="mod-close" class="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 text-sm">닫기</button></div></div>
+            <div class="flex items-center justify-between mb-3"><h3 class="text-lg font-bold">${I18n.t("j_report_management", {a: Icon.html('shield')})}</h3>
+                <div class="flex gap-2"><button id="mod-legacy" class="px-3 py-1 rounded bg-teal-700 hover:bg-teal-600 text-sm">${I18n.t("j_bulk_attach_links", {a: Icon.html('link')})}</button>
+                <button id="mod-close" class="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 text-sm">${I18n.t("b_close")}</button></div></div>
             <div class="flex gap-2 mb-3">${tabs}</div>
             <div class="space-y-3">${rows}</div>`;
         box.querySelector('#mod-close').addEventListener('click', () => this._close());
@@ -88,18 +88,18 @@ const ModerationUI = {
         const removed = r.moderation_status === 'removed';
         let btns = '';
         if (r.status === 'open') {
-            btns = `<button data-act="takedown" data-song="${r.song_id}" data-report="${r.report_id}" class="px-3 py-1 rounded bg-red-600 hover:bg-red-500 text-xs font-semibold">삭제 처리</button>
-                    <button data-act="dismiss" data-report="${r.report_id}" class="px-3 py-1 rounded bg-gray-600 hover:bg-gray-500 text-xs">기각</button>`;
+            btns = `<button data-act="takedown" data-song="${r.song_id}" data-report="${r.report_id}" class="px-3 py-1 rounded bg-red-600 hover:bg-red-500 text-xs font-semibold">${I18n.t("j_take_down")}</button>
+                    <button data-act="dismiss" data-report="${r.report_id}" class="px-3 py-1 rounded bg-gray-600 hover:bg-gray-500 text-xs">${I18n.t("j_dismissed")}</button>`;
         } else if (r.status === 'actioned' && removed) {
-            btns = `<button data-act="restore" data-song="${r.song_id}" class="px-3 py-1 rounded bg-blue-600 hover:bg-blue-500 text-xs">잠금 해제(복구)</button>`;
+            btns = `<button data-act="restore" data-song="${r.song_id}" class="px-3 py-1 rounded bg-blue-600 hover:bg-blue-500 text-xs">${I18n.t("j_unlock_restore")}</button>`;
         }
         return `<div class="p-3 bg-gray-900 rounded-lg text-sm">
-            <div class="font-semibold truncate">${_esc(r.song_title || '(삭제된 곡)')} <span class="text-gray-400 font-normal">— ${_esc(r.song_artist || '—')}</span></div>
-            <div class="text-xs text-gray-400 mt-1">${src} · 소유자 ${_esc(r.owner_handle || '—')} · 이 곡 신고 ${r.reports_on_song}건 · ${r.is_public ? '공개 중' : '비공개'}${removed ? ' · <span class="text-red-400">삭제 처리됨</span>' : ''}</div>
+            <div class="font-semibold truncate">${_esc(r.song_title || I18n.t("j_deleted_song"))} <span class="text-gray-400 font-normal">— ${_esc(r.song_artist || '—')}</span></div>
+            <div class="text-xs text-gray-400 mt-1">${I18n.t("j_owner_reports_on_this_song", {a: src, b: _esc(r.owner_handle || '—'), c: r.reports_on_song, d: r.is_public ? I18n.t("j_public_3") : I18n.t("j_private_2"), e: removed ? I18n.t("j_taken_down_2") : ''})}</div>
             <div class="mt-2"><span class="px-2 py-0.5 rounded bg-red-900 text-red-200 text-xs">${_esc(reason)}</span>
                 <span class="text-xs text-gray-500 ml-2">${_esc(new Date(r.created_at).toLocaleString())}</span></div>
             ${r.detail ? `<p class="mt-2 text-gray-300 whitespace-pre-wrap break-words">${_esc(r.detail)}</p>` : ''}
-            <div class="text-xs text-gray-500 mt-1">신고자 ${_esc(r.reporter_handle || '—')} (기각 이력 ${r.reporter_dismissed_count}건)${r.mod_note ? ` · 메모: ${_esc(r.mod_note)}` : ''}</div>
+            <div class="text-xs text-gray-500 mt-1">${I18n.t("j_reporter_dismissals", {a: _esc(r.reporter_handle || '—'), b: r.reporter_dismissed_count, c: r.mod_note ? I18n.t("j_note", {a: _esc(r.mod_note)}) : ''})}</div>
             ${btns ? `<div class="flex gap-2 mt-2">${btns}</div>` : ''}
         </div>`;
     },
@@ -108,30 +108,30 @@ const ModerationUI = {
         const act = btn.dataset.act;
         let res;
         if (act === 'takedown') {
-            const reason = prompt('삭제 처리 사유 (소유자 확인용 메모):', '');
+            const reason = prompt(I18n.t("j_takedown_reason_note_shown_to"), '');
             if (reason === null) return;
-            if (!confirm('이 곡과 모든 차트를 비공개로 삭제 처리합니다. 소유자는 다시 공개할 수 없습니다. 진행할까요?')) return;
+            if (!confirm(I18n.t("j_this_will_take_down_this"))) return;
             res = await CloudModeration.takedownSong(btn.dataset.song, reason);
         } else if (act === 'dismiss') {
-            const note = prompt('기각 메모 (선택):', '');
+            const note = prompt(I18n.t("j_dismissal_note_optional"), '');
             if (note === null) return;
             res = await CloudModeration.dismissReport(btn.dataset.report, note);
         } else if (act === 'restore') {
-            const note = prompt('복구 메모 (선택):', '');
+            const note = prompt(I18n.t("j_restore_note_optional"), '');
             if (note === null) return;
             res = await CloudModeration.restoreSong(btn.dataset.song, note);
         } else return;
-        if (!res.ok) { alert('처리 실패: ' + res.error); return; }
+        if (!res.ok) { alert(I18n.t("j_action_failed", {a: res.error})); return; }
         this.openPanel(status);
     },
 
     // 곡 상세 화면에서 모더레이터가 바로 삭제 처리
     async takedownFromDetail(songId, title) {
-        const reason = prompt(`"${title}" 삭제 처리 사유:`, '');
+        const reason = prompt(I18n.t("j_takedown_reason_for", {a: title}), '');
         if (reason === null) return false;
-        if (!confirm('이 곡과 모든 차트를 비공개로 삭제 처리합니다. 진행할까요?')) return false;
+        if (!confirm(I18n.t("j_this_will_take_down_this_2"))) return false;
         const res = await CloudModeration.takedownSong(songId, reason);
-        if (!res.ok) { alert('처리 실패: ' + res.error); return false; }
+        if (!res.ok) { alert(I18n.t("j_action_failed", {a: res.error})); return false; }
         return true;
     },
 
@@ -165,29 +165,29 @@ const ModerationUI = {
         if (!(await CloudModeration.isModerator())) return;
         try { SongPreview.stop(); } catch (e) { /* 무시 */ } // 뒤에서 재생 중인 미리듣기 정리
         this._lgCleanup();
-        const box = this._open(`<p class="text-center text-gray-400 py-6">불러오는 중…</p>`);
+        const box = this._open(`<p class="text-center text-gray-400 py-6">${I18n.t("j_loading_2")}</p>`);
         const lg = this._lg;
         const [{ data, total, error }, pending] = await Promise.all([
             CloudModeration.listLegacySongs(lg.q, 20, lg.offset), CloudModeration.purgeCount(),
         ]);
         const rows = error ? `<p class="text-red-400 text-sm">${_esc(error)}</p>`
-            : (data.length === 0 ? `<p class="text-center text-gray-500 py-6 text-sm">첨부할 legacy 곡이 없습니다. ${Icon.html('party-popper')}</p>`
+            : (data.length === 0 ? `<p class="text-center text-gray-500 py-6 text-sm">${I18n.t("j_no_legacy_songs_to_attach", {a: Icon.html('party-popper')})}</p>`
                 : data.map(r => `<button data-song="${r.song_id}" class="lg-row w-full text-left p-3 bg-gray-900 hover:bg-gray-700 rounded-lg text-sm">
                     <div class="font-semibold truncate">${_esc(r.title)} <span class="text-gray-400 font-normal">— ${_esc(r.artist || '—')}</span></div>
-                    <div class="text-xs text-gray-500">소유자 ${_esc(r.owner_handle || '—')} · 차트 ${r.chart_count}개 · ${r.is_public ? '공개' : '비공개'}</div></button>`).join(''));
+                    <div class="text-xs text-gray-500">${I18n.t("j_owner_charts", {a: _esc(r.owner_handle || '—'), b: r.chart_count, c: r.is_public ? I18n.t("j_public_4") : I18n.t("j_private_2")})}</div></button>`).join(''));
         box.innerHTML = `
-            <div class="flex items-center justify-between mb-3"><h3 class="text-lg font-bold">${Icon.html('link')} 링크 일괄 첨부 <span class="text-sm text-gray-400">(남은 ${total}곡)</span></h3>
-                <button id="lg-back" class="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 text-sm">← 신고 관리</button></div>
-            <div class="flex gap-2 mb-3"><input id="lg-q" value="${_esc(lg.q)}" placeholder="제목/아티스트 검색" class="flex-1 p-2 rounded bg-gray-700 border border-gray-600 text-sm">
-                <button id="lg-search" class="px-3 py-1 rounded bg-gray-600 hover:bg-gray-500 text-sm">검색</button></div>
+            <div class="flex items-center justify-between mb-3"><h3 class="text-lg font-bold">${I18n.t("j_bulk_attach_links", {a: Icon.html('link')})} <span class="text-sm text-gray-400">${I18n.t("j_songs_left", {a: total})}</span></h3>
+                <button id="lg-back" class="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 text-sm">${I18n.t("j_report_management_2")}</button></div>
+            <div class="flex gap-2 mb-3"><input id="lg-q" value="${_esc(lg.q)}" placeholder="${I18n.t("j_search_title_artist")}" class="flex-1 p-2 rounded bg-gray-700 border border-gray-600 text-sm">
+                <button id="lg-search" class="px-3 py-1 rounded bg-gray-600 hover:bg-gray-500 text-sm">${I18n.t("j_search")}</button></div>
             <div class="space-y-2 mb-3">${rows}</div>
             <div class="flex items-center justify-between mb-3 text-sm">
-                <button id="lg-prev" class="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 ${lg.offset === 0 ? 'opacity-40' : ''}" ${lg.offset === 0 ? 'disabled' : ''}>이전</button>
+                <button id="lg-prev" class="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 ${lg.offset === 0 ? 'opacity-40' : ''}" ${lg.offset === 0 ? 'disabled' : ''}>${I18n.t("j_previous")}</button>
                 <span class="text-gray-400">${total ? `${lg.offset + 1}–${Math.min(lg.offset + 20, total)} / ${total}` : ''}</span>
-                <button id="lg-next" class="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 ${lg.offset + 20 >= total ? 'opacity-40' : ''}" ${lg.offset + 20 >= total ? 'disabled' : ''}>다음</button></div>
+                <button id="lg-next" class="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 ${lg.offset + 20 >= total ? 'opacity-40' : ''}" ${lg.offset + 20 >= total ? 'disabled' : ''}>${I18n.t("j_next")}</button></div>
             <div class="p-3 bg-gray-900 rounded-lg text-sm flex items-center justify-between">
-                <span>정리 대기 중인 옛 오디오 파일: <b>${pending}</b>개</span>
-                <button id="lg-purge" class="px-3 py-1 rounded bg-red-700 hover:bg-red-600 text-xs ${pending ? '' : 'opacity-40'}" ${pending ? '' : 'disabled'}>파일 삭제 실행</button></div>
+                <span>${I18n.t("j_old_audio_files_awaiting_cleanup")} <b>${pending}</b>${I18n.t("j_files")}</span>
+                <button id="lg-purge" class="px-3 py-1 rounded bg-red-700 hover:bg-red-600 text-xs ${pending ? '' : 'opacity-40'}" ${pending ? '' : 'disabled'}>${I18n.t("j_run_file_deletion")}</button></div>
             <p id="lg-msg" class="text-xs text-gray-400 mt-2"></p>`;
         box.querySelector('#lg-back').addEventListener('click', () => this.openPanel());
         const search = () => { lg.q = box.querySelector('#lg-q').value; lg.offset = 0; this.openLegacyTool(); };
@@ -197,11 +197,11 @@ const ModerationUI = {
         box.querySelector('#lg-next').addEventListener('click', () => { lg.offset += 20; this.openLegacyTool(); });
         box.querySelectorAll('.lg-row').forEach(b => b.addEventListener('click', () => this._openAttachEditor(data.find(r => r.song_id === b.dataset.song))));
         box.querySelector('#lg-purge').addEventListener('click', async () => {
-            if (!confirm(`정리 대기 중인 옛 오디오 ${pending}개를 Storage에서 영구 삭제합니다. 진행할까요?`)) return;
+            if (!confirm(I18n.t("j_this_will_permanently_delete_old", {a: pending}))) return;
             const msg = box.querySelector('#lg-msg');
-            const res = await CloudModeration.purgeFiles((ok, fail) => { msg.textContent = `삭제 중… 완료 ${ok} / 실패 ${fail}`; });
-            if (res.error) { msg.textContent = '실패: ' + res.error; return; }
-            alert(`완료: ${res.removed}개 삭제${res.failed ? `, ${res.failed}개 실패(다시 실행하면 재시도)` : ''}`);
+            const res = await CloudModeration.purgeFiles((ok, fail) => { msg.textContent = I18n.t("j_deleting_done_failed", {a: ok, b: fail}); });
+            if (res.error) { msg.textContent = I18n.t("j_failed_2", {a: res.error}); return; }
+            alert(I18n.t("j_done_deleted", {a: res.removed, b: res.failed ? I18n.t("j_failed_run_again_to_retry", {a: res.failed}) : ''}));
             this.openLegacyTool();
         });
     },
@@ -210,8 +210,8 @@ const ModerationUI = {
     openOwnAttach(mySong, onDone) {
         try { SongPreview.stop(); } catch (e) { /* 무시 */ }
         this._openAttachEditor({
-            song_id: mySong.id, title: mySong.title || '(제목 없음)', artist: mySong.artist,
-            owner_handle: '나', chart_count: mySong.beatmapCount || 0, audio_storage_path: mySong.audio_storage_path || null,
+            song_id: mySong.id, title: mySong.title || I18n.t("j_untitled"), artist: mySong.artist,
+            owner_handle: I18n.t("j_you_3"), chart_count: mySong.beatmapCount || 0, audio_storage_path: mySong.audio_storage_path || null,
         }, { own: true, onDone });
     },
 
@@ -223,28 +223,28 @@ const ModerationUI = {
         const canCompare = hasOrig || own; // 본인 전환: 서버 음원이 없는 곡(local)은 내 파일을 골라 비교
         const box = this._open(`
             <div class="flex items-center justify-between mb-2"><h3 class="text-lg font-bold truncate">${_esc(song.title)}</h3>
-                <button id="ae-back" class="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 text-sm flex-shrink-0">${own ? '닫기' : '← 목록'}</button></div>
-            <p class="text-xs text-gray-400 mb-3">${_esc(song.artist || '—')} · 소유자 ${_esc(song.owner_handle || '—')} · 차트 ${song.chart_count}개</p>
-            <div class="flex gap-2 mb-2"><input id="ae-url" placeholder="YouTube 링크 또는 영상 ID" class="flex-1 p-2 rounded bg-gray-700 border border-gray-600 text-sm">
-                <button id="ae-check" class="px-3 py-1 rounded bg-blue-700 hover:bg-blue-600 text-sm">확인</button></div>
+                <button id="ae-back" class="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 text-sm flex-shrink-0">${own ? I18n.t("b_close") : I18n.t("j_list")}</button></div>
+            <p class="text-xs text-gray-400 mb-3">${I18n.t("j_owner_charts_2", {a: _esc(song.artist || '—'), b: _esc(song.owner_handle || '—'), c: song.chart_count})}</p>
+            <div class="flex gap-2 mb-2"><input id="ae-url" placeholder="${I18n.t("b_youtube_link_or_video_id")}" class="flex-1 p-2 rounded bg-gray-700 border border-gray-600 text-sm">
+                <button id="ae-check" class="px-3 py-1 rounded bg-blue-700 hover:bg-blue-600 text-sm">${I18n.t("b_verify")}</button></div>
             <p id="ae-status" class="text-xs text-gray-400 mb-2 min-h-[1rem]"></p>
             <div id="ae-player-wrap" class="mb-2" style="width:480px;max-width:100%;aspect-ratio:16/9;background:#000"><div id="ae-player"></div></div>
             <div class="flex items-center gap-2 mb-2 text-sm">
-                <label class="text-gray-300">오프셋(초)</label>
+                <label class="text-gray-300">${I18n.t("j_offset_sec")}</label>
                 <button data-d="-0.1" class="ae-nudge px-2 py-1 rounded bg-gray-700 hover:bg-gray-600">-0.1</button>
                 <input id="ae-off" type="number" step="0.01" min="0" value="0" class="w-24 p-1 rounded bg-gray-700 border border-gray-600 text-center">
                 <button data-d="0.1" class="ae-nudge px-2 py-1 rounded bg-gray-700 hover:bg-gray-600">+0.1</button>
-                <span class="text-xs text-gray-500">= 영상에서 곡이 시작하는 지점</span></div>
-            ${own && !hasOrig ? `<p class="text-xs text-gray-400 mb-2">비교용 내 음원 파일(선택): <input id="ae-file" type="file" accept="audio/*" class="text-xs"></p>` : ''}
+                <span class="text-xs text-gray-500">${I18n.t("j_the_point_in_the_video")}</span></div>
+            ${own && !hasOrig ? `<p class="text-xs text-gray-400 mb-2">${I18n.t("j_your_own_audio_file_for")} <input id="ae-file" type="file" accept="audio/*" class="text-xs"></p>` : ''}
             <div class="flex flex-wrap gap-2 mb-3 text-sm">
-                <button id="ae-play-video" class="px-3 py-1 rounded bg-gray-600 hover:bg-gray-500">▶ 영상(오프셋부터)</button>
-                ${canCompare ? `<button id="ae-play-orig" class="px-3 py-1 rounded bg-gray-600 hover:bg-gray-500">▶ 원본 음원</button>
-                <button id="ae-play-both" class="px-3 py-1 rounded bg-gray-600 hover:bg-gray-500">▶ 동시 재생(싱크 확인)</button>` : ''}
-                <button id="ae-stop" class="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600">■ 정지</button></div>
-            ${own ? `<p class="text-xs text-yellow-300 mb-2">⚠ 전환하면 서버에 올린 음원 파일은 삭제되고 되돌릴 수 없습니다. 오프셋은 이 곡의 노트 타이밍에 맞춰야 합니다.</p>` : ''}
-            <p class="text-xs text-gray-500 mb-3">동시 재생: 영상이 실제로 재생되기 시작하는 순간에 맞춰 원본 음원을 같은 곡 지점부터 재생합니다(영상 로딩 지연은 자동 보정). 오프셋이 맞으면 소리가 하나로 들리고, 틀리면 메아리처럼 겹쳐 들립니다. <b>영상 소리가 원본보다 늦게 들리면 오프셋을 늘리고, 빠르면 줄이세요.</b> (큰 단위 → 0.1초 → 0.01초 순으로)</p>
+                <button id="ae-play-video" class="px-3 py-1 rounded bg-gray-600 hover:bg-gray-500">${I18n.t("j_video_from_offset")}</button>
+                ${canCompare ? `<button id="ae-play-orig" class="px-3 py-1 rounded bg-gray-600 hover:bg-gray-500">${I18n.t("j_original_audio")}</button>
+                <button id="ae-play-both" class="px-3 py-1 rounded bg-gray-600 hover:bg-gray-500">${I18n.t("j_play_both_sync_check")}</button>` : ''}
+                <button id="ae-stop" class="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600">${I18n.t("j_stop")}</button></div>
+            ${own ? `<p class="text-xs text-yellow-300 mb-2">${I18n.t("j_switching_deletes_the_audio_file")}</p>` : ''}
+            <p class="text-xs text-gray-500 mb-3">${I18n.t("j_play_both_plays_the_original")} <b>${I18n.t("j_if_the_video_audio_is")}</b> ${I18n.t("j_from_coarse_0_1_s")}</p>
             <p id="ae-msg" class="text-sm text-red-400 mb-2 hidden"></p>
-            <div class="flex justify-end"><button id="ae-save" disabled class="px-4 py-2 rounded bg-green-700 hover:bg-green-600 text-sm font-semibold opacity-40">첨부하고 전환</button></div>`);
+            <div class="flex justify-end"><button id="ae-save" disabled class="px-4 py-2 rounded bg-green-700 hover:bg-green-600 text-sm font-semibold opacity-40">${I18n.t("j_attach_switch")}</button></div>`);
         const $ = (s) => box.querySelector(s);
         const state = { id: null, durationMs: 0, verified: false };
         const setStatus = (t, err) => { const el = $('#ae-status'); el.textContent = t; el.className = 'text-xs mb-2 min-h-[1rem] ' + (err ? 'text-red-400' : 'text-gray-400'); };
@@ -255,7 +255,7 @@ const ModerationUI = {
         };
         const ensureAudio = async () => {
             const picked = box.querySelector('#ae-file') && box.querySelector('#ae-file').files[0];
-            if (!this._lg.audioEl && !hasOrig && !picked) throw new Error('비교할 음원 파일을 먼저 선택하세요.');
+            if (!this._lg.audioEl && !hasOrig && !picked) throw new Error(I18n.t("j_select_an_audio_file_to"));
             if (!this._lg.audioEl) {
                 const a = new Audio();
                 a.src = hasOrig ? await CloudModeration.legacyAudioUrl(song.audio_storage_path) : URL.createObjectURL(picked);
@@ -270,13 +270,13 @@ const ModerationUI = {
             const a = this._lg.audioEl, p = this._lg.ytPlayer;
             if (!a || !p) return;
             const songT = p.getCurrentTime() - offSec();
-            if (songT >= 0) { a.currentTime = songT; a.play().catch(e => setStatus('원본 음원 재생 실패: ' + e.message, true)); }
+            if (songT >= 0) { a.currentTime = songT; a.play().catch(e => setStatus(I18n.t("j_original_audio_playback_failed", {a: e.message}), true)); }
             else { a.currentTime = 0; setTimeout(() => a.play().catch(() => {}), -songT * 1000); } // 영상이 곡 시작 전 지점이면 그만큼 기다렸다가
         };
         const playVideo = () => { const p = this._lg.ytPlayer; if (!p || !state.id) return; p.seekTo(offSec(), true); p.playVideo(); };
         const playOrig = async () => {
             try { const a = await ensureAudio(); a.currentTime = 0; await a.play(); }
-            catch (e) { setStatus('원본 음원 재생 실패: ' + e.message, true); }
+            catch (e) { setStatus(I18n.t("j_original_audio_playback_failed", {a: e.message}), true); }
         };
 
         $('#ae-back').addEventListener('click', () => { this._lgCleanup(); if (own) this._close(); else this.openLegacyTool(); });
@@ -290,7 +290,7 @@ const ModerationUI = {
         $('#ae-play-orig').addEventListener('click', () => { stopAll(); playOrig(); });
         $('#ae-play-both').addEventListener('click', async () => {
             stopAll();
-            try { await ensureAudio(); } catch (e) { setStatus('원본 음원 재생 실패: ' + e.message, true); return; }
+            try { await ensureAudio(); } catch (e) { setStatus(I18n.t("j_original_audio_playback_failed", {a: e.message}), true); return; }
             pending.audio = true;
             clearTimeout(pending.timer);
             pending.timer = setTimeout(() => { pending.audio = false; }, 8000); // 영상이 시작 못 하면 대기 해제
@@ -299,17 +299,17 @@ const ModerationUI = {
 
         $('#ae-check').addEventListener('click', async () => {
             const id = this._parseYtId($('#ae-url').value);
-            if (!id) { setStatus('올바른 YouTube 링크 또는 영상 ID가 아닙니다.', true); return; }
+            if (!id) { setStatus(I18n.t("j_not_a_valid_youtube_link"), true); return; }
             state.verified = false; state.id = null;
             $('#ae-save').disabled = true; $('#ae-save').classList.add('opacity-40');
-            setStatus('영상 확인 중…');
+            setStatus(I18n.t("j_checking_video"));
             try {
                 // ① oEmbed — 404: 없음/비공개, 401/403: 임베드 불가
                 let info = null;
                 try {
                     const res = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent('https://www.youtube.com/watch?v=' + id)}&format=json`);
-                    if (res.status === 404) throw new Error('영상을 찾을 수 없습니다 (삭제됨/비공개).');
-                    if (res.status === 401 || res.status === 403) throw new Error('이 영상은 임베드가 허용되지 않아 사용할 수 없습니다.');
+                    if (res.status === 404) throw new Error(I18n.t("j_couldn_t_find_the_video"));
+                    if (res.status === 401 || res.status === 403) throw new Error(I18n.t("j_this_video_can_t_be"));
                     if (res.ok) info = await res.json();
                 } catch (err) { if (/영상/.test(err.message)) throw err; }
                 // ② 모달 안의 (보이는) 플레이어로 길이 취득
@@ -318,7 +318,7 @@ const ModerationUI = {
                 const wrap = $('#ae-player-wrap');
                 wrap.innerHTML = '<div id="ae-player"></div>';
                 const durationMs = await new Promise((resolve, reject) => {
-                    const timer = setTimeout(() => reject(new Error('영상 정보를 불러오지 못했습니다.')), 15000);
+                    const timer = setTimeout(() => reject(new Error(I18n.t("j_couldn_t_load_video_info_2"))), 15000);
                     this._lg.ytPlayer = new YT.Player('ae-player', {
                         width: '100%', height: '100%', videoId: id,
                         playerVars: { playsinline: 1, rel: 0, origin: location.origin },
@@ -334,31 +334,31 @@ const ModerationUI = {
                             onStateChange: (e) => {
                                 if (e.data === 1 && pending.audio) { pending.audio = false; clearTimeout(pending.timer); startAudioSynced(); }
                             },
-                            onError: (e) => { clearTimeout(timer); reject(new Error([100, 101, 150].includes(e.data) ? '영상 사용 불가: 삭제/비공개/임베드 금지/지역 차단' : 'YouTube 오류 ' + e.data)); },
+                            onError: (e) => { clearTimeout(timer); reject(new Error([100, 101, 150].includes(e.data) ? I18n.t("j_video_unavailable_deleted_private_embe") : I18n.t("j_youtube_error", {a: e.data}))); },
                         },
                     });
                 });
                 state.id = id; state.durationMs = durationMs; state.verified = true;
                 const m = Math.floor(durationMs / 60000), s = Math.floor(durationMs / 1000) % 60;
-                setStatus(`✔ ${info && info.title ? info.title + ' · ' : ''}길이 ${m}:${String(s).padStart(2, '0')}`);
+                setStatus(I18n.t("j_length_2", {a: info && info.title ? info.title + ' · ' : '', b: m, c: String(s).padStart(2, '0')}));
                 $('#ae-save').disabled = false; $('#ae-save').classList.remove('opacity-40');
-            } catch (err) { setStatus(err.message || '영상을 확인하지 못했습니다.', true); }
+            } catch (err) { setStatus(err.message || I18n.t("j_couldn_t_verify_the_video"), true); }
         });
 
         $('#ae-save').addEventListener('click', async () => {
             if (!state.verified) return;
-            if (!confirm(`"${song.title}"을(를) YouTube(${state.id}), 오프셋 ${offSec()}초로 전환합니다.\n서버의 옛 음원 파일은 삭제됩니다. 진행할까요?`)) return;
+            if (!confirm(I18n.t("j_switch_to_youtube_with_an", {a: song.title, b: state.id, c: offSec()}))) return;
             const msg = $('#ae-msg'); msg.classList.add('hidden');
             if (own) {
                 const r = await CloudCharts.attachYoutubeToMySong(song.song_id, state.id, Math.round(offSec() * 1000), state.durationMs);
-                if (r.error) { msg.textContent = '실패: ' + (CloudModeration._errMsg(r.error)); msg.classList.remove('hidden'); return; }
-                if (r.purgeFailed) alert('전환은 완료됐지만 옛 음원 파일 삭제는 실패했습니다. 대기열에 남아 나중에 정리됩니다.');
+                if (r.error) { msg.textContent = I18n.t("j_failed_2", {a: CloudModeration._errMsg(r.error)}); msg.classList.remove('hidden'); return; }
+                if (r.purgeFailed) alert(I18n.t("j_the_switch_is_complete_but"));
                 this._close();
                 if (typeof opts.onDone === 'function') opts.onDone();
                 return;
             }
             const res = await CloudModeration.attachYoutube(song.song_id, state.id, Math.round(offSec() * 1000), state.durationMs);
-            if (!res.ok) { msg.textContent = '실패: ' + res.error; msg.classList.remove('hidden'); return; }
+            if (!res.ok) { msg.textContent = I18n.t("j_failed_2", {a: res.error}); msg.classList.remove('hidden'); return; }
             this._lgCleanup();
             this.openLegacyTool(); // 처리된 곡은 목록에서 빠진다 → 다음 곡으로
         });
