@@ -510,18 +510,28 @@ const UI = {
             const totalSec = Math.floor(clampedMs / 1000);
             const min = Math.floor(totalSec / 60);
             const sec = totalSec % 60;
-            DOM.hudTimeEl.textContent = `${min}:${String(sec).padStart(2, '0')}`;
-            DOM.hudTimeEl.classList.toggle('game-hud-warning', clampedMs <= 5000);
+            // 매 프레임 호출되므로, 값이 실제로 바뀔 때만 DOM에 쓴다 (같은 값을 매번 쓰면 프레임마다 스타일/레이아웃 재계산이 생긴다)
+            const timeStr = `${min}:${String(sec).padStart(2, '0')}`;
+            if (DOM.hudTimeEl.textContent !== timeStr) DOM.hudTimeEl.textContent = timeStr;
+            const warn = clampedMs <= 5000;
+            if (DOM.hudTimeEl.classList.contains('game-hud-warning') !== warn) DOM.hudTimeEl.classList.toggle('game-hud-warning', warn);
         }
         if (DOM.hudAccuracyEl) {
-            DOM.hudAccuracyEl.textContent = `${accuracyPercent.toFixed(2)}%`;
+            const accStr = `${accuracyPercent.toFixed(2)}%`;
+            if (DOM.hudAccuracyEl.textContent !== accStr) DOM.hudAccuracyEl.textContent = accStr;
         }
         if (DOM.hudRankEl) {
             // 현재까지의 정확도(판정 가중 평균)를 그대로 유지한다고 가정했을 때의 예상 등급.
+            // 등급이 바뀌었을 때(또는 외부에서 내용이 지워졌을 때)만 다시 그린다 — 등급 이미지 스킨이면 매 프레임 <img>를 새로 만들던 부분.
             const expectedRank = this.rankFromPercentage(accuracyPercent);
-            this.renderRank(DOM.hudRankEl, expectedRank);
-            DOM.hudRankEl.classList.remove('rank-S', 'rank-A', 'rank-B', 'rank-C');
-            DOM.hudRankEl.classList.add(`rank-${expectedRank}`);
+            const el = DOM.hudRankEl;
+            const rankClass = `rank-${expectedRank}`;
+            if (el.dataset.hudRank !== expectedRank || !el.classList.contains(rankClass) || !el.firstChild) {
+                this.renderRank(el, expectedRank);
+                el.classList.remove('rank-S', 'rank-A', 'rank-B', 'rank-C');
+                el.classList.add(rankClass);
+                el.dataset.hudRank = expectedRank;
+            }
         }
     },
     // ── 멀티플레이 관전 HUD: 상대 닉네임 + 점수/콤보 표시 전용 ──────────────────────

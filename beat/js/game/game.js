@@ -517,6 +517,7 @@ const Game = {
         this.state.animationFrameId = null;
         this.state.countdownIntervalId = null;
         this.state.audioReady = false;
+        if (typeof GameClock !== 'undefined') GameClock.reset();
     },
 
     // 커스터마이징 계획 2단계: 카운트다운 숫자(3/2/1/START) 이미지 스킨. runCountdown()/
@@ -869,7 +870,11 @@ const Game = {
             let elapsedTime;
 
             if (self.state.settings.mode === 'music' && self.state.audioReady) {
-                elapsedTime = Math.max(0, (DOM.musicPlayer.currentTime - self.state.settings.startTimeOffset) * 1000);
+                // 음원 시계는 계단식으로만 갱신돼서 그대로 쓰면 노트가 뚝뚝 끊겨 보인다 → GameClock으로 매끈하게 보정 (music-player.js)
+                const mp = DOM.musicPlayer;
+                const rate = (mp.buffering || mp.inAd) ? 0 : (mp.playbackRate || 1);   // YouTube 버퍼링/광고 중에는 시계를 멈춘다
+                const clockSec = GameClock.tick(timestamp, mp.currentTime, rate);
+                elapsedTime = Math.max(0, (clockSec - self.state.settings.startTimeOffset) * 1000);
             } else {
                 elapsedTime = timestamp - self.state.gameStartTime - self.state.totalPausedTime;
             }
@@ -931,7 +936,7 @@ const Game = {
                 setTimeout(() => self.end(), 500);
                 return;
             }
-            self.state.animationFrameId = requestAnimationFrame(self.loop.bind(self));
+            self.state.animationFrameId = requestAnimationFrame(self._boundLoop || (self._boundLoop = self.loop.bind(self)));   // 프레임마다 bind로 새 함수를 만들지 않는다
         } catch (err) {
             Debugger.logError(err, 'Game.loop');
         } finally {
@@ -1128,18 +1133,24 @@ const Game = {
         if (this.state.gameState !== 'playing' || this.state.isPaused) return;
         const laneIndex = this.state.keyMapping.findIndex(code => code === e.keyCode || code === e.key.toUpperCase().charCodeAt(0));
         if (laneIndex === -1 || this.state.activeLanes[laneIndex]) return;
-        this.handleInputDown(laneIndex, false);
+        this.handleInputDown(laneIndex, false, e.timeStamp);
     },
 
     handleKeyUp(e) {
         if (this.state.gameState !== 'playing' || this.state.isPaused) return;
         const laneIndex = this.state.keyMapping.findIndex(code => code === e.keyCode || code === e.key.toUpperCase().charCodeAt(0));
         if (laneIndex === -1) return;
-        this.handleInputUp(laneIndex, false);
+        this.handleInputUp(laneIndex, false, e.timeStamp);
     },
 
     // isTouch: 설정의 "판정 보정"에 터치 전용 추가 보정을 더할지 여부.
     // (키보드/마우스에는 일반 보정만, 터치에는 일반 보정 + 터치 전용 보정이 함께 적용된다)
+    // 입력 시각(ms, performance.now 기준): 이벤트 타임스탬프가 정상 범위면 그것을, 아니면 지금 시각을 쓴다.
+    _inputNowMs(eventTimeMs) {
+        const now = performance.now();
+        return (typeof eventTimeMs === 'number' && eventTimeMs > 0 && eventTimeMs <= now + 5 && now - eventTimeMs < 1000) ? eventTimeMs : now;
+    },
+
     getInputOffsetMs(isTouch) {
         const base = this.state.settings.inputOffsetMs || 0;
         const touchExtra = isTouch ? (this.state.settings.touchInputOffsetMs || 0) : 0;
@@ -1148,7 +1159,8 @@ const Game = {
         return base + touchExtra + ytExtra;
     },
 
-    handleInputDown(laneIndex, isTouch = false) {
+    // eventTimeMs: 입력 이벤트의 타임스탬프(e.timeStamp). 프레임 작업에 막혀 핸들러가 늦게 실행돼도 "누른 시각" 기준으로 판정한다.
+    handleInputDown(laneIndex, isTouch = false, eventTimeMs) {
         try {
             if (this.state.gameState !== 'playing') return;
 
@@ -1158,10 +1170,12 @@ const Game = {
 
             const offsetMs = this.getInputOffsetMs(isTouch);
             let elapsedTime;
+            const nowMs = this._inputNowMs(eventTimeMs);
             if (this.state.settings.mode === 'music') {
-                elapsedTime = Math.max(0, (DOM.musicPlayer.currentTime - this.state.settings.startTimeOffset) * 1000 - offsetMs);
+                const clockSec = GameClock.read(nowMs, DOM.musicPlayer.currentTime);   // 프레임 사이 시각의 곡 시간(외삽)
+                elapsedTime = Math.max(0, (clockSec - this.state.settings.startTimeOffset) * 1000 - offsetMs);
             } else {
-                elapsedTime = performance.now() - this.state.gameStartTime - this.state.totalPausedTime - offsetMs;
+                elapsedTime = nowMs - this.state.gameStartTime - this.state.totalPausedTime - offsetMs;
             }
 
             const isCircleMode = document.body.classList.contains('circle-notes');
@@ -1200,7 +1214,7 @@ const Game = {
         }
     },
 
-    handleInputUp(laneIndex, isTouch = false) {
+    handleInputUp(laneIndex, isTouch = false, eventTimeMs) {
         try {
             this.state.activeLanes[laneIndex] = false;
             const laneEl = DOM.lanesContainer.children[laneIndex];
@@ -1210,10 +1224,12 @@ const Game = {
 
             const offsetMs = this.getInputOffsetMs(isTouch);
             let elapsedTime;
+            const nowMs = this._inputNowMs(eventTimeMs);
             if (this.state.settings.mode === 'music') {
-                elapsedTime = Math.max(0, (DOM.musicPlayer.currentTime - this.state.settings.startTimeOffset) * 1000 - offsetMs);
+                const clockSec = GameClock.read(nowMs, DOM.musicPlayer.currentTime);   // 프레임 사이 시각의 곡 시간(외삽)
+                elapsedTime = Math.max(0, (clockSec - this.state.settings.startTimeOffset) * 1000 - offsetMs);
             } else {
-                elapsedTime = performance.now() - this.state.gameStartTime - this.state.totalPausedTime - offsetMs;
+                elapsedTime = nowMs - this.state.gameStartTime - this.state.totalPausedTime - offsetMs;
             }
 
             const isCircleMode = document.body.classList.contains('circle-notes');
@@ -1338,13 +1354,13 @@ const Game = {
             lane.appendChild(keyHint);
 
             // 이벤트: 클릭/터치 처리
-            lane.addEventListener('mousedown',  (e) => { e.preventDefault(); this.handleInputDown(i, false); });
-            lane.addEventListener('mouseup',    (e) => { e.preventDefault(); this.handleInputUp(i, false); });
+            lane.addEventListener('mousedown',  (e) => { e.preventDefault(); this.handleInputDown(i, false, e.timeStamp); });
+            lane.addEventListener('mouseup',    (e) => { e.preventDefault(); this.handleInputUp(i, false, e.timeStamp); });
             lane.addEventListener('mouseleave', (e) => { if (this.state.activeLanes[i]) this.handleInputUp(i, false); });
             // 터치 입력은 preventDefault로 스크롤/확대 등 브라우저 기본 동작을 실제로
             // 막아야 하므로 passive:false를 명시한다(안 그러면 판정 씹힘/오탭 유발).
-            lane.addEventListener('touchstart', (e) => { e.preventDefault(); this.handleInputDown(i, true); }, { passive: false });
-            lane.addEventListener('touchend',   (e) => { e.preventDefault(); this.handleInputUp(i, true); }, { passive: false });
+            lane.addEventListener('touchstart', (e) => { e.preventDefault(); this.handleInputDown(i, true, e.timeStamp); }, { passive: false });
+            lane.addEventListener('touchend',   (e) => { e.preventDefault(); this.handleInputUp(i, true, e.timeStamp); }, { passive: false });
             DOM.lanesContainer.appendChild(lane);
         }
     },

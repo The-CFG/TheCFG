@@ -98,23 +98,37 @@ const YTTools = (() => {
         if (timestamp - lastHudAt < HUD_INTERVAL_MS) return;
         lastHudAt = timestamp;
         const mp = DOM.musicPlayer;
-        if (mp.kind !== 'yt') { hudSection.hidden = true; return; }
+        const isYt = mp.kind === 'yt';
         hudSection.hidden = false;
         const song = mp.currentTime;                 // 곡 시간 (시계 통일: MusicPlayer가 영상 오프셋을 흡수)
-        const off = (mp.ytOffsetMs || 0) / 1000;
         const st = Game.state;
         const so = st.settings.startTimeOffset || 0;
-        const k = YouTubeSource.clockStats();
-        let layout = '-';
-        if (typeof YTLayout !== 'undefined') {
-            const r = YTLayout.rect;
-            layout = `${YTLayout.mode}${r ? ` ${r.w}x${r.h}` : ''}  covered ${YTLayout.coveredTopPx}px`;
+        const lines = [];
+        if (isYt) {
+            const off = (mp.ytOffsetMs || 0) / 1000;
+            lines.push(`video ${(song + off).toFixed(3)}s  song ${song.toFixed(3)}s  off ${off.toFixed(3)}s${so ? `  start ${so.toFixed(3)}s` : ''}`);
+            let layout = '-';
+            if (typeof YTLayout !== 'undefined') {
+                const r = YTLayout.rect;
+                layout = `${YTLayout.mode}${r ? ` ${r.w}x${r.h}` : ''}  covered ${YTLayout.coveredTopPx}px`;
+            }
+            lines.push(`layout ${layout}`);
+        } else {
+            lines.push(`song ${song.toFixed(3)}s${so ? `  start ${so.toFixed(3)}s` : ''}`);
         }
-        hudPre.textContent =
-            `video ${(song + off).toFixed(3)}s  song ${song.toFixed(3)}s  off ${off.toFixed(3)}s${so ? `  start ${so.toFixed(3)}s` : ''}\n` +
-            `layout ${layout}\n` +
-            `state ${st.gameState}  audioReady ${st.audioReady}\n` +
-            `clk ${k.mode}  upd med ${k.medianMs ?? '-'}ms p95 ${k.p95Ms ?? '-'}ms max ${k.maxMs ?? '-'}ms`;
+        lines.push(`state ${st.gameState}  audioReady ${st.audioReady}`);
+        if (isYt) {
+            const k = YouTubeSource.clockStats();
+            lines.push(`clk ${k.mode}  upd med ${k.medianMs ?? '-'}ms p95 ${k.p95Ms ?? '-'}ms max ${k.maxMs ?? '-'}ms`);
+        }
+        // 게임 시계(GameClock): raw = 음원 시계가 바뀌는 간격(클수록 계단이 거칠다), corr = 보정 폭, snap = 즉시 맞춘 횟수
+        // frame = 평균 프레임 간격, max = 최근 최장 프레임, long = 늘어진 프레임 수 (이 값이 늘면 시계가 아니라 진짜 프레임 드랍)
+        if (typeof GameClock !== 'undefined') {
+            const g = GameClock.stats;
+            lines.push(`gclk ${GameClock.enabled ? 'smooth' : 'OFF'}  raw ${g.rawStepMs.toFixed(1)}ms  corr ${g.corrMs.toFixed(1)}ms  snap ${g.snaps}`);
+            lines.push(`frame ${g.frameMs.toFixed(1)}ms  max ${g.maxFrameMs.toFixed(1)}ms  long ${g.longFrames}`);   // long = 평소의 1.5배 넘게 늘어진 프레임 수
+        }
+        hudPre.textContent = lines.join('\n');
     }
 
     // ── 판정 보정값 저장 (설정 > 캘리브레이션과 같은 경로) ─────────

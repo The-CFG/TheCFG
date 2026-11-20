@@ -98,3 +98,76 @@ const MusicPlayer = {
     addEventListener(evt, cb) { this._backends().forEach(b => b.addEventListener(evt, cb)); },
     removeEventListener(evt, cb) { this._backends().forEach(b => b.removeEventListener(evt, cb)); }
 };
+
+/**
+ * GameClock — 게임 화면용 "매끈한 곡 시계"
+ * -----------------------------------------
+ * 문제: 음원 시계(AudioContext.currentTime, YouTube getCurrentTime)는 10~20ms 단위로 "계단식"으로만 갱신된다.
+ *       그 값을 그대로 노트 위치/판정에 쓰면, 화면 주사율과 어긋난 프레임마다 노트가 이동하는 양이 들쭉날쭉해져
+ *       (예: 144Hz에서 어떤 프레임은 0ms, 어떤 프레임은 10ms만큼 이동) FPS가 높아도 뚝뚝 끊겨 보인다.
+ *       PC 성능과 무관하게 모든 환경에서 똑같이 생기는 끊김이다.
+ * 해결: 프레임마다 performance.now() 기준으로 시계를 "자유 진행"시키고, 음원 시계 값과의 차이만큼만 아주 조금씩(τ=0.1s)
+ *       끌어당겨 맞춘다(PLL). 평균 시각은 원래 음원 시계와 같아서 사용자가 맞춰 둔 판정 보정값은 그대로 유효하다.
+ *       (시뮬레이션: 프레임 간 움직임 오차 4.6~8.2ms → 0.2~0.9ms, 입력 판정 시각 흔들림 σ 2.7~5.6ms → 0.2~0.5ms)
+ *
+ *   tick(nowMs, rawSec, rate) : 프레임마다 한 번 (nowMs는 requestAnimationFrame 타임스탬프). 보정된 곡 시간(초)을 돌려준다.
+ *   read(nowMs, rawSec)       : 입력 이벤트처럼 프레임 사이의 시각에 곡 시간이 필요할 때. 마지막 tick 기준으로 외삽한다.
+ *   reset()                   : 시작/종료/시크 때 새로 시작.
+ * 끄기(문제 확인용): localStorage.setItem('theBeat_clockSmoothing', 'off') 후 새로고침 — 예전처럼 음원 시계를 그대로 쓴다.
+ */
+const GameClock = {
+    TAU_S: 0.1,        // 보정 시정수(초). 작을수록 어긋남을 빨리 따라가고(0.26초 복구), 클수록 더 매끈하다
+    SNAP_S: 0.06,      // 오차가 이보다 크면 보정 대신 즉시 맞춘다 (시크 / 버퍼링 / 장치 전환 등)
+    MAX_GAP_MS: 250,   // 이보다 오래 tick이 없었으면(일시정지 등) 새로 시작한다
+
+    enabled: (() => { try { return localStorage.getItem('theBeat_clockSmoothing') !== 'off'; } catch (e) { return true; } })(),
+
+    _init: false,
+    _t: 0,             // 마지막 tick 시점의 보정된 곡 시간(초)
+    _at: 0,            // 그 시점의 타임스탬프(ms)
+    _rate: 1,
+    _lastRaw: NaN,
+    _lastRawAt: 0,
+    stats: { rawStepMs: 0, frameMs: 0, maxFrameMs: 0, longFrames: 0, corrMs: 0, snaps: 0 },   // 디버그 오버레이용 (디버그 모드에서만 갱신)
+
+    reset() { this._init = false; this._lastRaw = NaN; },
+
+    tick(nowMs, rawSec, rate = 1) {
+        if (!this.enabled || !isFinite(rawSec)) { this._init = false; return rawSec; }
+        const dbg = typeof Debugger !== 'undefined' && Debugger.isActive;
+        if (!this._init || nowMs - this._at > this.MAX_GAP_MS || nowMs < this._at) {
+            this._init = true; this._t = rawSec; this._at = nowMs; this._rate = rate;
+            this._lastRaw = rawSec; this._lastRawAt = nowMs;
+            if (dbg) this.stats.snaps++;
+            return rawSec;
+        }
+        const dt = (nowMs - this._at) / 1000;
+        if (dt <= 0) return this._t;
+        let est = this._t + dt * this._rate;          // 직전 프레임의 속도로 자유 진행
+        const err = rawSec - est;                     // 음원 시계와의 차이 (계단식이라 0~갱신간격만큼 뒤처져 보인다)
+        if (Math.abs(err) > this.SNAP_S) {
+            est = rawSec;
+            if (dbg) this.stats.snaps++;
+        } else {
+            est += err * (1 - Math.exp(-dt / this.TAU_S));
+        }
+        if (dbg) {
+            const s = this.stats;
+            if (rawSec !== this._lastRaw) { s.rawStepMs += ((nowMs - this._lastRawAt) - s.rawStepMs) * 0.1; this._lastRaw = rawSec; this._lastRawAt = nowMs; }
+            const fm = dt * 1000;
+            s.frameMs += (fm - s.frameMs) * 0.05;
+            s.maxFrameMs = fm > s.maxFrameMs ? fm : s.maxFrameMs * 0.995;          // 최근 프레임 중 가장 느렸던 값(서서히 감소)
+            if (fm > Math.max(12, s.frameMs * 1.5)) s.longFrames++;                // 평소보다 확 늘어진 프레임 수 = 진짜 프레임 드랍
+            s.corrMs += (Math.abs(err) * 1000 - s.corrMs) * 0.05;
+        }
+        this._t = est; this._at = nowMs; this._rate = rate;
+        return est;
+    },
+
+    read(nowMs, rawSec) {
+        if (!this.enabled || !this._init) return rawSec;
+        const d = nowMs - this._at;
+        if (d > this.MAX_GAP_MS || d < -100) return rawSec;   // 오래된 기준이면 신뢰하지 않는다
+        return this._t + (d / 1000) * this._rate;
+    }
+};
